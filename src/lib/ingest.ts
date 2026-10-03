@@ -2,6 +2,7 @@
 // blocks). Mirrors how Life OS folds the same events, so both apps hand the
 // core the same days.
 import type { FactsInput, HabitLite, TickMap } from '../../core/facts.ts'
+import { settled } from '../../core/order.ts'
 import { emptyArbor, foldArbor, type LedgerEvent } from '../linked/arbor-model.ts'
 import { emptyShed, foldShed } from '../linked/shed-model.ts'
 
@@ -21,14 +22,15 @@ export function habitsFrom(config: LedgerEvent | undefined): HabitLite[] {
     const gone = new Set(config.payload.deleted ? (JSON.parse(String(config.payload.deleted)) as string[]) : [])
     return habits
       .filter((h) => h && h.id && !gone.has(h.id))
-      .map((h) => ({ id: h.id, tier: h.tier, spans: Array.isArray(h.spans) && h.spans.length ? h.spans : [{ from: EPOCH, to: null }] }))
+      .map((h) => ({ id: h.id, tier: h.tier, name: h.name, emoji: h.emoji, spans: Array.isArray(h.spans) && h.spans.length ? h.spans : [{ from: EPOCH, to: null }] }))
   } catch {
     return []
   }
 }
 
 export function ingest(events: LedgerEvent[], config: LedgerEvent | undefined, today: string): FactsInput {
-  const sorted = [...events].sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0))
+  // in the order things happened, by the server's clock where the device's own cannot be trusted
+  const sorted = settled(events)
   const ticks: TickMap = {}
   for (const ev of sorted) {
     const p = ev.payload ?? {}

@@ -198,3 +198,46 @@ test('facts: spans, grace period, block proportions', () => {
   assert.equal(inTime(new Date(addDays(GAME_START, 1) + 'T23:00:00').toISOString(), GAME_START), true)
   assert.equal(inTime(new Date(addDays(GAME_START, 2) + 'T00:30:00').toISOString(), GAME_START), false)
 })
+
+// ── order.ts ──
+import { happenedAt, inOrder, settled } from './order.ts'
+const ev = (at: string, ins: string | undefined, type = 'tick') => ({ at, inserted_at: ins, type })
+
+test('a live event is ordered by the server clock, so a slow phone clock cannot undo the order', () => {
+  // PC ticks at 12:00:10 (clock right); phone unticks 5 s later by the server, but its clock is 13 s behind
+  const tick = ev('2026-10-04T12:00:10.000Z', '2026-10-04T12:00:10.200Z')
+  const untick = ev('2026-10-04T12:00:02.000Z', '2026-10-04T12:00:15.300Z', 'untick')
+  assert.deepEqual(inOrder([untick, tick]).map((e) => e.type), ['tick', 'untick'])
+})
+
+test('an event that waited in an outbox keeps the device clock', () => {
+  const queued = ev('2026-10-04T09:00:00.000Z', '2026-10-04T12:30:00.000Z') // made at 9, arrived at 12:30
+  const live = ev('2026-10-04T11:00:00.000Z', '2026-10-04T11:00:00.300Z', 'untick')
+  assert.deepEqual(inOrder([live, queued]).map((e) => e.type), ['tick', 'untick'])
+  assert.equal(happenedAt(queued), Date.parse(queued.at))
+})
+
+test('rows without a server stamp fall back to at; settled() rewrites at to the ordering time', () => {
+  assert.equal(happenedAt(ev('2026-10-04T12:00:00.000Z', undefined)), Date.parse('2026-10-04T12:00:00.000Z'))
+  const [s] = settled([ev('2026-10-04T12:00:02.000Z', '2026-10-04T12:00:15.300Z')])
+  assert.equal(s.at, '2026-10-04T12:00:15.300Z')
+})
+
+// ── today's slice of the bar ──
+test('the bar splits into what was there this morning and what today added', () => {
+  const g = foldGame([day(0, { code: 1 }), day(1, { gym: 1 })]) // 100 + 100
+  assert.equal(g.today.xp, 100)
+  assert.equal(g.into, 200 - xpForLevel(levelOf(200)))
+  assert.equal(g.intoBeforeToday, Math.max(100, xpForLevel(levelOf(200))) - xpForLevel(levelOf(200)))
+  assert.ok(g.intoBeforeToday <= g.into)
+  const none = foldGame([day(0, { code: 1 }), day(1, {})])
+  assert.equal(none.intoBeforeToday, none.into) // nothing today: the whole bar was already there
+})
+
+test('a level-up today only counts the part above the new level floor', () => {
+  // level 2 starts at 24 XP: 0 → 100 crosses levels 2,3 (54) and 4 (96): today's slice sits above floor of level 4
+  const g = foldGame([day(0, { code: 1 })])
+  assert.equal(levelOf(100), 4)
+  assert.equal(g.intoBeforeToday, 0)
+  assert.equal(g.into, 100 - 96)
+})
