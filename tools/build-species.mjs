@@ -1,0 +1,154 @@
+// Builds core/species.ts from the public species table (names, numbers,
+// evolution links) and checks every entry against the sprite archive, so the
+// game never refers to a form it cannot show.
+//
+//   node tools/build-species.mjs <path to unpacked sprites folder>
+//
+// Also copies the sprites that are actually used into public/sprites/.
+import fs from 'node:fs'
+import path from 'node:path'
+
+const SRC = process.argv[2]
+if (!SRC || !fs.existsSync(path.join(SRC, 'gen5ani'))) {
+  console.error('usage: node tools/build-species.mjs <sprites folder containing gen5ani/, gen5/ ...>')
+  process.exit(1)
+}
+const ROOT = path.resolve(import.meta.dirname, '..')
+const CACHE = path.join(ROOT, 'tools/.cache/pokedex.json')
+if (!fs.existsSync(CACHE)) {
+  const res = await fetch('https://play.pokemonshowdown.com/data/pokedex.json')
+  fs.mkdirSync(path.dirname(CACHE), { recursive: true })
+  fs.writeFileSync(CACHE, await res.text())
+}
+const DEX = JSON.parse(fs.readFileSync(CACHE, 'utf8'))
+
+const toID = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, '')
+const spriteOf = (e) => (e.baseSpecies ? `${toID(e.baseSpecies)}-${toID(e.forme)}` : toID(e.name))
+const genOf = (n) => (n <= 151 ? 1 : n <= 251 ? 2 : n <= 386 ? 3 : n <= 493 ? 4 : n <= 649 ? 5 : n <= 721 ? 6 : n <= 809 ? 7 : n <= 905 ? 8 : 9)
+const has = (dir, id, ext) => fs.existsSync(path.join(SRC, dir, `${id}.${ext}`))
+const hasAni = (id) => has('gen5ani', id, 'gif')
+const hasStatic = (id) => has('gen5', id, 'png')
+const hasSprite = (id) => hasAni(id) || hasStatic(id)
+const bst = (e) => Object.values(e.baseStats).reduce((a, b) => a + b, 0)
+const LEGEND = new Set(['Restricted Legendary', 'Sub-Legendary', 'Mythical'])
+
+// What a branch says about you. The branch whose tag you did best on wins.
+const TYPE_TAG = {
+  Fighting: 'fitness', Rock: 'fitness', Ground: 'fitness', Steel: 'fitness', Fire: 'fitness', Dragon: 'fitness',
+  Psychic: 'code', Electric: 'code', Ghost: 'code',
+  Fairy: 'guitar', Normal: 'guitar', Flying: 'guitar',
+  Grass: 'arbor', Dark: 'sleep',
+  Water: 'routine', Ice: 'routine', Bug: 'routine', Poison: 'routine',
+}
+const BRANCH_OVERRIDE = {
+  eevee: { jolteon: 'code', flareon: 'fitness', sylveon: 'guitar', leafeon: 'arbor', umbreon: 'sleep', vaporeon: 'routine', espeon: 'balanced', glaceon: 'health' },
+}
+
+// base formes only, real species only
+const base = Object.entries(DEX).filter(([, e]) => !e.forme && e.num > 0 && !(e.tags ?? []).includes('Pokestar'))
+const byId = new Map(base.map(([id, e]) => [id, e]))
+const evosOf = (e) => (e.evos ?? []).map(toID).filter((id) => byId.has(id) && hasSprite(id))
+const rootOf = (id) => {
+  let cur = id
+  for (;;) {
+    const p = byId.get(cur)?.prevo
+    if (!p || !byId.has(toID(p)) || !hasSprite(toID(p))) return cur
+    cur = toID(p)
+  }
+}
+const members = (id) => [id, ...evosOf(byId.get(id)).flatMap(members)]
+const depth = (id) => 1 + Math.max(0, ...evosOf(byId.get(id)).map(depth))
+
+const out = {}
+const used = new Set() // sprite ids to copy
+let lines = 0
+for (const [id, e] of base) {
+  if (rootOf(id) !== id || !hasSprite(id)) continue
+  const line = members(id)
+  const gen = Math.min(...line.map((m) => genOf(byId.get(m).num)))
+  if (gen > 5) continue
+  lines++
+  const finals = line.filter((m) => evosOf(byId.get(m)).length === 0)
+  const top = Math.max(...finals.map((m) => bst(byId.get(m))))
+  const legendary = (e.tags ?? []).some((t) => LEGEND.has(t))
+  const rarity = legendary ? 'L' : top >= 590 ? 'R' : top >= 500 ? 'U' : 'C'
+  const depthMax = depth(id)
+  const walk = (sid, stage) => {
+    const s = byId.get(sid)
+    const evos = evosOf(s)
+    const megas = (s.otherFormes ?? [])
+      .map((n) => DEX[toID(n)])
+      .filter((f) => f && /^Mega/.test(f.forme))
+      .map(spriteOf)
+      .filter(hasSprite)
+    const gmax = s.canGigantamax && hasSprite(`${sid}-gmax`) ? `${sid}-gmax` : undefined
+    const rec = { n: s.name, d: s.num, t: s.types[0], s: stage }
+    if (!hasAni(sid)) rec.st = 1
+    if (stage === 1) Object.assign(rec, { g: gen, r: rarity, x: depthMax })
+    else rec.b = id
+    if (evos.length) rec.e = evos
+    if (evos.length > 1) {
+      const tag = (ev, i) => TYPE_TAG[byId.get(ev).types[i] ?? byId.get(ev).types[0]] ?? 'routine'
+      const first = evos.map((ev) => tag(ev, 0))
+      // branches that share a primary type are told apart by their second one
+      rec.bt = evos.map((ev, i) => BRANCH_OVERRIDE[sid]?.[ev] ?? (first.filter((t) => t === first[i]).length > 1 ? tag(ev, 1) : first[i]))
+    }
+    if (megas.length) rec.m = megas
+    if (gmax) rec.gm = gmax
+    out[sid] = rec
+    used.add(sid)
+    for (const f of [...megas, ...(gmax ? [gmax] : [])]) {
+      used.add(f)
+      const fe = Object.values(DEX).find((x) => x.baseSpecies && spriteOf(x) === f)
+      out[f] = { n: fe ? fe.name : `${s.name}-Gmax`, d: s.num, t: (fe ?? s).types[0], s: stage, b: id, f: sid }
+      if (!hasAni(f)) out[f].st = 1
+    }
+    evos.forEach((ev) => walk(ev, stage + 1))
+  }
+  walk(id, 1)
+}
+
+// ── write core/species.ts ──
+const ordered = Object.fromEntries(Object.entries(out).sort((a, b) => a[1].d - b[1].d || (a[1].f ? 1 : 0) - (b[1].f ? 1 : 0)))
+const ts = `// GENERATED by tools/build-species.mjs. Do not edit by hand.
+// Names, numbers and evolution links only: no artwork lives in this file.
+//
+// n name · d dex number · t primary type · s stage · st static sprite only
+// first stages: g region (1-5) · r rarity (C U R L) · x stages in the line
+// others: b first stage of the line · f the species this is a temporary form of
+// e evolutions · bt what each branch stands for · m mega forms · gm gigantamax form
+export interface SpeciesRec {
+  n: string; d: number; t: string; s: number; st?: 1
+  g?: number; r?: 'C' | 'U' | 'R' | 'L'; x?: number
+  b?: string; f?: string
+  e?: string[]; bt?: string[]; m?: string[]; gm?: string
+}
+export const SPECIES: Record<string, SpeciesRec> = ${JSON.stringify(ordered)}
+`
+fs.writeFileSync(path.join(ROOT, 'core/species.ts'), ts)
+
+// ── copy the sprites in use ──
+const DEST = path.join(ROOT, 'public/sprites')
+const sets = [['gen5ani', 'ani', 'gif'], ['gen5ani-shiny', 'ani-shiny', 'gif'], ['gen5', 'static', 'png'], ['gen5-shiny', 'static-shiny', 'png']]
+let copied = 0, bytes = 0
+const missingShiny = []
+for (const [from, to, ext] of sets) {
+  fs.mkdirSync(path.join(DEST, to), { recursive: true })
+  for (const id of used) {
+    const src = path.join(SRC, from, `${id}.${ext}`)
+    if (!fs.existsSync(src)) {
+      if (to === 'static-shiny' && !has('gen5ani-shiny', id, 'gif')) missingShiny.push(id)
+      continue
+    }
+    // animated ids do not need a static copy, except as the still for reduced motion
+    fs.copyFileSync(src, path.join(DEST, to, `${id}.${ext}`))
+    copied++
+    bytes += fs.statSync(src).size
+  }
+}
+const firsts = Object.values(out).filter((r) => r.s === 1 && !r.f)
+console.log(`${lines} lines, ${Object.keys(out).length} entries (${Object.values(out).filter((r) => r.f).length} temporary forms)`)
+console.log('by region', [1, 2, 3, 4, 5].map((g) => firsts.filter((r) => r.g === g).length).join(' / '))
+console.log('by rarity', ['C', 'U', 'R', 'L'].map((r) => `${r}:${firsts.filter((x) => x.r === r).length}`).join(' '))
+console.log('static only', Object.values(out).filter((r) => r.st).length, '· branching', Object.values(out).filter((r) => r.bt).length)
+console.log(`copied ${copied} files, ${(bytes / 1e6).toFixed(1)} MB`, missingShiny.length ? `· no shiny sprite: ${missingShiny.join(', ')}` : '')

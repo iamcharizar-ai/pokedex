@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/lib/ingest.ts","./src/lib/ledger.ts","./src/lib/store.ts","./src/linked/arbor-model.ts","./src/linked/shed-model.ts","./core/facts.ts","./core/fold.ts","./core/rules.ts","./core/species.ts"],"version":"6.0.3"}

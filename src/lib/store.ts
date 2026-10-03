@@ -1,0 +1,88 @@
+// The Pokedex reads the shared ledger and recomputes the game from it. It
+// writes nothing: everything you see is earned in Life OS.
+import { useSyncExternalStore } from 'react'
+import { buildFacts, type DayFacts } from '../../core/facts.ts'
+import { foldGame, type Game } from '../../core/fold.ts'
+import { dayISO, type LedgerEvent } from '../linked/arbor-model.ts'
+import { createLedger, type LedgerStatus } from './ledger.ts'
+import { TYPES, ingest } from './ingest.ts'
+
+const env = import.meta.env
+const OFF = env.VITE_SUPABASE_DISABLE === '1'
+const URL_ = OFF ? '' : ((env.VITE_SUPABASE_URL as string | undefined) ?? '')
+const KEY = OFF ? '' : ((env.VITE_SUPABASE_ANON_KEY as string | undefined) ?? '')
+
+export interface View {
+  game: Game
+  facts: DayFacts[]
+  status: LedgerStatus
+  today: string
+}
+
+const events: LedgerEvent[] = []
+let config: LedgerEvent | undefined
+let status: LedgerStatus = URL_ && KEY ? 'connecting' : 'off'
+let view: View = compute()
+const listeners = new Set<() => void>()
+
+function compute(): View {
+  const today = dayISO()
+  const facts = buildFacts(ingest(events, config, today))
+  return { game: foldGame(facts), facts, status, today }
+}
+function refresh(): void {
+  view = compute()
+  listeners.forEach((l) => l())
+}
+
+/** Only the newest habit library matters, and each one is a full copy: fetch just that row. */
+async function pullConfig(): Promise<void> {
+  if (!URL_ || !KEY) return
+  try {
+    const q = new URLSearchParams({ select: 'device,at,day,type,payload', type: 'eq.config', order: 'at.desc', limit: '1' })
+    const res = await fetch(`${URL_.replace(/\/$/, '')}/rest/v1/events?${q}`, { headers: { apikey: KEY, Authorization: `Bearer ${KEY}` } })
+    if (!res.ok) return
+    const [row] = (await res.json()) as LedgerEvent[]
+    if (row && row.at !== config?.at) {
+      config = row
+      refresh()
+    }
+  } catch {
+    /* offline: keep what we have */
+  }
+}
+
+const ledger = createLedger({
+  url: URL_,
+  key: KEY,
+  app: 'pokedex',
+  types: TYPES,
+  onEvents: (fresh) => {
+    events.push(...fresh)
+    refresh()
+    void pullConfig()
+  },
+  onStatus: (s) => {
+    status = s
+    refresh()
+  },
+})
+
+let started = false
+export function start(): void {
+  if (started) return
+  started = true
+  void pullConfig()
+  ledger.start()
+  // the day rolls over while the tab is open
+  setInterval(() => {
+    if (dayISO() !== view.today) refresh()
+    else void pullConfig()
+  }, 60_000)
+}
+
+export const useView = (): View =>
+  useSyncExternalStore((l) => { listeners.add(l); return () => { listeners.delete(l) } }, () => view)
+
+/** Sprites are served by this site, next to the app. */
+export { spritePath } from '../../core/fold.ts'
