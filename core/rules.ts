@@ -55,7 +55,7 @@ export const graduateAt = (stages: number): number => (stages <= 1 ? 30 : 50)
 
 // ── catching ────────────────────────────────────────────────────────────────
 export const START_SPECIES = 'charmander'
-export const REGIONS = ['Kanto', 'Johto', 'Hoenn', 'Sinnoh', 'Unova'] as const
+export const REGIONS = ['Kanto', 'Johto', 'Hoenn', 'Sinnoh', 'Unova', 'Kalos', 'Alola', 'Galar', 'Paldea'] as const
 /** Each pair of graduates opens the next region. */
 export const GRADUATES_PER_REGION = 2
 export const regionsOpen = (graduates: number): number => Math.min(REGIONS.length, 1 + Math.floor(graduates / GRADUATES_PER_REGION))

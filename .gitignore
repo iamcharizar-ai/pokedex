@@ -6,3 +6,6 @@ dist
 !.env.example
 tools/.cache
 .claude
+
+.vercel
+.env*
