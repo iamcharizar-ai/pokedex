@@ -6,7 +6,7 @@ import {
   TIER_XP, evolveAt, graduateAt, levelOf, xpForLevel,
 } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
-import { start, useView } from './lib/store.ts'
+import { VITALS_URL, start, useView, type BodyDay } from './lib/store.ts'
 
 type Tab = 'partner' | 'dex' | 'journal' | 'rules'
 const TABS: [Tab, string][] = [['partner', 'Partner'], ['dex', 'Pokedex'], ['journal', 'Journal'], ['rules', 'How it works']]
@@ -19,7 +19,7 @@ function Sprite({ form, shiny, size, className = '' }: { form: string; shiny?: b
 }
 
 // ── Partner ─────────────────────────────────────────────────────────────────
-function PartnerTab({ game, facts }: { game: Game; facts: DayFacts[] }) {
+function PartnerTab({ game, facts, body }: { game: Game; facts: DayFacts[]; body: BodyDay | null }) {
   const { partner, today, momentum } = game
   const last7 = game.days.slice(-8, -1)
   const todayFacts = facts[facts.length - 1]?.habits ?? []
@@ -96,6 +96,15 @@ function PartnerTab({ game, facts }: { game: Game; facts: DayFacts[] }) {
           )}
         </div>
       </section>
+      {body && (
+        <a className="panel bodyline" href={VITALS_URL} target="_blank" rel="noreferrer">
+          <h2>Body <span className="num">{fmtDay(body.day)}</span></h2>
+          <p className="muted">
+            {[body.sleepMin !== undefined && `slept ${Math.floor(body.sleepMin / 60)}h ${String(body.sleepMin % 60).padStart(2, '0')}m`, body.steps !== undefined && `${body.steps.toLocaleString('en-IN')} steps`, body.weightKg !== undefined && `${body.weightKg} kg`].filter(Boolean).join(' · ') || 'readings recorded'}
+            {' · open Vitals'}
+          </p>
+        </a>
+      )}
     </>
   )
 }
@@ -267,7 +276,7 @@ export default function App() {
         {TABS.map(([id, label]) => <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)}>{label}</button>)}
       </nav>
       <main>
-        {tab === 'partner' && <PartnerTab game={game} facts={view.facts} />}
+        {tab === 'partner' && <PartnerTab game={game} facts={view.facts} body={view.body} />}
         {tab === 'dex' && <DexTab game={game} />}
         {tab === 'journal' && <JournalTab game={game} />}
         {tab === 'rules' && <RulesTab />}

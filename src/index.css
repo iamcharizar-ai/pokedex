@@ -128,3 +128,6 @@ header { display: flex; justify-content: space-between; align-items: baseline; b
   .rows li { grid-template-columns: 96px 1fr 58px; }
 }
 @media (prefers-reduced-motion: reduce) { .bar i { transition: none; } }
+
+.bodyline { display: block; margin-top: 14px; color: inherit; text-decoration: none; }
+.bodyline h2 { margin-bottom: 4px; }

@@ -12,7 +12,17 @@ const OFF = env.VITE_SUPABASE_DISABLE === '1'
 const URL_ = OFF ? '' : ((env.VITE_SUPABASE_URL as string | undefined) ?? '')
 const KEY = OFF ? '' : ((env.VITE_SUPABASE_ANON_KEY as string | undefined) ?? '')
 
+/** The newest day Vitals has readings for. Absent until Vitals writes something: nothing here depends on it. */
+export interface BodyDay {
+  day: string
+  sleepMin?: number
+  steps?: number
+  weightKg?: number
+}
+export const VITALS_URL: string = (env.VITE_VITALS_URL as string | undefined) ?? 'https://vitals-theta-pied.vercel.app'
+
 export interface View {
+  body: BodyDay | null
   game: Game
   facts: DayFacts[]
   status: LedgerStatus
@@ -28,7 +38,14 @@ const listeners = new Set<() => void>()
 function compute(): View {
   const today = dayISO()
   const facts = buildFacts(ingest(events, config, today))
-  return { game: foldGame(facts), facts, status, today }
+  const vit = events.filter((e) => e.type === 'vitals').sort((a, b) => (a.at < b.at ? -1 : 1))
+  const last = vit.map((e) => e.day).sort().pop()
+  let body: BodyDay | null = null
+  if (last) {
+    body = { day: last }
+    for (const e of vit) if (e.day === last) for (const k of ['sleepMin', 'steps', 'weightKg'] as const) if (typeof e.payload[k] === 'number') body[k] = e.payload[k] as number
+  }
+  return { body, game: foldGame(facts), facts, status, today }
 }
 function refresh(): void {
   view = compute()

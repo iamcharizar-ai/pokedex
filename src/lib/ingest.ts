@@ -6,9 +6,12 @@ import { emptyArbor, foldArbor, type LedgerEvent } from '../linked/arbor-model.t
 import { emptyShed, foldShed } from '../linked/shed-model.ts'
 
 const GYM = 'gym'
+const SLEEP = 'sleep-before-10'
+/** A measured bedtime ticks the sleep habit when it was this early. Never un-ticks, never locks: hand ticks still count. */
+const BED_BY = '22:30'
 const EPOCH = '1970-01-01'
 
-export const TYPES = ['tick', 'untick', 'workout', 'workout_clear', 'skill', 'plan', 'guitar', 'guitar_plan']
+export const TYPES = ['tick', 'untick', 'workout', 'workout_clear', 'skill', 'plan', 'guitar', 'guitar_plan', 'vitals']
 
 /** The habit library from the newest `config` event. */
 export function habitsFrom(config: LedgerEvent | undefined): HabitLite[] {
@@ -35,6 +38,11 @@ export function ingest(events: LedgerEvent[], config: LedgerEvent | undefined, t
     // a finished Strong workout is what ticks Gym
     else if (ev.type === 'workout') day[GYM] ??= String(p.at ?? ev.at)
     else if (ev.type === 'workout_clear') delete day[GYM]
+    // Vitals: a night that began on time ticks that evening's sleep habit (same rule Life OS applies)
+    else if (ev.type === 'vitals' && typeof p.bed === 'string') {
+      const date = p.bed.slice(0, 10), time = p.bed.slice(11, 16)
+      if (time >= '18:00' && time <= BED_BY) (ticks[date] ??= {})[SLEEP] ??= ev.at
+    }
   }
   return {
     habits: habitsFrom(config),
