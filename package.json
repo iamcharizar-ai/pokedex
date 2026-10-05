@@ -12,6 +12,7 @@
     "species": "node tools/build-species.mjs"
   },
   "dependencies": {
+    "@fontsource/pixelify-sans": "^5.3.0",
     "@fontsource/silkscreen": "^5.3.0",
     "@fontsource/space-grotesk": "^5.2.10",
     "react": "^19.2.7",

@@ -241,3 +241,12 @@ test('a level-up today only counts the part above the new level floor', () => {
   assert.equal(g.intoBeforeToday, 0)
   assert.equal(g.into, 100 - 96)
 })
+
+test('the wild one is known before the day is perfect, and is the one that gets caught', () => {
+  const before = foldGame([day(0, { code: 1 })])
+  assert.ok(before.wild && !before.wild.caught)
+  const after = foldGame([day(0, ALL)])
+  assert.ok(after.wild?.caught)
+  assert.equal(after.wild.form, before.wild.form)
+  assert.equal(after.queue[0].base, after.wild.form)
+})

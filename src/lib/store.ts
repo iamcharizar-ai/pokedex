@@ -19,6 +19,8 @@ export interface BodyDay {
   steps?: number
   weightKg?: number
 }
+/** Where the habits are ticked. */
+export const LIFEOS_URL: string = (env.VITE_LIFEOS_URL as string | undefined) ?? 'https://redesign-life-os-ui.vercel.app'
 export const VITALS_URL: string = (env.VITE_VITALS_URL as string | undefined) ?? 'https://vitals-theta-pied.vercel.app'
 
 export interface View {
