@@ -156,6 +156,25 @@ for (const [from, to, ext] of sets) {
     bytes += fs.statSync(src).size
   }
 }
+// ── the Bag's item icons, the gym leaders and the type icons ──
+const { TRAINER_SPRITES, LEAGUES } = await import('../core/gyms.ts')
+const { STONES } = await import('../core/rules.ts')
+// two icons the archive files under another name
+const ITEM_FILE = { 'thunder-stone': 'itemicons/thunderstone.png', 'ice-stone': 'itemicons/nevermeltice.png' }
+const extras = [
+  ...STONES.map((id) => [ITEM_FILE[id] ?? `itemicons/${id}.png`, `items/${id}.png`]),
+  ...TRAINER_SPRITES.map((id) => [`trainers/${id}.png`, `trainers/${id}.png`]),
+  ...[...new Set(LEAGUES.flatMap((l) => [...l.gyms, ...l.four, l.champion].map((t) => t.type)))].map((t) => [`typeicons/${t}.png`, `types/${t}.png`]),
+]
+const missing = []
+for (const [from, to] of extras) {
+  const src = path.join(SRC, from)
+  if (!fs.existsSync(src)) { missing.push(from); continue }
+  fs.mkdirSync(path.dirname(path.join(DEST, to)), { recursive: true })
+  fs.copyFileSync(src, path.join(DEST, to))
+}
+console.log(`extras: ${extras.length - missing.length} copied`, missing.length ? `· missing: ${missing.join(', ')}` : '')
+
 const firsts = Object.values(out).filter((r) => r.s === 1 && !r.f)
 console.log(`${lines} lines, ${Object.keys(out).length} entries (${Object.values(out).filter((r) => r.f).length} temporary forms)`)
 console.log('by region', [1, 2, 3, 4, 5, 6, 7, 8, 9].map((g) => firsts.filter((r) => r.g === g).length).join(' / '))

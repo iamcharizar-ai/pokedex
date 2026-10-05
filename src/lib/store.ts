@@ -1,7 +1,9 @@
-// The Pokedex reads the shared ledger and recomputes the game from it. It
-// writes nothing: everything you see is earned in Life OS.
+// The Pokedex reads the shared ledger and recomputes the game from it.
+// Everything you see is earned in Life OS; the one thing written here is an
+// item being used from the Bag.
 import { useSyncExternalStore } from 'react'
 import { buildFacts, type DayFacts } from '../../core/facts.ts'
+import { USE_EVENT } from '../../core/events.ts'
 import { foldGame, type Game } from '../../core/fold.ts'
 import { dayISO, type LedgerEvent } from '../linked/arbor-model.ts'
 import { createLedger, type LedgerStatus } from './ledger.ts'
@@ -98,6 +100,12 @@ export function start(): void {
     if (dayISO() !== view.today) refresh()
     else void pullConfig()
   }, 60_000)
+}
+
+/** Spend a stone from the Bag on one Pokemon. Final, like the games: there is no taking it back. */
+export function useItem(item: string, uid: string, what: string, to?: string): void {
+  events.push(ledger.emit(USE_EVENT, { item, uid, what, ...(to ? { to } : {}) }))
+  refresh()
 }
 
 export const useView = (): View =>

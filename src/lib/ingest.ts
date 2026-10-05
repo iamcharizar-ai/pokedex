@@ -2,17 +2,18 @@
 // blocks). Mirrors how Life OS folds the same events, so both apps hand the
 // core the same days.
 import type { FactsInput, HabitLite, TickMap } from '../../core/facts.ts'
+import { BODY_EVENT, USE_EVENT, bodyOf, usesOf } from '../../core/events.ts'
 import { settled } from '../../core/order.ts'
 import { emptyArbor, foldArbor, type LedgerEvent } from '../linked/arbor-model.ts'
 import { emptyShed, foldShed } from '../linked/shed-model.ts'
 
 const GYM = 'gym'
 const SLEEP = 'sleep-before-10'
-/** A measured bedtime ticks the sleep habit when it was this early. Never un-ticks, never locks: hand ticks still count. */
+/** A hand-entered bedtime ticks the sleep habit when it was this early. A row from the band carries a sleep score instead, and Sleep is judged on that. */
 const BED_BY = '22:30'
 const EPOCH = '1970-01-01'
 
-export const TYPES = ['tick', 'untick', 'workout', 'workout_clear', 'skill', 'plan', 'guitar', 'guitar_plan', 'vitals']
+export const TYPES = ['tick', 'untick', 'workout', 'workout_clear', 'skill', 'plan', 'guitar', 'guitar_plan', BODY_EVENT, USE_EVENT]
 
 /** The habit library from the newest `config` event. */
 export function habitsFrom(config: LedgerEvent | undefined): HabitLite[] {
@@ -41,7 +42,7 @@ export function ingest(events: LedgerEvent[], config: LedgerEvent | undefined, t
     else if (ev.type === 'workout') day[GYM] ??= String(p.at ?? ev.at)
     else if (ev.type === 'workout_clear') delete day[GYM]
     // Vitals: a night that began on time ticks that evening's sleep habit (same rule Life OS applies)
-    else if (ev.type === 'vitals' && typeof p.bed === 'string') {
+    else if (ev.type === 'vitals' && typeof p.bed === 'string' && typeof p.sleepScore !== 'number') {
       const date = p.bed.slice(0, 10), time = p.bed.slice(11, 16)
       if (time >= '18:00' && time <= BED_BY) (ticks[date] ??= {})[SLEEP] ??= ev.at
     }
@@ -51,6 +52,8 @@ export function ingest(events: LedgerEvent[], config: LedgerEvent | undefined, t
     ticks,
     arbor: foldArbor(emptyArbor(), sorted.filter((e) => e.type === 'skill' || e.type === 'plan')),
     shed: foldShed(emptyShed(), sorted.filter((e) => e.type === 'guitar' || e.type === 'guitar_plan')),
+    body: bodyOf(sorted),
+    uses: usesOf(sorted),
     today,
   }
 }
