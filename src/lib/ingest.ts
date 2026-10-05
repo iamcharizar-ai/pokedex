@@ -2,7 +2,7 @@
 // blocks). Mirrors how Life OS folds the same events, so both apps hand the
 // core the same days.
 import type { FactsInput, HabitLite, TickMap } from '../../core/facts.ts'
-import { BODY_EVENT, USE_EVENT, bodyOf, usesOf } from '../../core/events.ts'
+import { BODY_EVENT, LIST_EVENT, USE_EVENT, bodyOf, listsOf, usesOf } from '../../core/events.ts'
 import { settled } from '../../core/order.ts'
 import { emptyArbor, foldArbor, type LedgerEvent } from '../linked/arbor-model.ts'
 import { emptyShed, foldShed } from '../linked/shed-model.ts'
@@ -13,7 +13,7 @@ const SLEEP = 'sleep-before-10'
 const BED_BY = '22:30'
 const EPOCH = '1970-01-01'
 
-export const TYPES = ['tick', 'untick', 'workout', 'workout_clear', 'skill', 'plan', 'guitar', 'guitar_plan', BODY_EVENT, USE_EVENT]
+export const TYPES = ['tick', 'untick', 'workout', 'workout_clear', 'skill', 'plan', 'guitar', 'guitar_plan', BODY_EVENT, USE_EVENT, LIST_EVENT]
 
 /** The habit library from the newest `config` event. */
 export function habitsFrom(config: LedgerEvent | undefined): HabitLite[] {
@@ -52,6 +52,7 @@ export function ingest(events: LedgerEvent[], config: LedgerEvent | undefined, t
     ticks,
     arbor: foldArbor(emptyArbor(), sorted.filter((e) => e.type === 'skill' || e.type === 'plan')),
     shed: foldShed(emptyShed(), sorted.filter((e) => e.type === 'guitar' || e.type === 'guitar_plan')),
+    lists: listsOf(sorted),
     body: bodyOf(sorted),
     uses: usesOf(sorted),
     today,

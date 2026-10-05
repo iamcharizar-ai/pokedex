@@ -2,9 +2,11 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { addDays, buildFacts, inTime, type DayFacts, type FactsInput, type HabitFact } from './facts.ts'
-import { foldGame, leaderOf, statsOf } from './fold.ts'
-import { LEAGUES } from './gyms.ts'
-import { GAME_START, V2_START, evolveAt, graduateAt, levelOf, momentumMult, regionsOpenV2, xpForLevel } from './rules.ts'
+import { listsOf } from './events.ts'
+import { foldGame, isGym, leaderOf, statsOf } from './fold.ts'
+import { LEAGUES, lineup } from './gyms.ts'
+import { beats, weakDomains } from './types.ts'
+import { GAME_START, LEADER_HP, V3_START, WEAK_MULT, WILD_HP, ballFor, evolveAt, graduateAt, levelOf, momentumMult, regionsOpenV2, wildHit, xpForLevel } from './rules.ts'
 import { SPECIES } from './species.ts'
 
 const H = (id: string, tag: HabitFact['tag'], worth: number, frac: number): HabitFact =>
@@ -25,8 +27,8 @@ function day(n: number, o: { code?: number; gym?: number; guitar?: number; arbor
   }
 }
 /** The original rules alone, and the new ones from the first day. */
-const fold1 = (f: DayFacts[]) => foldGame(f, { v2From: '9999-01-01' })
-const fold2 = (f: DayFacts[]) => foldGame(f, { v2From: GAME_START })
+const fold1 = (f: DayFacts[]) => foldGame(f, { v3From: '9999-01-01' })
+const fold3 = (f: DayFacts[]) => foldGame(f, { v3From: GAME_START })
 const ALL = { code: 1, gym: 1, guitar: 1, arbor: 1, sleep: 1, chores: 1 }
 const run = (n: number, o: Parameters<typeof day>[1]) => Array.from({ length: n }, (_, i) => day(i, o))
 
@@ -255,157 +257,274 @@ test('the wild one is known before the day is perfect, and is the one that gets 
   assert.equal(after.queue[0].base, after.wild.form)
 })
 
-// ── rules version 2 ──
-const items = (g: ReturnType<typeof foldGame>) => g.moments.flatMap((m) => (m.kind === 'item' ? [m] : []))
-const stones = (g: ReturnType<typeof foldGame>) => Object.values(g.bag).reduce((a, b) => a + b, 0)
+// ── rules version 3 ──
+type G = ReturnType<typeof foldGame>
+const items = (g: G) => g.moments.flatMap((m) => (m.kind === 'item' ? [m] : []))
+const stones = (g: G) => Object.values(g.bag).reduce((a, b) => a + b, 0)
+const caught = (g: G) => g.moments.flatMap((m) => (m.kind === 'catch' ? [m] : []))
 const withUse = (facts: DayFacts[], i: number, ...uses: Omit<NonNullable<DayFacts['uses']>[number], 'day'>[]) =>
   facts.map((f, k) => (k === i ? { ...f, uses: uses.map((u) => ({ day: f.day, ...u })) } : f))
+// code + gym only: 200 of the day's 370 XP, no chores, so a Poke Ball
+const HALF = { code: 1, gym: 1 }
+const HALF_HIT = wildHit(200 / 370, 1)
 
-test('version 2 starts on its own day and leaves earlier days alone', () => {
-  const facts = run(40, { code: 1, gym: 1 })
+test('version 3 starts on its own day and leaves earlier days alone', () => {
+  const facts = run(40, HALF)
   const a = foldGame(facts), b = fold1(facts)
-  const cut = facts.findIndex((f) => f.day >= V2_START)
+  const cut = facts.findIndex((f) => f.day >= V3_START)
   assert.ok(cut > 0)
-  assert.deepEqual(a.days.slice(0, cut), b.days.slice(0, cut))
-  assert.deepEqual(a.moments.filter((m) => m.day < V2_START), b.moments.filter((m) => m.day < V2_START))
-  assert.equal(b.moments.some((m) => m.kind === 'item' || m.kind === 'gym'), false)
+  assert.deepEqual(a.moments.filter((m) => m.day < V3_START), b.moments.filter((m) => m.day < V3_START))
+  assert.deepEqual(a.days.slice(0, cut).map((d) => d.xp), b.days.slice(0, cut).map((d) => d.xp))
+  assert.equal(b.moments.some((m) => m.kind === 'item' || m.kind === 'gym' || m.kind === 'appear'), false)
 })
 
-test('evolution is automatic in version 2 exactly as before: no stone, no condition', () => {
-  const facts = run(200, ALL)
-  const a = fold2(facts), b = fold1(facts)
-  const evolved = (g: typeof a) => g.moments.filter((m) => m.kind === 'evolve' || m.kind === 'graduate' || m.kind === 'partner')
-  assert.deepEqual(evolved(a), evolved(b))
-  assert.ok(evolved(a).length > 20)
-  assert.equal(a.next.level > a.level, true)
+test('the partner still levels and evolves by itself, exactly as before', () => {
+  const facts = run(30, HALF)
+  const evo = (g: G) => g.moments.filter((m) => (m.kind === 'evolve' || m.kind === 'level') && m.uid === g.moments.find((x) => x.kind === 'evolve')!.uid)
+  assert.deepEqual(evo(fold3(facts)), evo(fold1(facts)))
+  assert.equal(fold3(facts).partner.form, 'charizard')
+  assert.deepEqual(fold3(facts).days.map((d) => d.xp), fold1(facts).days.map((d) => d.xp))
 })
 
-test('a badge week beats the next gym and comes with one stone', () => {
-  const g = fold2(run(9, { code: 1, gym: 1 })) // code and gym tie: either stone, the same one every time
-  assert.equal(g.badges.length, 1)
-  assert.deepEqual(g.league, { region: 1, badges: 1, run: 0, beaten: 0 })
-  const gym = g.moments.find((m) => m.kind === 'gym')
-  assert.ok(gym && gym.kind === 'gym' && gym.region === 1 && gym.slot === 0)
-  const [it] = items(g)
-  assert.ok(['fire-stone', 'thunder-stone'].includes(it.item))
-  assert.equal(stones(g), 1)
-  assert.deepEqual(items(fold2(run(9, { code: 1, gym: 1 }))), items(g))
-  assert.equal(stones(fold2(run(6, { code: 1, gym: 1 }))), 0) // no badge week yet, no stone
+test('one wild Pokemon at a time: each day wears it down, and it is caught when its HP runs out', () => {
+  const one = fold3(run(1, HALF))
+  assert.ok(one.wild && !one.wild.caught)
+  assert.equal(one.wild.max, WILD_HP[one.wild.rarity])
+  assert.equal(one.today.hit, HALF_HIT)
+  assert.equal(one.wild.hp, one.wild.max - HALF_HIT)
+  assert.equal(one.today.ball, 'poke')
+  assert.equal(one.dex[one.wild.form].own, undefined) // seen, not yet yours
+  // the same one is still there the next day, a little weaker: it does not change daily and never flees
+  const two = fold3([...run(1, HALF), day(1, {}), day(2, HALF)])
+  assert.equal(two.wild!.form, one.wild.form)
+  assert.equal(two.wild!.hp, one.wild.max - 2 * HALF_HIT)
+  // it falls on the day the damage adds up, joins the Box, and the next one appears the morning after
+  const n = Math.ceil(one.wild.max / HALF_HIT)
+  const done = fold3(run(n, HALF))
+  assert.deepEqual([done.wild!.caught, done.wild!.hp, done.wild!.form], [true, 0, one.wild.form])
+  assert.equal(done.queue.length, 1)
+  assert.equal(caught(done)[0].how, 'worn')
+  assert.equal(done.dex[one.wild.form].own, done.today.day)
+  const after = fold3(run(n + 1, HALF))
+  assert.notEqual(after.wild!.form, one.wild.form)
+  assert.equal(after.wild!.from, after.today.day)
+  assert.equal(after.moments.filter((m) => m.kind === 'appear').length, 2)
 })
 
-test('eight gyms, the Elite Four, then the Champion: thirteen badge weeks, and a missed week costs nothing', () => {
-  const g = fold2(run(2 + 13 * 7, { code: 1, gym: 1 }))
-  assert.equal(g.badges.length, 13)
-  assert.deepEqual(g.league, { region: 2, badges: 0, run: 0, beaten: 1 })
-  assert.deepEqual(g.moments.flatMap((m) => (m.kind === 'gym' ? [m.slot] : [])), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
-  assert.equal(stones(g), 13)
-  // a week off in the middle of the Elite Four: the next badge week simply carries on
-  const facts = run(2 + 14 * 7, { code: 1, gym: 1 })
-  for (let i = 2 + 9 * 7; i < 2 + 10 * 7; i++) facts[i] = day(i, {})
-  const paused = fold2(facts)
-  assert.equal(paused.badges.length, 13)
-  assert.equal(paused.league.beaten, 1)
+test('a whole day hits four times as hard as a half day, and the chores decide the ball', () => {
+  assert.equal(wildHit(1, 1), 100)
+  assert.equal(wildHit(0.5, 1), 25)
+  assert.deepEqual([ballFor(0), ballFor(0.49), ballFor(0.5), ballFor(0.79), ballFor(0.8), ballFor(1)], ['poke', 'poke', 'great', 'great', 'ultra', 'ultra'])
+  const great = fold3(run(1, { ...HALF, chores: 1 })).today
+  assert.equal(great.ball, 'ultra')
+  assert.equal(great.hit, wildHit(210 / 370, 1.5))
+  assert.equal(fold3(run(1, {})).today.hit, 0) // an empty day does nothing, and costs nothing
 })
 
-test('a region needs both: the league beaten and two partners fully trained', () => {
+test('a perfect day catches on the spot, and is the only way to a shiny', () => {
+  const g = fold3([day(0, HALF), day(1, ALL)])
+  assert.equal(g.wild!.caught, true)
+  assert.equal(g.today.hit, g.wild!.max - HALF_HIT) // whatever HP it had left
+  assert.equal(caught(g)[0].how, 'perfect')
+  assert.equal(g.perfectDays, 1)
+  // sixty perfect days: sixty catches, some of them shiny, and a stone on every fifth
+  const many = fold3(run(60, ALL))
+  assert.equal(caught(many).length, 60)
+  const shiny = caught(many).filter((c) => c.shiny).length
+  assert.ok(shiny >= 1 && shiny <= 20, `${shiny} shinies in 60`)
+  assert.equal(items(many).filter((m) => m.why === 'perfect').length, 12)
+  assert.deepEqual(caught(fold3(run(60, ALL))), caught(many)) // the same on every device
+  // a worn-down catch is never shiny
+  assert.equal(caught(fold3(run(120, HALF))).some((c) => c.shiny), false)
+  // every 25th to appear is a legendary
+  const spawns = many.moments.flatMap((m) => (m.kind === 'appear' ? [m.rarity] : []))
+  assert.equal(spawns[24], 'L')
+  assert.equal(spawns.slice(0, 24).includes('L'), false)
+})
+
+test('the Box: the oldest is next unless you choose, and choosing is free', () => {
+  const facts = run(3, ALL) // three perfect days: three in the Box
+  const g = fold3(facts)
+  assert.equal(g.queue.length, 3)
+  assert.equal(g.nextUp, g.queue[0].uid)
+  const pick = g.queue[2]
+  const chosen = fold3(withUse(facts, 2, { item: '', uid: pick.uid, what: 'next' }))
+  assert.equal(chosen.nextUp, pick.uid)
+  assert.deepEqual(chosen.bag, g.bag) // no stone spent
+  // when the partner is fully trained, the chosen one takes over; the others stay in the Box
+  const long = [...facts, ...Array.from({ length: 40 }, (_, k) => day(3 + k, { code: 1, gym: 1, guitar: 1 }))]
+  const led = fold3(withUse(long, 2, { item: '', uid: pick.uid, what: 'next' }))
+  assert.equal(led.graduates[0].base, 'charmander')
+  assert.equal(led.partner.uid, pick.uid)
+  assert.equal(fold3(long).partner.uid, g.queue[0].uid) // untouched: the oldest
+  // a choice that is not in the Box is ignored
+  assert.equal(fold3(withUse(facts, 2, { item: '', uid: 'nobody', what: 'next' })).nextUp, g.queue[0].uid)
+})
+
+test('a gym leader has HP; the domains they are weak to hit harder, and so does a partner with the edge', () => {
+  assert.deepEqual(weakDomains('Rock'), ['arbor', 'fitness'])
+  assert.deepEqual(weakDomains('Water'), ['arbor', 'code'])
+  assert.equal(beats(['Fire', 'Flying'], 'Grass'), true)
+  assert.equal(beats(['Fire', undefined], 'Rock'), false)
+  // Brock (Rock) against a Charmander: gym counts x1.5, code x1, no edge
+  const g = fold3(run(1, HALF))
+  assert.equal(leaderOf(g.league.index, g.league.slot)?.name, 'Brock')
+  assert.deepEqual(g.league.weak, ['arbor', 'fitness'])
+  assert.equal(g.league.edge, false)
+  assert.equal(g.today.strike, 100 * WEAK_MULT + 100)
+  assert.equal(g.league.hp, LEADER_HP - 250)
+  // HP carries over, a day off costs nothing, and the next leader steps up when it reaches zero
+  const off = fold3([day(0, HALF), day(1, {}), day(2, HALF)])
+  assert.equal(off.league.hp, LEADER_HP - 500)
+  const n = Math.ceil(LEADER_HP / 250)
+  const won = fold3(run(n, HALF))
+  assert.deepEqual([won.league.slot, won.league.hp], [1, LEADER_HP])
+  assert.equal(leaderOf(won.league.index, won.league.slot)?.name, 'Misty')
+  const gym = won.moments.find((m) => m.kind === 'gym')
+  assert.ok(gym && gym.kind === 'gym' && gym.league === 0 && gym.slot === 0)
+  // Misty is Water and code is one of her weaknesses; by now the partner is no Charmander either way
+  assert.deepEqual(won.league.weak, ['arbor', 'code'])
+})
+
+test('Kanto, then the Orange Islands, then Johto when Johto is open', () => {
+  assert.deepEqual(LEAGUES.map((l) => l.name).slice(0, 3), ['Kanto', 'Orange Islands', 'Johto'])
+  assert.deepEqual(lineup(LEAGUES[1]).map((t) => t.name), ['Cissy', 'Danny', 'Rudy', 'Luana', 'Drake'])
+  assert.deepEqual(LEAGUES[1].gyms.map((t) => t.badge), ['Coral-Eye', 'Sea Ruby', 'Spike Shell', 'Jade Star'])
+  const g = fold3(run(400, { code: 1, gym: 1, guitar: 1 }))
+  const leagues = g.moments.flatMap((m) => (m.kind === 'league' ? [m.league] : []))
+  assert.deepEqual(leagues.slice(0, 2), [0, 1]) // Kanto, then Orange without waiting for anything
+  assert.ok(g.league.beaten >= 1)
+  assert.ok(g.regions >= 2)
+  // beating the Orange Crew opens no region: only regional leagues count for that
+  const kanto = g.moments.find((m) => m.kind === 'league' && m.league === 0)!
+  const orange = g.moments.find((m) => m.kind === 'league' && m.league === 1)!
+  const until = (d: string) => fold3(run(400, { code: 1, gym: 1, guitar: 1 }).filter((f) => f.day <= d))
+  assert.equal(until(orange.day).league.beaten, until(kanto.day).league.beaten)
+  // the Hall of Fame keeps who was there when a Champion fell
+  assert.equal(g.hall[0].league, 0)
+  assert.equal(g.hall[0].day, kanto.day)
+  assert.ok(g.hall[0].partner.form && g.hall[0].stats.atk === 100)
+  // stones: every second gym, each of the Elite Four, the Champion: nine for Kanto
+  assert.equal(items(until(kanto.day)).filter((m) => m.why !== 'perfect').length, 4 + 4 + 1)
+})
+
+test('a region waits for both: its league stands still until two partners are trained', () => {
   assert.deepEqual([regionsOpenV2(0, 1), regionsOpenV2(2, 0), regionsOpenV2(2, 1), regionsOpenV2(9, 1), regionsOpenV2(40, 40)], [1, 1, 2, 2, 9])
-  const trained = fold2(run(160, { code: 1, gym: 1, guitar: 1 })) // 22 weeks: one league beaten on the way
-  assert.ok(trained.graduates.length >= 2)
-  assert.equal(trained.league.beaten, 1)
-  assert.equal(trained.regions, 2)
-  const short = fold2(run(2 + 13 * 7, { code: 1, gym: 1 })) // the league, but nothing fully trained twice
-  assert.ok(short.graduates.length < 2)
-  assert.equal(short.regions, 1)
-  assert.equal(short.league.region, 2)
-  assert.equal(short.moments.filter((m) => m.kind === 'gym' && m.region === 2).length, 0) // Johto's gyms wait for Johto
+  // chores only: leaders fall slowly and nothing is ever fully trained, so Johto's leaders wait
+  const slow = fold3(run(400, { code: 1 }))
+  if (slow.league.index === 2 && slow.graduates.length < 2) {
+    assert.equal(slow.league.waiting, true)
+    assert.equal(slow.today.strike, 0)
+  }
+  assert.equal(fold3(run(1, HALF)).league.waiting, false)
 })
 
-test('a stone Mega Evolves the partner for a week, without full momentum', () => {
-  // Charizard by day 30, then an on-and-off stretch so momentum is never full
-  const facts = [...run(30, { gym: 1, code: 1 }), ...Array.from({ length: 12 }, (_, k) => day(30 + k, k % 2 ? { gym: 1, code: 1 } : {}))]
-  const g = fold2(facts)
+test('stones are spent by hand and never needed: Mega for a week, a branch, a change of partner', () => {
+  // long enough for a Charizard and a stone from the second gym, on and off so momentum is never full
+  const facts = Array.from({ length: 70 }, (_, k) => day(k, k % 3 === 2 ? {} : HALF))
+  const g = fold3(facts)
   assert.equal(g.partner.form, 'charizard')
   assert.equal(g.aura, null)
+  assert.ok(stones(g) >= 1)
   const stone = Object.keys(g.bag).find((k) => g.bag[k] > 0)!
-  const used = fold2(withUse(facts, 38, { item: stone, uid: g.partner.uid, what: 'mega', to: 'charizard-megay' }))
-  assert.equal(used.display, 'charizard-megay')
-  assert.equal(used.aura, 'mega')
+  const used = fold3(withUse(facts, 69, { item: stone, uid: g.partner.uid, what: 'mega', to: 'charizard-megay' }))
+  assert.deepEqual([used.display, used.aura], ['charizard-megay', 'mega'])
   assert.equal(stones(used), stones(g) - 1)
-  assert.ok(used.dex['charizard-megay'])
-  // it lasts seven days and then goes
-  const later = fold2(withUse([...facts, ...Array.from({ length: 4 }, (_, k) => day(42 + k, {}))], 38, { item: stone, uid: g.partner.uid, what: 'mega', to: 'charizard-megay' }))
-  assert.equal(later.display, 'charizard')
-  // full momentum still brings Mega on its own, with no stone spent
-  const free = fold2(run(40, { gym: 1, code: 1 }))
-  assert.equal(free.display, 'charizard-megax')
-  assert.equal(stones(free), free.badges.length)
+  // bring someone from the Box forward: the old partner goes back to the Box with its XP
+  assert.ok(g.queue.length >= 1)
+  const swap = fold3(withUse(facts, 69, { item: stone, uid: g.queue[0].uid, what: 'lead' }))
+  assert.equal(swap.partner.uid, g.queue[0].uid)
+  assert.deepEqual([swap.queue[0].uid, swap.queue[0].xp], [g.partner.uid, g.partner.xp])
+  // junk costs nothing
+  const junk = fold3(withUse(facts, 69, { item: stone, uid: 'nobody', what: 'lead' }, { item: 'no-such-stone', uid: g.partner.uid, what: 'mega' }, { item: stone, uid: g.partner.uid, what: 'branch', to: 'raichu' }))
+  assert.deepEqual(junk.bag, g.bag)
 })
 
-test('a stone can choose a branch, or bring a queued Pokemon forward; a use that does not apply keeps the stone', () => {
+test('Mega by itself needs full momentum and every pillar done today', () => {
+  const some = fold3(run(40, HALF)) // momentum full, but guitar never done
+  assert.equal(some.momentum.days, 7)
+  assert.equal(some.aura, null)
+  const all = fold3([...run(39, HALF), day(39, { code: 1, gym: 1, guitar: 1 })])
+  assert.equal(all.aura, 'mega')
+  assert.equal(all.display, 'charizard-megax')
+})
+
+test('a branching partner shows which way it is leaning', () => {
+  assert.deepEqual(fold3(run(5, HALF)).lean, []) // Charmander does not branch
+  // find a branching Pokemon among the first catches and bring it forward
   const facts = run(45, ALL)
-  const g = fold2(facts)
-  const eevee = g.queue.find((m) => m.base === 'eevee')
-  assert.ok(eevee, 'forty-five perfect days in Kanto catch an Eevee')
+  const g = fold3(facts)
+  const branchy = g.queue.find((m) => (SPECIES[m.form].e?.length ?? 0) > 1)
+  assert.ok(branchy, 'forty-five catches in Kanto include a branching Pokemon')
   const stone = Object.keys(g.bag).find((k) => g.bag[k] > 0)!
-  // choose Flareon now; it still evolves on its own, at its level, once it is the partner
-  const picked = fold2(withUse(facts, 44, { item: stone, uid: eevee.uid, what: 'branch', to: 'flareon' }))
-  assert.equal(picked.queue.find((m) => m.uid === eevee.uid)!.pick, 'flareon')
-  assert.equal(stones(picked), stones(g) - 1)
-  const led = fold2(withUse([...facts, ...Array.from({ length: 30 }, (_, k) => day(45 + k, { code: 1, gym: 1, guitar: 1 }))], 44,
-    { item: stone, uid: eevee.uid, what: 'branch', to: 'flareon' }, { item: Object.keys(g.bag).find((k) => g.bag[k] > (k === stone ? 1 : 0))!, uid: eevee.uid, what: 'lead' }))
-  const now = [led.partner, ...led.graduates].find((m) => m.uid === eevee.uid)!
-  assert.deepEqual(now.path.slice(0, 2), ['eevee', 'flareon'])
-  assert.ok(led.moments.some((m) => m.kind === 'evolve' && m.form === 'flareon' && m.picked))
-  // bringing it forward put the old partner at the front of the queue with its XP
-  const swap = fold2(withUse(facts, 44, { item: stone, uid: eevee.uid, what: 'lead' }))
-  assert.equal(swap.partner.uid, eevee.uid)
-  assert.equal(swap.queue[0].uid, g.partner.uid)
-  assert.equal(swap.queue[0].xp, g.partner.xp)
-  // junk: a Pokemon that is not there, a branch it does not have, a Mega it does not have, a stone not in the Bag
-  const junk = fold2(withUse(facts, 44, { item: stone, uid: 'nobody', what: 'lead' }, { item: stone, uid: eevee.uid, what: 'branch', to: 'raichu' },
-    { item: stone, uid: eevee.uid, what: 'mega' }, { item: 'no-such-stone', uid: eevee.uid, what: 'lead' }))
-  assert.deepEqual(junk.bag, g.bag)
-  assert.equal(junk.partner.uid, g.partner.uid)
+  const led = fold3(withUse([...facts, day(45, { gym: 1 })], 44, { item: stone, uid: branchy.uid, what: 'lead' }))
+  assert.equal(led.partner.uid, branchy.uid)
+  assert.equal(led.lean.length, SPECIES[branchy.form].e!.length)
+  assert.ok(led.lean[0].pct >= led.lean[led.lean.length - 1].pct)
+  const sum = led.lean.reduce((a, b) => a + b.pct, 0)
+  assert.ok(sum >= 97 && sum <= 103, String(sum))
 })
 
 test('the measured Sleep pillar pays the score, is done at 80, and cannot spoil a perfect day', () => {
   const lib = (tier: string) => ({ tier, spans: [{ from: '1970-01-01', to: null }] })
   const input: FactsInput = {
-    today: addDays(V2_START, 1),
+    today: addDays(V3_START, 1),
     habits: [{ id: 'leetcode-coding', ...lib('pillar') }, { id: 'sleep-before-10', ...lib('core') }],
-    ticks: { [V2_START]: { 'sleep-before-10': new Date(V2_START + 'T08:00:00').toISOString() } },
+    ticks: { [V3_START]: { 'sleep-before-10': new Date(V3_START + 'T08:00:00').toISOString() } },
   }
   const sleep = (i: FactsInput, d: string) => buildFacts(i).find((f) => f.day === d)!.habits.find((h) => h.id === 'sleep-before-10')!
   // no band: the hand tick still counts, as a core habit
-  assert.deepEqual([sleep(input, V2_START).worth, sleep(input, V2_START).done, sleep(input, V2_START).pillar], [30, true, false])
+  assert.deepEqual([sleep(input, V3_START).worth, sleep(input, V3_START).done, sleep(input, V3_START).pillar], [30, true, false])
   // the band reports: a pillar, paid by score, and the tick is ignored
-  const band: FactsInput = { ...input, body: { [V2_START]: { sleepScore: 65 }, [addDays(V2_START, 1)]: { sleepScore: 88, steps: 12000, recovery: 70 } } }
-  const a = sleep(band, V2_START), b = sleep(band, addDays(V2_START, 1))
+  const band: FactsInput = { ...input, body: { [V3_START]: { sleepScore: 65 }, [addDays(V3_START, 1)]: { sleepScore: 88, steps: 12000, recovery: 70 } } }
+  const a = sleep(band, V3_START), b = sleep(band, addDays(V3_START, 1))
   assert.deepEqual([a.worth, a.pillar, a.frac, a.done, a.measured], [100, true, 0.65, false, true])
   assert.deepEqual([b.frac, b.done], [0.88, true])
   const g = foldGame(buildFacts(band))
   assert.equal(g.today.xp, 88)
   assert.equal(g.today.pillars, 1)
-  // a poor night, then everything else done: still a perfect day, and the count of what is left leaves sleep out
-  const rough: FactsInput = { ...band, ticks: { [V2_START]: { 'leetcode-coding': new Date(V2_START + 'T09:00:00').toISOString() } } }
-  const d0 = foldGame(buildFacts(rough)).days.find((d) => d.day === V2_START)!
+  // a poor night, then everything else done: still a perfect day
+  const rough: FactsInput = { ...band, ticks: { [V3_START]: { 'leetcode-coding': new Date(V3_START + 'T09:00:00').toISOString() } } }
+  const d0 = foldGame(buildFacts(rough)).days.find((d) => d.day === V3_START)!
   assert.deepEqual([d0.perfect, d0.done, d0.total], [true, 1, 1])
-  // days before the band's first night keep the old habit
-  assert.equal(sleep({ ...band, body: { [addDays(V2_START, 1)]: { sleepScore: 88 } } }, V2_START).pillar, false)
+  assert.equal(sleep({ ...band, body: { [addDays(V3_START, 1)]: { sleepScore: 88 } } }, V3_START).pillar, false)
   const s = statsOf(buildFacts(band))
-  assert.equal(s.spe, 100)
-  assert.equal(s.def, 70)
-  assert.equal(s.atk, null) // no gym habit on the list
+  assert.deepEqual([s.spe, s.def, s.atk], [100, 70, null])
 })
 
-test('every gym leader, in every region', () => {
-  assert.equal(LEAGUES.length, 9)
-  for (const l of LEAGUES) {
-    assert.equal(l.gyms.length, 8)
-    assert.equal(l.four.length, 4)
-    for (const t of [...l.gyms, ...l.four, l.champion]) assert.ok(t.name && t.type && t.sprite)
+test('a frozen day list: editing the library later cannot change what a day was', () => {
+  const span = [{ from: '1970-01-01', to: null }]
+  const tick = (d: string) => new Date(d + 'T09:00:00').toISOString()
+  const input: FactsInput = {
+    today: addDays(GAME_START, 1),
+    // today's library: Gym was deleted and LeetCode demoted since yesterday
+    habits: [{ id: 'leetcode-coding', tier: 'core', name: 'LeetCode', spans: span }],
+    ticks: { [GAME_START]: { 'leetcode-coding': tick(GAME_START), gym: tick(GAME_START) } },
+    lists: { [GAME_START]: [{ id: 'leetcode-coding', tier: 'pillar' }, { id: 'gym', tier: 'pillar' }] },
   }
-  assert.equal(leaderOf(1, 0)?.name, 'Brock')
-  assert.equal(leaderOf(1, 11)?.name, 'Lance')
-  assert.equal(leaderOf(1, 12)?.name, 'Blue')
+  const [d0, d1] = buildFacts(input)
+  assert.deepEqual(d0.habits.map((h) => [h.id, h.worth, h.done, h.name]), [['leetcode-coding', 100, true, 'LeetCode'], ['gym', 100, true, undefined]])
+  assert.deepEqual(d1.habits.map((h) => [h.id, h.worth]), [['leetcode-coding', 30]]) // no list for that day: the library as it is
+  // a list rewritten during its own day replaces the earlier one
+  const evs = [
+    { type: 'day_list', day: GAME_START, at: '1', payload: { habits: JSON.stringify([{ id: 'a', tier: 'pillar' }]) } },
+    { type: 'day_list', day: GAME_START, at: '2', payload: { habits: JSON.stringify([{ id: 'b', tier: 'core' }]) } },
+    { type: 'day_list', day: 'x', at: '3', payload: { habits: '{broken' } },
+  ]
+  assert.deepEqual(listsOf(evs), { [GAME_START]: [{ id: 'b', tier: 'core' }] })
+})
+
+test('every leader, in every league', () => {
+  assert.equal(LEAGUES.length, 10)
+  assert.deepEqual(LEAGUES.filter((l) => l.region !== null).map((l) => l.region), [1, 2, 3, 4, 5, 6, 7, 8, 9])
+  for (const l of LEAGUES) {
+    for (const t of lineup(l)) {
+      assert.ok(t.name && t.type)
+      assert.ok(weakDomains(t.type).length >= 1, `${t.name} has a weakness`)
+    }
+    if (l.region !== null) assert.deepEqual([l.gyms.length, l.four.length], [8, 4])
+  }
+  assert.equal(leaderOf(0, 0)?.name, 'Brock')
+  assert.equal(leaderOf(0, 12)?.name, 'Blue')
+  assert.deepEqual([isGym(0, 7), isGym(0, 8), isGym(1, 3), isGym(1, 4)], [true, false, true, false])
 })

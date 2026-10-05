@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { leaderOf, nameOf, spritePath, type Game, type Mon, type Moment, type Stats } from '../core/fold.ts'
+import { isGym, leaderOf, nameOf, spritePath, type Game, type Mon, type Moment, type Stats } from '../core/fold.ts'
 import type { DayFacts, HabitFact } from '../core/facts.ts'
-import { LEAGUES, type Leader } from '../core/gyms.ts'
+import { LEAGUES, lineup, type Leader } from '../core/gyms.ts'
 import {
-  BADGES_PER_REGION, BADGE_DAYS, GAME_START, GRADUATES_PER_REGION, ITEM_NAME, LEAGUE_STEPS, LEGENDARY_EVERY, MEGA_DAYS, MOMENTUM_WINDOW,
-  PILLARS_FOR_A_DAY, RARE_EVERY, REGIONS, SHINY_EVERY, SLEEP_DONE, STAT_DAYS, STEPS_GOAL, TIER_XP, V2_START, type StoneUse,
-  evolveAt, graduateAt, levelOf, momentumMult, xpForLevel,
+  ADVANTAGE_MULT, BALL_MULT, BALL_NAME, GAME_START, GRADUATES_PER_REGION, ITEM_NAME, LEADER_HP, LEGENDARY_EVERY_WILD, MEGA_DAYS, MOMENTUM_WINDOW,
+  PILLARS_FOR_A_DAY, RARE_EVERY, REGIONS, SHINY_ODDS, SLEEP_DONE, STAT_DAYS, STEPS_GOAL, TIER_XP, V3_START, WEAK_MULT, WILD_HP,
+  evolveAt, graduateAt, levelOf, momentumMult, xpForLevel, type StoneUse,
 } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
 import { LIFEOS_URL, VITALS_URL, start, useItem, useView, type BodyDay } from './lib/store.ts'
@@ -21,6 +21,16 @@ const plural = (n: number, one: string, many = one + 's') => `${n.toLocaleString
 const dexNo = (n: number) => String(n).padStart(3, '0')
 const itemName = (item: string): string => ITEM_NAME[item] ?? item
 const itemIcon = (item: string): string => `/sprites/items/${item}.png`
+const RARITY: Record<string, string> = { C: 'Common', U: 'Uncommon', R: 'Rare', L: 'Legendary' }
+/** Badge pictures exist for Kanto to Kalos and the Orange Islands; the rest get a plain shape. */
+const badgeArt = (league: number, slot: number): string | null => {
+  const l = LEAGUES[league]
+  if (!l || slot >= l.gyms.length) return null
+  if (l.region === null) return `/sprites/badges/orange-${slot + 1}.png`
+  return l.region <= 6 ? `/sprites/badges/${l.region}-${slot + 1}.png` : null
+}
+const badgeName = (t: Leader): string => `${t.badge}${/ Z$/.test(t.badge) ? '' : ' Badge'}`
+const leagueName = (i: number): string => LEAGUES[i]?.name ?? ''
 
 function Sprite({ form, shiny, size, className = '' }: { form: string; shiny?: boolean; size: number; className?: string }) {
   return <img src={spritePath(form, shiny)} alt="" width={size} height={size} className={`sprite ${className}`} style={{ width: size, height: size }} />
@@ -62,27 +72,25 @@ function Scene({ game }: { game: Game }) {
   const { partner, today, wild } = game
   const pct = clamp01(game.into / game.need)
   const before = Math.min(pct, clamp01(game.intoBeforeToday / game.need))
-  const left = today.total - today.done
-  const hp = today.total ? left / today.total : 0
-  const known = wild ? wild.caught || Boolean(game.dex[wild.form]) : false
+  const hp = wild && wild.max ? wild.hp / wild.max : 0
   return (
     <section className={`scene tod-${timeOfDay()} ${game.aura ? `aura-${game.aura}` : ''}`} aria-label="Today, as a battle">
       {wild && (
         <>
           <div className="hpbox foe-box">
             <div className="hp-top">
-              <span className="hp-name">{wild.caught ? nameOf(wild.form) : known ? `Wild ${nameOf(wild.form)}` : 'Wild ???'}{wild.shiny && <span className="chip">shiny</span>}</span>
-              <span className="hp-lv">{wild.caught ? 'Caught' : 'Today'}</span>
+              <span className="hp-name">{wild.caught ? nameOf(wild.form) : `Wild ${nameOf(wild.form)}`}{wild.shiny && <span className="chip">shiny</span>}{wild.rarity !== 'C' && <span className={`chip r-${wild.rarity}`}>{RARITY[wild.rarity]}</span>}</span>
+              <span className="hp-lv">{wild.caught ? 'Caught' : BALL_NAME[today.ball]}</span>
             </div>
             <div className="hp-row">
               <b>HP</b>
-              <div className="bar" role="progressbar" aria-valuemin={0} aria-valuemax={today.total} aria-valuenow={left} aria-label="Habits left before it can be caught">
+              <div className="bar" role="progressbar" aria-valuemin={0} aria-valuemax={wild.max} aria-valuenow={wild.hp} aria-label="The wild Pokemon's HP">
                 <i className={`hp ${hp <= 0.2 ? 'low' : hp <= 0.5 ? 'mid' : ''}`} style={{ width: `${hp * 100}%` }} />
               </div>
             </div>
-            <div className="hp-sub"><span>{wild.caught ? 'In your queue' : 'Habits left'}</span><b>{left} / {today.total}</b></div>
+            <div className="hp-sub"><span>{wild.caught ? 'In your Box' : today.hit > 0 ? `Today −${today.hit}` : 'Not hit yet today'}</span><b>{wild.hp} / {wild.max}</b></div>
           </div>
-          <div className="pad foe-pad"><img src={still(wild.form, wild.shiny)} alt="" width={104} height={104} className={`sprite ${known ? '' : 'unseen'}`} /></div>
+          <div className="pad foe-pad"><img src={still(wild.form, wild.shiny)} alt="" width={104} height={104} className={`sprite ${wild.caught ? 'got' : ''}`} /></div>
         </>
       )}
       <div className="pad me-pad">
@@ -122,16 +130,16 @@ function Talk({ game, pillars }: { game: Game; pillars: HabitFact[] }) {
   let say: ReactNode, sub: ReactNode
   if (wild?.caught) {
     say = <>Gotcha! {nameOf(wild.form)} was caught!</>
-    sub = <>Every habit was ticked today. It waits in the queue until {me} is fully trained.</>
+    sub = <>{today.perfect ? 'A perfect day catches on the spot.' : 'Its HP ran out.'} It is in your Box. A new one appears tomorrow morning.</>
   } else if (game.asleep) {
     say = <>{me} is fast asleep.</>
     sub = <>Two days went by without a pillar. Finish one to wake it.</>
-  } else if (today.xp > 0) {
+  } else if (today.xp > 0 && wild) {
     say = <>{me} gained {today.xp} XP today!</>
-    sub = <>{plural(left, 'habit')} left to catch the wild Pokemon. {Math.max(0, Math.round(game.need - game.into))} XP to level {game.level + 1}.</>
+    sub = <>The wild {nameOf(wild.form)} took {today.hit} with a {BALL_NAME[today.ball]} and has {wild.hp} HP left. {plural(left, 'habit')} from a perfect day, which would catch it on the spot.</>
   } else {
     say = <>What will {me} do today?</>
-    sub = <>Each pillar is a move worth {TIER_XP.pillar} XP. Tick all {today.total} habits and the wild Pokemon is yours.</>
+    sub = wild ? <>A wild {nameOf(wild.form)} is in front of you with {wild.hp} HP. The more whole the day, the harder it is hit; tick all {today.total} habits and it is yours at once.</> : <>Each pillar is a move worth {TIER_XP.pillar} XP.</>
   }
   return (
     <div className="talk">
@@ -217,7 +225,7 @@ function Momentum({ game }: { game: Game }) {
       </div>
       <p className="muted">
         {momentum.days} of the last 7 days had {PILLARS_FOR_A_DAY} or more pillars.
-        {next !== undefined ? ` ${plural(next - momentum.days, 'more day')} reaches ×${momentumMult(next)}.` : ' Full momentum: Mega form while it lasts.'}
+        {next !== undefined ? ` ${plural(next - momentum.days, 'more day')} reaches ×${momentumMult(next)}.` : ' Full momentum: Mega shows on a day every pillar is done.'}
       </p>
       <div className="ladder">
         {steps.map((s) => (
@@ -238,33 +246,99 @@ function Summary({ game }: { game: Game }) {
   return (
     <Win title="Summary" tone="blue" aside={`No. ${dexNo(rec.d)}`}>
       <dl className="facts">
-        <dt>Met</dt><dd>{partner.origin === 'starter' ? 'Starter' : partner.origin === 'egg' ? 'Hatched from an egg' : 'Caught on a perfect day'}, {fmtDay(partner.from)}</dd>
-        <dt>Type</dt><dd>{rec.t}</dd>
+        <dt>Met</dt><dd>{partner.origin === 'starter' ? 'Starter' : partner.origin === 'egg' ? 'Hatched from an egg' : 'Caught'}, {fmtDay(partner.from)}</dd>
+        <dt>Type</dt><dd>{rec.t}{rec.t2 ? ` / ${rec.t2}` : ''}</dd>
         <dt>Next</dt><dd>{game.next.what === 'evolve' ? 'Evolves' : 'Fully trained'} at level {game.next.level} <span className="muted">({toGo.toLocaleString('en-IN')} XP to go)</span></dd>
+        {game.lean.length > 0 && (
+          <>
+            <dt>Leaning</dt>
+            <dd className="lean">
+              {game.lean.slice(0, 4).map((x) => (
+                <span key={x.form} title={`${TAG_NAME[x.tag] ?? x.tag}: what you have done most while raising it`}>
+                  <img src={still(x.form, partner.shiny)} alt="" width={36} height={36} className={`sprite ${game.dex[x.form] ? '' : 'unseen'}`} />
+                  <b>{x.pct}%</b><small>{TAG_NAME[x.tag] ?? x.tag}</small>
+                </span>
+              ))}
+            </dd>
+          </>
+        )}
+        <dt>Line</dt>
+        <dd className="path">
+          {partner.path.map((f, i) => (
+            <span key={f} className="path-step">{i > 0 && <span className="arrow">▸</span>}<img src={still(f, partner.shiny)} alt={nameOf(f)} title={nameOf(f)} width={44} height={44} className="sprite" /></span>
+          ))}
+        </dd>
+        <dt>Bond</dt><dd><span className={`ribbon ${partner.bond ? 'on' : ''}`} title="Never two empty days in a row while it is your partner">{partner.bond ? 'Ribbon intact' : 'Ribbon lost'}</span></dd>
       </dl>
+      {game.lean.length > 0 && <p className="muted">It evolves by itself at level {game.next.level}, into whichever your habits lean to most by then.</p>}
       {game.asleep && <p className="notice warn">Asleep after two days without a pillar. Finish one pillar to wake it.</p>}
-      {game.aura === 'mega' && <p className="notice good">Momentum is full: Mega form while it lasts.</p>}
+      {game.aura === 'mega' && <p className="notice good">Mega form: full momentum and every pillar done today, or a stone.</p>}
       {game.aura === 'gmax' && <p className="notice gmax">Perfect day: Gigantamax for today.</p>}
     </Win>
   )
 }
 
-function DayCare({ game, body }: { game: Game; body: BodyDay | null }) {
-  const grad = graduateAt(SPECIES[game.partner.base].x ?? 1)
+/** Who is up in the league, with their HP: worn down by the kind of work you do. */
+function LeaderCard({ game }: { game: Game }) {
+  const { league, today } = game
+  const t = leaderOf(league.index, league.slot)
+  if (!t) return <Win title="League" tone="gold" aside="All beaten"><p className="muted">Every league is beaten.</p></Win>
+  const l = LEAGUES[league.index]
+  const role = isGym(league.index, league.slot) ? `Gym ${league.slot + 1} of ${l.gyms.length}` : league.slot === lineup(l).length - 1 ? 'Champion' : 'Elite Four'
+  const hp = league.hp / league.max
   return (
-    <Win title="Day care" tone="dark" aside={game.queue.length ? `${game.queue.length} waiting` : 'Egg'}>
+    <Win title={`${l.name}: ${t.name}`} tone="gold" aside={role}>
+      <div className="leadrow">
+        {t.sprite ? <img src={`/sprites/trainers/${t.sprite}.png`} alt="" width={72} height={72} className="sprite" /> : <span className="nopic" aria-hidden>?</span>}
+        <div className="leadinfo">
+          <div className="hp-row">
+            <b>HP</b>
+            <div className="bar" role="progressbar" aria-valuemin={0} aria-valuemax={league.max} aria-valuenow={league.hp} aria-label={`${t.name}'s HP`}>
+              <i className={`hp ${hp <= 0.2 ? 'low' : hp <= 0.5 ? 'mid' : ''}`} style={{ width: `${hp * 100}%` }} />
+            </div>
+          </div>
+          <div className="hp-sub"><span>{league.waiting ? 'Waiting' : today.strike > 0 ? `Today −${today.strike}` : 'Not hit yet today'}</span><b>{league.hp.toLocaleString('en-IN')} / {league.max.toLocaleString('en-IN')}</b></div>
+          <div className="weak">
+            <img src={`/sprites/types/${t.type}.png`} alt="" width={16} height={16} /><span>{t.type}</span>
+            {league.weak.map((w) => <span key={w} className="chip weakchip" data-tag={w}>{TAG_NAME[w] ?? w} ×{WEAK_MULT}</span>)}
+            {league.edge && <span className="chip mega">type edge ×{ADVANTAGE_MULT}</span>}
+          </div>
+        </div>
+      </div>
+      <p className="muted">
+        {league.waiting
+          ? `${l.name} is not open yet: it needs ${((l.region ?? 1) - 1) * GRADUATES_PER_REGION} fully trained Pokemon (you have ${game.graduates.length}).`
+          : `Every day's XP wears ${t.name} down. ${league.weak.map((w) => TAG_NAME[w] ?? w).join(' and ')} ${league.weak.length > 1 ? 'hit' : 'hits'} hardest. HP carries over; there is no losing.`}
+      </p>
+    </Win>
+  )
+}
+
+/** The Box: caught and not yet raised. Tap one to make it the next partner; the oldest is next otherwise. */
+function Box({ game, body }: { game: Game; body: BodyDay | null }) {
+  const grad = graduateAt(SPECIES[game.partner.base].x ?? 1)
+  const next = game.queue.find((m) => m.uid === game.nextUp)
+  return (
+    <Win title="Box" tone="dark" aside={game.queue.length ? `${game.queue.length} caught` : 'Egg'}>
       {game.queue.length === 0 ? (
         <div className="care">
           <Egg />
           <p>
-            An egg is waiting. It hatches into your next partner when {nameOf(game.partner.form)} is fully trained at level {grad}.
-            <span className="muted" style={{ display: 'block' }}>Catch something on a perfect day and it goes first instead.</span>
+            The Box is empty, so an egg is waiting. It hatches into your next partner when {nameOf(game.partner.form)} is fully trained at level {grad}.
+            <span className="muted" style={{ display: 'block' }}>Catch the wild Pokemon and it goes first instead.</span>
           </p>
         </div>
       ) : (
         <>
-          <div className="queue">{game.queue.map((m) => <img key={m.uid} src={still(m.form, m.shiny)} alt={nameOf(m.form)} title={`${nameOf(m.form)} · caught ${fmtDay(m.from)}`} width={64} height={64} className="sprite" />)}</div>
-          <p className="muted">{nameOf(game.queue[0].form)} becomes your partner when {nameOf(game.partner.form)} is fully trained at level {grad}.</p>
+          <div className="queue pick">
+            {game.queue.map((m) => (
+              <button key={m.uid} aria-pressed={m.uid === game.nextUp} className={m.uid === game.nextUp ? 'on' : ''} onClick={() => m.uid !== game.nextUp && useItem('', m.uid, 'next')} title={`${nameOf(m.form)} · caught ${fmtDay(m.from)}${m.uid === game.nextUp ? ' · next partner' : ''}`}>
+                <img src={still(m.form, m.shiny)} alt={nameOf(m.form)} width={64} height={64} className="sprite" />
+                {m.uid === game.nextUp && <span className="nexttag">Next</span>}
+              </button>
+            ))}
+          </div>
+          <p className="muted">{next ? nameOf(next.form) : 'The oldest'} becomes your partner when {nameOf(game.partner.form)} is fully trained at level {grad}. Tap another to choose it instead; it costs nothing. Nothing here is waiting for anything.</p>
         </>
       )}
       {body && (
@@ -285,13 +359,14 @@ function PartnerTab({ game, facts, body }: { game: Game; facts: DayFacts[]; body
       <Scene game={game} />
       <Talk game={game} pillars={habits.filter((h) => h.pillar)} />
       <div className="cols">
+        <LeaderCard game={game} />
         <Support rest={habits.filter((h) => !h.pillar)} />
-        <Momentum game={game} />
       </div>
       <div className="cols">
         <Summary game={game} />
-        <DayCare game={game} body={body} />
+        <Momentum game={game} />
       </div>
+      <Box game={game} body={body} />
     </>
   )
 }
@@ -302,7 +377,7 @@ function PartnerTab({ game, facts, body }: { game: Game; facts: DayFacts[]; body
 const USES: [StoneUse, string, string][] = [
   ['mega', 'Mega Evolve', `Your partner takes its Mega form for ${MEGA_DAYS} days, whatever momentum is doing.`],
   ['branch', 'Choose a branch', 'Decide which way a branching Pokemon evolves. It still evolves on its own, at its level.'],
-  ['lead', 'Change partner', 'Bring a Pokemon from the queue forward. Your partner waits at the front of the queue and keeps its XP.'],
+  ['lead', 'Change partner now', 'Bring a Pokemon from the Box forward today. Your partner goes back to the Box and keeps its XP. (Choosing who is next is free, on the Partner tab.)'],
 ]
 
 function BagTab({ game }: { game: Game }) {
@@ -318,7 +393,7 @@ function BagTab({ game }: { game: Game }) {
   const why: Record<StoneUse, string> = {
     mega: `${nameOf(game.partner.form)} has no Mega form.`,
     branch: 'None of your Pokemon has a branching evolution right now.',
-    lead: 'Nothing is waiting in the queue.',
+    lead: 'The Box is empty.',
   }
   const mon = what ? (can[what].find((m) => m.uid === uid) ?? (what === 'mega' ? game.partner : null)) : null
   const choices = !what || !mon ? [] : what === 'mega' ? megas : what === 'branch' ? (SPECIES[mon.form].e ?? []) : []
@@ -332,12 +407,12 @@ function BagTab({ game }: { game: Game }) {
   }
   const sentence = !what || !mon ? '' : what === 'mega' ? `${nameOf(mon.form)} becomes ${nameOf(chosen ?? '')} for ${MEGA_DAYS} days.`
     : what === 'branch' ? `${nameOf(mon.form)} will evolve into ${nameOf(chosen ?? '')} when its level comes.`
-    : `${nameOf(mon.form)} becomes your partner. ${nameOf(game.partner.form)} waits at the front of the queue.`
+    : `${nameOf(mon.form)} becomes your partner now. ${nameOf(game.partner.form)} goes back to the Box.`
   return (
     <>
       <Win title="Stones" tone="green" aside={total ? plural(total, 'stone') : 'None yet'}>
         {total === 0 ? (
-          <p className="muted">No stones yet. Beating a gym leader comes with one, and so does every {RARE_EVERY}th perfect day. They are rare on purpose, and nothing needs them: your partner levels up and evolves on its own.</p>
+          <p className="muted">No stones yet. Every second gym leader hands one over, as do the Elite Four, each Champion and every {RARE_EVERY}th perfect day. They are rare on purpose, and nothing needs them: your partner levels up and evolves on its own.</p>
         ) : (
           <>
             <div className="items">
@@ -417,18 +492,20 @@ function DexTab({ game }: { game: Game }) {
   }, [game])
   const all = useMemo(() => Object.entries(SPECIES).filter(([, r]) => !r.f), [])
   const perRegion = useMemo(() => {
-    const out = REGIONS.map(() => ({ seen: 0, total: 0 }))
+    const out = REGIONS.map(() => ({ seen: 0, own: 0, total: 0 }))
     for (const [id] of all) {
       const g = regionOf(id) - 1
       if (!out[g]) continue
       out[g].total++
       if (game.dex[id]) out[g].seen++
+      if (game.dex[id]?.own) out[g].own++
     }
     return out
   }, [all, game.dex])
   const entries = useMemo(() => all.filter(([id]) => regionOf(id) === region).sort((a, b) => a[1].d - b[1].d), [all, region])
   const shown = entries.filter(([id]) => (show === 'all' ? true : show === 'seen' ? game.dex[id] : !game.dex[id]))
   const locked = region > game.regions
+  const raisedIn = entries.filter(([id]) => owned.get(id)?.graduated).length
   const sel = open ? SPECIES[open] : null
   const forms = sel ? [...(sel.m ?? []), ...(sel.gm ? [sel.gm] : [])] : []
   const seenTotal = Object.keys(game.dex).filter((id) => !SPECIES[id]?.f).length
@@ -438,8 +515,8 @@ function DexTab({ game }: { game: Game }) {
         {REGIONS.map((name, i) => (
           <button key={name} role="tab" aria-selected={region === i + 1} className={`${region === i + 1 ? 'on' : ''} ${i + 1 > game.regions ? 'lock' : ''}`} onClick={() => { setRegion(i + 1); setOpen(null) }}>
             <span className="n">{name}</span>
-            <span className="c">{i + 1 > game.regions ? 'locked' : `${perRegion[i].seen} / ${perRegion[i].total}`}</span>
-            <span className="meter"><i style={{ width: `${perRegion[i].total ? (perRegion[i].seen / perRegion[i].total) * 100 : 0}%` }} /></span>
+            <span className="c">{i + 1 > game.regions ? 'locked' : `${perRegion[i].own} / ${perRegion[i].total}`}</span>
+            <span className="meter"><i style={{ width: `${perRegion[i].total ? (perRegion[i].own / perRegion[i].total) * 100 : 0}%` }} /></span>
           </button>
         ))}
       </div>
@@ -452,8 +529,8 @@ function DexTab({ game }: { game: Game }) {
           </div>
           <span className="muted">
             {locked
-              ? `Locked until the ${REGIONS[region - 2]} league is beaten and ${(region - 1) * GRADUATES_PER_REGION} Pokemon are fully trained (you have ${game.graduates.length}, and ${plural(game.league.beaten, 'league')}).`
-              : `${perRegion[region - 1].seen} of ${entries.length} seen here.`}
+              ? `Locked until the ${REGIONS[region - 2]} league is beaten and ${(region - 1) * GRADUATES_PER_REGION} Pokemon are fully trained (you have ${game.graduates.length}, and ${plural(game.league.beaten, 'regional league')}).`
+              : `${perRegion[region - 1].seen} seen · ${perRegion[region - 1].own} caught · ${raisedIn} raised, of ${entries.length}.`}
           </span>
         </div>
         <div className="dexwrap">
@@ -462,7 +539,7 @@ function DexTab({ game }: { game: Game }) {
               const e = game.dex[id]
               const mon = owned.get(id)
               return (
-                <button key={id} className={`cell ${e ? 'seen' : ''} ${open === id ? 'sel' : ''}`} onClick={() => setOpen(open === id ? null : id)} title={e ? r.n : `#${r.d}`} aria-pressed={open === id} aria-label={e ? `${r.n}, number ${r.d}` : `Not seen, number ${r.d}`}>
+                <button key={id} className={`cell ${e ? 'seen' : ''} ${e && !e.own ? 'met' : ''} ${open === id ? 'sel' : ''}`} onClick={() => setOpen(open === id ? null : id)} title={e ? r.n : `#${r.d}`} aria-pressed={open === id} aria-label={e ? `${r.n}, number ${r.d}` : `Not seen, number ${r.d}`}>
                   <img src={still(id, e?.shiny)} alt="" loading="lazy" width={64} height={64} className={`sprite ${e ? '' : 'unseen'}`} />
                   <span className="no">{dexNo(r.d)}</span>
                   {mon?.graduated && <span className="star" title="Fully trained">★</span>}
@@ -482,7 +559,7 @@ function DexTab({ game }: { game: Game }) {
                 <div className="eyebrow">No. {dexNo(sel.d)} · {sel.t}</div>
                 <h3>{game.dex[open] ? sel.n : '???'}</h3>
                 <p className="muted">
-                  {game.dex[open] ? `First seen ${fmtDay(game.dex[open].first)}.` : 'Not seen yet. Catch it on a perfect day or hatch it from an egg.'}
+                  {game.dex[open] ? `First seen ${fmtDay(game.dex[open].first)}.${game.dex[open].own ? ` Yours since ${fmtDay(game.dex[open].own!)}.` : ' Seen, not caught.'}` : 'Not seen yet.'}
                   {owned.get(open)?.graduated ? ` Fully trained ${fmtDay(owned.get(open)!.graduated!)}${owned.get(open)!.bond ? ', Bond ribbon' : ''}.` : ''}
                 </p>
                 {sel.e && sel.e.length > 1 && (
@@ -514,7 +591,7 @@ function DexTab({ game }: { game: Game }) {
 }
 
 // ── Trainer card ────────────────────────────────────────────────────────────
-const KIND: Record<Moment['kind'], string> = { level: 'Level', evolve: 'Evolved', graduate: 'Trained', partner: 'Partner', catch: 'Caught', form: 'Form', badge: 'Badge', region: 'Region', gym: 'Gym', league: 'League', item: 'Stone', use: 'Stone' }
+const KIND: Record<Moment['kind'], string> = { level: 'Level', evolve: 'Evolved', graduate: 'Trained', partner: 'Partner', catch: 'Caught', appear: 'Wild', form: 'Form', badge: 'Badge', region: 'Region', gym: 'Gym', league: 'League', item: 'Stone', use: 'Stone' }
 const ITEM_WHY = { gym: 'with the badge', perfect: 'for a perfect-day milestone', league: 'from the league' } as const
 function line(m: Moment): string {
   switch (m.kind) {
@@ -522,16 +599,17 @@ function line(m: Moment): string {
     case 'evolve': return `${nameOf(m.from)} evolved into ${nameOf(m.form)}${m.picked ? ' (your choice)' : m.tag ? ` (${TAG_NAME[m.tag] ?? m.tag} led)` : ''}`
     case 'graduate': return `${nameOf(m.form)} was fully trained${m.bond ? ' with a Bond ribbon' : ''}`
     case 'partner': return `${nameOf(m.form)} became the partner${m.origin === 'egg' ? ' (hatched from an egg)' : ''}`
-    case 'catch': return `Perfect day #${m.n}: ${m.shiny ? 'shiny ' : ''}${nameOf(m.form)} joined the queue`
+    case 'catch': return `${m.shiny ? 'Shiny ' : ''}${nameOf(m.form)} was caught${m.how === 'perfect' ? ' on the spot, by a perfect day' : ''} (#${m.n})`
+    case 'appear': return `A wild ${nameOf(m.form)} appeared${m.rarity === 'C' ? '' : ` (${RARITY[m.rarity].toLowerCase()})`}`
     case 'form': return `${nameOf(m.form)} registered (${m.what === 'mega' ? 'Mega' : 'Gigantamax'})`
     case 'badge': return `Badge #${m.n} earned`
     case 'region': return `${REGIONS[m.n - 1]} opened`
     case 'gym': {
-      const l = leaderOf(m.region, m.slot)
-      return m.slot < BADGES_PER_REGION ? `Beat ${l?.name} of ${REGIONS[m.region - 1]}: ${l?.badge}${/ Z$/.test(l?.badge ?? '') ? '' : ' Badge'}`
-        : m.slot < BADGES_PER_REGION + 4 ? `Beat ${l?.name} of the ${REGIONS[m.region - 1]} Elite Four` : `Beat Champion ${l?.name}`
+      const t = leaderOf(m.league, m.slot), l = LEAGUES[m.league]
+      if (!t || !l) return 'A leader was beaten'
+      return isGym(m.league, m.slot) ? `Beat ${t.name} of ${l.name}: ${badgeName(t)}` : m.slot === lineup(l).length - 1 ? `Beat ${t.name}, ${l.name}'s Champion` : `Beat ${t.name} of the ${l.name} Elite Four`
     }
-    case 'league': return `The ${REGIONS[m.region - 1]} league is yours`
+    case 'league': return `The ${leagueName(m.league)} league is yours: entered in the Hall of Fame`
     case 'item': return `${itemName(m.item)} added to the Bag ${ITEM_WHY[m.why]}`
     case 'use': return m.what === 'mega' ? `Spent a ${itemName(m.item)}: ${nameOf(m.form)} Mega Evolves for ${MEGA_DAYS} days`
       : m.what === 'branch' ? `Spent a ${itemName(m.item)}: chose ${nameOf(m.to ?? '')}`
@@ -541,38 +619,56 @@ function line(m: Moment): string {
 function Trainer({ t, state, label, badge }: { t: Leader; state: 'beaten' | 'next' | 'ahead'; label: string; badge?: string }) {
   return (
     <div className={`leader ${state}`} title={`${t.name} · ${t.type}${t.badge ? ` · ${t.badge}` : ''}`}>
-      <img src={`/sprites/trainers/${t.sprite}.png`} alt="" width={64} height={64} className="sprite" loading="lazy" />
+      {t.sprite ? <img src={`/sprites/trainers/${t.sprite}.png`} alt="" width={64} height={64} className="sprite" loading="lazy" /> : <span className="nopic" aria-hidden>?</span>}
       <span className="ld-name">{t.name}</span>
       <span className="ld-sub">{badge ? <img src={badge} alt="" width={16} height={16} className="sprite" /> : <img src={`/sprites/types/${t.type}.png`} alt={t.type} width={16} height={16} />}{label}</span>
     </div>
   )
 }
 
+/** The league being challenged: everyone in it, in order, and how far through you are. */
 function Gyms({ game }: { game: Game }) {
   const { league } = game
-  const done = league.region > LEAGUES.length
-  const shown = Math.min(league.region, LEAGUES.length)
-  const l = LEAGUES[shown - 1]
-  const name = REGIONS[Math.min(league.region, LEAGUES.length) - 1]
-  const closed = !done && league.region > game.regions
-  const at = done ? 99 : league.badges // index of the next one to beat
-  const inLeague = !done && league.badges >= BADGES_PER_REGION
+  const done = league.index >= LEAGUES.length
+  const index = Math.min(league.index, LEAGUES.length - 1)
+  const l = LEAGUES[index]
+  const all = lineup(l)
+  const at = done ? all.length : league.slot
+  const state = (i: number) => (i < at ? 'beaten' : i === at && !league.waiting ? 'next' : 'ahead')
   return (
-    <Win title={`${name} gyms`} tone="gold" aside={done ? 'All beaten' : `${league.badges} / ${BADGES_PER_REGION} badges`}>
+    <Win title={`${l.name} league`} tone="gold" aside={done ? 'All beaten' : `${Math.min(at, l.gyms.length)} / ${l.gyms.length} badges`}>
       <div className="gyms">
-        {l.gyms.map((t, i) => <Trainer key={t.name} t={t} state={i < at ? 'beaten' : i === at && !closed ? 'next' : 'ahead'} label={t.badge} badge={shown <= BADGE_ART_REGIONS ? `/sprites/badges/${shown}-${i + 1}.png` : undefined} />)}
+        {l.gyms.map((t, i) => <Trainer key={t.name} t={t} state={state(i)} label={t.badge} badge={badgeArt(index, i) ?? undefined} />)}
       </div>
       <div className="gyms four">
-        {l.four.map((t, i) => <Trainer key={`${t.name}${i}`} t={t} state={done || (inLeague && i < league.run) ? 'beaten' : inLeague && i === league.run ? 'next' : 'ahead'} label="Elite Four" />)}
-        <Trainer t={l.champion} state={done ? 'beaten' : inLeague && league.run === 4 ? 'next' : 'ahead'} label="Champion" />
+        {l.four.map((t, i) => <Trainer key={`${t.name}${i}`} t={t} state={state(l.gyms.length + i)} label="Elite Four" />)}
+        <Trainer t={l.champion} state={state(all.length - 1)} label="Champion" />
       </div>
       <p className="muted">
         {done ? 'Every league is beaten.'
-          : closed ? `${name} is not open yet: it needs ${(league.region - 1) * GRADUATES_PER_REGION} fully trained Pokemon (you have ${game.graduates.length}). Badge weeks still hand over stones meanwhile.`
-          : inLeague ? `The league: each badge week beats the next of the Elite Four, then the Champion. ${league.run} of ${LEAGUE_STEPS} done. A week off costs nothing.`
-          : `A week (Monday to Sunday) with ${BADGE_DAYS} days of ${PILLARS_FOR_A_DAY} or more pillars beats ${l.gyms[league.badges].name}.`}
-        {' '}{plural(league.beaten, 'league')} beaten.
+          : league.waiting ? `${l.name} is not open yet. Its leaders wait until it is.`
+          : `Each leader has ${LEADER_HP.toLocaleString('en-IN')} HP, worn down by every day's XP. There are no weeks and no losing.`}
+        {' '}Leagues beaten: {game.hall.length ? game.hall.map((h) => leagueName(h.league)).join(', ') : 'none yet'}.
       </p>
+    </Win>
+  )
+}
+
+function HallOfFame({ game }: { game: Game }) {
+  if (game.hall.length === 0) return null
+  return (
+    <Win title="Hall of Fame" tone="gold" aside={plural(game.hall.length, 'league')}>
+      <ul className="hall">
+        {game.hall.map((h) => (
+          <li key={h.league}>
+            <div><b>{leagueName(h.league)}</b><small>{fmtDay(h.day)} · beat {LEAGUES[h.league].champion.name}</small></div>
+            <div className="team">
+              <img src={still(h.partner.form, h.partner.shiny)} alt={nameOf(h.partner.form)} title={`${nameOf(h.partner.form)}, the partner`} width={56} height={56} className="sprite lead" />
+              {h.team.map((m, i) => <img key={i} src={still(m.form, m.shiny)} alt={nameOf(m.form)} title={nameOf(m.form)} width={44} height={44} className="sprite" />)}
+            </div>
+          </li>
+        ))}
+      </ul>
     </Win>
   )
 }
@@ -608,8 +704,6 @@ function StatsRadar({ stats }: { stats: Stats }) {
   )
 }
 
-/** Regions whose badges have artwork (Kanto to Kalos); see tools/build-badges.py. */
-const BADGE_ART_REGIONS = 6
 const DAYS_SHOWN = 30
 function TrainerTab({ game }: { game: Game }) {
   const days = game.days.slice(-DAYS_SHOWN)
@@ -636,19 +730,20 @@ function TrainerTab({ game }: { game: Game }) {
             <dt>Perfect days</dt><dd>{game.perfectDays}</dd>
             <dt>Best day</dt><dd>{best?.xp ? `${best.xp} XP, ${fmtDay(best.day)}` : 'none yet'}</dd>
             <dt>Region</dt><dd>{REGIONS[game.regions - 1]}</dd>
-            <dt>Badge weeks</dt><dd>{game.badges.length} · {plural(game.league.beaten, 'league')}</dd>
+            <dt>League</dt><dd>{game.league.index < LEAGUES.length ? leagueName(game.league.index) : 'All beaten'} · {plural(game.hall.length, 'league')} won</dd>
+            <dt>Caught</dt><dd>{game.moments.filter((m) => m.kind === 'catch').length} · {game.queue.length} in the Box</dd>
           </dl>
         </div>
         <div className="who"><Sprite form={game.partner.form} shiny={game.partner.shiny} size={96} /></div>
-        <div className="badges" title="The badges of the region you are challenging">
-          {Array.from({ length: BADGES_PER_REGION }, (_, i) => {
-            const region = Math.min(game.league.region, LEAGUES.length)
-            const t = LEAGUES[region - 1].gyms[i]
-            const on = game.league.region > LEAGUES.length || i < game.league.badges
-            const title = `${t.badge}${/ Z$/.test(t.badge) ? '' : ' Badge'}: ${on ? 'earned' : `beat ${t.name}`}`
+        <div className="badges" title="The badges of the league you are challenging" style={{ gridTemplateColumns: `repeat(${LEAGUES[Math.min(game.league.index, LEAGUES.length - 1)].gyms.length}, minmax(0, 44px))` }}>
+          {LEAGUES[Math.min(game.league.index, LEAGUES.length - 1)].gyms.map((t, i) => {
+            const index = Math.min(game.league.index, LEAGUES.length - 1)
+            const on = game.league.index >= LEAGUES.length || i < game.league.slot
+            const title = `${badgeName(t)}: ${on ? 'earned' : `beat ${t.name}`}`
+            const art = badgeArt(index, i)
             // the real badge where there is a picture of it; a plain shape for the regions without one
-            return region <= BADGE_ART_REGIONS
-              ? <img key={i} src={`/sprites/badges/${region}-${i + 1}.png`} alt={title} title={title} width={44} height={44} className={`sprite badge-art ${on ? 'on' : ''}`} />
+            return art
+              ? <img key={i} src={art} alt={title} title={title} width={44} height={44} className={`sprite badge-art ${on ? 'on' : ''}`} />
               : <span key={i} className={`badge b${i} ${on ? 'on' : ''}`} title={title} />
           })}
         </div>
@@ -658,6 +753,7 @@ function TrainerTab({ game }: { game: Game }) {
         <Gyms game={game} />
         <StatsRadar stats={game.stats} />
       </div>
+      <HallOfFame game={game} />
 
       <Win title="XP per day" tone="blue" aside={`last ${plural(days.length, 'day')}`}>
         <div className="chart" role="img" aria-label={`XP earned on each of the last ${days.length} days; best was ${best?.xp ?? 0}`}>
@@ -695,42 +791,48 @@ function TrainerTab({ game }: { game: Game }) {
 function RulesTab() {
   return (
     <>
-      <p className="lead">Nothing is earned here. Everything comes from ticking your day in Life OS; this app only shows what that built.</p>
+      <p className="lead">Nothing is earned here. Everything comes from ticking your day in Life OS. The same day does three different things: how much you did grows your partner, how whole the day was catches the wild Pokemon, and what kind of work it was beats the gym leader.</p>
       <div className="cols">
-        <Win title="XP per habit" tone="gold">
+        <Win title="How much: XP" tone="gold">
           <div className="tiers">
             <div><b>{TIER_XP.pillar}</b>pillar</div><div><b>{TIER_XP.core}</b>core</div><div><b>{TIER_XP.standard}</b>standard</div><div><b>{TIER_XP.basic}</b>basic</div>
           </div>
-          <p>Pillars are the day's real work: whichever habits you mark as pillars in Life OS. Arbor and Woodshed pay for the share of the block you finished. A tick counts if it is made by the end of the next day, and un-ticking takes the XP straight back.</p>
+          <p>All XP goes to one partner. Pillars are the day's real work. Arbor and Woodshed pay for the share of the block you finished. A tick counts if it is made by the end of the next day.</p>
+          <p className="muted">A day with {PILLARS_FOR_A_DAY} or more pillars counts for momentum: 3 of the last seven days give ×1.2, 5 give ×1.35, 7 give ×{momentumMult(MOMENTUM_WINDOW)}. It slides, never resets.</p>
         </Win>
-        <Win title="Momentum" tone="gold">
-          <p>A day with {PILLARS_FOR_A_DAY} or more pillars counts. Three of the last seven days give ×1.2, five give ×1.35 and seven give ×1.5. One missed day slides the number down a step; it never resets.</p>
-        </Win>
-      </div>
-      <div className="cols">
-        <Win title="One partner" tone="blue">
-          <p>All XP goes to one partner. Level L needs {xpForLevel(1)}×L² XP in total. Three-stage lines evolve at levels {evolveAt(3, 1)} and {evolveAt(3, 2)}, two-stage lines at {evolveAt(2, 1)}. At level {graduateAt(3)} ({graduateAt(1)} for a single-stage one) it is fully trained and the oldest catch in the queue takes over. If the queue is empty, the egg hatches.</p>
-          <p className="muted">Level {levelOf(1536)} takes 1,536 XP: about four full days, or eight ordinary ones.</p>
-        </Win>
-        <Win title="Catching">
-          <p>Every day has one wild Pokemon. Its HP is the habits you have left: tick them all (a perfect day) and it is caught. Every {RARE_EVERY}th perfect day is a rare, every {SHINY_EVERY}th a shiny and every {LEGENDARY_EVERY}th a legendary. The next region opens only when both are true: its league before it is beaten, and {GRADUATES_PER_REGION} more partners are fully trained.</p>
+        <Win title="The partner" tone="blue">
+          <p>Level L needs {xpForLevel(1)}×L² XP in total. It evolves by itself: three-stage lines at levels {evolveAt(3, 1)} and {evolveAt(3, 2)}, two-stage lines at {evolveAt(2, 1)}. A branching Pokemon goes the way your habits lean, and its card shows the lean. At level {graduateAt(3)} ({graduateAt(1)} for a single-stage one) it is fully trained and the next one takes over.</p>
+          <p className="muted">Level {levelOf(1536)} takes 1,536 XP: about four full days.</p>
         </Win>
       </div>
       <div className="cols">
-        <Win title="Forms" tone="dark">
-          <p>Every evolution happens by level, on its own. Branching evolutions follow what you did most while raising it. Mega forms show while momentum is full (X when the gym led the week, Y when code or guitar did). Gigantamax shows on a perfect day. A partner that never had two empty days in a row keeps its Bond ribbon.</p>
+        <Win title="How whole: catching" tone="green">
+          <p>One wild Pokemon stands in front of you until it is caught. It does not change daily and never flees. Each day hits it for 100 × (share of the day's XP done)², so a whole day hits four times as hard as a half day.</p>
+          <p>Your chores decide the ball: {BALL_NAME.great} (×{BALL_MULT.great}) at half of them done, {BALL_NAME.ultra} (×{BALL_MULT.ultra}) at four-fifths. HP: common {WILD_HP.C}, uncommon {WILD_HP.U.toLocaleString('en-IN')}, rare {WILD_HP.R.toLocaleString('en-IN')}; every {LEGENDARY_EVERY_WILD}th to appear is a legendary with {WILD_HP.L.toLocaleString('en-IN')}.</p>
+          <p><b>A perfect day</b> (every habit done) catches it on the spot, whatever HP is left, and is the only way to a shiny (1 in {SHINY_ODDS}). It also shows Gigantamax, and every {RARE_EVERY}th one hands over a stone.</p>
         </Win>
-        <Win title="Gyms and the league" tone="green">
-          <p>A week (Monday to Sunday) with {BADGE_DAYS} days of {PILLARS_FOR_A_DAY} or more pillars is a badge week: it beats the next gym leader of the region you are in. After the eighth badge, the next four beat the Elite Four and the fifth the Champion. A week off never undoes anything.</p>
+        <Win title="The Box" tone="dark">
+          <p>Caught Pokemon go to the Box. Nothing in it is waiting. When your partner is fully trained, the oldest in the Box takes over unless you tapped another one first, which costs nothing. If the Box is empty, an egg hatches.</p>
+          <p className="muted">The Pokedex counts three things per region: seen, caught and raised.</p>
         </Win>
       </div>
       <div className="cols">
-        <Win title="Stones" tone="green">
-          <p>A rare extra, earned and never bought: one with each gym badge, each league win and every {RARE_EVERY}th perfect day. Nothing needs one. You can spend a stone, by hand, on one of three things: a {MEGA_DAYS}-day Mega Evolution without full momentum, choosing the branch of a branching evolution, or bringing a queued Pokemon forward as your partner. None of them gives XP.</p>
+        <Win title="What kind: the league" tone="gold">
+          <p>The gym leader in front of you has {LEADER_HP.toLocaleString('en-IN')} HP. Every day's XP wears it down, and the domains that leader is weak to count ×{WEAK_MULT}. If your partner's type is super effective against the leader's, everything counts ×{ADVANTAGE_MULT} more. HP carries over: there are no weeks and no losing.</p>
+          <p>A league is its gyms, then the Elite Four, then the Champion. After Kanto come the Orange Islands (four gyms and Drake), then Johto. A new region opens only when the league before it is beaten and {GRADUATES_PER_REGION} more partners are fully trained. Beating a Champion puts you in the Hall of Fame.</p>
         </Win>
+        <Win title="Stones and Mega" tone="green">
+          <p>A stone comes from every second gym, each of the Elite Four, each Champion and every {RARE_EVERY}th perfect day. Nothing needs one. Spend it by hand on a {MEGA_DAYS}-day Mega Evolution, on choosing a branch, or on changing partner straight away. None of them gives XP.</p>
+          <p>Mega also shows by itself on a day with full momentum and every pillar done.</p>
+        </Win>
+      </div>
+      <div className="cols">
         <Win title="Sleep" tone="blue">
-          <p>Once the band reports a sleep score, Sleep becomes a pillar that only the band can fill: it pays the score as a share of {TIER_XP.pillar} XP and counts as done at {SLEEP_DONE} or more. The score is how long you slept, how much of it was deep or REM, and how unbroken it was. A poor night costs XP but never a perfect day: that is judged on what you can still do today. Until the band is in use the sleep habit is ticked by hand as before.</p>
-          <p className="muted">These rules are version 2, in force from {fmtDay(V2_START)}. Earlier days keep the first rules.</p>
+          <p>Once the band reports a sleep score, Sleep becomes a pillar that only the band can fill: it pays the score as a share of {TIER_XP.pillar} XP and counts as done at {SLEEP_DONE} or more. A poor night costs XP but never a perfect day. Until then the sleep habit is ticked by hand.</p>
+        </Win>
+        <Win title="Version" tone="dark">
+          <p>These rules are version 3, in force from {fmtDay(V3_START)}. Days before that keep the first rules. The game began on {fmtDay(GAME_START)}.</p>
+          <p className="muted">Trainer stats are yours, not the partner's: the share of each thing done over the last {STAT_DAYS} days, with Speed as steps against {STEPS_GOAL.toLocaleString('en-IN')}.</p>
         </Win>
       </div>
     </>
