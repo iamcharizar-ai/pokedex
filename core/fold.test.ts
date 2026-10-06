@@ -1,12 +1,14 @@
 // node --test core/
+import fs from 'node:fs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { addDays, buildFacts, inTime, type DayFacts, type FactsInput, type HabitFact } from './facts.ts'
-import { listsOf } from './events.ts'
+import { listAdds, listsOf } from './events.ts'
+import { golden } from './golden.ts'
 import { foldGame, isGym, leaderOf, statsOf } from './fold.ts'
 import { LEAGUES, lineup } from './gyms.ts'
 import { beats, weakDomains } from './types.ts'
-import { GAME_START, LEADER_HP, V3_START, WEAK_MULT, WILD_HP, ballFor, evolveAt, graduateAt, levelOf, momentumMult, regionsOpenV2, wildHit, xpForLevel } from './rules.ts'
+import { GAME_START, LEADER_HP, V3_START, V4_START, WEAK_MULT, WILD_HP, ballFor, evolveAt, graduateAt, levelOf, momentumMult, regionsOpenV2, rulesOn, wildHit, xpForLevel } from './rules.ts'
 import { SPECIES } from './species.ts'
 
 const H = (id: string, tag: HabitFact['tag'], worth: number, frac: number): HabitFact =>
@@ -27,8 +29,9 @@ function day(n: number, o: { code?: number; gym?: number; guitar?: number; arbor
   }
 }
 /** The original rules alone, and the new ones from the first day. */
-const fold1 = (f: DayFacts[]) => foldGame(f, { v3From: '9999-01-01' })
-const fold3 = (f: DayFacts[]) => foldGame(f, { v3From: GAME_START })
+const fold1 = (f: DayFacts[]) => foldGame(f, { v3From: '9999-01-01', v4From: '9999-01-01' })
+const fold3 = (f: DayFacts[]) => foldGame(f, { v3From: GAME_START, v4From: '9999-01-01' })
+const fold4 = (f: DayFacts[]) => foldGame(f, { v3From: GAME_START, v4From: GAME_START })
 const ALL = { code: 1, gym: 1, guitar: 1, arbor: 1, sleep: 1, chores: 1 }
 const run = (n: number, o: Parameters<typeof day>[1]) => Array.from({ length: n }, (_, i) => day(i, o))
 
@@ -527,4 +530,178 @@ test('every leader, in every league', () => {
   assert.equal(leaderOf(0, 0)?.name, 'Brock')
   assert.equal(leaderOf(0, 12)?.name, 'Blue')
   assert.deepEqual([isGym(0, 7), isGym(0, 8), isGym(1, 3), isGym(1, 4)], [true, false, true, false])
+})
+
+// ── version 4 ────────────────────────────────────────────────────────────────
+const THREE = { code: 1, gym: 1, guitar: 1 }
+const far = (n: number) => addDays(GAME_START, n)
+
+test('history stands: the recorded days fold exactly as they did under versions 1 and 3', () => {
+  const file = new URL('./fixtures/golden.json', import.meta.url)
+  const { facts, expected } = JSON.parse(fs.readFileSync(file, 'utf8')) as { facts: DayFacts[]; expected: unknown }
+  assert.deepEqual(golden(foldGame(facts, { v4From: '9999-01-01' })), expected)
+})
+
+test('version 4 starts on its own day and leaves every earlier day alone', () => {
+  assert.deepEqual([rulesOn(GAME_START), rulesOn(V3_START), rulesOn(V4_START), rulesOn(addDays(V4_START, -1))], [1, 3, 4, 3])
+  const facts = Array.from({ length: 200 }, (_, k) => day(k, k % 11 === 3 ? ALL : k % 5 === 4 ? {} : THREE))
+  const cut = 120
+  const old = fold3(facts.slice(0, cut))
+  const g = foldGame(facts, { v3From: GAME_START, v4From: far(cut) })
+  assert.deepEqual(g.days.slice(0, cut), old.days)
+  assert.deepEqual(g.moments.filter((m) => m.day < far(cut)), old.moments)
+  assert.equal(g.version, 4)
+  assert.equal(old.version, 3)
+})
+
+test('a day list can grow but not shrink', () => {
+  const D = V4_START
+  const L = (at: string, list: unknown, extra: Record<string, unknown> = {}) => ({ type: 'day_list', day: D, at, payload: { habits: JSON.stringify(list), ...extra } })
+  const first = [{ id: 'a', tier: 'pillar', tag: 'code' }, { id: 'b', tier: 'basic', tag: 'routine' }]
+  // b taken off, a demoted, c added: only c counts
+  const later = [{ id: 'a', tier: 'core', tag: 'guitar' }, { id: 'c', tier: 'core', tag: 'fitness' }]
+  assert.deepEqual(listsOf([L('1', first), L('2', later)])[D], [...first, { id: 'c', tier: 'core', tag: 'fitness' }])
+  // the same order of lists on a version 3 day: the last one stands, as it always did
+  const old = addDays(V4_START, -1)
+  assert.deepEqual(listsOf([{ ...L('1', first), day: old }, { ...L('2', later), day: old }])[old], later.map(({ id, tier }) => ({ id, tier })))
+  // a deliberate correction replaces the list of the day
+  assert.deepEqual(listsOf([L('1', first), L('2', later, { fix: true })])[D], later)
+  // an empty list is a list (a day with nothing on it), a broken one is not, and a made-up domain is dropped
+  assert.deepEqual(listsOf([L('1', [])])[D], [])
+  assert.equal(listsOf([{ type: 'day_list', day: D, at: '1', payload: { habits: '{broken' } }])[D], undefined)
+  assert.deepEqual(listsOf([L('1', [{ id: 'a', tier: 'core', tag: 'nonsense' }])])[D], [{ id: 'a', tier: 'core' }])
+  // Life OS only writes when it would change something
+  assert.equal(listAdds(undefined, first), true)
+  assert.equal(listAdds(first, [first[1], first[0]]), false) // a reorder
+  assert.equal(listAdds(first, [first[0]]), false) // a removal
+  assert.equal(listAdds(first, later), true)
+})
+
+test('the domain of a habit comes from the list of the day, then the library, then its id', () => {
+  const span = [{ from: '1970-01-01', to: null }]
+  const input: FactsInput = {
+    today: V4_START,
+    habits: [{ id: 'deep-work', tier: 'pillar', domain: 'code', spans: span }, { id: 'gym', tier: 'pillar', spans: span }, { id: 'run', tier: 'pillar', spans: span }],
+    ticks: {},
+  }
+  const tags = (i: FactsInput, d: string) => Object.fromEntries(buildFacts(i).find((f) => f.day === d)!.habits.map((h) => [h.id, h.tag]))
+  assert.deepEqual(tags(input, V4_START), { 'deep-work': 'code', gym: 'fitness', run: 'routine' })
+  // before version 4 only the id decided, and it still does for those days
+  assert.equal(tags(input, addDays(V4_START, -1))['deep-work'], 'routine')
+  // the list of the day wins over what the library says now
+  const listed: FactsInput = { ...input, lists: { [V4_START]: [{ id: 'deep-work', tier: 'pillar', tag: 'guitar' }, { id: 'run', tier: 'pillar' }] } }
+  assert.deepEqual(tags(listed, V4_START), { 'deep-work': 'guitar', run: 'routine' })
+  // a pillar that counts as a chore is said out loud
+  const g = foldGame(buildFacts(input))
+  assert.equal(g.warnings.length, 1)
+  assert.match(g.warnings[0], /^run is a pillar with no domain/)
+})
+
+test('version 4: the badge is the reward; no stone is earned and none is needed', () => {
+  const facts = run(400, THREE)
+  const g = fold4(facts)
+  assert.ok(g.moments.filter((m) => m.kind === 'gym').length >= 13)
+  assert.equal(items(g).length, 0)
+  assert.deepEqual(g.bag, {})
+  // pace is untouched: the same leaders fall on the same days as under version 3
+  const gyms = (x: G) => x.moments.filter((m) => m.kind === 'gym')
+  assert.deepEqual(gyms(g), gyms(fold3(facts)))
+  assert.deepEqual(g.days.map((d) => [d.xp, d.hit, d.strike]), fold3(facts).days.map((d) => [d.xp, d.hit, d.strike]))
+  // a change of partner costs nothing
+  const box = fold4(run(3, ALL))
+  const led = fold4(withUse(run(3, ALL), 2, { item: '', uid: box.queue[0].uid, what: 'lead' }))
+  assert.equal(led.partner.uid, box.queue[0].uid)
+  assert.equal(led.queue[0].uid, box.partner.uid)
+  // a week of Mega is no longer sold
+  const noMega = fold4(withUse(run(70, HALF), 69, { item: 'fire-stone', uid: fold4(run(70, HALF)).partner.uid, what: 'mega' }))
+  assert.equal(noMega.moments.some((m) => m.kind === 'use'), false)
+})
+
+test('version 4: the Key Stone comes with the eighth Kanto badge, and Mega is kept for good', () => {
+  const facts = run(900, THREE)
+  const g = fold4(facts)
+  const eighth = g.moments.find((m) => m.kind === 'gym' && m.league === 0 && m.slot === 7)!
+  const key = g.moments.filter((m) => m.kind === 'key')
+  assert.equal(key.length, 1)
+  assert.equal(key[0].day, eighth.day)
+  assert.equal(g.keyStone, eighth.day)
+  const megas = g.moments.flatMap((m) => (m.kind === 'mega' ? [m] : []))
+  assert.ok(megas.length >= 1, 'someone with a Mega form was raised in 900 days')
+  assert.ok(megas.every((m) => m.day >= eighth.day))
+  // nothing with a Mega form finishes training without it once the Key Stone is held
+  for (const m of g.graduates.filter((x) => x.graduated! >= eighth.day && SPECIES[x.form].m))
+    assert.deepEqual(m.megas, SPECIES[m.form].m, m.uid)
+  // registered while it was out in front: drawn as the Mega from then on, even on days with no work at all
+  const until = (d: string, extra: DayFacts[] = []) => fold4([...facts.filter((f) => f.day <= d), ...extra])
+  const live = megas.find((m) => until(m.day).partner.uid === m.uid)
+  assert.ok(live, 'one of them was registered by a leader falling')
+  const n = facts.findIndex((f) => f.day === live.day)
+  const rest = [day(n + 1, {}), day(n + 2, {}), day(n + 3, {})]
+  const idle = until(live.day, rest)
+  assert.deepEqual([idle.aura, idle.display, idle.partner.megas], ['mega', live.form, SPECIES[idle.partner.form].m])
+  // which form shows is a free choice and changes nothing else
+  const plain = fold4(withUse([...facts.filter((f) => f.day <= live.day), ...rest], n + 1, { item: '', uid: live.uid, what: 'show', to: 'base' }))
+  assert.deepEqual([plain.aura, plain.display], [null, plain.partner.form])
+  assert.equal(plain.partner.xp, idle.partner.xp)
+})
+
+test('version 4: bond is never lost, and the days together only count up', () => {
+  const facts = [day(0, HALF), day(1, {}), day(2, {}), day(3, {})]
+  assert.equal(fold3(facts).partner.bond, false)
+  const g = fold4(facts)
+  assert.deepEqual([g.partner.bond, g.asleep, g.partner.together], [true, true, 1])
+  assert.equal(fold4([...facts, day(4, HALF)]).partner.together, 2)
+})
+
+test('version 4: a partner graduates with a nature from what it was raised on', () => {
+  // gym and code every day, nothing else: the first of the best (gym) up, the first of the worst (the morning block) down
+  const g = fold4(run(80, HALF))
+  assert.deepEqual(g.graduates[0].nature, { name: 'Lonely', up: 'fitness', down: 'arbor' })
+  // code alone: Sp. Atk up
+  assert.equal(fold4(run(200, { code: 1 })).graduates[0].nature?.up, 'code')
+  // everything the same: one of the five that change nothing
+  assert.deepEqual(fold4(run(80, ALL)).graduates[0].nature, { name: 'Hardy' })
+  // raised before version 4: none
+  assert.equal(fold3(run(80, HALF)).graduates[0].nature, undefined)
+})
+
+test('a catch keeps the ball of its day', () => {
+  assert.equal(fold4(run(1, ALL)).queue[0].ball, 'ultra')
+  const worn = fold4(run(40, HALF)) // no chores done: worn down with a Poke Ball
+  assert.equal(worn.queue[0].ball, 'poke')
+})
+
+test('field notes count each domain in its own unit', () => {
+  const facts: DayFacts[] = [
+    { ...day(0, { code: 1, arbor: 1, guitar: 0.5 }), marks: { workouts: 1, records: 2, clean: 3 }, body: { steps: 4000 } },
+    { ...day(1, { code: 1, guitar: 1 }), marks: { owned: 1 }, body: { steps: 25000 } },
+    day(2, {}),
+  ]
+  assert.deepEqual(fold4(facts).notes, { codeDays: 2, arborDays: 1, guitarDays: 1, workouts: 1, records: 2, clean: 3, owned: 1, steps: 14000, stepDays: 2 })
+})
+
+test('crossing into version 4 with a stone in the Bag and a Mega week running', () => {
+  const facts = Array.from({ length: 80 }, (_, k) => day(k, k % 3 === 2 ? {} : HALF))
+  const before = fold3(facts.slice(0, 70))
+  const stone = Object.keys(before.bag).find((k) => before.bag[k] > 0)!
+  const used = withUse(facts, 69, { item: stone, uid: before.partner.uid, what: 'mega', to: 'charizard-megay' })
+  const cross = (n: number) => foldGame(used.slice(0, n), { v3From: GAME_START, v4From: far(72) })
+  // the week that was bought runs out as it was bought: days 69 to 75
+  assert.deepEqual([cross(74).display, cross(76).display, cross(77).display], ['charizard-megay', 'charizard-megay', 'charizard'])
+  // what was in the Bag stays there, and nothing is added to it
+  assert.deepEqual(cross(80).bag, cross(72).bag)
+  assert.equal(items(cross(80)).filter((m) => m.day >= far(72)).length, 0)
+})
+
+test('every entry in the species table can be reached', async () => {
+  const { auditDex } = await import('../tools/audit-dex.mjs')
+  const a = auditDex()
+  assert.deepEqual(a.unreachable, [])
+  assert.deepEqual(a.byChoiceOnly, ['glaceon'])
+})
+
+test('Life OS runs the same core', { skip: !fs.existsSync(new URL('../../lifeos/src/game-core', import.meta.url)) }, () => {
+  const read = (u: URL) => fs.readFileSync(u, 'utf8').replace(/\r\n/g, '\n')
+  for (const f of ['rules.ts', 'facts.ts', 'fold.ts', 'order.ts', 'species.ts', 'gyms.ts', 'events.ts', 'types.ts'])
+    assert.ok(read(new URL(`../../lifeos/src/game-core/${f}`, import.meta.url)) === read(new URL(`./${f}`, import.meta.url)), `${f} differs: run npm run core`)
 })

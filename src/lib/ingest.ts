@@ -5,7 +5,8 @@ import type { FactsInput, HabitLite, TickMap } from '../../core/facts.ts'
 import { BODY_EVENT, LIST_EVENT, USE_EVENT, bodyOf, listsOf, usesOf } from '../../core/events.ts'
 import { settled } from '../../core/order.ts'
 import { emptyArbor, foldArbor, type LedgerEvent } from '../linked/arbor-model.ts'
-import { emptyShed, foldShed } from '../linked/shed-model.ts'
+import { emptyShed, foldShed } from '../linked/woodshed/model.ts'
+import { marksOf } from './marks.ts'
 
 const GYM = 'gym'
 const SLEEP = 'sleep-before-10'
@@ -13,7 +14,7 @@ const SLEEP = 'sleep-before-10'
 const BED_BY = '22:30'
 const EPOCH = '1970-01-01'
 
-export const TYPES = ['tick', 'untick', 'workout', 'workout_clear', 'skill', 'plan', 'guitar', 'guitar_plan', BODY_EVENT, USE_EVENT, LIST_EVENT]
+export const TYPES = ['tick', 'untick', 'workout', 'workout_clear', 'workout_delete', 'skill', 'plan', 'guitar', 'guitar_plan', BODY_EVENT, USE_EVENT, LIST_EVENT]
 
 /** The habit library from the newest `config` event. */
 export function habitsFrom(config: LedgerEvent | undefined): HabitLite[] {
@@ -23,7 +24,7 @@ export function habitsFrom(config: LedgerEvent | undefined): HabitLite[] {
     const gone = new Set(config.payload.deleted ? (JSON.parse(String(config.payload.deleted)) as string[]) : [])
     return habits
       .filter((h) => h && h.id && !gone.has(h.id))
-      .map((h) => ({ id: h.id, tier: h.tier, name: h.name, emoji: h.emoji, spans: Array.isArray(h.spans) && h.spans.length ? h.spans : [{ from: EPOCH, to: null }] }))
+      .map((h) => ({ id: h.id, tier: h.tier, name: h.name, emoji: h.emoji, domain: h.domain, spans: Array.isArray(h.spans) && h.spans.length ? h.spans : [{ from: EPOCH, to: null }] }))
   } catch {
     return []
   }
@@ -47,11 +48,13 @@ export function ingest(events: LedgerEvent[], config: LedgerEvent | undefined, t
       if (time >= '18:00' && time <= BED_BY) (ticks[date] ??= {})[SLEEP] ??= ev.at
     }
   }
+  const shed = foldShed(emptyShed(), sorted.filter((e) => e.type === 'guitar' || e.type === 'guitar_plan'))
   return {
     habits: habitsFrom(config),
     ticks,
     arbor: foldArbor(emptyArbor(), sorted.filter((e) => e.type === 'skill' || e.type === 'plan')),
-    shed: foldShed(emptyShed(), sorted.filter((e) => e.type === 'guitar' || e.type === 'guitar_plan')),
+    shed,
+    marks: marksOf(sorted, shed),
     lists: listsOf(sorted),
     body: bodyOf(sorted),
     uses: usesOf(sorted),

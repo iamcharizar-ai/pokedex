@@ -1,5 +1,3 @@
-// Copied from woodshed/core/model.ts. The Pokedex only needs the fold, to read the same
-// day plans and practice logs Life OS reads. Keep in step with the original.
 // WOODSHED CORE — shared by Woodshed and Life OS.
 // Source of truth lives in the woodshed repo (core/); `npm run core` copies it
 // into Life OS. Pure TypeScript, no DOM, no dependencies.

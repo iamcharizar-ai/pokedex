@@ -1,5 +1,5 @@
 // Plays a year of synthetic days through the real game core and prints what
-// happens: XP a day, catches, the Box, partners raised, leaders beaten, stones.
+// happens: XP a day, catches, the Box, partners raised, leaders beaten, Mega.
 // Run it after any change to core/rules.ts, before shipping the change.
 //
 //   node tools/simulate.mjs
@@ -33,6 +33,8 @@ const PROFILES = {
   ordinary: () => ({ p: 0.68, s: 0.6, c: 0.6 }),
   patchy: () => ({ p: 0.5, s: 0.45, c: 0.45 }),
   lapsing: (w) => (w % 6 < 3 ? { p: 0.85, s: 0.75, c: 0.8 } : { p: 0.15, s: 0.2, c: 0.2 }), // three good weeks, three off
+  interrupted: (w) => (w >= 8 && w < 11 ? { p: 0, s: 0, c: 0 } : { p: 0.8, s: 0.7, c: 0.75 }), // good, then three weeks of nothing at all (ill, away), then good again
+  oneDomain: () => ({ p: 0.9, s: 0.6, c: 0.5, only: 'code' }), // a push on one thing: the other pillars mostly dropped
 }
 const DAYS = 365
 
@@ -41,13 +43,15 @@ for (const name of Object.keys(PROFILES)) {
   for (let i = 0; i < DAYS; i++) {
     const q = PROFILES[name](Math.floor(i / 7)), mood = (r() - 0.5) * 0.3
     const habits = LIST.map(([id, tag, worth, pillar]) => {
-      const p = Math.max(0, Math.min(1, (pillar ? q.p : tag === 'sleep' ? q.s : q.c) + mood))
+      const base = pillar ? (q.only && tag !== q.only ? 0.15 : q.p) : tag === 'sleep' ? q.s : q.c
+      const p = base === 0 ? 0 : Math.max(0, Math.min(1, base + mood))
       const done = r() < p
       return { id, tag, worth, pillar, frac: done ? 1 : 0, done }
     })
     facts.push({ day: addDays(GAME_START, i), habits })
   }
-  const g = foldGame(facts, { v3From: GAME_START })
+  // the rules in force now, from the first day
+  const g = foldGame(facts, { v3From: GAME_START, v4From: GAME_START })
   const m = g.moments, of = (k) => m.filter((x) => x.kind === k)
   const dayNo = (x) => (x ? g.days.findIndex((d) => d.day === x.day) + 1 : '-')
   const avg = (f) => g.days.reduce((s, d) => s + f(d), 0) / DAYS
@@ -58,5 +62,7 @@ for (const name of Object.keys(PROFILES)) {
   console.log(`  catching: ${catches.length} a year (${(catches.length / 52).toFixed(2)} a week; ${catches.filter((c) => c.how === 'perfect').length} by a perfect day, ${catches.filter((c) => c.shiny).length} shiny) · typical wait ${gaps[Math.floor(gaps.length / 2)] ?? '-'} days · average hit ${Math.round(avg((d) => d.hit))}`)
   console.log(`  raising: ${g.graduates.length} fully trained (first on day ${dayNo(of('graduate')[0])}) · ${(catches.length / Math.max(1, g.graduates.length)).toFixed(1)} caught for each one raised · Box at year end ${g.queue.length} · eggs ${of('partner').filter((x) => x.origin === 'egg').length}`)
   console.log(`  league: ${of('gym').length} leaders beaten · average strike ${Math.round(avg((d) => d.strike))} · leagues beaten ${leagues.map((l) => `${LEAGUES[l.league].name} day ${dayNo(l)}`).join(', ') || 'none'} · regions open ${g.regions}${g.league.waiting ? ' (next league waiting for its region)' : ''}`)
-  console.log(`  extras: ${of('item').length} stones · Mega on ${g.days.filter((_, i) => false).length || m.filter((x) => x.kind === 'form' && x.what === 'mega').length} first-time forms · days at full momentum ${g.days.filter((d) => d.mult >= 1.5).length}`)
+  const natures = g.graduates.map((x) => x.nature?.name).filter(Boolean)
+  console.log(`  mega: Key Stone day ${dayNo(of('key')[0])} · ${of('mega').length} kept for good · ${m.filter((x) => x.kind === 'form' && x.what === 'mega').length} first seen on a full-momentum day · days at full momentum ${g.days.filter((d) => d.mult >= 1.5).length}`)
+  console.log(`  kept: bond lost ${g.graduates.filter((x) => !x.bond).length} (must be 0) · stones ${of('item').length} (must be 0) · natures ${[...new Set(natures)].join(', ') || 'none yet'}`)
 }

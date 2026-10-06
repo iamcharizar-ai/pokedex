@@ -102,7 +102,7 @@ export function start(): void {
   }, 60_000)
 }
 
-/** Spend a stone on one Pokemon (final, like the games), or choose who is next (`what: 'next'`, no stone, changeable). */
+/** Something chosen by hand: who is next, a branch, who leads, which form shows. None of it costs anything from version 4; `item` is only sent for a stone spent under version 3. */
 export function useItem(item: string, uid: string, what: string, to?: string): void {
   events.push(ledger.emit(USE_EVENT, { ...(item ? { item } : {}), uid, what, ...(to ? { to } : {}) }))
   refresh()
