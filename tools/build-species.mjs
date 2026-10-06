@@ -47,7 +47,9 @@ const BRANCH_OVERRIDE = {
 // Real species in their ordinary form, plus the regional variants, which are
 // lines of their own that turn up once their region opens.
 const REGIONAL = { Alola: 7, Galar: 8, Hisui: 8, Paldea: 9 }
-const base = Object.entries(DEX).filter(([, e]) => (!e.forme || REGIONAL[e.forme]) && e.num > 0 && !(e.tags ?? []).includes('Pokestar'))
+// cosmetic forms that only share a regional name (Ash's Alola Cap Pikachu): not a regional variant
+const COSMETIC = new Set(['pikachualola'])
+const base = Object.entries(DEX).filter(([id, e]) => (!e.forme || (REGIONAL[e.forme] && !COSMETIC.has(id))) && e.num > 0 && !(e.tags ?? []).includes('Pokestar'))
 const byId = new Map(base.map(([id, e]) => [id, e]))
 const sid = (key) => spriteOf(byId.get(key))
 const ok = (key) => byId.has(key) && hasSprite(sid(key))

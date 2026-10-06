@@ -17,5 +17,5 @@ createRoot(document.getElementById('root')!).render(
 
 // Installable and usable offline: the shell and every sprite seen once are cached.
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
-  window.addEventListener('load', () => void navigator.serviceWorker.register('/sw.js'))
+  window.addEventListener('load', () => void navigator.serviceWorker.register('/sw.js').catch((err) => console.warn('Service worker registration failed; carrying on without offline support', err)))
 }
