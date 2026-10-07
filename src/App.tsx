@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { isGym, leaderOf, nameOf, spritePath, type Game, type Mon, type Moment, type Stats } from '../core/fold.ts'
 import type { DayFacts, HabitFact } from '../core/facts.ts'
-import { LEAGUES, lineup, type Leader } from '../core/gyms.ts'
+import { LEAGUES, lineup } from '../core/gyms.ts'
 import {
   ADVANTAGE_MULT, BALL_MULT, BALL_NAME, GAME_START, GRADUATES_PER_REGION, ITEM_NAME, KEY_STONE_BADGES, LEADER_HP, LEGENDARY_EVERY_WILD, MEGA_DAYS, MOMENTUM_WINDOW,
   PILLARS_FOR_A_DAY, REGIONS, SHINY_ODDS, SLEEP_DONE, STAT_DAYS, STEPS_GOAL, TIER_XP, V3_START, V4_START, WEAK_MULT, WILD_HP,
@@ -9,9 +9,11 @@ import {
 } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
 import { Ball, KeyStone } from './Ball.tsx'
+import { KBar, KCard, KMedal, KPill, KRibbon } from './Kit.tsx'
 import { Recap } from './Recap.tsx'
 import { aBall, badgeArt, badgeName, fmtDay, leagueName, still } from './lib/art.ts'
 import { LIFEOS_URL, VITALS_URL, start, useItem, useView, type BodyDay } from './lib/store.ts'
+import './skin.css'
 
 type Tab = 'partner' | 'bag' | 'dex' | 'trainer' | 'rules'
 const TABS: [Tab, string][] = [['partner', 'Partner'], ['bag', 'Bag'], ['dex', 'Pokedex'], ['trainer', 'Trainer'], ['rules', 'Rules']]
@@ -23,6 +25,19 @@ const dexNo = (n: number) => String(n).padStart(3, '0')
 const itemName = (item: string): string => ITEM_NAME[item] ?? item
 const itemIcon = (item: string): string => `/sprites/items/${item}.png`
 const RARITY: Record<string, string> = { C: 'Common', U: 'Uncommon', R: 'Rare', L: 'Legendary' }
+/** How far along its line a form is, as the card frame shows it: 1 bronze, 2 silver, 3 gold (it evolves no further). */
+const frameOf = (form: string): 1 | 2 | 3 => (SPECIES[form]?.e?.length ? (SPECIES[form].s >= 2 ? 2 : 1) : 3)
+function MonCard({ m, form = m.form, size, level, bar, note }: { m: Mon; form?: string; size: number; level?: number; bar?: ReactNode; note?: string }) {
+  return (
+    <KCard
+      stage={frameOf(m.form)} mega={Boolean(m.megas?.length)} level={level} bar={bar} note={note}
+      gem={m.nature?.up ? TAG_NAME[m.nature.up]?.slice(0, 2) : undefined}
+      ball={m.ball ? <Ball ball={m.ball} size={22} /> : undefined}
+      art={<img src={still(form, m.shiny)} alt={nameOf(form)} width={size} height={size} className="sprite" />}
+    />
+  )
+}
+
 /** Badges won so far, across every league. */
 const badgesWon = (game: Game): number =>
   LEAGUES.reduce((n, l, i) => n + (i < game.league.index ? l.gyms.length : i === game.league.index ? Math.min(game.league.slot, l.gyms.length) : 0), 0)
@@ -274,6 +289,8 @@ function Summary({ game }: { game: Game }) {
   const toGo = Math.max(0, xpForLevel(game.next.level) - Math.round(partner.xp))
   return (
     <Win title="Summary" tone="blue" aside={`No. ${dexNo(rec.d)}`}>
+      <div className="sumrow">
+      <MonCard m={partner} form={game.display} size={104} level={game.level} bar={<KBar value={Math.round(game.into)} max={game.need} ready={toGo === 0} />} note={frameOf(partner.form) === 3 ? (partner.megas?.length ? 'Mega, for good' : 'Fully evolved') : `Stage ${rec.s} of ${SPECIES[partner.base].x ?? 1}`} />
       <dl className="facts">
         <dt>Met</dt><dd>{partner.origin === 'starter' ? 'Starter' : partner.origin === 'egg' ? 'Hatched from an egg' : 'Caught'}, {fmtDay(partner.from)}</dd>
         <dt>Type</dt><dd>{rec.t}{rec.t2 ? ` / ${rec.t2}` : ''}</dd>
@@ -299,6 +316,7 @@ function Summary({ game }: { game: Game }) {
         </dd>
         <dt>Bond</dt><dd><span className={`ribbon ${partner.together ? 'on' : ''}`} title="Days it has been your partner on which you did at least one pillar. It only ever counts up.">{plural(partner.together ?? 0, 'day')} together</span></dd>
       </dl>
+      </div>
       {game.lean.length > 0 && <p className="muted">It evolves by itself at level {game.next.level}, into whichever your habits lean to most by then.</p>}
       {game.asleep && <p className="notice warn">Asleep after two days without a pillar. Finish one pillar to wake it. Nothing is lost.</p>}
       {game.aura === 'mega' && <p className="notice good">{partner.megas?.length ? 'Mega form: registered for good. Choose which form shows in the Bag.' : 'Mega form: full momentum and every pillar done today.'}</p>}
@@ -362,8 +380,7 @@ function Box({ game, body }: { game: Game; body: BodyDay | null }) {
           <div className="queue pick">
             {game.queue.map((m) => (
               <button key={m.uid} aria-pressed={m.uid === game.nextUp} className={m.uid === game.nextUp ? 'on' : ''} onClick={() => m.uid !== game.nextUp && useItem('', m.uid, 'next')} title={`${nameOf(m.form)} · caught ${fmtDay(m.from)}${m.ball ? ` in ${aBall(m.ball)}` : ''}${m.uid === game.nextUp ? ' · next partner' : ''}`}>
-                <img src={still(m.form, m.shiny)} alt={nameOf(m.form)} width={64} height={64} className="sprite" />
-                {m.ball && <Ball ball={m.ball} size={16} className="inball" />}
+                <MonCard m={m} size={64} />
                 {m.uid === game.nextUp && <span className="nexttag">Next</span>}
               </button>
             ))}
@@ -385,7 +402,7 @@ function Box({ game, body }: { game: Game; body: BodyDay | null }) {
 function PartnerTab({ game, facts, body }: { game: Game; facts: DayFacts[]; body: BodyDay | null }) {
   const habits = facts[facts.length - 1]?.habits ?? []
   return (
-    <>
+    <div className="home">
       <Scene game={game} />
       <Talk game={game} pillars={habits.filter((h) => h.pillar)} />
       <NextUp game={game} />
@@ -398,7 +415,7 @@ function PartnerTab({ game, facts, body }: { game: Game; facts: DayFacts[]; body
         <Momentum game={game} />
       </div>
       <Box game={game} body={body} />
-    </>
+    </div>
   )
 }
 
@@ -598,8 +615,9 @@ function DexTab({ game }: { game: Game }) {
           <span className="muted">
             {locked
               ? `Locked until the ${REGIONS[region - 2]} league is beaten and ${(region - 1) * GRADUATES_PER_REGION} Pokemon are fully trained (you have ${game.graduates.length}, and ${plural(game.league.beaten, 'regional league')}).`
-              : `${perRegion[region - 1].seen} seen · ${perRegion[region - 1].own} caught · ${raisedIn} raised, of ${entries.length}.`}
+              : `${perRegion[region - 1].seen} seen · ${raisedIn} raised.`}
           </span>
+          {!locked && <span className="found">Found: {perRegion[region - 1].own}/{entries.length}</span>}
         </div>
         <div className="dexwrap">
           <div className={`dex ${locked ? 'locked' : ''}`}>
@@ -607,7 +625,7 @@ function DexTab({ game }: { game: Game }) {
               const e = game.dex[id]
               const mon = owned.get(id)
               return (
-                <button key={id} className={`cell ${e ? 'seen' : ''} ${e && !e.own ? 'met' : ''} ${open === id ? 'sel' : ''}`} onClick={() => setOpen(open === id ? null : id)} title={e ? r.n : `#${r.d}`} aria-pressed={open === id} aria-label={e ? `${r.n}, number ${r.d}` : `Not seen, number ${r.d}`}>
+                <button key={id} className={`cell ${e ? 'seen' : ''} ${e && !e.own ? 'met' : ''} ${e?.own ? `own st${frameOf(id)}` : ''} ${(r.m ?? []).some((f) => game.dex[f]?.own) ? 'mg' : ''} ${open === id ? 'sel' : ''}`} onClick={() => setOpen(open === id ? null : id)} title={e ? r.n : `#${r.d}`} aria-pressed={open === id} aria-label={e ? `${r.n}, number ${r.d}` : `Not seen, number ${r.d}`}>
                   <img src={still(id, e?.shiny)} alt="" loading="lazy" width={64} height={64} className={`sprite ${e ? '' : 'unseen'}`} />
                   <span className="no">{dexNo(r.d)}</span>
                   {mon?.graduated && <span className="star" title="Fully trained">★</span>}
@@ -691,33 +709,40 @@ function line(m: Moment): string {
     case 'mega': return `${nameOf(m.form)} registered for good`
   }
 }
-function Trainer({ t, state, label, badge }: { t: Leader; state: 'beaten' | 'next' | 'ahead'; label: string; badge?: string }) {
-  return (
-    <div className={`leader ${state}`} title={`${t.name} · ${t.type}${t.badge ? ` · ${t.badge}` : ''}`}>
-      {t.sprite ? <img src={`/sprites/trainers/${t.sprite}.png`} alt="" width={64} height={64} className="sprite" loading="lazy" /> : <span className="nopic" aria-hidden>?</span>}
-      <span className="ld-name">{t.name}</span>
-      <span className="ld-sub">{badge ? <img src={badge} alt="" width={16} height={16} className="sprite" /> : <img src={`/sprites/types/${t.type}.png`} alt={t.type} width={16} height={16} />}{label}</span>
-    </div>
-  )
-}
-
-/** The league being challenged: everyone in it, in order, and how far through you are. */
-function Gyms({ game }: { game: Game }) {
+/** The league being challenged, as a road: one step per leader, a tick on those behind you, a marker where you stand. */
+function Road({ game }: { game: Game }) {
   const { league } = game
   const done = league.index >= LEAGUES.length
   const index = Math.min(league.index, LEAGUES.length - 1)
   const l = LEAGUES[index]
   const all = lineup(l)
   const at = done ? all.length : league.slot
-  const state = (i: number) => (i < at ? 'beaten' : i === at && !league.waiting ? 'next' : 'ahead')
+  const hp = league.hp / league.max
   return (
     <Win title={`${l.name} league`} tone="gold" aside={done ? 'All beaten' : `${Math.min(at, l.gyms.length)} / ${l.gyms.length} badges`}>
-      <div className="gyms">
-        {l.gyms.map((t, i) => <Trainer key={t.name} t={t} state={state(i)} label={t.badge} badge={badgeArt(index, i) ?? undefined} />)}
-      </div>
-      <div className="gyms four">
-        {l.four.map((t, i) => <Trainer key={`${t.name}${i}`} t={t} state={state(l.gyms.length + i)} label="Elite Four" />)}
-        <Trainer t={l.champion} state={state(all.length - 1)} label="Champion" />
+      <div className="road-win">
+        <div className="k-road">
+          {all.flatMap((t, i) => {
+            const state = i < at ? 'done' : i === at && !league.waiting ? 'now' : 'ahead'
+            const gym = i < l.gyms.length
+            const art = gym ? badgeArt(index, i) : null
+            const step = (
+              <div key={`${t.name}${i}`} className={`k-step ${state}`} data-n={i + 1}>
+                {t.sprite ? <img src={`/sprites/trainers/${t.sprite}.png`} alt="" width={52} height={52} className="sprite" loading="lazy" /> : <span className="nopic" aria-hidden>?</span>}
+                <div>
+                  <span className="name">{t.name}</span>
+                  <small>{gym ? badgeName(t) : i === all.length - 1 ? 'Champion' : 'Elite Four'} · {t.type}</small>
+                  {state === 'now' && <div style={{ marginTop: 6 }}><KBar value={league.hp} max={league.max} kind={hp <= 0.2 ? 'hp low' : hp <= 0.5 ? 'hp mid' : 'hp'} label={`${league.hp.toLocaleString('en-IN')} HP left`} /></div>}
+                </div>
+                {gym && <KMedal on={state === 'done'} title={`${badgeName(t)}: ${state === 'done' ? 'won' : 'not yet'}`}>{art ? <img src={art} alt="" className="sprite" /> : <span className={`badge b${i} on`} />}</KMedal>}
+              </div>
+            )
+            // the big step after the eighth badge of the first league
+            return index === 0 && i === KEY_STONE_BADGES - 1
+              ? [step, <div key="key" className={`k-step key ${game.keyStone ? 'done' : 'ahead'}`} data-n="★"><KeyStone size={52} held /><div><span className="name">Key Stone</span><small>{game.keyStone ? `Yours since ${fmtDay(game.keyStone)}: Mega forms are kept for good` : 'Comes with this badge. With it, Mega forms are kept for good'}</small></div></div>]
+              : [step]
+          })}
+        </div>
       </div>
       <p className="muted">
         {done ? 'Every league is beaten.'
@@ -786,16 +811,14 @@ function BadgeCase({ game }: { game: Game }) {
     <Win title="Badge case" tone="dark" aside={plural(badgesWon(game), 'badge')}>
       {LEAGUES.slice(0, upTo + 1).map((l, index) => (
         <div key={l.name} className="caserow">
-          <span className="casename">{l.name}</span>
-          <div className="badges" style={{ gridTemplateColumns: `repeat(${l.gyms.length}, minmax(0, 44px))` }}>
+          <KRibbon metal={index < game.league.index ? 'gold' : 'silver'}>{l.name}</KRibbon>
+          <div className="casemedals">
             {l.gyms.map((t, i) => {
               const on = index < game.league.index || i < game.league.slot
               const title = `${badgeName(t)}: ${on ? `won from ${t.name}` : `beat ${t.name}`}`
               const art = badgeArt(index, i)
               // the real badge where there is a picture of it; a plain shape for the regions without one
-              return art
-                ? <img key={i} src={art} alt={title} title={title} width={44} height={44} className={`sprite badge-art ${on ? 'on' : ''}`} />
-                : <span key={i} className={`badge b${i} ${on ? 'on' : ''}`} title={title} />
+              return <KMedal key={i} on={on} title={title} color={index < game.league.index ? undefined : '#63c6ff'}>{art ? <img src={art} alt={title} className="sprite" /> : <span className={`badge b${i} on`} />}</KMedal>
             })}
           </div>
         </div>
@@ -880,7 +903,7 @@ function TrainerTab({ game }: { game: Game }) {
 
       {game.warnings.map((w) => <p key={w} className="notice warn">{w}</p>)}
       <div className="cols">
-        <Gyms game={game} />
+        <Road game={game} />
         <StatsRadar stats={game.stats} />
       </div>
       <div className="cols">
@@ -977,6 +1000,39 @@ function RulesTab() {
   )
 }
 
+// ── the frame every tab shares ──────────────────────────────────────────────
+/** Tab icons, drawn here as plain shapes. */
+const ICON: Record<Tab, ReactNode> = {
+  partner: <svg viewBox="0 0 24 24" aria-hidden><path d="M12 21s-8-5.2-8-11a4.6 4.6 0 0 1 8-3 4.6 4.6 0 0 1 8 3c0 5.8-8 11-8 11z" fill="#ff6b78" stroke="#141a33" strokeWidth="2" strokeLinejoin="round" /></svg>,
+  bag: <svg viewBox="0 0 24 24" aria-hidden><path d="M8 8V6a4 4 0 0 1 8 0v2" fill="none" stroke="#141a33" strokeWidth="2.4" /><rect x="3.5" y="8" width="17" height="13" rx="3" fill="#e9a23b" stroke="#141a33" strokeWidth="2" /><rect x="9.5" y="12" width="5" height="4" rx="1" fill="#fff3a8" stroke="#141a33" strokeWidth="1.6" /></svg>,
+  dex: <svg viewBox="0 0 24 24" aria-hidden><rect x="4" y="3" width="16" height="18" rx="3" fill="#dc3b45" stroke="#141a33" strokeWidth="2" /><circle cx="9" cy="8" r="2.6" fill="#63c6ff" stroke="#141a33" strokeWidth="1.6" /><rect x="7" y="13" width="10" height="5" rx="1" fill="#f8f5ea" stroke="#141a33" strokeWidth="1.6" /></svg>,
+  trainer: <svg viewBox="0 0 24 24" aria-hidden><path d="M8 13l-2 9 6-3 6 3-2-9" fill="#7b5cf0" stroke="#141a33" strokeWidth="2" strokeLinejoin="round" /><circle cx="12" cy="9" r="7" fill="#f5b800" stroke="#141a33" strokeWidth="2" /><path d="M12 5l1.3 2.700 2.900.3-2.2 2 .7 2.900L12 11.5 9.300 12.900l.7-2.900-2.2-2 2.900-.3z" fill="#fff3a8" stroke="#141a33" strokeWidth="1.2" strokeLinejoin="round" /></svg>,
+  rules: <svg viewBox="0 0 24 24" aria-hidden><rect x="4" y="3" width="16" height="18" rx="3" fill="#f8f5ea" stroke="#141a33" strokeWidth="2" /><path d="M8 8h8M8 12h8M8 16h5" stroke="#2f7fd0" strokeWidth="2.2" strokeLinecap="round" /></svg>,
+}
+
+/** Always in view: the partner's level and bar, badges won, Pokemon seen, and the Key Stone once it is held. */
+function TopBar({ game, status, loading }: { game: Game; status: string[]; loading: boolean }) {
+  const pct = clamp01(game.into / game.need)
+  const before = Math.min(pct, clamp01(game.intoBeforeToday / game.need))
+  const seen = Object.keys(game.dex).filter((id) => !SPECIES[id]?.f).length
+  return (
+    <header className="topbar">
+      <div className="lv">
+        <span className="k-type">{loading ? 'Pokedex' : `Lv ${game.level}`}</span>
+        <div className="k-bar" role="progressbar" aria-valuemin={0} aria-valuemax={game.need} aria-valuenow={Math.round(game.into)} aria-label={`${nameOf(game.display)}: ${Math.round(game.into)} of ${game.need} XP to the next level`}>
+          <i className="banked" style={{ width: `${before * 100}%` }} />
+          <i className="today" style={{ left: `${before * 100}%`, width: `${(pct - before) * 100}%` }} />
+          <span>{loading ? '' : `${Math.round(game.into)} / ${game.need}`}</span>
+        </div>
+      </div>
+      <KPill icon={<svg width="28" height="28" viewBox="0 0 24 24" aria-hidden><circle cx="12" cy="12" r="9" fill="#f5b800" stroke="#141a33" strokeWidth="2" /><path d="M12 6.5l1.6 3.400 3.700.4-2.800 2.500.8 3.700L12 14.700l-3.300 1.800.8-3.700-2.800-2.500 3.700-.4z" fill="#fff3a8" stroke="#141a33" strokeWidth="1.2" strokeLinejoin="round" /></svg>}><span title="Badges won">{badgesWon(game)}</span></KPill>
+      <KPill icon={<Ball ball="poke" size={28} />}><span title="Pokemon seen">{seen}</span></KPill>
+      {game.keyStone && <KPill icon={<KeyStone size={28} />}><span title="Mega forms kept for good">{game.moments.filter((m) => m.kind === 'mega').length}</span></KPill>}
+      <span className={`sync s-${status[0]}`} role="status" aria-label={status[1]} title={status[1]} />
+    </header>
+  )
+}
+
 export default function App() {
   const view = useView()
   const [tab, setTab] = useState<Tab>('partner')
@@ -987,15 +1043,7 @@ export default function App() {
   const status = view.status === 'live' ? ['live', 'Synced'] : view.status === 'connecting' ? ['connecting', 'Loading'] : view.status === 'error' ? ['error', 'Offline'] : ['off', 'Local only']
   return (
     <div className="shell">
-      <header className="device">
-        <span className="lens" aria-hidden />
-        <span className="lights" aria-hidden><i /><i /><i /></span>
-        <div className="brand">POKEDEX<small>powered by your Life OS habits</small></div>
-        <div className={`pill s-${status[0]}`} role="status">{status[1]}</div>
-      </header>
-      <nav className="tabs" role="tablist" aria-label="Sections">
-        {TABS.map(([id, text]) => <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'on' : ''} onClick={() => { setTab(id); window.scrollTo({ top: 0 }) }}>{text}</button>)}
-      </nav>
+      <TopBar game={game} status={status} loading={loading} />
       <main>
         {loading && tab !== 'rules' && (
           <Win title="Loading" tone="dark">
@@ -1008,6 +1056,9 @@ export default function App() {
         {!loading && tab === 'trainer' && <TrainerTab game={game} />}
         {tab === 'rules' && <RulesTab />}
       </main>
+      <nav className="navbar" role="tablist" aria-label="Sections">
+        {TABS.map(([id, text]) => <button key={id} role="tab" aria-selected={tab === id} aria-label={text} className={tab === id ? 'on' : ''} onClick={() => { setTab(id); window.scrollTo({ top: 0 }) }}>{ICON[id]}{text}</button>)}
+      </nav>
       {!loading && <Recap game={game} today={view.today} />}
     </div>
   )

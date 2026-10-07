@@ -1,0 +1,197 @@
+/* THE KIT — the shared look every Pokedex screen is built from.
+   Chunky objects, layered panels, ribbon headers, one heavy outlined face.
+   Everything is prefixed k- and reads its colours from the tokens below, so
+   the look can be retuned in one place. No screen uses it yet: see ?kit. */
+:root {
+  --k-edge: #141a33;
+  --k-night: #1a2240;
+  --k-body: #26315e;
+  --k-tile: #33417a;
+  --k-tile-hi: #42539a;
+  --k-frame: #f8f5ea;
+  --k-frame-lo: #d9d2b8;
+  --k-text: #ffffff;
+  --k-dim: #aab6e6;
+  --k-gold: #f5b800;
+  --k-gold-hi: #ffd84a;
+  --k-blue: #2f7fd0;
+  --k-green: #2fae66;
+  --k-red: #dc3b45;
+  --k-grey: #8089a8;
+  --k-purple: #7b5cf0;
+  --k-pink: #e0559a;
+  --k-bronze: #c47a3c;
+  --k-silver: #b9c4d8;
+  --k-face: 'Lilita One', 'Pixelify Sans', system-ui, sans-serif;
+}
+
+/* ── type: white, dark outline, hard shadow below ── */
+.k-type { font-family: var(--k-face); font-weight: 400; color: var(--k-text); letter-spacing: 0.02em; -webkit-text-stroke: 4px var(--k-edge); paint-order: stroke fill; text-shadow: 0 3px 0 var(--k-edge); line-height: 1.1; }
+.k-type.sm { -webkit-text-stroke-width: 3px; text-shadow: 0 2px 0 var(--k-edge); }
+.k-label { font-family: var(--k-face); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--k-dim); }
+
+/* ── buttons: an object with a lit top edge and a thick lip. Colour says what it does ── */
+.k-btn { --c: var(--k-blue); position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 8px 22px 12px; font-family: var(--k-face); font-size: 20px; color: #fff; -webkit-text-stroke: 4px var(--k-edge); paint-order: stroke fill; text-shadow: 0 2px 0 var(--k-edge); background: var(--c); border: 3px solid var(--k-edge); border-radius: 14px; box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.42), inset 0 -7px 0 rgba(0, 0, 0, 0.26), 0 5px 0 var(--k-edge); cursor: pointer; transition: transform 0.07s, box-shadow 0.07s, filter 0.12s; }
+.k-btn:hover { filter: brightness(1.07); }
+.k-btn:active { transform: translateY(4px) scale(0.98); box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.42), inset 0 -4px 0 rgba(0, 0, 0, 0.26), 0 1px 0 var(--k-edge); }
+.k-btn:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.k-btn.main { --c: var(--k-gold); }
+.k-btn.ok { --c: var(--k-green); }
+.k-btn.big { min-height: 68px; padding: 10px 40px 16px; font-size: 30px; border-radius: 18px; }
+.k-btn:disabled { --c: var(--k-grey); cursor: default; filter: none; }
+.k-btn:disabled:active { transform: none; box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.42), inset 0 -7px 0 rgba(0, 0, 0, 0.26), 0 5px 0 var(--k-edge); }
+/* close is always the same red square, top right of whatever it closes */
+.k-close { --c: var(--k-red); min-height: 0; width: 38px; height: 38px; padding: 0 0 4px; font-size: 20px; border-radius: 10px; }
+
+/* ── panels: a pale frame, a dark quilted body, lighter tiles. Depth by stacking ── */
+.k-panel { position: relative; padding: 6px; background: linear-gradient(var(--k-frame), var(--k-frame-lo)); border: 3px solid var(--k-edge); border-radius: 18px; box-shadow: 0 6px 0 var(--k-edge); }
+.k-panel-b { position: relative; padding: 16px; border: 3px solid var(--k-edge); border-radius: 12px; color: var(--k-text); background-color: var(--k-body); background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.035) 25%, transparent 25%, transparent 75%, rgba(255, 255, 255, 0.035) 75%), linear-gradient(-45deg, rgba(0, 0, 0, 0.07) 25%, transparent 25%, transparent 75%, rgba(0, 0, 0, 0.07) 75%); background-size: 44px 44px; box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.08); }
+.k-panel > .k-close { position: absolute; top: -10px; right: -10px; z-index: 2; }
+.k-tile { padding: 10px 12px; background: var(--k-tile); border: 2px solid var(--k-edge); border-radius: 10px; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.1), inset 0 -3px 0 rgba(0, 0, 0, 0.18); }
+.k-tile b { display: block; font-family: var(--k-face); font-weight: 400; font-size: 24px; }
+/* a thin rule in a section's colour, over its heading */
+.k-rule { height: 4px; margin: 0 0 8px; border-radius: 2px; background: var(--c, var(--k-gold)); }
+
+/* ── ribbons: section headers with folded ends. The metal is the tier ── */
+.k-ribbon { --c: var(--k-blue); --lo: #1f5aa0; position: relative; display: flex; align-items: center; justify-content: center; min-height: 46px; margin: 0 18px; padding: 4px 18px 8px; font-family: var(--k-face); font-size: 22px; color: #fff; -webkit-text-stroke: 4px var(--k-edge); paint-order: stroke fill; text-shadow: 0 2px 0 var(--k-edge); background: var(--c); border: 3px solid var(--k-edge); border-radius: 6px; box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.4), inset 0 -5px 0 rgba(0, 0, 0, 0.22); }
+.k-ribbon::before, .k-ribbon::after { content: ''; position: absolute; top: 8px; width: 26px; height: 100%; background: var(--lo); border: 3px solid var(--k-edge); z-index: -1; }
+.k-ribbon::before { left: -20px; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 38% 50%); }
+.k-ribbon::after { right: -20px; clip-path: polygon(0 0, 100% 0, 62% 50%, 100% 100%, 0 100%); }
+.k-ribbon.gold { --c: var(--k-gold); --lo: #b8860b; }
+.k-ribbon.silver { --c: var(--k-silver); --lo: #7f8aa3; }
+.k-ribbon.purple { --c: var(--k-purple); --lo: #4f38b0; }
+.k-ribbon-wrap { position: relative; z-index: 0; }
+
+/* ── counters: a dark pill with the icon hanging off its left end ── */
+.k-pill { position: relative; display: inline-flex; align-items: center; min-width: 96px; height: 30px; margin-left: 14px; padding: 0 12px 0 24px; font-family: var(--k-face); font-size: 18px; color: #fff; background: rgba(8, 12, 30, 0.72); border: 2px solid var(--k-edge); border-radius: 99px; box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.4); }
+.k-pill > .ico { position: absolute; left: -14px; top: 50%; transform: translateY(-50%); display: grid; place-items: center; filter: drop-shadow(0 2px 0 var(--k-edge)); }
+.k-pill > span { margin-left: auto; }
+
+/* ── bars: blue while filling, green with an arrow the moment something is ready ── */
+.k-bar { position: relative; height: 24px; background: #0c1126; border: 2px solid var(--k-edge); border-radius: 8px; overflow: hidden; box-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.5); }
+.k-bar > i { position: absolute; inset: 0 auto 0 0; background: var(--k-blue); box-shadow: inset 0 5px 0 rgba(255, 255, 255, 0.38), inset 0 -4px 0 rgba(0, 0, 0, 0.2); border-radius: 5px; transition: width 0.7s cubic-bezier(0.2, 0.9, 0.3, 1); }
+.k-bar > span { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--k-face); font-size: 14px; color: #fff; -webkit-text-stroke: 3px var(--k-edge); paint-order: stroke fill; }
+.k-bar.ready > i { background: var(--k-green); }
+.k-bar.ready::before { content: '▲'; position: absolute; left: 6px; top: 50%; transform: translateY(-50%); z-index: 1; font-size: 12px; color: #c9ffd9; text-shadow: 0 1px 0 var(--k-edge); animation: k-nudge 1.2s ease-in-out infinite; }
+.k-bar.gold > i { background: var(--k-gold); }
+.k-bar.hp > i { background: #3fd07a; } .k-bar.hp.mid > i { background: #f5c400; } .k-bar.hp.low > i { background: #ee4b3e; }
+@keyframes k-nudge { 50% { transform: translateY(-80%); } }
+
+/* ── cards: the unit for one Pokemon. Picture, level ribbon, bar. The frame's metal is its stage ── */
+.k-card { --m: var(--k-bronze); --m-hi: #e6a366; position: relative; width: 112px; display: grid; gap: 4px; }
+.k-card-f { position: relative; padding: 5px; background: linear-gradient(160deg, var(--m-hi), var(--m) 55%, var(--m-hi)); border: 3px solid var(--k-edge); border-radius: 12px; box-shadow: 0 4px 0 var(--k-edge); }
+.k-card-art { position: relative; height: 104px; display: grid; place-items: center; border: 2px solid var(--k-edge); border-radius: 7px; overflow: hidden; background: radial-gradient(circle at 50% 38%, #6f86d6 0 30%, #3a4a8e 70%); }
+.k-card-art::after { content: ''; position: absolute; left: 14%; right: 14%; bottom: 8px; height: 12px; border-radius: 50%; background: rgba(0, 0, 0, 0.3); }
+.k-card-art > * { position: relative; z-index: 1; image-rendering: pixelated; }
+.k-card-lv { position: absolute; left: 5px; right: 5px; bottom: 5px; padding: 1px 0 3px; text-align: center; font-family: var(--k-face); font-size: 15px; color: #fff; -webkit-text-stroke: 3px var(--k-edge); paint-order: stroke fill; background: linear-gradient(transparent, rgba(8, 12, 30, 0.85) 45%); border-radius: 0 0 6px 6px; z-index: 2; }
+.k-card.s2 { --m: var(--k-silver); --m-hi: #eef2fa; }
+.k-card.s3 { --m: var(--k-gold); --m-hi: var(--k-gold-hi); }
+.k-card.mega { --m: var(--k-purple); --m-hi: #7fe3ff; }
+.k-card.mega .k-card-f { background: linear-gradient(135deg, #7fe3ff, var(--k-purple), var(--k-pink), var(--k-gold-hi), #7fe3ff); background-size: 300% 300%; animation: k-shimmer 5s linear infinite; }
+.k-card.mega .k-card-art { background: radial-gradient(circle at 50% 38%, #b9a6ff 0 30%, #4a2f9e 70%); }
+@keyframes k-shimmer { to { background-position: 300% 300%; } }
+/* corner marks: what kind of thing it is, without a word */
+.k-gem { position: absolute; top: -8px; left: -8px; z-index: 3; width: 28px; height: 28px; display: grid; place-items: center; font-family: var(--k-face); font-size: 13px; color: #fff; -webkit-text-stroke: 3px var(--k-edge); paint-order: stroke fill; background: var(--c, var(--k-pink)); border: 3px solid var(--k-edge); border-radius: 50% 50% 50% 8px; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.4); }
+.k-card .k-ballmark { position: absolute; top: -7px; right: -7px; z-index: 3; filter: drop-shadow(0 2px 0 var(--k-edge)); }
+.k-card.missing .k-card-f { background: linear-gradient(160deg, #8d93a8, #5d647c); }
+.k-card.missing .k-card-art { background: #2a3050; }
+.k-card.missing .k-card-art > * { filter: brightness(0) opacity(0.45); }
+.k-card-note { text-align: center; font-family: var(--k-face); font-size: 13px; color: var(--k-dim); }
+
+/* ── medallions: a won thing. Tails below, greyed until it is yours ── */
+.k-medal { --c: var(--k-gold); position: relative; width: 68px; height: 78px; display: grid; justify-items: center; }
+.k-medal::before, .k-medal::after { content: ''; position: absolute; bottom: 0; width: 20px; height: 34px; background: var(--k-purple); border: 3px solid var(--k-edge); clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 72%, 0 100%); }
+.k-medal::before { left: 12px; transform: rotate(14deg); } .k-medal::after { right: 12px; transform: rotate(-14deg); }
+.k-medal > span { position: relative; z-index: 1; width: 60px; height: 60px; display: grid; place-items: center; background: radial-gradient(circle at 35% 28%, #fff7 0 18%, transparent 19%), var(--c); border: 3px solid var(--k-edge); border-radius: 50%; box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.35), inset 0 -6px 0 rgba(0, 0, 0, 0.22), 0 3px 0 var(--k-edge); }
+.k-medal > span > * { max-width: 40px; max-height: 40px; image-rendering: pixelated; }
+.k-medal.off::before, .k-medal.off::after { background: #4a5170; }
+.k-medal.off > span { background: #39405f; box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.08), 0 3px 0 var(--k-edge); }
+.k-medal.off > span > * { filter: brightness(0) opacity(0.35); }
+
+/* ── the road: steps in order, a tick on what is behind you, a marker where you stand ── */
+.k-road { position: relative; display: grid; gap: 10px; padding-left: 46px; }
+.k-road::before { content: ''; position: absolute; left: 16px; top: 8px; bottom: 8px; width: 10px; background: #0c1126; border: 2px solid var(--k-edge); border-radius: 6px; }
+.k-step { position: relative; display: grid; grid-template-columns: 52px 1fr auto; align-items: center; gap: 10px; padding: 8px 12px; background: var(--k-tile); border: 2px solid var(--k-edge); border-radius: 10px; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.1); }
+.k-step::before { content: attr(data-n); position: absolute; left: -44px; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; display: grid; place-items: center; font-family: var(--k-face); font-size: 14px; color: #fff; background: var(--k-body); border: 3px solid var(--k-edge); border-radius: 50%; z-index: 1; }
+.k-step.done { background: #2c4a55; } .k-step.done::before { content: '✓'; background: var(--k-green); }
+.k-step.now { background: var(--k-tile-hi); box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.18), 0 0 0 3px var(--k-gold); }
+.k-step.now::before { background: var(--k-gold); color: var(--k-edge); }
+.k-step.ahead > :first-child { filter: brightness(0) opacity(0.4); }
+.k-step.key { grid-template-columns: 64px 1fr auto; padding: 14px 12px; background: linear-gradient(120deg, #4a2f9e, #7b5cf0); }
+.k-step small { display: block; color: var(--k-dim); font-size: 13px; }
+.k-step .name { font-family: var(--k-face); font-size: 17px; }
+
+/* ── the ladder: one big number, what is next, what is behind folded away ── */
+.k-ladder { display: grid; gap: 8px; }
+.k-ladder .head { display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 44px; }
+.k-rung { display: grid; grid-template-columns: 1fr auto; align-items: center; padding: 10px 14px; border: 2px solid var(--k-gold); border-radius: 10px; background: rgba(8, 12, 30, 0.45); font-family: var(--k-face); font-size: 18px; }
+.k-rung.past { justify-items: center; grid-template-columns: 1fr; border-color: rgba(255, 255, 255, 0.25); color: var(--k-dim); font-size: 15px; padding: 6px; }
+
+/* ── the reveal: appear, idle, open. Five parts, swapped by tier ── */
+.k-reveal { --t: var(--k-blue); --t-hi: #9bd0ff; position: relative; height: 260px; display: grid; place-items: center; overflow: hidden; border: 3px solid var(--k-edge); border-radius: 12px; background: radial-gradient(circle at 50% 55%, color-mix(in srgb, var(--t) 55%, #000) 0, #0c1126 75%); cursor: pointer; }
+.k-reveal.big { --t: var(--k-gold); --t-hi: #fff3a8; }
+.k-reveal.rare { --t: var(--k-purple); --t-hi: #7fe3ff; }
+/* 1 background: rays that turn */
+.k-reveal .rays { position: absolute; width: 520px; height: 520px; background: repeating-conic-gradient(color-mix(in srgb, var(--t-hi) 26%, transparent) 0 10deg, transparent 10deg 20deg); border-radius: 50%; opacity: 0; mask-image: radial-gradient(circle, #000 0 30%, transparent 68%); }
+/* 2 back effect: a ring that swells behind the object */
+.k-reveal .ring { position: absolute; width: 120px; height: 120px; border: 10px solid var(--t-hi); border-radius: 50%; opacity: 0; }
+/* 3 the object */
+.k-reveal .obj { position: relative; z-index: 2; display: grid; place-items: center; filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.35)); }
+.k-reveal .obj > * { image-rendering: pixelated; }
+/* 4 front effect: sparks thrown outward */
+.k-reveal .sparks { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+.k-reveal .sparks i { position: absolute; left: 50%; top: 52%; width: 10px; height: 10px; margin: -5px; background: var(--t-hi); border-radius: 2px; opacity: 0; transform: rotate(var(--a)) translateY(0) scale(1); }
+.k-reveal .cap { position: absolute; left: 0; right: 0; bottom: 14px; z-index: 4; text-align: center; font-size: 26px; opacity: 0; }
+
+.k-reveal.appear .obj { animation: k-drop 0.55s cubic-bezier(0.3, 1.5, 0.5, 1) both; }
+.k-reveal.appear .rays { animation: k-fade 0.5s 0.2s both; }
+.k-reveal.idle .rays, .k-reveal.open .rays { opacity: 1; animation: k-spin 14s linear infinite; }
+.k-reveal.idle .obj { animation: k-wobble 0.9s ease-in-out infinite; }
+.k-reveal.idle .ring { animation: k-pulse 0.9s ease-out infinite; }
+.k-reveal.open .obj { animation: k-burst 0.6s cubic-bezier(0.2, 1.6, 0.4, 1) both; }
+.k-reveal.open .ring { animation: k-ringout 0.7s ease-out both; }
+.k-reveal.open .sparks i { animation: k-spark 0.8s cubic-bezier(0.1, 0.8, 0.3, 1) both; animation-delay: calc(var(--i) * 12ms); }
+.k-reveal.open .cap { animation: k-rise 0.4s 0.25s cubic-bezier(0.3, 1.4, 0.5, 1) both; }
+.k-reveal.open::after { content: ''; position: absolute; inset: 0; z-index: 5; background: #fff; pointer-events: none; animation: k-flash 0.35s ease-out both; }
+/* the bigger the tier, the more of everything */
+.k-reveal.big.open .sparks i { width: 12px; height: 12px; }
+.k-reveal.rare.open .sparks i { width: 14px; height: 14px; border-radius: 50%; animation-duration: 1.1s; }
+.k-reveal.rare .rays { background: repeating-conic-gradient(color-mix(in srgb, var(--t-hi) 34%, transparent) 0 6deg, color-mix(in srgb, var(--k-pink) 26%, transparent) 6deg 12deg, transparent 12deg 20deg); }
+@keyframes k-drop { from { transform: translateY(-160px) scale(0.5); opacity: 0; } }
+@keyframes k-fade { to { opacity: 1; } }
+@keyframes k-spin { to { transform: rotate(360deg); } }
+@keyframes k-wobble { 0%, 100% { transform: rotate(0) scale(1); } 20% { transform: rotate(-7deg) scale(1.04); } 40% { transform: rotate(7deg) scale(1.04); } 60% { transform: rotate(-3deg); } }
+@keyframes k-pulse { from { transform: scale(0.7); opacity: 0.7; } to { transform: scale(1.9); opacity: 0; } }
+@keyframes k-burst { 0% { transform: scale(0.6); } 55% { transform: scale(1.35); } 100% { transform: scale(1.15) translateY(-14px); } }
+@keyframes k-ringout { from { transform: scale(0.6); opacity: 1; border-width: 16px; } to { transform: scale(4.2); opacity: 0; border-width: 2px; } }
+@keyframes k-spark { 0% { opacity: 1; transform: rotate(var(--a)) translateY(0) scale(1); } 100% { opacity: 0; transform: rotate(var(--a)) translateY(calc(var(--d) * -1px)) scale(0.2); } }
+@keyframes k-rise { from { transform: translateY(18px) scale(0.8); opacity: 0; } to { opacity: 1; } }
+@keyframes k-flash { from { opacity: 0.85; } to { opacity: 0; } }
+
+/* ── the kit page itself ── */
+.kit { max-width: 980px; margin: 0 auto; padding: 20px 16px 80px; display: grid; gap: 22px; color: var(--k-text); font-family: 'Space Grotesk', system-ui, sans-serif; }
+.kit h1 { margin: 0; font-size: 40px; }
+.kit > p { margin: -12px 0 0; color: var(--k-dim); max-width: 62ch; }
+.kit-row { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+.kit-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.kit-note { margin: 10px 0 0; font-size: 14px; color: var(--k-dim); }
+.kit .k-panel-b > .k-label { display: block; margin-bottom: 10px; }
+.kit-bar-top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding: 8px 12px; background: linear-gradient(#2a3668, #1c2548); border: 3px solid var(--k-edge); border-radius: 12px; }
+.kit-tabs { display: grid; grid-template-columns: repeat(5, 1fr); background: linear-gradient(#3a4680, #262f5c); border: 3px solid var(--k-edge); border-radius: 12px; overflow: hidden; }
+.kit-tabs button { position: relative; display: grid; justify-items: center; gap: 2px; padding: 10px 2px 8px; font-family: var(--k-face); font-size: 13px; color: transparent; background: none; border: 0; border-left: 2px solid rgba(0, 0, 0, 0.3); cursor: pointer; transition: transform 0.12s; }
+.kit-tabs button:first-child { border-left: 0; }
+.kit-tabs button.on { color: #fff; background: linear-gradient(#5a6fc0, #3b4c94); transform: translateY(-4px); box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.25); -webkit-text-stroke: 3px var(--k-edge); paint-order: stroke fill; }
+.kit-tabs .dot { position: absolute; top: 6px; right: 22%; min-width: 20px; height: 20px; padding: 0 5px; display: grid; place-items: center; font-family: var(--k-face); font-size: 12px; color: #fff; -webkit-text-stroke: 0; background: var(--k-red); border: 2px solid var(--k-edge); border-radius: 6px; }
+.kit-ico { width: 34px; height: 34px; display: grid; place-items: center; }
+
+@media (max-width: 560px) {
+  .k-btn.big { font-size: 24px; padding: 10px 24px 16px; }
+  .kit h1 { font-size: 30px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .k-btn, .k-bar > i, .kit-tabs button { transition: none; }
+  .k-bar.ready::before, .k-card.mega .k-card-f, .k-reveal *, .k-reveal::after { animation: none !important; }
+  .k-reveal .rays { opacity: 1; }
+  .k-reveal.open .cap { opacity: 1; }
+  .k-reveal.open::after { display: none; }
+}

@@ -6,12 +6,17 @@ import '@fontsource/space-grotesk/latin-400.css'
 import '@fontsource/space-grotesk/latin-600.css'
 import '@fontsource/pixelify-sans/latin-400.css'
 import '@fontsource/pixelify-sans/latin-600.css'
+import '@fontsource/lilita-one/latin-400.css'
 import './index.css'
 import App from './App.tsx'
+import { KitPage } from './Kit.tsx'
+
+// ?kit shows the kit page: the pieces of the new look, on stand-in art
+const kit = new URLSearchParams(location.search).has('kit')
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    {kit ? <KitPage /> : <App />}
   </StrictMode>,
 )
 

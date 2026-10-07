@@ -9,6 +9,7 @@ import { isGym, leaderOf, nameOf, spritePath, type Game, type Moment } from '../
 import { LEAGUES, lineup } from '../core/gyms.ts'
 import { REGIONS, type Ball as BallId } from '../core/rules.ts'
 import { Ball, KeyStone } from './Ball.tsx'
+import { KMedal, KReveal, type Tier } from './Kit.tsx'
 import { aBall, badgeArt, badgeName, fmtDay, leagueName, still } from './lib/art.ts'
 
 const SEEN_KEY = 'pokedex.seen.v1'
@@ -78,15 +79,23 @@ function tell(m: Moment, game: Game): Told {
   }
 }
 
+/** How big a moment is: it picks the whole look of its reveal. */
+const tierOf = (m: Moment): Tier =>
+  m.kind === 'key' || m.kind === 'mega' || m.kind === 'league' || (m.kind === 'catch' && m.shiny) ? 'rare'
+    : m.kind === 'evolve' || m.kind === 'gym' || m.kind === 'graduate' || m.kind === 'region' ? 'big' : 'ordinary'
+
+const STAR = <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden><path d="M12 2l3 6.6 7 .8-5.2 4.8 1.5 7L12 17.6 5.7 21.2l1.5-7L2 9.4l7-.8z" fill="#fff3a8" stroke="#141a33" strokeWidth="2" strokeLinejoin="round" /></svg>
+
+/** What stands in the middle of the reveal. */
 function Art({ t }: { t: Told }) {
-  if (t.art === 'evolve' && t.form && t.from)
-    return <div className="rc-art evolve"><img src={still(t.from)} alt="" width={96} height={96} className="sprite was" /><img src={spritePath(t.form)} alt="" width={120} height={120} className="sprite now" /></div>
-  if (t.art === 'catch' && t.form)
-    return <div className="rc-art catch"><img src={spritePath(t.form, t.shiny)} alt="" width={112} height={112} className="sprite" /><Ball ball={t.ball ?? 'poke'} size={48} /></div>
-  if (t.art === 'mon' && t.form) return <div className="rc-art"><img src={spritePath(t.form, t.shiny)} alt="" width={120} height={120} className="sprite pop" /></div>
-  if (t.art === 'badge') return <div className="rc-art">{t.badge ? <img src={t.badge} alt="" width={96} height={96} className="sprite pop" /> : <span className="badge b0 on pop" style={{ width: 80 }} />}</div>
-  if (t.art === 'key') return <div className="rc-art"><span className="pop"><KeyStone size={84} /></span></div>
-  return null
+  // the old form as a shadow until it opens, then the new one
+  if (t.art === 'evolve' && t.form && t.from) return <><img src={still(t.from)} alt="" className="was" /><img src={spritePath(t.form)} alt="" className="now" /></>
+  // the ball of that day closes on it, then it is shown beside its ball
+  if (t.art === 'catch' && t.form) return <><img src={spritePath(t.form, t.shiny)} alt="" className="hideuntil" /><span className="ballover"><Ball ball={t.ball ?? 'poke'} size={84} /></span></>
+  if (t.art === 'mon' && t.form) return <img src={spritePath(t.form, t.shiny)} alt="" />
+  if (t.art === 'badge') return t.badge ? <img src={t.badge} alt="" /> : <KMedal>{STAR}</KMedal>
+  if (t.art === 'key') return <KeyStone size={110} />
+  return <KMedal>{STAR}</KMedal>
 }
 
 /** One window for everything new: the biggest thing drawn large, the rest as a list. One tap, anywhere, closes it. */
@@ -112,9 +121,9 @@ export function Recap({ game, today }: { game: Game; today: string }) {
   return (
     <div className="recap" role="dialog" aria-modal="true" aria-label="What is new" onClick={() => setFresh([])}>
       <div className="rc-win">
+        <div className="rc-body">
         <div className="rc-eyebrow">{days.size > 1 ? 'While you were away' : top.m.day === today ? 'Today' : fmtDay(top.m.day)}</div>
-        <Art t={top.t} />
-        <h2>{top.t.title}</h2>
+        <KReveal tier={tierOf(top.m)} title={top.t.title}><Art t={top.t} /></KReveal>
         <p>{top.t.line}</p>
         {rest.length > 0 && (
           <ul className="rc-list">
@@ -124,6 +133,7 @@ export function Recap({ game, today }: { game: Game; today: string }) {
         )}
         <button className="go" autoFocus>Continue</button>
         <small className="rc-note">Already saved. Tap anywhere to close.</small>
+        </div>
       </div>
     </div>
   )
