@@ -51,7 +51,18 @@ for (const name of Object.keys(PROFILES)) {
     facts.push({ day: addDays(GAME_START, i), habits })
   }
   // the rules in force now, from the first day
-  const g = foldGame(facts, { v3From: GAME_START, v4From: GAME_START })
+  const opts = { v3From: GAME_START, v4From: GAME_START, v5From: GAME_START }
+  // a plain way of spending: an Ultra Ball whenever one can be paid for and the wild Pokemon is still standing,
+  // and every Pokemon beyond three in the Box goes to the Professor. Found by folding day by day.
+  for (let i = 0; i < DAYS; i++) {
+    const now = foldGame(facts.slice(0, i + 1), opts)
+    const uses = []
+    let coins = now.wallet.coins, hp = now.wild && !now.wild.caught ? now.wild.hp : 0
+    while (coins >= 350 && hp > 0) { uses.push({ day: facts[i].day, item: 'ultra-ball', uid: '', what: 'buy' }, { day: facts[i].day, item: 'ultra-ball', uid: '', what: 'throw' }); coins -= 350; hp -= 200 }
+    for (const m of now.queue.slice(3)) uses.push({ day: facts[i].day, item: '', uid: m.uid, what: 'transfer' })
+    if (uses.length) facts[i].uses = uses
+  }
+  const g = foldGame(facts, opts)
   const m = g.moments, of = (k) => m.filter((x) => x.kind === k)
   const dayNo = (x) => (x ? g.days.findIndex((d) => d.day === x.day) + 1 : '-')
   const avg = (f) => g.days.reduce((s, d) => s + f(d), 0) / DAYS
@@ -64,5 +75,6 @@ for (const name of Object.keys(PROFILES)) {
   console.log(`  league: ${of('gym').length} leaders beaten · average strike ${Math.round(avg((d) => d.strike))} · leagues beaten ${leagues.map((l) => `${LEAGUES[l.league].name} day ${dayNo(l)}`).join(', ') || 'none'} · regions open ${g.regions}${g.league.waiting ? ' (next league waiting for its region)' : ''}`)
   const natures = g.graduates.map((x) => x.nature?.name).filter(Boolean)
   console.log(`  mega: Key Stone day ${dayNo(of('key')[0])} · ${of('mega').length} kept for good · ${m.filter((x) => x.kind === 'form' && x.what === 'mega').length} first seen on a full-momentum day · days at full momentum ${g.days.filter((d) => d.mult >= 1.5).length}`)
+  console.log(`  wallet at year end: ${g.wallet.coins} coins, ${g.wallet.gems} gems · balls thrown ${facts.reduce((n, f) => n + (f.uses ?? []).filter((u) => u.what === 'throw').length, 0)} · sent to the Professor ${of('transfer').length} · quests paid ${of('quest').length}`)
   console.log(`  kept: bond lost ${g.graduates.filter((x) => !x.bond).length} (must be 0) · stones ${of('item').length} (must be 0) · natures ${[...new Set(natures)].join(', ') || 'none yet'}`)
 }

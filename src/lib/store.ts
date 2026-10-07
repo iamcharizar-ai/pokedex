@@ -34,6 +34,8 @@ export interface View {
 }
 
 const events: LedgerEvent[] = []
+const keyOf = (e: LedgerEvent): string => `${e.device}|${e.at}|${e.type}|${JSON.stringify(e.payload)}`
+const seen = new Set<string>()
 let config: LedgerEvent | undefined
 let status: LedgerStatus = URL_ && KEY ? 'connecting' : 'off'
 let view: View = compute()
@@ -79,7 +81,8 @@ const ledger = createLedger({
   app: 'pokedex',
   types: TYPES,
   onEvents: (fresh) => {
-    events.push(...fresh)
+    // something done here is added at once, then comes back from the ledger: take it once
+    for (const e of fresh) if (!seen.has(keyOf(e))) { seen.add(keyOf(e)); events.push(e) }
     refresh()
     void pullConfig()
   },
@@ -104,7 +107,9 @@ export function start(): void {
 
 /** Something chosen by hand: who is next, a branch, who leads, which form shows. None of it costs anything from version 4; `item` is only sent for a stone spent under version 3. */
 export function useItem(item: string, uid: string, what: string, to?: string): void {
-  events.push(ledger.emit(USE_EVENT, { ...(item ? { item } : {}), uid, what, ...(to ? { to } : {}) }))
+  const ev = ledger.emit(USE_EVENT, { ...(item ? { item } : {}), uid, what, ...(to ? { to } : {}) })
+  seen.add(keyOf(ev))
+  events.push(ev)
   refresh()
 }
 

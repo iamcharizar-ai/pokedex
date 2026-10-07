@@ -8,7 +8,7 @@ import { golden } from './golden.ts'
 import { foldGame, isGym, leaderOf, statsOf } from './fold.ts'
 import { LEAGUES, lineup } from './gyms.ts'
 import { beats, weakDomains } from './types.ts'
-import { GAME_START, LEADER_HP, V3_START, V4_START, WEAK_MULT, WILD_HP, ballFor, evolveAt, graduateAt, levelOf, momentumMult, regionsOpenV2, rulesOn, wildHit, xpForLevel } from './rules.ts'
+import { GAME_START, GEMS, LEADER_HP, SHOP, V3_START, V4_START, V5_START, WEAK_MULT, bondLevel, wildHit5, WILD_HP, ballFor, evolveAt, graduateAt, levelOf, momentumMult, regionsOpenV2, rulesOn, wildHit, xpForLevel } from './rules.ts'
 import { SPECIES } from './species.ts'
 
 const H = (id: string, tag: HabitFact['tag'], worth: number, frac: number): HabitFact =>
@@ -29,9 +29,10 @@ function day(n: number, o: { code?: number; gym?: number; guitar?: number; arbor
   }
 }
 /** The original rules alone, and the new ones from the first day. */
-const fold1 = (f: DayFacts[]) => foldGame(f, { v3From: '9999-01-01', v4From: '9999-01-01' })
-const fold3 = (f: DayFacts[]) => foldGame(f, { v3From: GAME_START, v4From: '9999-01-01' })
-const fold4 = (f: DayFacts[]) => foldGame(f, { v3From: GAME_START, v4From: GAME_START })
+const fold1 = (f: DayFacts[]) => foldGame(f, { v3From: '9999-01-01', v4From: '9999-01-01', v5From: '9999-01-01' })
+const fold3 = (f: DayFacts[]) => foldGame(f, { v3From: GAME_START, v4From: '9999-01-01', v5From: '9999-01-01' })
+const fold4 = (f: DayFacts[]) => foldGame(f, { v3From: GAME_START, v4From: GAME_START, v5From: '9999-01-01' })
+const fold5 = (f: DayFacts[]) => foldGame(f, { v3From: GAME_START, v4From: GAME_START, v5From: GAME_START })
 const ALL = { code: 1, gym: 1, guitar: 1, arbor: 1, sleep: 1, chores: 1 }
 const run = (n: number, o: Parameters<typeof day>[1]) => Array.from({ length: n }, (_, i) => day(i, o))
 
@@ -539,15 +540,15 @@ const far = (n: number) => addDays(GAME_START, n)
 test('history stands: the recorded days fold exactly as they did under versions 1 and 3', () => {
   const file = new URL('./fixtures/golden.json', import.meta.url)
   const { facts, expected } = JSON.parse(fs.readFileSync(file, 'utf8')) as { facts: DayFacts[]; expected: unknown }
-  assert.deepEqual(golden(foldGame(facts, { v4From: '9999-01-01' })), expected)
+  assert.deepEqual(golden(foldGame(facts, { v4From: '9999-01-01', v5From: '9999-01-01' })), expected)
 })
 
 test('version 4 starts on its own day and leaves every earlier day alone', () => {
-  assert.deepEqual([rulesOn(GAME_START), rulesOn(V3_START), rulesOn(V4_START), rulesOn(addDays(V4_START, -1))], [1, 3, 4, 3])
+  assert.deepEqual([rulesOn(GAME_START), rulesOn(V3_START), rulesOn(V4_START, V3_START, V4_START, '9999-01-01'), rulesOn(addDays(V4_START, -1))], [1, 3, 4, 3])
   const facts = Array.from({ length: 200 }, (_, k) => day(k, k % 11 === 3 ? ALL : k % 5 === 4 ? {} : THREE))
   const cut = 120
   const old = fold3(facts.slice(0, cut))
-  const g = foldGame(facts, { v3From: GAME_START, v4From: far(cut) })
+  const g = foldGame(facts, { v3From: GAME_START, v4From: far(cut), v5From: '9999-01-01' })
   assert.deepEqual(g.days.slice(0, cut), old.days)
   assert.deepEqual(g.moments.filter((m) => m.day < far(cut)), old.moments)
   assert.equal(g.version, 4)
@@ -685,12 +686,129 @@ test('crossing into version 4 with a stone in the Bag and a Mega week running', 
   const before = fold3(facts.slice(0, 70))
   const stone = Object.keys(before.bag).find((k) => before.bag[k] > 0)!
   const used = withUse(facts, 69, { item: stone, uid: before.partner.uid, what: 'mega', to: 'charizard-megay' })
-  const cross = (n: number) => foldGame(used.slice(0, n), { v3From: GAME_START, v4From: far(72) })
+  const cross = (n: number) => foldGame(used.slice(0, n), { v3From: GAME_START, v4From: far(72), v5From: '9999-01-01' })
   // the week that was bought runs out as it was bought: days 69 to 75
   assert.deepEqual([cross(74).display, cross(76).display, cross(77).display], ['charizard-megay', 'charizard-megay', 'charizard'])
   // what was in the Bag stays there, and nothing is added to it
   assert.deepEqual(cross(80).bag, cross(72).bag)
   assert.equal(items(cross(80)).filter((m) => m.day >= far(72)).length, 0)
+})
+
+// ── version 5 ────────────────────────────────────────────────────────────────
+const use = (facts: DayFacts[], i: number, ...uses: { what: string; item?: string; uid?: string; to?: string }[]) =>
+  withUse(facts, i, ...uses.map((u) => ({ item: u.item ?? '', uid: u.uid ?? '', what: u.what, ...(u.to ? { to: u.to } : {}) })))
+
+test('version 5 starts on its own day and leaves every earlier day alone', () => {
+  assert.deepEqual([rulesOn(addDays(V5_START, -1)), rulesOn(V5_START)], [3, 5]) // version 4 was replaced before its first day
+  const facts = Array.from({ length: 160 }, (_, k) => day(k, k % 11 === 3 ? ALL : k % 5 === 4 ? {} : THREE))
+  const cut = 90
+  const old = fold4(facts.slice(0, cut))
+  const g = foldGame(facts, { v3From: GAME_START, v4From: GAME_START, v5From: far(cut) })
+  assert.deepEqual(g.days.slice(0, cut), old.days)
+  assert.deepEqual(g.moments.filter((m) => m.day < far(cut)), old.moments)
+  assert.deepEqual([g.version, old.version], [5, 4])
+  // nothing was earned before it began
+  assert.deepEqual(old.wallet, { coins: 0, gems: 0, coinsToday: 0, gemsToday: 0 })
+})
+
+test('version 5: a coin for each XP of the work, quests pay by themselves, and XP is untouched', () => {
+  // gym and code: 200 XP of work, two pillars
+  const one = fold5(run(1, HALF))
+  assert.equal(one.wallet.coins, 200 + 40) // the work, and "finish two pillars"
+  assert.deepEqual(one.quests.daily.map((q) => [q.id, q.done]), [['two-pillars', true], ['all-pillars', false], ['chores', false], ['perfect', false]])
+  assert.deepEqual(one.quests.daily[1].have, 2)
+  // the same days give the same XP as version 4: coins never touch it
+  const facts = run(30, HALF)
+  assert.deepEqual(fold5(facts).days.map((d) => d.xp), fold4(facts).days.map((d) => d.xp))
+  assert.equal(fold5(facts).partner.xp, fold4(facts).partner.xp)
+  // a week of them: five counting days and 2,000 XP of work are both paid, once
+  const week = fold5(run(14, HALF))
+  const paid = week.moments.flatMap((m) => (m.kind === 'quest' ? [m.id] : []))
+  assert.equal(paid.filter((id) => id === 'five-days').length, 2)
+  // 200 XP a day never makes 2,000 in a week; 300 a day does, in the one full week
+  assert.equal(paid.filter((id) => id === 'week-xp').length, 0)
+  assert.equal(fold5(run(14, THREE)).moments.filter((m) => m.kind === 'quest' && m.id === 'week-xp').length, 1)
+  assert.ok(week.wallet.gems >= 30)
+})
+
+test('version 5: an ordinary day hits harder than under the square', () => {
+  assert.equal(wildHit(0.5, 1), 25)
+  assert.equal(wildHit5(0.5, 1), 35)
+  assert.equal(wildHit5(1, 1.5), wildHit(1, 1.5))
+})
+
+test('version 5: buy a ball, throw it, and the wild Pokemon loses that much at once', () => {
+  const facts = run(4, HALF) // 4 x 240 coins
+  const g = fold5(facts)
+  assert.ok(g.wild && !g.wild.caught)
+  const hp = g.wild.hp
+  // cannot throw what is not held; cannot buy what cannot be paid for
+  assert.equal(fold5(use(facts, 3, { what: 'throw', item: 'ultra-ball' })).wild!.hp, hp)
+  assert.deepEqual(fold5(use(run(1, HALF), 0, { what: 'buy', item: 'ultra-ball' })).inv, {})
+  const bought = fold5(use(facts, 3, { what: 'buy', item: 'ultra-ball' }))
+  assert.deepEqual([bought.inv['ultra-ball'], bought.wallet.coins], [1, g.wallet.coins - SHOP['ultra-ball'].coins!])
+  const thrown = fold5(use(facts, 3, { what: 'buy', item: 'ultra-ball' }, { what: 'throw', item: 'ultra-ball' }))
+  assert.equal(thrown.wild!.hp, hp - 200)
+  assert.equal(thrown.inv['ultra-ball'], 0)
+  assert.equal(thrown.today.hit, g.today.hit + 200)
+  assert.equal(thrown.partner.xp, g.partner.xp)
+  // enough of them and it is caught by the ball, kept in that ball, and pays gems
+  const many = run(12, HALF)
+  const base = fold5(many)
+  const left = base.wild!.hp
+  const n = Math.ceil(left / 200)
+  const acts = Array.from({ length: n }, () => [{ what: 'buy', item: 'ultra-ball' }, { what: 'throw', item: 'ultra-ball' }]).flat()
+  const got = fold5(use(many, 11, ...acts))
+  if (base.wallet.coins >= n * 350) {
+    const c = caught(got).at(-1)!
+    assert.deepEqual([c.how, got.queue.at(-1)!.ball, got.wild!.caught], ['ball', 'ultra', true])
+    assert.equal(got.wallet.gems, base.wallet.gems + GEMS.catch + 10) // and the week's "catch a Pokemon"
+  }
+})
+
+test('version 5: a berry is a heart, and the Professor takes a Pokemon for gems', () => {
+  const facts = run(3, ALL) // three perfect days: three in the Box
+  const g = fold5(facts)
+  assert.equal(g.queue.length, 3)
+  const fed = fold5(use(facts, 2, { what: 'buy', item: 'berry' }, { what: 'feed' }, { what: 'feed' }))
+  assert.deepEqual([fed.partner.fed, fed.inv.berry], [1, 0])
+  assert.deepEqual([bondLevel(9), bondLevel(10), bondLevel(60)], [0, 1, 3])
+  const sent = fold5(use(facts, 2, { what: 'transfer', uid: g.queue[1].uid }, { what: 'transfer', uid: 'nobody' }))
+  assert.deepEqual(sent.queue.map((m) => m.uid), [g.queue[0].uid, g.queue[2].uid])
+  assert.equal(sent.wallet.gems, g.wallet.gems + GEMS.transfer)
+  // the partner cannot be sent away
+  assert.equal(fold5(use(facts, 2, { what: 'transfer', uid: g.partner.uid })).partner.uid, g.partner.uid)
+})
+
+test('version 5: incense chooses the next wild Pokemon from three', () => {
+  const facts = run(20, ALL) // plenty of gems; a catch every day
+  const g = fold5(facts.slice(0, 19))
+  assert.equal(g.wish.options.length, 3)
+  const want = g.wish.options[2]
+  const wished = fold5(use(facts, 18, { what: 'buy', item: 'incense' }, { what: 'wish', to: want }, { what: 'wish', to: g.wish.options[0] }))
+  assert.equal(wished.moments.filter((m) => m.kind === 'appear').at(-1)!.form, want)
+  assert.equal(wished.inv.incense, 0)
+  // something that is not one of the three is ignored and the incense is kept
+  const junk = fold5(use(facts.slice(0, 19), 18, { what: 'buy', item: 'incense' }, { what: 'wish', to: 'mewtwo' }))
+  assert.deepEqual([junk.inv.incense, junk.wish.chosen], [1, null])
+})
+
+test('version 5: the team backs the partner, and a theme is bought once', () => {
+  const facts = run(260, THREE)
+  const g = fold5(facts)
+  assert.ok(g.graduates.length >= 3)
+  assert.deepEqual(g.team.map((m) => m.uid), g.graduates.slice(-3).reverse().map((m) => m.uid)) // left alone: the last three trained
+  // no team at all never hits harder than the one you have
+  const none = fold5(use(facts, 60, { what: 'team', to: '' }))
+  const sum = (x: G) => x.days.reduce((s, d) => s + d.strike, 0)
+  assert.ok(sum(none) <= sum(g))
+  assert.equal(none.team.length, 0)
+  const picked = fold5(use(facts, 259, { what: 'team', to: `${g.graduates[0].uid},nobody,${g.graduates[0].uid}` }))
+  assert.deepEqual(picked.team.map((m) => m.uid), [g.graduates[0].uid])
+  // a theme: bought once, then worn; one that is not owned is not worn
+  const themed = fold5(use(facts, 259, { what: 'buy', item: 'theme-cave' }, { what: 'buy', item: 'theme-cave' }, { what: 'theme', to: 'theme-cave' }))
+  assert.deepEqual([themed.inv['theme-cave'], themed.theme, themed.wallet.gems], [1, 'theme-cave', g.wallet.gems - 60])
+  assert.equal(fold5(use(facts, 259, { what: 'theme', to: 'theme-beach' })).theme, '')
 })
 
 test('every entry in the species table can be reached', async () => {

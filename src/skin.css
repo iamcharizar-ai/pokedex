@@ -230,6 +230,91 @@ main .win-b a { color: #fff; }
 .queue.pick button.on .k-card-f { box-shadow: 0 0 0 3px var(--k-gold), 0 4px 0 var(--k-edge); }
 main .queue.pick button.on img { background: none; outline: 0; }
 
+/* ══ step 3: version 5, the things you do ════════════════════════════════ */
+.price { display: inline-flex; align-items: center; gap: 4px; font-family: var(--k-face); }
+.topbar .help { min-height: 0; width: 34px; height: 34px; padding: 0 0 4px; font-size: 20px; border-radius: 50%; }
+.swatch { display: inline-block; border: 3px solid var(--k-edge); border-radius: 10px; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.4); }
+
+/* a tab arrives rather than cuts in */
+.tabin { animation: tab-in 0.22s cubic-bezier(0.2, 0.9, 0.3, 1); }
+@keyframes tab-in { from { opacity: 0; transform: translateY(10px); } }
+
+/* ── the scene: places, things that breathe, numbers that pop ── */
+.scene.theme-beach { --sky-1: #58c8e8; --sky-2: #d8f6ff; --far: #3aa6d0; --ground: #f1dc9a; --ground-2: #e6cc80; --pad: #e9d08a; --pad-2: #cdb066; }
+.scene.theme-cave { --sky-1: #2f2a44; --sky-2: #4a4466; --far: #5c5470; --ground: #8a7a6a; --ground-2: #74675a; --pad: #9a8a78; --pad-2: #6e6254; }
+.scene.theme-night { --sky-1: #121a3d; --sky-2: #2c3d7a; --far: #2f5b56; --ground: #3d7a5c; --ground-2: #336a50; --pad: #2e6a4c; --pad-2: #24553d; }
+.foe-pad > img { animation: sway 3.2s ease-in-out infinite; transform-origin: 50% 100%; }
+@keyframes sway { 50% { transform: translateY(-3px) rotate(-2deg); } }
+.pop { position: absolute; left: 50%; top: -6px; z-index: 5; font-family: var(--k-face); font-size: 30px; color: #fff; -webkit-text-stroke: 5px var(--k-red); paint-order: stroke fill; text-shadow: 0 3px 0 var(--k-edge); pointer-events: none; animation: pop-up 1.6s cubic-bezier(0.2, 0.9, 0.3, 1) both; white-space: nowrap; }
+@keyframes pop-up { 0% { opacity: 0; transform: translate(-50%, 20px) scale(0.5); } 18% { opacity: 1; transform: translate(-50%, -8px) scale(1.25); } 30% { transform: translate(-50%, -4px) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -44px) scale(0.9); } }
+.dmg { font-family: var(--k-face); color: #ff9aa2; }
+
+/* ── the talk box's second line: one pip for each habit of the day ── */
+.pips { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.pips i { width: 12px; height: 12px; border-radius: 3px; background: #0c1126; border: 2px solid var(--k-edge); }
+.pips i.on { background: var(--k-gold); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.5); }
+.pips b { margin-left: 8px; font-family: var(--k-face); font-weight: 400; font-size: 14px; color: var(--k-dim); -webkit-text-stroke: 0; text-shadow: none; }
+
+/* ── what you can do right now ── */
+.actions { position: relative; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 0 0 18px; }
+.k-btn.act { justify-content: flex-start; gap: 10px; min-height: 60px; padding: 8px 14px 12px; text-align: left; }
+.k-btn.act span { display: grid; line-height: 1.05; font-size: 21px; }
+.k-btn.act small { font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 12px; font-weight: 600; -webkit-text-stroke: 0; text-shadow: none; color: rgba(20, 26, 51, 0.8); letter-spacing: 0; }
+.k-btn.act:not(.main):not(.ok) small, .k-btn.act:disabled small { color: #e6ecff; }
+.k-btn.main.act:not(:disabled) { animation: ready 1.8s ease-in-out infinite; }
+@keyframes ready { 50% { filter: brightness(1.14); transform: translateY(-2px); } }
+/* a thrown ball: up from the buttons to the wild Pokemon */
+.thrown { position: absolute; left: 12%; bottom: 100%; z-index: 6; pointer-events: none; animation: throw 0.65s cubic-bezier(0.3, 0, 0.7, 1) both; }
+@keyframes throw { 0% { transform: translate(0, 0) rotate(0) scale(0.8); } 55% { transform: translate(34vw, -330px) rotate(540deg) scale(1.1); } 100% { transform: translate(min(56vw, 560px), -250px) rotate(900deg) scale(0.7); opacity: 0.9; } }
+
+/* ── quests ── */
+.questcols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.quests { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 6px; }
+.quest { display: grid; grid-template-columns: 1fr 110px auto; align-items: center; gap: 10px; padding: 7px 10px; background: var(--k-tile); border: 2px solid var(--k-edge); border-radius: 10px; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.1); }
+.quest.done { background: #2a6a52; }
+.quest .q-name { font-family: var(--k-face); font-size: 15px; }
+.quest .k-bar { height: 20px; } .quest .k-bar > span { font-size: 12px; }
+.quest .price { min-width: 58px; justify-content: flex-end; }
+.quest.done .price { opacity: 0.55; }
+
+/* ── the leader: hurt at half, critical at a fifth, and who stands behind you ── */
+.foe { position: relative; display: grid; place-items: center; }
+.foe img { animation: sway 3.6s ease-in-out infinite; transform-origin: 50% 100%; }
+.foe.hurt img { animation: hurt 1.6s ease-in-out infinite; }
+.foe.crit img { animation: hurt 0.5s linear infinite; filter: drop-shadow(0 0 6px var(--k-red)); }
+@keyframes hurt { 25% { transform: translateX(-2px) rotate(-3deg); } 75% { transform: translateX(2px) rotate(3deg); } }
+.backing { display: flex; align-items: center; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 2px dashed rgba(255, 255, 255, 0.18); }
+.backing img { background: var(--k-tile); border: 2px solid var(--k-edge); border-radius: 8px; opacity: 0.6; }
+.backing img.edge { opacity: 1; box-shadow: 0 0 0 2px var(--k-gold); }
+
+/* ── shop ── */
+.shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.good { position: relative; display: grid; justify-items: center; align-content: start; gap: 4px; padding: 14px 10px 12px; text-align: center; background: var(--k-tile); border: 3px solid var(--k-edge); border-radius: 14px; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.12), 0 4px 0 var(--k-edge); }
+.good b { font-family: var(--k-face); font-weight: 400; font-size: 19px; }
+.good small { color: var(--k-dim); font-size: 13px; line-height: 1.25; min-height: 2.5em; }
+.good .k-btn { width: 100%; min-height: 42px; margin-top: 6px; font-size: 18px; padding: 6px 10px 10px; }
+.good .held { position: absolute; top: 6px; right: 8px; font-family: var(--k-face); font-size: 16px; color: var(--k-gold); }
+.good.bump { animation: bump 0.35s cubic-bezier(0.3, 1.6, 0.5, 1); }
+@keyframes bump { 40% { transform: scale(1.08); } }
+.earn { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.earn li { display: flex; align-items: center; gap: 8px; } .earn b { font-family: var(--k-face); font-weight: 400; font-size: 18px; color: var(--k-gold); }
+
+/* ── team ── */
+.hearts { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.heartrow { display: inline-flex; gap: 3px; }
+.teamrow { display: flex; gap: 12px; flex-wrap: wrap; }
+.slot { position: relative; width: 92px; padding: 0; line-height: 0; border-radius: 12px; }
+.slot .k-card, main .queue.pick .k-card { width: 86px; }
+.slot .k-card-art { height: 76px; } .slot .k-card-art img { width: 64px; height: 64px; }
+.slot.empty { display: grid; place-items: center; height: 96px; font-family: var(--k-face); font-size: 34px; color: var(--k-dim); background: rgba(8, 12, 30, 0.4); border: 3px dashed rgba(255, 255, 255, 0.3); }
+.boxacts { display: grid; gap: 6px; margin-top: 12px; padding: 12px; background: rgba(8, 12, 30, 0.4); border: 2px solid var(--k-edge); border-radius: 12px; }
+.boxacts .k-btn { min-height: 42px; font-size: 17px; padding: 6px 14px 10px; }
+
+/* ── "?" : how it works, in a window ── */
+.helpwin { place-items: start center; overflow-y: auto; padding: 20px 12px 100px; }
+.helpbody { position: relative; width: min(900px, 100%); }
+.helpbody > .k-close { position: sticky; top: 0; float: right; z-index: 3; }
+
 @media (max-width: 760px) {
   .sumrow { grid-template-columns: 1fr; justify-items: center; }
   .sumrow .facts { width: 100%; }
@@ -250,6 +335,13 @@ main .queue.pick button.on img { background: none; outline: 0; }
   .detail { bottom: 78px; }
   .recap { padding-bottom: 86px; }
 }
+@media (max-width: 760px) {
+  .questcols { grid-template-columns: 1fr; }
+  .quest { grid-template-columns: 1fr 90px auto; }
+  .thrown { display: none; }
+}
 @media (prefers-reduced-motion: reduce) {
+  .tabin, .foe-pad > img, .foe img, .pop, .k-btn.main.act, .thrown, .good.bump { animation: none !important; }
+  .pop { display: none; }
   .navbar button, .navbar button svg, .go, .plain { transition: none; }
 }
