@@ -315,6 +315,69 @@ main .queue.pick button.on img { background: none; outline: 0; }
 .helpbody { position: relative; width: min(900px, 100%); }
 .helpbody > .k-close { position: sticky; top: 0; float: right; z-index: 3; }
 
+/* ══ step 4: Pokemon stand bare ══════════════════════════════════════════
+   No frame around a sprite anywhere. It stands on a soft shadow; its stage is
+   three small pips under it, its ball and nature are small marks beside it. */
+.mon { position: relative; display: inline-grid; justify-items: center; gap: 2px; line-height: 1; vertical-align: top; }
+.mon-art { position: relative; display: grid; place-items: end center; width: 100%; }
+.mon-art::after { content: ''; position: absolute; left: 18%; right: 18%; bottom: 0; height: 10px; border-radius: 50%; background: rgba(0, 0, 0, 0.32); }
+.mon-art img { position: relative; z-index: 1; background: none !important; border: 0 !important; box-shadow: none !important; outline: 0 !important; }
+.mon.mega .mon-art img { filter: drop-shadow(0 0 5px #7fe3ff) drop-shadow(0 0 2px var(--k-purple)); }
+.mon-ball { position: absolute; right: 0; bottom: 0; z-index: 2; filter: drop-shadow(0 1px 0 var(--k-edge)); }
+.mon-gem { position: absolute; left: 2px; top: 2px; z-index: 2; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--k-edge); background: var(--k-dim); }
+.mon-gem[data-tag='code'] { background: var(--k-blue); } .mon-gem[data-tag='fitness'] { background: var(--k-red); } .mon-gem[data-tag='guitar'] { background: #ee7b2f; } .mon-gem[data-tag='arbor'] { background: var(--k-green); }
+.mon-pips { display: inline-flex; gap: 3px; margin-top: 2px; }
+.mon-pips i { width: 7px; height: 7px; border-radius: 50%; background: rgba(255, 255, 255, 0.18); }
+.mon-pips i.on { background: var(--k-gold); }
+.mon-lv { font-family: var(--k-face); font-weight: 400; font-size: 17px; margin-top: 2px; }
+.mon .k-bar { width: 100%; min-width: 110px; margin-top: 2px; }
+.mon-note { font-size: 12px; color: var(--k-dim); }
+
+/* where Pokemon are listed: a tap target with no box until it is chosen */
+main .queue.pick button, .slot { padding: 6px 2px 4px; border-radius: 12px; line-height: 1; background: transparent; transition: background 0.12s, transform 0.12s; }
+main .queue.pick button:hover, .slot:hover { background: rgba(255, 255, 255, 0.06); transform: translateY(-2px); }
+main .queue.pick button.on { background: rgba(245, 184, 0, 0.18); box-shadow: inset 0 0 0 2px var(--k-gold); }
+main .queue img, main .path img, main .lean img, .backing img, .hall .team img { background: none; border: 0; box-shadow: none; border-radius: 0; }
+main .queue.pick button.on img { background: none; outline: 0; }
+.backing img.edge { box-shadow: none; filter: drop-shadow(0 0 4px var(--k-gold)); }
+.slot { width: auto; min-width: 84px; }
+.slot.empty { width: 84px; height: 92px; }
+.nexttag { position: static; margin-top: 2px; padding: 1px 8px 2px; border-radius: 6px; }
+.sumrow .mon { min-width: 140px; }
+
+/* the Pokedex grid: plain tiles. Found ones are lit, not framed */
+.cell, .cell.seen { padding: 0; background: rgba(8, 12, 30, 0.32); border: 0; border-radius: 12px; box-shadow: none; animation: none; }
+.cell::before { display: none; }
+.cell.seen { background: rgba(255, 255, 255, 0.07); }
+.cell.own { background: rgba(99, 198, 255, 0.16); }
+.cell.mg { background: linear-gradient(135deg, rgba(127, 227, 255, 0.28), rgba(123, 92, 240, 0.28), rgba(224, 85, 154, 0.22)); }
+.cell:hover { background: rgba(255, 255, 255, 0.14); }
+.cell.sel { box-shadow: inset 0 0 0 3px var(--k-gold); }
+.cell img { width: 86%; height: 86%; }
+.card .who { background: none; border: 0; box-shadow: none; }
+.card .who img { filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.3)); }
+
+/* ── top bar: the season ── */
+.topbar .nextprize { display: inline-flex; align-items: center; justify-content: center; gap: 4px; font-size: 13px; }
+.topbar .lv .k-bar { height: 22px; }
+
+/* ── the egg, being kept warm ── */
+.eggrow { display: flex; align-items: center; gap: 12px; margin-top: 14px; padding: 10px 12px; background: rgba(8, 12, 30, 0.4); border: 2px solid var(--k-edge); border-radius: 12px; }
+.warm { display: inline-block; animation: wobble 3s steps(3, end) infinite; transform-origin: 50% 90%; }
+
+/* ── the rules, as pictures ── */
+.rules { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+.rule { --c: var(--k-blue); display: grid; align-content: start; gap: 4px; padding: 10px 12px 12px; background: var(--k-tile); border: 2px solid var(--k-edge); border-top: 6px solid var(--c); border-radius: 12px; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.08); }
+.rule[data-tone='gold'] { --c: var(--k-gold); } .rule[data-tone='green'] { --c: var(--k-green); } .rule[data-tone='red'] { --c: var(--k-red); } .rule[data-tone='purple'] { --c: var(--k-purple); }
+.rule-pic { display: flex; align-items: center; justify-content: center; gap: 6px; height: 56px; }
+.rule b { font-family: var(--k-face); font-weight: 400; font-size: 18px; }
+.rule p { margin: 0; font-size: 13.5px; line-height: 1.3; color: var(--k-dim); }
+.rule-chip { display: grid; place-items: center; min-width: 46px; height: 46px; padding: 0 6px; font-family: var(--k-face); font-size: 20px; color: #fff; -webkit-text-stroke: 3px var(--k-edge); paint-order: stroke fill; background: var(--c); border: 3px solid var(--k-edge); border-radius: 12px; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.4), inset 0 -4px 0 rgba(0, 0, 0, 0.22); }
+.rule-chip.sm { min-width: 36px; height: 36px; font-size: 16px; border-radius: 10px; } .rule-chip.xs { min-width: 26px; height: 26px; font-size: 12px; border-radius: 8px; }
+.rule-dot { width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--k-edge); background: var(--c); box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.4); }
+.rule-arrow { color: var(--k-dim); font-size: 14px; }
+.helpbody .k-panel { margin-top: 6px; }
+
 @media (max-width: 760px) {
   .sumrow { grid-template-columns: 1fr; justify-items: center; }
   .sumrow .facts { width: 100%; }

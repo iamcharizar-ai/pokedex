@@ -3,17 +3,17 @@ import { isGym, leaderOf, nameOf, spritePath, type Game, type Mon, type Moment, 
 import type { DayFacts, HabitFact } from '../core/facts.ts'
 import { LEAGUES, lineup } from '../core/gyms.ts'
 import {
-  ADVANTAGE_MULT, BALL_MULT, BALL_NAME, GAME_START, GRADUATES_PER_REGION, ITEM_NAME, KEY_STONE_BADGES, LEADER_HP, LEGENDARY_EVERY_WILD, MEGA_DAYS, MOMENTUM_WINDOW,
-  PILLARS_FOR_A_DAY, REGIONS, SHINY_ODDS, SLEEP_DONE, STAT_DAYS, STEPS_GOAL, TIER_XP, V3_START, V4_START, WEAK_MULT, WILD_HP,
-  evolveAt, graduateAt, levelOf, momentumMult, xpForLevel,
+  ADVANTAGE_MULT, GEMS, SEASON_STEP, V5_START, BALL_MULT, BALL_NAME, GAME_START, GRADUATES_PER_REGION, ITEM_NAME, KEY_STONE_BADGES, LEADER_HP, MEGA_DAYS, MOMENTUM_WINDOW,
+  PILLARS_FOR_A_DAY, REGIONS, STAT_DAYS, TIER_XP, V4_START, WEAK_MULT,   SHOP, evolveAt, graduateAt, momentumMult, xpForLevel, type ShopItem,
 } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
 import { beats } from '../core/types.ts'
 import { Ball, KeyStone } from './Ball.tsx'
-import { KBar, KCard, KMedal, KPill, KRibbon } from './Kit.tsx'
+import { KBar, KMedal, KPill, KRibbon } from './Kit.tsx'
 import { Actions, Coin, Count, Gem, Pop, Quests, ShopTab, TeamTab } from './Play.tsx'
 import { Recap } from './Recap.tsx'
 import { aBall, badgeArt, badgeName, fmtDay, leagueName, still } from './lib/art.ts'
+import { play, setSoundOn, soundOn } from './lib/sfx.ts'
 import { LIFEOS_URL, start, useItem, useView } from './lib/store.ts'
 import './skin.css'
 
@@ -29,13 +29,19 @@ const RARITY: Record<string, string> = { C: 'Common', U: 'Uncommon', R: 'Rare', 
 /** How far along its line a form is, as the card frame shows it: 1 bronze, 2 silver, 3 gold (it evolves no further). */
 const frameOf = (form: string): 1 | 2 | 3 => (SPECIES[form]?.e?.length ? (SPECIES[form].s >= 2 ? 2 : 1) : 3)
 export function MonCard({ m, form = m.form, size, level, bar, note }: { m: Mon; form?: string; size: number; level?: number; bar?: ReactNode; note?: string }) {
+  const stage = frameOf(m.form)
   return (
-    <KCard
-      stage={frameOf(m.form)} mega={Boolean(m.megas?.length)} level={level} bar={bar} note={note}
-      gem={m.nature?.up ? TAG_NAME[m.nature.up]?.slice(0, 2) : undefined}
-      ball={m.ball ? <Ball ball={m.ball} size={22} /> : undefined}
-      art={<img src={still(form, m.shiny)} alt={nameOf(form)} width={size} height={size} className="sprite" />}
-    />
+    <span className={`mon ${m.megas?.length ? 'mega' : ''}`} style={{ width: size + 16 }}>
+      <span className="mon-art" style={{ height: size + 6 }}>
+        <img src={still(form, m.shiny)} alt={nameOf(form)} width={size} height={size} className="sprite" />
+        {m.ball && <Ball ball={m.ball} size={Math.max(14, Math.round(size / 4.5))} className="mon-ball" />}
+        {m.nature?.up && <span className="mon-gem" data-tag={m.nature.up} title={`${m.nature.name}: raised most on ${TAG_NAME[m.nature.up]}`} />}
+      </span>
+      <span className="mon-pips" title={stage === 3 ? 'Fully evolved' : `Stage ${stage}`} aria-hidden>{[1, 2, 3].map((n) => <i key={n} className={n <= stage ? 'on' : ''} />)}</span>
+      {level !== undefined && <b className="mon-lv">Lv {level}</b>}
+      {bar}
+      {note && <small className="mon-note">{note}</small>}
+    </span>
   )
 }
 
@@ -216,7 +222,7 @@ function Summary({ game }: { game: Game }) {
   return (
     <Win title="Summary" tone="blue" aside={`No. ${dexNo(rec.d)}`}>
       <div className="sumrow">
-      <MonCard m={partner} form={game.display} size={104} level={game.level} bar={<KBar value={Math.round(game.into)} max={game.need} ready={toGo === 0} />} note={frameOf(partner.form) === 3 ? (partner.megas?.length ? 'Mega, for good' : 'Fully evolved') : `Stage ${rec.s} of ${SPECIES[partner.base].x ?? 1}`} />
+      <MonCard m={partner} form={game.display} size={120} level={game.level} bar={<KBar value={Math.round(game.into)} max={game.need} ready={toGo === 0} />} />
       <dl className="facts">
         <dt>Met</dt><dd>{partner.origin === 'starter' ? 'Starter' : partner.origin === 'egg' ? 'Hatched from an egg' : 'Caught'}, {fmtDay(partner.from)}</dd>
         <dt>Type</dt><dd>{rec.t}{rec.t2 ? ` / ${rec.t2}` : ''}</dd>
@@ -471,7 +477,7 @@ function DexTab({ game }: { game: Game }) {
               const e = game.dex[id]
               const mon = owned.get(id)
               return (
-                <button key={id} className={`cell ${e ? 'seen' : ''} ${e && !e.own ? 'met' : ''} ${e?.own ? `own st${frameOf(id)}` : ''} ${(r.m ?? []).some((f) => game.dex[f]?.own) ? 'mg' : ''} ${open === id ? 'sel' : ''}`} onClick={() => setOpen(open === id ? null : id)} title={e ? r.n : `#${r.d}`} aria-pressed={open === id} aria-label={e ? `${r.n}, number ${r.d}` : `Not seen, number ${r.d}`}>
+                <button key={id} className={`cell ${e ? 'seen' : ''} ${e && !e.own ? 'met' : ''} ${e?.own ? 'own' : ''} ${(r.m ?? []).some((f) => game.dex[f]?.own) ? 'mg' : ''} ${open === id ? 'sel' : ''}`} onClick={() => setOpen(open === id ? null : id)} title={e ? r.n : `#${r.d}`} aria-pressed={open === id} aria-label={e ? `${r.n}, number ${r.d}` : `Not seen, number ${r.d}`}>
                   <img src={still(id, e?.shiny)} alt="" loading="lazy" width={64} height={64} className={`sprite ${e ? '' : 'unseen'}`} />
                   <span className="no">{dexNo(r.d)}</span>
                   {mon?.graduated && <span className="star" title="Fully trained">★</span>}
@@ -525,7 +531,7 @@ function DexTab({ game }: { game: Game }) {
 }
 
 // ── Trainer card ────────────────────────────────────────────────────────────
-const KIND: Record<Moment['kind'], string> = { level: 'Level', evolve: 'Evolved', graduate: 'Trained', partner: 'Partner', catch: 'Caught', appear: 'Wild', form: 'Form', badge: 'Badge', region: 'Region', gym: 'Gym', league: 'League', item: 'Stone', use: 'Choice', key: 'Key Stone', mega: 'Mega', transfer: 'Professor', quest: 'Quest' }
+const KIND: Record<Moment['kind'], string> = { level: 'Level', evolve: 'Evolved', graduate: 'Trained', partner: 'Partner', catch: 'Caught', appear: 'Wild', form: 'Form', badge: 'Badge', region: 'Region', gym: 'Gym', league: 'League', item: 'Stone', use: 'Choice', key: 'Key Stone', mega: 'Mega', transfer: 'Professor', quest: 'Quest', season: 'Season', hatch: 'Hatched' }
 const ITEM_WHY = { gym: 'with the badge', perfect: 'for a perfect-day milestone', league: 'from the league' } as const
 function line(m: Moment): string {
   switch (m.kind) {
@@ -555,6 +561,8 @@ function line(m: Moment): string {
     case 'mega': return `${nameOf(m.form)} registered for good`
     case 'transfer': return `${nameOf(m.form)} went to the Professor (+${m.gems} gems)`
     case 'quest': return `${m.name}: ${m.coins ? `+${m.coins} coins` : `+${m.gems} gems`}`
+    case 'season': return `Season step ${m.step}: ${m.coins ? `+${m.coins} coins` : m.gems ? `+${m.gems} gems` : (SHOP[m.item as ShopItem]?.name ?? m.item)}`
+    case 'hatch': return `A Rare Egg hatched into ${nameOf(m.form)}`
   }
 }
 /** The league being challenged, as a road: one step per leader, a tick on those behind you, a marker where you stand. */
@@ -592,12 +600,7 @@ function Road({ game }: { game: Game }) {
           })}
         </div>
       </div>
-      <p className="muted">
-        {done ? 'Every league is beaten.'
-          : league.waiting ? `${l.name} is not open yet. Its leaders wait until it is.`
-          : `Each leader has ${LEADER_HP.toLocaleString('en-IN')} HP, worn down by each day's work. Every gym leader's badge is yours to keep. There are no weeks and no losing.`}
-        {' '}Leagues beaten: {game.hall.length ? game.hall.map((h) => leagueName(h.league)).join(', ') : 'none yet'}.
-      </p>
+      {league.waiting && <p className="muted">{l.name} is not open yet.</p>}
     </Win>
   )
 }
@@ -647,7 +650,7 @@ function StatsRadar({ stats }: { stats: Stats }) {
           ))}
         </dl>
       </div>
-      <p className="muted">Your own numbers, not the partner's, and not battle stats: the share of each thing you did over the last {STAT_DAYS} days. Speed is steps against {STEPS_GOAL.toLocaleString('en-IN')} a day, and Defense becomes measured recovery once the band reports it.</p>
+      <p className="muted">You over the last {STAT_DAYS} days, not the partner.</p>
     </Win>
   )
 }
@@ -657,7 +660,7 @@ function BadgeCase({ game }: { game: Game }) {
   const upTo = Math.min(game.league.index, LEAGUES.length - 1)
   return (
     <Win title="Badge case" tone="dark" aside={plural(badgesWon(game), 'badge')}>
-      {LEAGUES.slice(0, upTo + 1).map((l, index) => (
+      {LEAGUES.slice(0, upTo).map((l, index) => (
         <div key={l.name} className="caserow">
           <KRibbon metal={index < game.league.index ? 'gold' : 'silver'}>{l.name}</KRibbon>
           <div className="casemedals">
@@ -698,7 +701,7 @@ function FieldNotes({ game }: { game: Game }) {
       <dl className="facts notes">
         {rows.map(([tag, name, text]) => <div key={name} className="noterow" data-tag={tag}><dt>{name}</dt><dd>{text}</dd></div>)}
       </dl>
-      <p className="muted">Each kind of work in its own unit, read from what Strong, Woodshed and Life OS already record. Steps count up to {STEPS_GOAL.toLocaleString('en-IN')} a day. Nothing is earned from these yet: they are what each domain's own rewards will be priced from once there are a few weeks of them.</p>
+      <p className="muted">Counted for life. Nothing is earned from these yet.</p>
     </Win>
   )
 }
@@ -735,18 +738,6 @@ function TrainerTab({ game }: { game: Game }) {
           </dl>
         </div>
         <div className="who"><Sprite form={game.partner.form} shiny={game.partner.shiny} size={96} /></div>
-        <div className="badges" title="The badges of the league you are challenging" style={{ gridTemplateColumns: `repeat(${LEAGUES[Math.min(game.league.index, LEAGUES.length - 1)].gyms.length}, minmax(0, 44px))` }}>
-          {LEAGUES[Math.min(game.league.index, LEAGUES.length - 1)].gyms.map((t, i) => {
-            const index = Math.min(game.league.index, LEAGUES.length - 1)
-            const on = game.league.index >= LEAGUES.length || i < game.league.slot
-            const title = `${badgeName(t)}: ${on ? 'earned' : `beat ${t.name}`}`
-            const art = badgeArt(index, i)
-            // the real badge where there is a picture of it; a plain shape for the regions without one
-            return art
-              ? <img key={i} src={art} alt={title} title={title} width={44} height={44} className={`sprite badge-art ${on ? 'on' : ''}`} />
-              : <span key={i} className={`badge b${i} ${on ? 'on' : ''}`} title={title} />
-          })}
-        </div>
       </section>
 
       {game.warnings.map((w) => <p key={w} className="notice warn">{w}</p>)}
@@ -755,8 +746,8 @@ function TrainerTab({ game }: { game: Game }) {
         <StatsRadar stats={game.stats} />
       </div>
       <div className="cols">
-        <BadgeCase game={game} />
         <FieldNotes game={game} />
+        {game.league.index > 0 && <BadgeCase game={game} />}
       </div>
       <HallOfFame game={game} />
 
@@ -792,59 +783,67 @@ function TrainerTab({ game }: { game: Game }) {
   )
 }
 
-// ── Rules ───────────────────────────────────────────────────────────────────
-function RulesTab() {
+// ── Rules: a picture and one line each ──────────────────────────────────────
+function Rule({ title, tone, pic, children }: { title: string; tone: string; pic: ReactNode; children: ReactNode }) {
   return (
-    <>
-      <p className="lead">Nothing is earned here. Everything comes from ticking your day in Life OS, and nothing you have earned is ever taken back. The same day does three different things: how much you did grows your partner, how whole the day was catches the wild Pokemon, and what kind of work it was beats the gym leader.</p>
-      <div className="cols">
-        <Win title="How much: XP" tone="gold">
-          <div className="tiers">
-            <div><b>{TIER_XP.pillar}</b>pillar</div><div><b>{TIER_XP.core}</b>core</div><div><b>{TIER_XP.standard}</b>standard</div><div><b>{TIER_XP.basic}</b>basic</div>
-          </div>
-          <p>All XP goes to one partner. Pillars are the day's real work. Arbor and Woodshed pay for the share of the block you finished. A tick counts if it is made by the end of the next day.</p>
-          <p className="muted">A day with {PILLARS_FOR_A_DAY} or more pillars counts for momentum: 3 of the last seven days give ×1.2, 5 give ×1.35, 7 give ×{momentumMult(MOMENTUM_WINDOW)}. It slides, never resets.</p>
-        </Win>
-        <Win title="The partner" tone="blue">
-          <p>Level L needs {xpForLevel(1)}×L² XP in total. It evolves by itself: three-stage lines at levels {evolveAt(3, 1)} and {evolveAt(3, 2)}, two-stage lines at {evolveAt(2, 1)}. A branching Pokemon goes the way your habits lean, and its card shows the lean. At level {graduateAt(3)} ({graduateAt(1)} for a single-stage one) it is fully trained and the next one takes over.</p>
-          <p>When it finishes it is given a <b>nature</b> from what you raised it on: the domain you did best in is the stat it raises, the one you did least in is the stat it lowers (Attack is the gym, Defense is Arbor, Sp. Atk is code, Sp. Def is guitar, Speed is the chores). It also carries the days you spent together, which only ever count up.</p>
-          <p className="muted">Level {levelOf(1536)} takes 1,536 XP: about four full days.</p>
-        </Win>
+    <div className="rule" data-tone={tone}>
+      <div className="rule-pic">{pic}</div>
+      <b>{title}</b>
+      <p>{children}</p>
+    </div>
+  )
+}
+const Arrow = () => <span className="rule-arrow" aria-hidden>▸</span>
+function RulesTab() {
+  const [sound, setSound] = useState(soundOn())
+  return (
+    <section className="k-panel">
+      <div className="k-panel-b">
+        <h2 className="k-type" style={{ fontSize: 26, marginBottom: 12 }}>How it works</h2>
+        <div className="rules">
+          <Rule title="Do the day" tone="gold" pic={<><span className="rule-chip">{TIER_XP.pillar}</span><span className="rule-chip sm">{TIER_XP.core}</span><span className="rule-chip xs">{TIER_XP.standard}</span></>}>
+            Every habit is XP for your partner. Pillars are {TIER_XP.pillar}; chores are small.
+          </Rule>
+          <Rule title="One day, three hits" tone="blue" pic={<><span className="rule-dot" style={{ background: 'var(--k-blue)' }} /><span className="rule-dot" style={{ background: 'var(--hp-ok)' }} /><span className="rule-dot" style={{ background: 'var(--k-gold)' }} /></>}>
+            How much grows the partner. How whole the day was hurts the wild Pokemon. What kind of work hurts the leader.
+          </Rule>
+          <Rule title="Evolves by itself" tone="green" pic={<><span className="rule-chip sm">{evolveAt(3, 1)}</span><Arrow /><span className="rule-chip sm">{evolveAt(3, 2)}</span><Arrow /><span className="rule-chip">{graduateAt(3)}</span></>}>
+            At these levels. At {graduateAt(3)} it is fully trained and the next one steps up.
+          </Rule>
+          <Rule title="Chores pick the ball" tone="red" pic={<><Ball ball="poke" size={30} /><Arrow /><Ball ball="great" size={34} /><Arrow /><Ball ball="ultra" size={38} /></>}>
+            Half the chores: ×{BALL_MULT.great}. Four-fifths: ×{BALL_MULT.ultra}. Every habit done catches it on the spot.
+          </Rule>
+          <Rule title="Throw to finish" tone="gold" pic={<><Coin size={30} /><Arrow /><Ball ball="ultra" size={36} /><span className="rule-chip sm">−200</span></>}>
+            A coin for each XP of work. Buy a ball, throw it, and the HP drops at once.
+          </Rule>
+          <Rule title="Leaders and badges" tone="purple" pic={<><span className="rule-chip">{(LEADER_HP / 1000).toFixed(0)}k</span><Arrow /><KMedal><span className="badge b3 on" style={{ width: 30 }} /></KMedal></>}>
+            Each leader has {LEADER_HP.toLocaleString('en-IN')} HP and is weak to two kinds of work (×{WEAK_MULT}). Beat one, keep the badge.
+          </Rule>
+          <Rule title="Your team" tone="blue" pic={<><span className="rule-dot" /><span className="rule-dot" /><span className="rule-dot" /><span className="rule-chip sm">+10%</span></>}>
+            Three trained Pokemon stand behind you. Each one whose type beats the leader's adds 10%.
+          </Rule>
+          <Rule title="Mega, for good" tone="purple" pic={<><KeyStone size={38} /></>}>
+            The Key Stone comes with badge {KEY_STONE_BADGES}. After it, a fully evolved partner keeps its Mega.
+          </Rule>
+          <Rule title="Gems" tone="green" pic={<><Gem size={34} /><span className="rule-chip sm">{GEMS.catch}</span><span className="rule-chip sm">{GEMS.evolve}</span><span className="rule-chip sm">{GEMS.gym}</span></>}>
+            A catch, an evolution, a badge. Or send a Box Pokemon to the Professor for {GEMS.transfer}.
+          </Rule>
+          <Rule title="The season" tone="gold" pic={<><span className="rule-chip sm">1</span><Arrow /><span className="rule-chip sm">2</span><Arrow /><span className="rule-chip sm">3</span></>}>
+            Every {SEASON_STEP.toLocaleString('en-IN')} XP of the month's work is a step, and each step hands something over.
+          </Rule>
+          <Rule title="Nothing is lost" tone="green" pic={<span className="rule-chip">∞</span>}>
+            A day off adds nothing and takes nothing. Hearts, badges and Pokemon are yours for good.
+          </Rule>
+          <Rule title="A day's list" tone="red" pic={<><span className="rule-dot" /><span className="rule-dot" /><span className="rule-dot" style={{ opacity: 0.3 }} /></>}>
+            Fixed when the day starts. You can add a habit today; taking one off starts tomorrow.
+          </Rule>
+        </div>
+        <div className="kit-row" style={{ marginTop: 14 }}>
+          <button type="button" className={`k-btn ${sound ? 'ok' : ''}`} aria-pressed={sound} onClick={() => { setSoundOn(!sound); setSound(!sound); if (!sound) play('buy') }}>Sound: {sound ? 'on' : 'off'}</button>
+          <span className="muted">Rules version 5, from {fmtDay(V5_START)}. The game began {fmtDay(GAME_START)}.</span>
+        </div>
       </div>
-      <div className="cols">
-        <Win title="How whole: catching" tone="green">
-          <p>One wild Pokemon stands in front of you until it is caught. It does not change daily and never flees. Each day hits it for 100 × (share of the day's XP done)², so a whole day hits four times as hard as a half day.</p>
-          <p>Your chores decide the ball: {BALL_NAME.great} (×{BALL_MULT.great}) at half of them done, {BALL_NAME.ultra} (×{BALL_MULT.ultra}) at four-fifths. The Pokemon keeps the ball it was caught in. HP: common {WILD_HP.C}, uncommon {WILD_HP.U.toLocaleString('en-IN')}, rare {WILD_HP.R.toLocaleString('en-IN')}; every {LEGENDARY_EVERY_WILD}th to appear is a legendary with {WILD_HP.L.toLocaleString('en-IN')}.</p>
-          <p><b>A perfect day</b> (every habit done) catches it on the spot, whatever HP is left, and is the only way to a shiny (1 in {SHINY_ODDS}). It also shows Gigantamax.</p>
-        </Win>
-        <Win title="The Box" tone="dark">
-          <p>Caught Pokemon go to the Box. Nothing in it is waiting. When your partner is fully trained, the oldest in the Box takes over unless you tapped another one first. If the Box is empty, an egg hatches.</p>
-          <p>Three things can be chosen by hand in the Bag, all free and none needed: which way a branching Pokemon evolves, bringing one forward from the Box today, and which form a partner with a Mega shows.</p>
-          <p className="muted">The Pokedex counts three things per region: seen, caught and raised.</p>
-        </Win>
-      </div>
-      <div className="cols">
-        <Win title="What kind: the league" tone="gold">
-          <p>The gym leader in front of you has {LEADER_HP.toLocaleString('en-IN')} HP. Each day's work wears it down (the momentum bonus is for XP only), and the domains that leader is weak to count ×{WEAK_MULT}. If your partner's type is super effective against the leader's, everything counts ×{ADVANTAGE_MULT} more. HP carries over: there are no weeks and no losing.</p>
-          <p><b>Every gym leader gives their badge</b>, and it is yours for good. A league is its gyms, then the Elite Four, then the Champion. After Kanto come the Orange Islands (four gyms and Drake), then Johto. A new region opens only when the league before it is beaten and {GRADUATES_PER_REGION} more partners are fully trained. Beating a Champion puts you in the Hall of Fame.</p>
-        </Win>
-        <Win title="Mega, for good" tone="green">
-          <p>The <b>Key Stone</b> comes with the {KEY_STONE_BADGES}th Kanto badge. From then on, a fully evolved partner that has a Mega form registers it the first time a leader falls to it, or when it finishes training at the latest. Once registered it never runs out, and the partner is drawn as its Mega unless you choose otherwise.</p>
-          <p>Mega also shows by itself, for the day, on a day with full momentum and every pillar done.</p>
-          <p className="muted">Stones are no longer handed out and nothing costs one. Any you already hold stay in the Bag as keepsakes.</p>
-        </Win>
-      </div>
-      <div className="cols">
-        <Win title="A day's list" tone="blue">
-          <p>The habits on today's list, their tiers and their domains are fixed when the day starts. A habit added during the day joins it. Taking one off, or changing its tier or domain, starts tomorrow, so today cannot be made whole by editing the list.</p>
-          <p>Once the band reports a sleep score, Sleep becomes a pillar that only the band can fill: it pays the score as a share of {TIER_XP.pillar} XP and counts as done at {SLEEP_DONE} or more. A poor night costs XP but never a perfect day. Until then the sleep habit is ticked by hand.</p>
-        </Win>
-        <Win title="Version" tone="dark">
-          <p>These rules are version 4, in force from {fmtDay(V4_START)}. It changed what rewards are, not how fast they come: no XP, HP or pace number moved. Days from {fmtDay(V3_START)} to then keep version 3 (stones, a week of Mega, a Bond ribbon that could be lost), and the first two days keep the first rules. The game began on {fmtDay(GAME_START)}.</p>
-          <p className="muted">The trainer profile is yours, not the partner's: the share of each thing done over the last {STAT_DAYS} days, with Speed as steps against {STEPS_GOAL.toLocaleString('en-IN')}. Field notes count each domain in its own unit and earn nothing yet.</p>
-        </Win>
-      </div>
-    </>
+    </section>
   )
 }
 
@@ -860,20 +859,21 @@ const ICON: Record<Tab, ReactNode> = {
 
 /** Always in view: the partner's level and bar, badges won, Pokemon seen, and the Key Stone once it is held. */
 function TopBar({ game, status, loading, onHelp }: { game: Game; status: string[]; loading: boolean; onHelp: () => void }) {
-  const pct = clamp01(game.into / game.need)
-  const before = Math.min(pct, clamp01(game.intoBeforeToday / game.need))
   const seen = Object.keys(game.dex).filter((id) => !SPECIES[id]?.f).length
+  const v5 = game.version >= 5 && !loading
+  const nx = game.season.next
   return (
     <header className="topbar">
-      <div className="lv">
-        <span className="k-type">{loading ? 'Pokedex' : `Lv ${game.level}`}</span>
-        <div className="k-bar" role="progressbar" aria-valuemin={0} aria-valuemax={game.need} aria-valuenow={Math.round(game.into)} aria-label={`${nameOf(game.display)}: ${Math.round(game.into)} of ${game.need} XP to the next level`}>
-          <i className="banked" style={{ width: `${before * 100}%` }} />
-          <i className="today" style={{ left: `${before * 100}%`, width: `${(pct - before) * 100}%` }} />
-          <span>{loading ? '' : `${Math.round(game.into)} / ${game.need}`}</span>
-        </div>
+      <div className="lv" title={v5 ? `Season step ${game.season.step}. Every ${game.season.need.toLocaleString('en-IN')} XP of the month's work is a step.` : undefined}>
+        <span className="k-type">{v5 ? `Season ${game.season.step}` : 'Pokedex'}</span>
+        {v5 && (
+          <div className="k-bar gold" role="progressbar" aria-valuemin={0} aria-valuemax={game.season.need} aria-valuenow={game.season.into} aria-label="Progress to the next season step">
+            <i style={{ width: `${clamp01(game.season.into / game.season.need) * 100}%` }} />
+            <span className="nextprize">{game.season.into.toLocaleString('en-IN')} / {game.season.need.toLocaleString('en-IN')} · next {nx.coins ? <><Coin size={16} />{nx.coins}</> : nx.gems ? <><Gem size={16} />{nx.gems}</> : (SHOP[nx.item as ShopItem]?.name ?? '')}</span>
+          </div>
+        )}
       </div>
-      {game.version >= 5
+      {v5
         ? <><KPill icon={<Coin size={28} />}><span title="Coins: one for each XP of the day's work"><Count value={game.wallet.coins} /></span></KPill><KPill icon={<Gem size={28} />}><span title="Gems: from milestones and weekly quests"><Count value={game.wallet.gems} /></span></KPill></>
         : <KPill icon={<Ball ball="poke" size={28} />}><span title="Pokemon seen">{seen}</span></KPill>}
       <button type="button" className="k-btn help" aria-label="How it works" onClick={onHelp}>?</button>
@@ -915,7 +915,7 @@ export default function App() {
         </div>
       )}
       <nav className="navbar" role="tablist" aria-label="Sections">
-        {TABS.map(([id, text]) => <button key={id} role="tab" aria-selected={tab === id} aria-label={text} className={tab === id ? 'on' : ''} onClick={() => { setTab(id); window.scrollTo({ top: 0 }) }}>{ICON[id]}{text}</button>)}
+        {TABS.map(([id, text]) => <button key={id} role="tab" aria-selected={tab === id} aria-label={text} className={tab === id ? 'on' : ''} onClick={() => { setTab(id); play('tap'); window.scrollTo({ top: 0 }) }}>{ICON[id]}{text}</button>)}
       </nav>
       {!loading && <Recap game={game} today={view.today} />}
     </div>

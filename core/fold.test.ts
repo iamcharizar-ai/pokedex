@@ -8,7 +8,7 @@ import { golden } from './golden.ts'
 import { foldGame, isGym, leaderOf, statsOf } from './fold.ts'
 import { LEAGUES, lineup } from './gyms.ts'
 import { beats, weakDomains } from './types.ts'
-import { GAME_START, GEMS, LEADER_HP, SHOP, V3_START, V4_START, V5_START, WEAK_MULT, bondLevel, wildHit5, WILD_HP, ballFor, evolveAt, graduateAt, levelOf, momentumMult, regionsOpenV2, rulesOn, wildHit, xpForLevel } from './rules.ts'
+import { EGG_DAYS, GAME_START, GEMS, LEADER_HP, SEASON_STEP, SHOP, V3_START, V4_START, V5_START, WEAK_MULT, bondLevel, wildHit5, WILD_HP, ballFor, evolveAt, graduateAt, levelOf, momentumMult, regionsOpenV2, rulesOn, wildHit, xpForLevel } from './rules.ts'
 import { SPECIES } from './species.ts'
 
 const H = (id: string, tag: HabitFact['tag'], worth: number, frac: number): HabitFact =>
@@ -809,6 +809,37 @@ test('version 5: the team backs the partner, and a theme is bought once', () => 
   const themed = fold5(use(facts, 259, { what: 'buy', item: 'theme-cave' }, { what: 'buy', item: 'theme-cave' }, { what: 'theme', to: 'theme-cave' }))
   assert.deepEqual([themed.inv['theme-cave'], themed.theme, themed.wallet.gems], [1, 'theme-cave', g.wallet.gems - 60])
   assert.equal(fold5(use(facts, 259, { what: 'theme', to: 'theme-beach' })).theme, '')
+})
+
+test('version 5: the season is a ladder climbed by the work of the month', () => {
+  // 300 XP of work a day: a step every five days
+  const g = fold5(run(12, THREE))
+  const steps = g.moments.flatMap((m) => (m.kind === 'season' ? [m] : []))
+  assert.deepEqual(steps.map((m) => m.step), [1, 2])
+  assert.deepEqual([steps[0].coins, steps[1].item], [100, 'great-ball'])
+  assert.equal(g.inv['great-ball'], 1)
+  assert.deepEqual([g.season.step, g.season.into, g.season.need, g.season.next], [2, 600, SEASON_STEP, { gems: 10 }])
+  // a new month starts the ladder again, and keeps what was handed over
+  const long = fold5(run(40, THREE)) // 3 Oct to 11 Nov
+  assert.equal(long.season.month, '2026-11')
+  assert.equal(long.season.step, Math.floor((11 * 300) / SEASON_STEP))
+  assert.ok(long.moments.filter((m) => m.kind === 'season').length > long.season.step)
+})
+
+test('version 5: a Rare Egg is kept warm by days with two pillars, and hatches into the Box', () => {
+  const facts = run(40, ALL) // gems from a catch a day
+  const base = fold5(facts.slice(0, 30))
+  assert.ok(base.wallet.gems >= 150)
+  assert.equal(base.egg, null)
+  const bought = (n: number) => fold5(use(facts.slice(0, n), 29, { what: 'buy', item: 'rare-egg' }))
+  assert.deepEqual(bought(30).egg, { have: 0, need: EGG_DAYS })
+  assert.deepEqual(bought(33).egg, { have: 3, need: EGG_DAYS })
+  const hatched = bought(36)
+  assert.equal(hatched.egg, null)
+  const h = hatched.moments.find((m) => m.kind === 'hatch')!
+  assert.ok(h.kind === 'hatch' && h.day === far(34))
+  const mon = hatched.queue.find((m) => m.uid === h.uid)!
+  assert.deepEqual([mon.origin, SPECIES[mon.form].r], ['egg', 'R'])
 })
 
 test('every entry in the species table can be reached', async () => {

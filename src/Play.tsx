@@ -10,6 +10,7 @@ import { MonCard, TAG_NAME, Win, plural } from './App.tsx'
 import { Ball } from './Ball.tsx'
 import { KBar, KButton } from './Kit.tsx'
 import { still } from './lib/art.ts'
+import { play } from './lib/sfx.ts'
 import { useItem } from './lib/store.ts'
 
 // ── icons, drawn here ───────────────────────────────────────────────────────
@@ -28,15 +29,22 @@ const Incense = ({ size = 40 }: { size?: number }) => (
 const Heart = ({ on }: { on: boolean }) => (
   <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden><path d="M12 21s-8-5.200-8-11a4.600 4.600 0 0 1 8-3 4.600 4.600 0 0 1 8 3c0 5.800-8 11-8 11z" fill={on ? '#ff6b78' : '#39405f'} stroke="#141a33" strokeWidth="2" strokeLinejoin="round" /></svg>
 )
+export const EggIcon = ({ size = 40 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden><path d="M12 2.500c4 0 7.500 6 7.500 11.500a7.500 7.500 0 0 1-15 0C4.500 8.500 8 2.500 12 2.500z" fill="#fbf6e3" stroke="#141a33" strokeWidth="2" /><path d="M8 9l2 2 2-2 2 2 2-2" fill="none" stroke="#7b5cf0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /><circle cx="9.500" cy="15" r="1.500" fill="#e0559a" /><circle cx="14.500" cy="17" r="1.200" fill="#63c6ff" /></svg>
+)
 const THEME_SWATCH: Record<string, [string, string]> = { 'theme-beach': ['#58c8e8', '#f1dc9a'], 'theme-cave': ['#4a4466', '#8a7a6a'], 'theme-night': ['#121a3d', '#3d7a5c'] }
 function ItemIcon({ item, size = 44 }: { item: string; size?: number }) {
   if (item === 'great-ball') return <Ball ball="great" size={size} />
   if (item === 'ultra-ball') return <Ball ball="ultra" size={size} />
   if (item === 'berry') return <Berry size={size} />
   if (item === 'incense') return <Incense size={size} />
+  if (item === 'rare-egg') return <EggIcon size={size} />
   const [sky, ground] = THEME_SWATCH[item] ?? ['#7cc8ff', '#b6e08a']
   return <span className="swatch" style={{ width: size, height: size, background: `linear-gradient(${sky} 0 55%, ${ground} 55%)` }} />
 }
+
+/** What the wild Pokemon's HP will be once this ball lands. */
+const wildHpAfter = (game: Game, item: ShopItem): number => (game.wild?.hp ?? 0) - (THROW_HP[item] ?? 0)
 
 /** A number that counts to its new value instead of jumping. */
 export function Count({ value }: { value: number }) {
@@ -73,8 +81,9 @@ export function Actions({ game, onShop }: { game: Game; onShop: () => void }) {
   const throwIt = (item: ShopItem) => {
     if (flying) return
     setFlying(item)
+    play('throw')
     // the ball is seen to fly, then the ledger is told and the HP falls
-    setTimeout(() => { useItem(item, '', 'throw'); setFlying(null) }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 650)
+    setTimeout(() => { useItem(item, '', 'throw'); setFlying(null); play(wildHpAfter(game, item) <= 0 ? 'catch' : 'hit') }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 650)
   }
   const balls = (['great-ball', 'ultra-ball'] as ShopItem[]).filter((b) => (game.inv[b] ?? 0) > 0)
   const hearts = (game.partner.together ?? 0) + (game.partner.fed ?? 0)
@@ -93,7 +102,7 @@ export function Actions({ game, onShop }: { game: Game; onShop: () => void }) {
           <span>Get balls<small>from 150 coins</small></span>
         </button>
       )}
-      <button type="button" className="k-btn ok act" disabled={!game.inv.berry} onClick={() => useItem('berry', '', 'feed')} title={game.inv.berry ? 'Feed your partner' : 'Berries are in the shop'}>
+      <button type="button" className="k-btn ok act" disabled={!game.inv.berry} onClick={() => { useItem('berry', '', 'feed'); play('feed') }} title={game.inv.berry ? 'Feed your partner' : 'Berries are in the shop'}>
         <Berry size={30} />
         <span>Feed<small>{game.inv.berry ? `${game.inv.berry} left` : 'no berries'} · {hearts} ♥</small></span>
       </button>
@@ -127,7 +136,7 @@ export function Quests({ game }: { game: Game }) {
 export function ShopTab({ game }: { game: Game }) {
   const [bump, setBump] = useState<string | null>(null)
   if (game.version < 5) return <Win title="Shop" tone="gold"><p className="muted">The shop opens with rules version 5.</p></Win>
-  const buy = (item: ShopItem) => { useItem(item, '', 'buy'); setBump(item); setTimeout(() => setBump(null), 350) }
+  const buy = (item: ShopItem) => { useItem(item, '', 'buy'); play('buy'); setBump(item); setTimeout(() => setBump(null), 350) }
   const shelf = (items: ShopItem[]) => (
     <div className="shelf">
       {items.map((id) => {
@@ -152,7 +161,10 @@ export function ShopTab({ game }: { game: Game }) {
   return (
     <>
       <Win title="For catching" tone="gold" aside={<><Coin size={22} /> <Count value={game.wallet.coins} /></>}>{shelf(['great-ball', 'ultra-ball', 'berry'])}</Win>
-      <Win title="Rare things" tone="blue" aside={<><Gem size={22} /> <Count value={game.wallet.gems} /></>}>{shelf(['incense', ...THEMES])}</Win>
+      <Win title="Rare things" tone="blue" aside={<><Gem size={22} /> <Count value={game.wallet.gems} /></>}>
+        {shelf(['rare-egg', 'incense', ...THEMES])}
+        {game.egg && <div className="eggrow"><span className="warm"><EggIcon size={44} /></span><div style={{ flex: 1 }}><span className="k-label">An egg is being kept warm</span><KBar value={game.egg.have} max={game.egg.need} kind="gold" label={`${game.egg.have} / ${game.egg.need} days with two pillars`} /></div></div>}
+      </Win>
       {game.inv.incense > 0 && (
         <Win title="Incense" tone="green" aside={game.wish.chosen ? 'Chosen' : 'Pick one'}>
           <div className="queue pick">
@@ -198,7 +210,7 @@ export function TeamTab({ game, partnerCard, choices }: { game: Game; partnerCar
         <div className="hearts">
           <span className="heartrow" aria-label={`Bond level ${level} of ${HEART_LEVELS.length}`}>{HEART_LEVELS.map((_, i) => <Heart key={i} on={i < level} />)}</span>
           <div style={{ flex: 1, minWidth: 140 }}><KBar value={nextAt ? hearts : 1} max={nextAt ?? 1} kind="gold" label={nextAt ? `${hearts} / ${nextAt}` : 'Full'} /></div>
-          {v5 && <button type="button" className="k-btn ok" disabled={!game.inv.berry} onClick={() => useItem('berry', '', 'feed')}><Berry size={26} />Feed{game.inv.berry ? ` ×${game.inv.berry}` : ''}</button>}
+          {v5 && <button type="button" className="k-btn ok" disabled={!game.inv.berry} onClick={() => { useItem('berry', '', 'feed'); play('feed') }}><Berry size={26} />Feed{game.inv.berry ? ` ×${game.inv.berry}` : ''}</button>}
         </div>
       </Win>
       {v5 && (

@@ -16,7 +16,7 @@ const SEEN_KEY = 'pokedex.seen.v1'
 /** How far back a moment can still be news. Older than this it is history, in the Adventure log. */
 const NEWS_DAYS = 30
 /** Not news by themselves: a level is one of many, a wild Pokemon is on the screen already, a choice was made by hand. */
-const QUIET = new Set<Moment['kind']>(['level', 'appear', 'use', 'item', 'badge'])
+const QUIET = new Set<Moment['kind']>(['level', 'appear', 'use', 'item', 'badge', 'quest', 'season', 'transfer'])
 /** Bigger things first. */
 const WEIGHT: Partial<Record<Moment['kind'], number>> = { league: 9, key: 8, mega: 7, gym: 6, evolve: 5, graduate: 4, region: 3, catch: 2, form: 1, partner: 0 }
 
@@ -59,6 +59,7 @@ function tell(m: Moment, game: Game): Told {
       const mon = game.graduates.find((g) => g.uid === m.uid)
       return { title: 'Fully trained', line: `${nameOf(m.form)} is in the Pokedex for good${mon?.nature ? `, with a ${mon.nature.name} nature` : ''}.`, art: 'mon', form: m.form, shiny: mon?.shiny }
     }
+    case 'hatch': return { title: 'The egg hatched!', line: `${nameOf(m.form)} is in your Box.`, art: 'mon', form: m.form }
     case 'partner': return { title: m.origin === 'egg' ? 'An egg hatched' : 'New partner', line: `${nameOf(m.form)} is your partner now.`, art: 'mon', form: m.form }
     case 'catch': {
       const ball = game.queue.find((x) => x.uid === m.uid)?.ball ?? game.days.find((d) => d.day === m.day)?.ball ?? 'poke'
