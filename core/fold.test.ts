@@ -8,7 +8,7 @@ import { golden } from './golden.ts'
 import { foldGame, isGym, leaderOf, statsOf } from './fold.ts'
 import { LEAGUES, lineup } from './gyms.ts'
 import { beats, weakDomains } from './types.ts'
-import { EGG_DAYS, GAME_START, GEMS, LEADER_HP, SEASON_STEP, SHOP, V3_START, V4_START, V5_START, WEAK_MULT, bondLevel, wildHit5, WILD_HP, ballFor, evolveAt, graduateAt, levelOf, momentumMult, regionsOpenV2, rulesOn, wildHit, xpForLevel } from './rules.ts'
+import { CHEST, EGG_DAYS, GAME_START, GEMS, LEADER_HP, SEASON_STEP, SHOP, V3_START, V4_START, V5_START, WEAK_MULT, bondLevel, wildHit5, WILD_HP, ballFor, evolveAt, graduateAt, levelOf, momentumMult, regionsOpenV2, rulesOn, wildHit, xpForLevel } from './rules.ts'
 import { SPECIES } from './species.ts'
 
 const H = (id: string, tag: HabitFact['tag'], worth: number, frac: number): HabitFact =>
@@ -840,6 +840,26 @@ test('version 5: a Rare Egg is kept warm by days with two pillars, and hatches i
   assert.ok(h.kind === 'hatch' && h.day === far(34))
   const mon = hatched.queue.find((m) => m.uid === h.uid)!
   assert.deepEqual([mon.origin, SPECIES[mon.form].r], ['egg', 'R'])
+})
+
+test('version 5: a chest is opened as it is bought, and holds the same thing on every device', () => {
+  const facts = run(40, ALL)
+  const base = fold5(facts)
+  const opened = (n: number) => fold5(use(facts, 39, ...Array.from({ length: n }, () => ({ what: 'buy', item: 'chest' }))))
+  const one = opened(1)
+  const c = one.moments.find((m) => m.kind === 'chest')!
+  assert.ok(c.kind === 'chest' && c.n === 1)
+  assert.equal(one.wallet.gems, base.wallet.gems - 30)
+  assert.equal(one.inv.chest, undefined) // nothing to keep: it was opened
+  if (c.kind === 'chest') {
+    if (c.coins) assert.equal(one.wallet.coins, base.wallet.coins + c.coins)
+    else assert.equal(one.inv[c.item], (base.inv[c.item] ?? 0) + c.count)
+  }
+  assert.deepEqual(opened(1).moments.at(-1), one.moments.at(-1))
+  // ten of them: every one holds something from the table
+  const ten = opened(10).moments.flatMap((m) => (m.kind === 'chest' ? [m] : []))
+  assert.equal(ten.length, 10)
+  assert.ok(ten.every((m) => m.coins > 0 || CHEST.some((x) => x.item === m.item && x.n === m.count)))
 })
 
 test('every entry in the species table can be reached', async () => {

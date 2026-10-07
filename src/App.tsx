@@ -531,7 +531,7 @@ function DexTab({ game }: { game: Game }) {
 }
 
 // ── Trainer card ────────────────────────────────────────────────────────────
-const KIND: Record<Moment['kind'], string> = { level: 'Level', evolve: 'Evolved', graduate: 'Trained', partner: 'Partner', catch: 'Caught', appear: 'Wild', form: 'Form', badge: 'Badge', region: 'Region', gym: 'Gym', league: 'League', item: 'Stone', use: 'Choice', key: 'Key Stone', mega: 'Mega', transfer: 'Professor', quest: 'Quest', season: 'Season', hatch: 'Hatched' }
+const KIND: Record<Moment['kind'], string> = { level: 'Level', evolve: 'Evolved', graduate: 'Trained', partner: 'Partner', catch: 'Caught', appear: 'Wild', form: 'Form', badge: 'Badge', region: 'Region', gym: 'Gym', league: 'League', item: 'Stone', use: 'Choice', key: 'Key Stone', mega: 'Mega', transfer: 'Professor', quest: 'Quest', season: 'Season', hatch: 'Hatched', chest: 'Chest' }
 const ITEM_WHY = { gym: 'with the badge', perfect: 'for a perfect-day milestone', league: 'from the league' } as const
 function line(m: Moment): string {
   switch (m.kind) {
@@ -563,6 +563,7 @@ function line(m: Moment): string {
     case 'quest': return `${m.name}: ${m.coins ? `+${m.coins} coins` : `+${m.gems} gems`}`
     case 'season': return `Season step ${m.step}: ${m.coins ? `+${m.coins} coins` : m.gems ? `+${m.gems} gems` : (SHOP[m.item as ShopItem]?.name ?? m.item)}`
     case 'hatch': return `A Rare Egg hatched into ${nameOf(m.form)}`
+    case 'chest': return `Chest ${m.n}: ${m.coins ? `${m.coins} coins` : `${SHOP[m.item as ShopItem]?.name ?? m.item}${m.count > 1 ? ` ×${m.count}` : ''}`}`
   }
 }
 /** The league being challenged, as a road: one step per leader, a tick on those behind you, a marker where you stand. */

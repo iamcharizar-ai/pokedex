@@ -3,13 +3,14 @@
 // what the day's work earned, and is written to the ledger as one small event
 // (store.useItem), so the game is still recomputed from the ledger alone.
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { nameOf, type Game, type Mon, type Quest } from '../core/fold.ts'
-import { BALL_NAME, GEMS, HEART_LEVELS, SHOP, TEAM_BONUS, TEAM_SIZE, THEMES, THROW_HP, bondLevel, type ShopItem } from '../core/rules.ts'
+import { createPortal } from 'react-dom'
+import { nameOf, spritePath, type Game, type Mon, type Quest } from '../core/fold.ts'
+import { BALL_NAME, GEMS, HEART_LEVELS, SHOP, TEAM_BONUS, TEAM_SIZE, THEMES, THROW_HP, bondLevel, levelOf, type ShopItem } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
 import { MonCard, TAG_NAME, Win, plural } from './App.tsx'
 import { Ball } from './Ball.tsx'
-import { KBar, KButton } from './Kit.tsx'
-import { still } from './lib/art.ts'
+import { KBar, KButton, KClose, KReveal } from './Kit.tsx'
+import { aBall, fmtDay, still } from './lib/art.ts'
 import { play } from './lib/sfx.ts'
 import { useItem } from './lib/store.ts'
 
@@ -32,6 +33,9 @@ const Heart = ({ on }: { on: boolean }) => (
 export const EggIcon = ({ size = 40 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden><path d="M12 2.500c4 0 7.500 6 7.500 11.500a7.500 7.500 0 0 1-15 0C4.500 8.500 8 2.500 12 2.500z" fill="#fbf6e3" stroke="#141a33" strokeWidth="2" /><path d="M8 9l2 2 2-2 2 2 2-2" fill="none" stroke="#7b5cf0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /><circle cx="9.500" cy="15" r="1.500" fill="#e0559a" /><circle cx="14.500" cy="17" r="1.200" fill="#63c6ff" /></svg>
 )
+const ChestIcon = ({ size = 40 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden><path d="M3 10a5 5 0 0 1 5-5h8a5 5 0 0 1 5 5v2H3z" fill="#c47a3c" stroke="#141a33" strokeWidth="2" strokeLinejoin="round" /><rect x="3" y="11" width="18" height="9" rx="1.5" fill="#e6a366" stroke="#141a33" strokeWidth="2" /><rect x="10" y="9.5" width="4" height="5" rx="1" fill="#f5b800" stroke="#141a33" strokeWidth="1.6" /><path d="M7 5.500v14M17 5.500v14" stroke="#141a33" strokeWidth="1.400" opacity="0.5" /></svg>
+)
 const THEME_SWATCH: Record<string, [string, string]> = { 'theme-beach': ['#58c8e8', '#f1dc9a'], 'theme-cave': ['#4a4466', '#8a7a6a'], 'theme-night': ['#121a3d', '#3d7a5c'] }
 function ItemIcon({ item, size = 44 }: { item: string; size?: number }) {
   if (item === 'great-ball') return <Ball ball="great" size={size} />
@@ -39,6 +43,7 @@ function ItemIcon({ item, size = 44 }: { item: string; size?: number }) {
   if (item === 'berry') return <Berry size={size} />
   if (item === 'incense') return <Incense size={size} />
   if (item === 'rare-egg') return <EggIcon size={size} />
+  if (item === 'chest') return <ChestIcon size={size} />
   const [sky, ground] = THEME_SWATCH[item] ?? ['#7cc8ff', '#b6e08a']
   return <span className="swatch" style={{ width: size, height: size, background: `linear-gradient(${sky} 0 55%, ${ground} 55%)` }} />
 }
@@ -135,6 +140,14 @@ export function Quests({ game }: { game: Game }) {
 // ── shop ────────────────────────────────────────────────────────────────────
 export function ShopTab({ game }: { game: Game }) {
   const [bump, setBump] = useState<string | null>(null)
+  // a chest opens the moment it is bought: show what was in the newest one, once
+  const opened = game.moments.flatMap((m) => (m.kind === 'chest' ? [m] : []))
+  const told = useRef(opened.length)
+  const [loot, setLoot] = useState<(typeof opened)[number] | null>(null)
+  useEffect(() => {
+    if (opened.length > told.current) { setLoot(opened[opened.length - 1]); play('catch') }
+    told.current = opened.length
+  }, [opened.length]) // eslint-disable-line react-hooks/exhaustive-deps
   if (game.version < 5) return <Win title="Shop" tone="gold"><p className="muted">The shop opens with rules version 5.</p></Win>
   const buy = (item: ShopItem) => { useItem(item, '', 'buy'); play('buy'); setBump(item); setTimeout(() => setBump(null), 350) }
   const shelf = (items: ShopItem[]) => (
@@ -162,7 +175,7 @@ export function ShopTab({ game }: { game: Game }) {
     <>
       <Win title="For catching" tone="gold" aside={<><Coin size={22} /> <Count value={game.wallet.coins} /></>}>{shelf(['great-ball', 'ultra-ball', 'berry'])}</Win>
       <Win title="Rare things" tone="blue" aside={<><Gem size={22} /> <Count value={game.wallet.gems} /></>}>
-        {shelf(['rare-egg', 'incense', ...THEMES])}
+        {shelf(['chest', 'rare-egg', 'incense', ...THEMES])}
         {game.egg && <div className="eggrow"><span className="warm"><EggIcon size={44} /></span><div style={{ flex: 1 }}><span className="k-label">An egg is being kept warm</span><KBar value={game.egg.have} max={game.egg.need} kind="gold" label={`${game.egg.have} / ${game.egg.need} days with two pillars`} /></div></div>}
       </Win>
       {game.inv.incense > 0 && (
@@ -177,6 +190,18 @@ export function ShopTab({ game }: { game: Game }) {
           <p className="muted">{game.wish.chosen ? `${nameOf(game.wish.chosen)} is the next wild Pokemon.` : 'The one you tap appears next.'}</p>
         </Win>
       )}
+      {loot && createPortal(
+        <div className="recap" role="dialog" aria-modal="true" aria-label="What was in the chest" onClick={() => setLoot(null)}>
+          <div className="rc-win"><div className="rc-body">
+            <div className="rc-eyebrow">Chest {loot.n}</div>
+            <KReveal tier={loot.item === 'incense' ? 'rare' : loot.item === 'ultra-ball' ? 'big' : 'ordinary'} title={loot.coins ? `${loot.coins} coins` : `${SHOP[loot.item as ShopItem]?.name}${loot.count > 1 ? ` ×${loot.count}` : ''}`} replay={loot.n}>
+              {loot.coins ? <Coin size={96} /> : <ItemIcon item={loot.item} size={96} />}
+            </KReveal>
+            <button type="button" className="go" autoFocus>Continue</button>
+          </div></div>
+        </div>,
+        document.body,
+      )}
       <Win title="How you earn" tone="dark">
         <ul className="earn">
           <li><Coin size={22} /><b>1</b> for each XP of the day's work</li>
@@ -189,23 +214,72 @@ export function ShopTab({ game }: { game: Game }) {
   )
 }
 
+// ── one Pokemon's own page ──────────────────────────────────────────────────
+/** Everything about one of yours, and what can be done with it from where it stands. */
+function MonPage({ m, game, onClose }: { m: Mon; game: Game; onClose: () => void }) {
+  const rec = SPECIES[m.form]
+  const inBox = game.queue.some((x) => x.uid === m.uid)
+  const trained = Boolean(m.graduated)
+  const isPartner = game.partner.uid === m.uid
+  const inTeam = game.team.some((x) => x.uid === m.uid)
+  const hearts = (m.together ?? 0) + (m.fed ?? 0)
+  const v5 = game.version >= 5
+  const setTeam = () => {
+    const ids = inTeam ? game.team.filter((x) => x.uid !== m.uid).map((x) => x.uid) : [...game.team.map((x) => x.uid), m.uid].slice(-TEAM_SIZE)
+    useItem('', '', 'team', ids.join(','))
+  }
+  const act = (what: string) => { useItem('', m.uid, what); play('tap'); onClose() }
+  // drawn on the page itself, not inside the tab: the tab slides in and would carry the window off with it
+  return createPortal(
+    <div className="recap" role="dialog" aria-modal="true" aria-label={nameOf(m.form)} onClick={onClose}>
+      <div className="monpage" onClick={(e) => e.stopPropagation()}>
+        <KClose onClick={onClose} />
+        <div className={`mp-art ${m.megas?.length ? 'mega' : ''}`}><img src={spritePath(m.megas?.length && m.show !== 'base' ? (m.show && m.megas.includes(m.show) ? m.show : m.megas[0]) : m.form, m.shiny)} alt="" className="sprite" /></div>
+        <div className="mp-body">
+          <h2 className="k-type">{nameOf(m.form)}{m.shiny && <span className="chip">shiny</span>}</h2>
+          <div className="mp-types">
+            {[rec.t, rec.t2].filter(Boolean).map((t) => <span key={t} className="chip type"><img src={`/sprites/types/${t}.png`} alt="" width={14} height={14} onError={(e) => { e.currentTarget.style.display = 'none' }} />{t}</span>)}
+            <span className="chip where">{isPartner ? 'Your partner' : trained ? (inTeam ? 'On the team' : 'Fully trained') : 'In the Box'}</span>
+          </div>
+          <div className="mp-tiles">
+            <div className="k-tile"><span className="k-label">Level</span><b>{levelOf(m.xp)}</b></div>
+            <div className="k-tile"><span className="k-label">Hearts</span><b>{hearts} ♥</b></div>
+            {m.nature && <div className="k-tile"><span className="k-label">Nature</span><b>{m.nature.name}</b></div>}
+            <div className="k-tile"><span className="k-label">{m.origin === 'egg' ? 'Hatched' : m.origin === 'starter' ? 'Starter' : 'Caught'}</span><b>{fmtDay(m.from)}</b></div>
+          </div>
+          {m.nature?.up && m.nature.down && <p className="muted">Raised most on {TAG_NAME[m.nature.up]}, least on {TAG_NAME[m.nature.down]}.</p>}
+          {m.ball && <p className="muted ballname"><Ball ball={m.ball} size={18} />Caught in {aBall(m.ball)}.</p>}
+          <div className="mp-line">
+            {m.path.map((f, i) => <span key={f} className="path-step">{i > 0 && <span className="arrow">▸</span>}<img src={still(f, m.shiny)} alt={nameOf(f)} title={nameOf(f)} width={48} height={48} className="sprite" /></span>)}
+            {(rec.e ?? []).length > 0 && <span className="path-step"><span className="arrow">▸</span>{rec.e!.slice(0, 3).map((f) => <img key={f} src={still(f)} alt="" width={48} height={48} className={`sprite ${game.dex[f] ? '' : 'unseen'}`} />)}</span>}
+            {(m.megas ?? []).map((f) => <span key={f} className="path-step"><span className="arrow">★</span><img src={still(f, m.shiny)} alt={nameOf(f)} title={`${nameOf(f)}, for good`} width={48} height={48} className="sprite" /></span>)}
+          </div>
+          <div className="kit-row">
+            {inBox && <KButton tone="main" disabled={m.uid === game.nextUp} onClick={() => act('next')}>{m.uid === game.nextUp ? 'Next up' : 'Make next'}</KButton>}
+            {inBox && game.version >= 4 && <KButton onClick={() => act('lead')}>Partner now</KButton>}
+            {inBox && v5 && <button type="button" className="k-btn ok" onClick={() => act('transfer')}>To the Professor <Price gems={GEMS.transfer} /></button>}
+            {trained && v5 && <KButton tone={inTeam ? 'neutral' : 'main'} onClick={() => { setTeam(); play('tap') }}>{inTeam ? 'Take off the team' : 'Put on the team'}</KButton>}
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  )
+}
+
 // ── team ────────────────────────────────────────────────────────────────────
 /** The partner's hearts, the three behind it, and the Box with what can be done to each one in it. */
 export function TeamTab({ game, partnerCard, choices }: { game: Game; partnerCard: ReactNode; choices: ReactNode }) {
-  const [pick, setPick] = useState<string | null>(null)
+  const [page, setPage] = useState<string | null>(null)
   const hearts = (game.partner.together ?? 0) + (game.partner.fed ?? 0)
   const level = bondLevel(hearts)
   const nextAt = HEART_LEVELS[level]
   const inTeam = new Set(game.team.map((m) => m.uid))
-  const toggle = (m: Mon) => {
-    const ids = inTeam.has(m.uid) ? game.team.filter((x) => x.uid !== m.uid).map((x) => x.uid) : [...game.team.map((x) => x.uid), m.uid].slice(-TEAM_SIZE)
-    useItem('', '', 'team', ids.join(','))
-  }
-  const sel = game.queue.find((m) => m.uid === pick)
+  const shown = [game.partner, ...game.queue, ...game.graduates].find((m) => m.uid === page)
   const v5 = game.version >= 5
   return (
     <>
-      {partnerCard}
+      <div className="tappable" onClick={() => setPage(game.partner.uid)} title="Open its page">{partnerCard}</div>
       <Win title="Bond" tone="green" aside={`${hearts} ♥`}>
         <div className="hearts">
           <span className="heartrow" aria-label={`Bond level ${level} of ${HEART_LEVELS.length}`}>{HEART_LEVELS.map((_, i) => <Heart key={i} on={i < level} />)}</span>
@@ -219,7 +293,7 @@ export function TeamTab({ game, partnerCard, choices }: { game: Game; partnerCar
             {Array.from({ length: TEAM_SIZE }, (_, i) => {
               const m = game.team[i]
               return m
-                ? <button key={m.uid} type="button" className="slot" onClick={() => toggle(m)} title={`${nameOf(m.form)}: tap to take out`}><MonCard m={m} size={64} /></button>
+                ? <button key={m.uid} type="button" className="slot" onClick={() => setPage(m.uid)} title={nameOf(m.form)}><MonCard m={m} size={64} /></button>
                 : <span key={i} className="slot empty" aria-label="Empty team place">+</span>
             })}
           </div>
@@ -227,7 +301,7 @@ export function TeamTab({ game, partnerCard, choices }: { game: Game; partnerCar
             ? (
               <div className="queue pick" style={{ marginTop: 12 }}>
                 {game.graduates.map((m) => (
-                  <button key={m.uid} type="button" aria-pressed={inTeam.has(m.uid)} className={inTeam.has(m.uid) ? 'on' : ''} onClick={() => toggle(m)} title={`${nameOf(m.form)} · ${SPECIES[m.form].t}${SPECIES[m.form].t2 ? ` / ${SPECIES[m.form].t2}` : ''}${m.nature ? ` · ${m.nature.name}` : ''}`}>
+                  <button key={m.uid} type="button" aria-pressed={inTeam.has(m.uid)} className={inTeam.has(m.uid) ? 'on' : ''} onClick={() => setPage(m.uid)} title={`${nameOf(m.form)} · ${SPECIES[m.form].t}${SPECIES[m.form].t2 ? ` / ${SPECIES[m.form].t2}` : ''}${m.nature ? ` · ${m.nature.name}` : ''}`}>
                     <MonCard m={m} size={56} />
                   </button>
                 ))}
@@ -241,27 +315,17 @@ export function TeamTab({ game, partnerCard, choices }: { game: Game; partnerCar
           <>
             <div className="queue pick">
               {game.queue.map((m) => (
-                <button key={m.uid} type="button" aria-pressed={pick === m.uid} className={pick === m.uid ? 'on' : ''} onClick={() => setPick(pick === m.uid ? null : m.uid)} title={`${nameOf(m.form)}${m.ball ? ` · ${BALL_NAME[m.ball]}` : ''}`}>
+                <button key={m.uid} type="button" onClick={() => setPage(m.uid)} title={`${nameOf(m.form)}${m.ball ? ` · ${BALL_NAME[m.ball]}` : ''}`}>
                   <MonCard m={m} size={64} />
                   {m.uid === game.nextUp && <span className="nexttag">Next</span>}
                 </button>
               ))}
             </div>
-            {sel && (
-              <div className="boxacts">
-                <span className="k-type sm" style={{ fontSize: 20 }}>{nameOf(sel.form)}</span>
-                <span className="k-label">{SPECIES[sel.form].t}{SPECIES[sel.form].t2 ? ` / ${SPECIES[sel.form].t2}` : ''} · {TAG_NAME[SPECIES[sel.form].t] ?? ''}</span>
-                <div className="kit-row">
-                  <KButton tone="main" disabled={sel.uid === game.nextUp} onClick={() => useItem('', sel.uid, 'next')}>Make next</KButton>
-                  {game.version >= 4 && <KButton onClick={() => { useItem('', sel.uid, 'lead'); setPick(null) }}>Partner now</KButton>}
-                  {v5 && <button type="button" className="k-btn ok" onClick={() => { useItem('', sel.uid, 'transfer'); setPick(null) }}>To the Professor <Price gems={GEMS.transfer} /></button>}
-                </div>
-              </div>
-            )}
           </>
         )}
       </Win>
       {choices}
+      {shown && <MonPage m={shown} game={game} onClose={() => setPage(null)} />}
     </>
   )
 }
