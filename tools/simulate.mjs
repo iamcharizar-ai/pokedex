@@ -69,6 +69,19 @@ for (const name of Object.keys(PROFILES)) {
     }
     for (const [tag, [item, price]] of Object.entries(DOMAIN_BALL))
       if (now.wallet.marks[tag] >= price && hp > 0) { uses.push({ day, item, uid: '', what: 'buy', to: tag }, { day, item, uid: '', what: 'throw' }); hp -= 40 }
+    if (process.env.FARM !== '0') {
+      // the Farm: reap what is ripe, sell it all, buy a seed for each empty plot, plant it
+      now.plots.forEach((p, k) => { if (p?.ripe) uses.push({ day, item: '', uid: '', what: 'harvest', to: String(k) }) })
+      for (const c of Object.keys(now.inv)) if (c.startsWith('crop-') && now.inv[c] > 0) uses.push({ day, item: c, uid: '', what: 'sell', to: 'all' })
+      let marks = now.wallet.marks.arbor
+      now.plots.forEach((p, k) => {
+        if (p && !p.ripe) return
+        const seed = marks >= 2 ? 'seed-pumpkin' : marks >= 1 ? 'seed-radish' : Object.keys(now.inv).find((c) => c.startsWith('seed-') && now.inv[c] > 0)
+        if (!seed) return
+        if (seed === 'seed-pumpkin') { uses.push({ day, item: seed, uid: '', what: 'buy', to: 'arbor' }); marks -= 2 } else if (marks >= 1 && !(now.inv[seed] > 0)) { uses.push({ day, item: seed, uid: '', what: 'buy', to: 'arbor' }); marks -= 1 }
+        uses.push({ day, item: seed, uid: '', what: 'plant', to: String(k) })
+      })
+    }
     for (const m of now.queue.slice(3)) uses.push({ day, item: '', uid: m.uid, what: 'transfer' })
     for (const m of now.graduates) for (const to of SPECIES[m.form]?.m ?? []) if (!m.megas?.includes(to)) uses.push({ day, item: '', uid: m.uid, what: 'forge', to })
     if (uses.length) facts[i].uses = uses
@@ -89,6 +102,7 @@ for (const name of Object.keys(PROFILES)) {
   const feats = of('feat')
   console.log(`  feats: ${feats.length} reached (first on day ${dayNo(feats[0])}, tenth on day ${dayNo(feats[9])}) · runs best ${Object.entries(g.runs).map(([k, r]) => k + ' ' + r.best).join(', ')}`)
   console.log(`  money: ${(g.wallet.coins + facts.length * 0).toLocaleString()} coins unspent · coins earned ${Math.round(of('quest').reduce((n, q) => n + q.coins, 0) + of('transfer').reduce((n, q) => n + (q.coins ?? 0), 0))} from quests and the Professor, about ${Math.round((of('quest').reduce((n, q) => n + q.coins, 0) + of('transfer').reduce((n, q) => n + (q.coins ?? 0), 0)) / DAYS)} a day · gems ${g.wallet.gems} · marks left ${Object.entries(g.wallet.marks).map(([k, v]) => k + ' ' + v).join(', ')}`)
+  console.log(`  farm: ${g.counters.harvests ?? 0} harvests · plots ${g.plots.length}`)
   console.log(`  balls thrown ${facts.reduce((n, f) => n + (f.uses ?? []).filter((u) => u.what === 'throw').length, 0)} of which ${catches.filter((c) => c.how === 'ball').length} finished a wild Pokemon · sent to the Professor ${of('transfer').length} · quests paid ${of('quest').length}`)
   console.log(`  kept: bond lost ${g.graduates.filter((x) => !x.bond).length} (must be 0) · stones ${of('item').length} (must be 0) · natures ${[...new Set(natures)].join(', ') || 'none yet'}`)
 }

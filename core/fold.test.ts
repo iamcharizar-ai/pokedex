@@ -1052,3 +1052,58 @@ test('version 6: every shop sells whole prices of things the table knows', () =>
   for (const s of Object.values(DOMAIN_SHOPS)) for (const o of s.stock) assert.ok(o.item && Number.isInteger(o.marks) && o.marks! > 0, o.item)
   for (const o of MART_POOL) assert.ok(Number.isInteger(o.coins) && o.coins! > 0)
 })
+
+// ── the Farm ─────────────────────────────────────────────────────────────────
+import { CROPS, YIELD } from './economy.ts'
+
+test('version 6: the Farm starts with two radish seeds, and only a full Arbor morning waters', () => {
+  assert.equal(fold6(run(1, {})).inv['seed-radish'], 2)
+  assert.equal(fold6(run(1, {})).plots.length, 4)
+  // plant on day 0; Arbor is done on days 1 and 2 only
+  const facts = [day(0, {}), day(1, { arbor: 1 }), day(2, { arbor: 1 }), day(3, {}), day(4, {}), day(5, {})]
+  const planted = fold6(withUse(facts, 0, { item: 'seed-radish', uid: '', what: 'plant', to: '0' }))
+  assert.deepEqual(planted.plots[0], { crop: 'radish', grown: 2, days: 3, ripe: false })
+  assert.equal(planted.inv['seed-radish'], 1)
+  // nothing wilts: a long gap changes nothing, and a day of Arbor ripens it
+  const ripe = fold6(withUse([...facts, day(6, { arbor: 1 })], 0, { item: 'seed-radish', uid: '', what: 'plant', to: '0' }))
+  assert.equal(ripe.plots[0]!.ripe, true)
+  // a half morning does not water
+  const half = fold6(withUse([day(0, {}), day(1, { arbor: 0.5 }), day(2, { arbor: 0.5 })], 0, { item: 'seed-radish', uid: '', what: 'plant', to: '0' }))
+  assert.equal(half.plots[0]!.grown, 0)
+})
+
+test('version 6: harvest only when ripe, then sell or feed', () => {
+  const grow = [day(0, {}), day(1, { arbor: 1 }), day(2, { arbor: 1 }), day(3, { arbor: 1 })]
+  const plant = { item: 'seed-radish', uid: '', what: 'plant', to: '0' }
+  const early = fold6(withUse(withUse(grow.slice(0, 3), 0, plant), 2, { item: '', uid: '', what: 'harvest', to: '0' }))
+  assert.equal(early.inv['crop-radish'] ?? 0, 0) // two mornings of three: not yet
+  const facts = withUse(withUse(grow, 0, plant), 3, { item: '', uid: '', what: 'harvest', to: '0' })
+  const g = fold6(facts)
+  assert.equal(g.inv['crop-radish'], YIELD)
+  assert.equal(g.plots[0], null)
+  assert.equal(g.counters.harvests, 1)
+  // the same plot can be planted again, and a plot that is full or does not exist cannot
+  assert.equal(fold6(withUse(grow, 0, plant, { ...plant, to: '0' })).inv['seed-radish'], 1)
+  assert.equal(fold6(withUse(grow, 0, { ...plant, to: '4' })).inv['seed-radish'], 2)
+  assert.equal(fold6(withUse(grow, 0, { ...plant, item: 'seed-carrot' })).plots[0], null)
+  // sell: coins at the crop's price
+  const reap = { item: '', uid: '', what: 'harvest', to: '0' }
+  const sold = fold6(withUse(facts, 3, reap, { item: 'crop-radish', uid: '', what: 'sell', to: 'all' }))
+  assert.equal(sold.inv['crop-radish'] ?? 0, 0)
+  assert.equal(sold.wallet.coins - g.wallet.coins, CROPS.radish.sell * YIELD)
+  // feed: a heart for each radish
+  const fed = fold6(withUse(facts, 3, reap, { item: 'crop-radish', uid: '', what: 'feed' }))
+  assert.equal(fed.inv['crop-radish'], YIELD - 1)
+  assert.equal(fed.partner.fed, 1)
+})
+
+test('version 6: seeds are bought with Seeds marks, and more plots come with Arbor feats', () => {
+  const facts = run(3, { arbor: 1 })
+  const bought = fold6(withUse(facts, 2, { item: 'seed-pumpkin', uid: '', what: 'buy', to: 'arbor' }))
+  assert.equal(bought.inv['seed-pumpkin'], 1)
+  assert.equal(bought.wallet.marks.arbor, 1) // 3 marks, 2 spent
+  assert.equal(fold6(withUse(run(1, { arbor: 1 }), 0, { item: 'seed-pumpkin', uid: '', what: 'buy', to: 'arbor' })).inv['seed-pumpkin'] ?? 0, 0)
+  assert.equal(fold6(run(24, { arbor: 1 })).plots.length, 4)
+  assert.equal(fold6(run(25, { arbor: 1 })).plots.length, 5)
+  assert.ok(fold6(run(25, { arbor: 1 })).feats.some((f) => f.id === 'days25-arbor'))
+})

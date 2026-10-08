@@ -6,7 +6,7 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import { createPortal } from 'react-dom'
 import { nameOf, spritePath, type Game, type Mon, type Quest } from '../core/fold.ts'
 import {
-  BALLS, DOMAIN_SHOPS, FORGE_COST, HELD, ITEMS, LURES, MARKS, MARK_TAGS, RARE_SHELF, SELL, TM_SLOTS, forgeShard, itemName, throwHp, tmType,
+  BALLS, CROPS, CROP_IDS, DOMAIN_SHOPS, FORGE_COST, HELD, ITEMS, LURES, MARKS, MARK_TAGS, RARE_SHELF, SELL, TM_SLOTS, YIELD, cropId, forgeShard, itemName, seedId, throwHp, tmType,
   type MarkTag, type Offer, type ShopId,
 } from '../core/economy.ts'
 import { BALL_NAME, GEMS, HEART_LEVELS, TEAM_BONUS, bondLevel, levelOf } from '../core/rules.ts'
@@ -179,16 +179,99 @@ function Shelf({ game, offers, shop }: { game: Game; offers: Offer[]; shop: Shop
   )
 }
 
+// ── the Farm ────────────────────────────────────────────────────────────────
+/** Which of the crop's pictures a plot shows: young, growing, nearly there, ripe. */
+const stageOf = (p: { grown: number; days: number; ripe: boolean }): number => (p.ripe ? 4 : p.grown / p.days < 1 / 3 ? 1 : p.grown / p.days < 2 / 3 ? 2 : 3)
+
+/** Arbor's plots: plant a seed, a full Arbor morning waters, harvest when ripe, then sell or feed. */
+export function FarmWin({ game }: { game: Game }) {
+  const [picking, setPicking] = useState<number | null>(null)
+  const seeds = CROP_IDS.filter((c) => (game.inv[seedId(c)] ?? 0) > 0)
+  const crops = CROP_IDS.filter((c) => (game.inv[cropId(c)] ?? 0) > 0)
+  const planted = game.plots.filter(Boolean).length
+  return (
+    <Win title="The plots" tone="green" aside={`${planted} / ${game.plots.length} planted`}>
+      <div className="plots">
+        {game.plots.map((p, i) => p
+          ? (
+            <div key={i} className={`plot ${p.ripe ? 'ripe' : ''}`}>
+              <img src={`/world/${p.crop}_0${stageOf(p)}.png`} alt={CROPS[p.crop].name} width={64} height={64} className="pix cropimg" />
+              <b>{CROPS[p.crop].name}</b>
+              {p.ripe
+                ? <button type="button" className="k-btn main" onClick={() => { useItem('', '', 'harvest', String(i)); play('catch') }}>Harvest</button>
+                : <small>{p.grown} / {p.days} mornings</small>}
+            </div>
+          )
+          : (
+            <button key={i} type="button" className={`plot empty ${picking === i ? 'on' : ''}`} onClick={() => setPicking(picking === i ? null : i)} aria-expanded={picking === i}>
+              <span>+</span><small>Plant</small>
+            </button>
+          ))}
+      </div>
+      {picking !== null && (
+        seeds.length > 0
+          ? (
+            <div className="seedpick">
+              {seeds.map((c) => (
+                <button key={c} type="button" className="k-btn main" onClick={() => { useItem(seedId(c), '', 'plant', String(picking)); play('tap'); setPicking(null) }}>
+                  <ItemIcon id={seedId(c)} size={26} />{CROPS[c].name} <small>×{game.inv[seedId(c)]} · {CROPS[c].days} mornings</small>
+                </button>
+              ))}
+            </div>
+          )
+          : <p className="muted">No seeds. Buy some below with Seeds, one for each crop.</p>
+      )}
+      {crops.length > 0 && (
+        <>
+          <span className="k-label">Harvested</span>
+          <div className="baggrid">
+            {crops.map((c) => {
+              const n = game.inv[cropId(c)]
+              return (
+                <div key={c} className="bagtile">
+                  <ItemIcon id={cropId(c)} size={40} />
+                  <b>{CROPS[c].name} ×{n}</b>
+                  <button type="button" className="k-btn ok" onClick={() => { useItem(cropId(c), '', 'sell', 'all'); play('buy') }}>Sell <Price coins={n * CROPS[c].sell} /></button>
+                  <button type="button" className="k-btn" onClick={() => { useItem(cropId(c), '', 'feed'); play('feed') }}>Feed +{CROPS[c].hearts} ♥</button>
+                </div>
+              )
+            })}
+          </div>
+        </>
+      )}
+      <p className="muted">A full Arbor morning waters every crop one day. A day without it adds nothing and takes nothing: nothing wilts. A ripe plot gives {YIELD}.</p>
+    </Win>
+  )
+}
+
 /** One domain's shop: what its marks buy. */
 export function DomainShop({ game, tag }: { game: Game; tag: MarkTag }) {
   const shop = DOMAIN_SHOPS[tag]
-  const goods = shop.stock.filter((o) => ITEMS[o.item]?.kind !== 'tm')
+  const goods = shop.stock.filter((o) => ITEMS[o.item]?.kind !== 'tm' && ITEMS[o.item]?.kind !== 'seed')
+  const seedStock = shop.stock.filter((o) => ITEMS[o.item]?.kind === 'seed')
   const tms = shop.stock.filter((o) => ITEMS[o.item]?.kind === 'tm')
   const [bump, setBump] = useState<string | null>(null)
   return (
+    <>
+    {tag === 'arbor' && game.version >= 6 && <FarmWin game={game} />}
     <Win title={shop.name} tone={tag === 'sleep' ? 'dark' : tag === 'code' ? 'blue' : tag === 'fitness' ? 'red' : tag === 'guitar' ? 'purple' : 'green'} aside={<><MarkIcon tag={tag} size={22} /> {game.wallet.marks[tag]} {MARKS[tag].name}</>}>
       <p className="muted">{TAG_NAME[tag]} days pay {MARKS[tag].name}. Nothing here can be bought with coins.</p>
       <Shelf game={game} offers={goods} shop={tag} />
+      {seedStock.length > 0 && (
+        <>
+          <span className="k-label" style={{ marginTop: 14, display: 'block' }}>Seeds: plant them in the plots above</span>
+          <div className="tmgrid">
+            {seedStock.map((o) => (
+              <button key={o.item} type="button" className={`tm ${bump === o.item ? 'bump' : ''}`} disabled={!canBuy(game, o, tag)} onClick={() => { useItem(o.item, '', 'buy', tag); play('buy'); setBump(o.item); setTimeout(() => setBump(null), 350) }} title={ITEMS[o.item].text}>
+                <ItemIcon id={o.item} size={36} />
+                <small>{CROPS[o.item.slice(5)]?.name}</small>
+                <Price marks={o.marks} tag={tag} />
+                {(game.inv[o.item] ?? 0) > 0 && <i>×{game.inv[o.item]}</i>}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
       {tms.length > 0 && (
         <>
           <span className="k-label" style={{ marginTop: 14, display: 'block' }}>TMs: each is yours for good, and you can carry {TM_SLOTS}</span>
@@ -207,6 +290,7 @@ export function DomainShop({ game, tag }: { game: Game; tag: MarkTag }) {
         </>
       )}
     </Win>
+    </>
   )
 }
 
