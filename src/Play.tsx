@@ -255,7 +255,7 @@ export function DomainShop({ game, tag }: { game: Game; tag: MarkTag }) {
     <>
     {tag === 'arbor' && game.version >= 6 && <FarmWin game={game} />}
     <Win title={shop.name} tone={tag === 'sleep' ? 'dark' : tag === 'code' ? 'blue' : tag === 'fitness' ? 'red' : tag === 'guitar' ? 'purple' : 'green'} aside={<><MarkIcon tag={tag} size={22} /> {game.wallet.marks[tag]} {MARKS[tag].name}</>}>
-      <p className="muted">{TAG_NAME[tag]} days pay {MARKS[tag].name}. Nothing here can be bought with coins.</p>
+      <p className="muted">{TAG_NAME[tag]} days pay {MARKS[tag].name}. Nothing here can be bought with coins.{tag === 'sleep' && !game.sleep.band ? ' Bells come only from nights your band measures, so this house stays quiet until the first one.' : ''}</p>
       <Shelf game={game} offers={goods} shop={tag} />
       {seedStock.length > 0 && (
         <>

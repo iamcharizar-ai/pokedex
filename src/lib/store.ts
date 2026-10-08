@@ -3,7 +3,8 @@
 // item being used from the Bag.
 import { useSyncExternalStore } from 'react'
 import { buildFacts, type DayFacts } from '../../core/facts.ts'
-import { USE_EVENT } from '../../core/events.ts'
+import { USE_EVENT, sleepOf, type SleepNight } from '../../core/events.ts'
+import { settled } from '../../core/order.ts'
 import { foldGame, type Game } from '../../core/fold.ts'
 import { dayISO, type LedgerEvent } from '../linked/arbor-model.ts'
 import { createLedger, type LedgerStatus } from './ledger.ts'
@@ -26,6 +27,8 @@ export const LIFEOS_URL: string = (env.VITE_LIFEOS_URL as string | undefined) ??
 export const VITALS_URL: string = (env.VITE_VITALS_URL as string | undefined) ?? 'https://vitals-theta-pied.vercel.app'
 
 export interface View {
+  /** day → the night that ended on it, as the band reported it */
+  nights: Record<string, SleepNight>
   body: BodyDay | null
   game: Game
   facts: DayFacts[]
@@ -51,7 +54,7 @@ function compute(): View {
     body = { day: last }
     for (const e of vit) if (e.day === last) for (const k of ['sleepMin', 'steps', 'weightKg'] as const) if (typeof e.payload[k] === 'number') body[k] = e.payload[k] as number
   }
-  return { body, game: foldGame(facts), facts, status, today }
+  return { nights: sleepOf(settled(events)), body, game: foldGame(facts), facts, status, today }
 }
 function refresh(): void {
   view = compute()

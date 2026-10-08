@@ -1107,3 +1107,88 @@ test('version 6: seeds are bought with Seeds marks, and more plots come with Arb
   assert.equal(fold6(run(25, { arbor: 1 })).plots.length, 5)
   assert.ok(fold6(run(25, { arbor: 1 })).feats.some((f) => f.id === 'days25-arbor'))
 })
+
+// ── sleep (SLEEP-DESIGN.md) ──────────────────────────────────────────────────
+import { sleepOf } from './events.ts'
+import { SLEEP_DEEP, V6_START } from './rules.ts'
+
+/** a day whose sleep habit the band measured: a 100-XP pillar paid by the score */
+function night(n: number, score: number, o: Parameters<typeof day>[1] = {}): DayFacts {
+  const d = day(n, o)
+  return { ...d, body: { sleepScore: score }, habits: d.habits.map((h) => (h.id === 'sleep-before-10' ? { ...H('sleep-before-10', 'sleep', 100, score / 100), done: score >= 80, measured: true as const } : h)) }
+}
+
+test('sleep: a morning with no reading is a hand tick worth a core habit, and a reading replaces it', () => {
+  const lib = (tier: string) => ({ tier, spans: [{ from: '1970-01-01', to: null }] })
+  const d1 = V6_START, d2 = addDays(V6_START, 1)
+  const input = (ticked: boolean, body: FactsInput['body']): FactsInput => ({
+    today: d2,
+    habits: [{ id: 'leetcode-coding', ...lib('pillar') }, { id: 'sleep-before-10', ...lib('core') }],
+    ticks: ticked ? { [d2]: { 'sleep-before-10': new Date(d2 + 'T08:00:00').toISOString() } } : {},
+    body,
+  })
+  const sleep = (i: FactsInput, d: string) => buildFacts(i).find((f) => f.day === d)!.habits.find((h) => h.id === 'sleep-before-10')!
+  // the band has reported on the first day; the second morning has no reading yet
+  const waiting = input(false, { [d1]: { sleepScore: 85 } })
+  const w = sleep(waiting, d2)
+  assert.deepEqual([w.worth, w.pillar, w.frac, w.done, w.measured, w.selfReported], [30, false, 0, false, undefined, true])
+  // it can be ticked by hand meanwhile, and pays a core habit
+  const ticked = sleep(input(true, { [d1]: { sleepScore: 85 } }), d2)
+  assert.deepEqual([ticked.worth, ticked.pillar, ticked.frac, ticked.done], [30, false, 1, true])
+  // the reading arrives: the tick is ignored and the score is paid
+  const read = sleep(input(true, { [d1]: { sleepScore: 85 }, [d2]: { sleepScore: 70 } }), d2)
+  assert.deepEqual([read.worth, read.pillar, read.frac, read.done, read.measured, read.selfReported], [100, true, 0.7, false, true, undefined])
+  // a day before version 6 keeps its old reading: no score is a zero
+  const before = sleep({ ...input(false, { [addDays(V6_START, -3)]: { sleepScore: 85 } }), today: addDays(V6_START, -1) }, addDays(V6_START, -1))
+  assert.deepEqual([before.worth, before.frac, before.measured], [100, 0, true])
+  // nothing is self-reported when no band is in use
+  assert.equal(sleep(input(false, {}), d2).selfReported, undefined)
+})
+
+test('sleep: Bells come from measured nights only, two for a deep night', () => {
+  const marks = (facts: DayFacts[]) => fold6(facts).wallet.marks.sleep
+  assert.equal(marks([night(0, 70)]), 0)
+  assert.equal(marks([night(0, 80)]), 1)
+  assert.equal(marks([night(0, SLEEP_DEEP - 1)]), 1)
+  assert.equal(marks([night(0, SLEEP_DEEP)]), 2)
+  assert.equal(marks([night(0, 85), night(1, 95), night(2, 60)]), 3)
+  // a plain hand tick is not a measured night: no Bell, no sleep run, no sleep days
+  const ticked = fold6(run(10, { sleep: 1 }))
+  assert.equal(ticked.wallet.marks.sleep, 0)
+  assert.equal(ticked.counters['days:sleep'] ?? 0, 0)
+  // measured good nights are a run
+  const measured = fold6(Array.from({ length: 7 }, (_, i) => night(i, 88)))
+  assert.deepEqual(measured.runs.sleep, { cur: 7, best: 7 })
+  assert.ok(measured.feats.some((f) => f.id === 'run7-sleep'))
+})
+
+test('sleep: HP is the average of measured nights, and a night with no reading is left out', () => {
+  const facts = [night(0, 90), day(1, {}), night(2, 70)]
+  assert.equal(statsOf(facts).hp, 80)
+  // before any reading it is still the share of the hand-ticked habit
+  assert.equal(statsOf(run(2, { sleep: 1 })).hp, 100)
+  assert.equal(statsOf(run(2, {})).hp, 0)
+})
+
+test('sleep: the game says what last night was', () => {
+  assert.deepEqual(fold6(run(1, {})).sleep, { band: false, state: 'off', score: null, xp: 0 })
+  const measured = fold6([night(0, 84)])
+  assert.deepEqual(measured.sleep, { band: true, state: 'measured', score: 84, xp: 84 })
+  // the band was in use, and the next morning is still waiting for its reading
+  const waiting = { ...day(1, {}), habits: day(1, {}).habits.map((h) => (h.id === 'sleep-before-10' ? { ...h, worth: 30, pillar: false, selfReported: true as const } : h)) }
+  assert.deepEqual(fold6([night(0, 84), waiting]).sleep, { band: true, state: 'self', score: null, xp: 0 })
+})
+
+test('sleep: the night is read from the ledger with its bed and wake times', () => {
+  const ev = (day: string, payload: Record<string, unknown>, at = `${day}T07:00:00Z`) => ({ type: 'vitals', day, at, payload })
+  const nights = sleepOf([
+    ev('2026-10-08', { bed: '2026-10-07T23:40', wake: '2026-10-08T06:52', sleepMin: 412, awakeMin: 25, deepMin: 70, remMin: 95, lightMin: 247, steps: 4000 }),
+    ev('2026-10-08', { sleepScore: 84 }, '2026-10-08T07:01:00Z'),
+    ev('2026-10-09', { steps: 5000 }), // nothing about sleep: not a night
+    ev('2026-10-10', { sleepMin: 300, sleepScore: 60 }),
+    ev('2026-10-10', { sleepScore: null }, '2026-10-10T08:00:00Z'), // taken back
+  ])
+  assert.deepEqual(nights['2026-10-08'], { day: '2026-10-08', bed: '2026-10-07T23:40', wake: '2026-10-08T06:52', sleepMin: 412, awakeMin: 25, deepMin: 70, remMin: 95, lightMin: 247, score: 84 })
+  assert.equal(nights['2026-10-09'], undefined)
+  assert.deepEqual(nights['2026-10-10'], { day: '2026-10-10', sleepMin: 300 })
+})

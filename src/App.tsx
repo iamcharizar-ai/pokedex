@@ -11,6 +11,8 @@ import { SPECIES } from '../core/species.ts'
 import { beats } from '../core/types.ts'
 import { Ball, KeyStone } from './Ball.tsx'
 import { FeatsWin } from './Feats.tsx'
+import { SleepWin } from './Sleep.tsx'
+import type { SleepNight } from '../core/events.ts'
 import { ItemIcon } from './Item.tsx'
 import { KBar, KMedal, KPill, KRibbon } from './Kit.tsx'
 import { Actions, Coin, Count, Gem, Pop, Quests, ShopTab, TeamTab } from './Play.tsx'
@@ -154,7 +156,7 @@ function Talk({ game, pillars }: { game: Game; pillars: HabitFact[] }) {
   const me = nameOf(game.display)
   const left = today.total - today.done
   const say: ReactNode = wild?.caught ? <>Gotcha! {nameOf(wild.form)} was caught!</>
-    : game.asleep ? <>{me} is fast asleep.</>
+    : game.asleep ? <>{me} is dozing.</>
     : today.xp > 0 ? <>{me} gained {today.xp} XP today!</>
     : <>What will {me} do today?</>
   // the habits still open, as pips: all of them filled is a perfect day
@@ -255,7 +257,7 @@ function Summary({ game }: { game: Game }) {
       </dl>
       </div>
       {game.lean.length > 0 && <p className="muted">It evolves by itself at level {game.next.level}, into whichever your habits lean to most by then.</p>}
-      {game.asleep && <p className="notice warn">Asleep after two days without a pillar. Finish one pillar to wake it. Nothing is lost.</p>}
+      {game.asleep && <p className="notice warn">Dozing after two days without a pillar. Finish one pillar to wake it. Nothing is lost.</p>}
       {game.aura === 'mega' && <p className="notice good">{partner.megas?.length ? 'Mega form: registered for good. Choose which form shows in the Bag.' : 'Mega form: full momentum and every pillar done today.'}</p>}
       {game.aura === 'gmax' && <p className="notice gmax">Perfect day: Gigantamax for today.</p>}
     </Win>
@@ -300,7 +302,7 @@ function LeaderCard({ game }: { game: Game }) {
   )
 }
 
-function PartnerTab({ game, facts, onShop }: { game: Game; facts: DayFacts[]; onShop: () => void }) {
+function PartnerTab({ game, facts, nights, onShop }: { game: Game; facts: DayFacts[]; nights: Record<string, SleepNight>; onShop: () => void }) {
   const habits = facts[facts.length - 1]?.habits ?? []
   return (
     <div className="home">
@@ -311,6 +313,7 @@ function PartnerTab({ game, facts, onShop }: { game: Game; facts: DayFacts[]; on
         <LeaderCard game={game} />
         <Momentum game={game} />
       </div>
+      {game.sleep.state !== 'off' && <SleepWin game={game} nights={nights} />}
       <Quests game={game} />
     </div>
   )
@@ -717,7 +720,7 @@ function FieldNotes({ game }: { game: Game }) {
 }
 
 const DAYS_SHOWN = 30
-function TrainerTab({ game }: { game: Game }) {
+function TrainerTab({ game, nights }: { game: Game; nights: Record<string, SleepNight> }) {
   const days = game.days.slice(-DAYS_SHOWN)
   const max = Math.max(100, ...days.map((d) => d.xp))
   const total = game.days.reduce((s, d) => s + d.xp, 0)
@@ -755,6 +758,7 @@ function TrainerTab({ game }: { game: Game }) {
         <Road game={game} />
         <StatsRadar stats={game.stats} />
       </div>
+      <SleepWin game={game} nights={nights} full />
       <FeatsWin game={game} />
       <div className="cols">
         <FieldNotes game={game} />
@@ -830,6 +834,9 @@ function RulesTab() {
           </Rule>
           <Rule title="Each work, its mark" tone="blue" pic={<>{(['code', 'fitness', 'guitar', 'arbor', 'sleep'] as const).map((t) => <ItemIcon key={t} id={{ code: 'machine-part', fitness: 'iron', guitar: 'poke-flute', arbor: 'grn-apricorn', sleep: 'lunar-wing' }[t]} size={26} />)}</>}>
             A day of coding, gym, guitar, Arbor or good sleep pays one mark, spent only in that kind's own shop.
+          </Rule>
+          <Rule title="Sleep" tone="blue" pic={<><ItemIcon id="lunar-wing" size={30} /><span className="rule-chip sm">80</span><span className="rule-chip sm">90</span></>}>
+            A night your band measures is a pillar: its score is the XP, 80 fills it, 80 pays a Bell and 90 two. No reading is never a zero: tick it by hand for less.
           </Rule>
           <Rule title="Balls have conditions" tone="red" pic={<><ItemIcon id="net-ball" size={30} /><ItemIcon id="quick-ball" size={30} /><ItemIcon id="timer-ball" size={30} /></>}>
             A Net Ball hits Water and Bug double. A Quick Ball is best the day it appears. A Timer Ball grows each day it waits.
@@ -925,12 +932,12 @@ export default function App() {
             <div className="care"><Egg /><p>Reading your Life OS ledger...<span className="muted" style={{ display: 'block' }}>Your partner appears as soon as it arrives.</span></p></div>
           </Win>
         )}
-        {!loading && tab === 'partner' && <PartnerTab game={game} facts={view.facts} onShop={() => setTab('shop')} />}
+        {!loading && tab === 'partner' && <PartnerTab game={game} facts={view.facts} nights={view.nights} onShop={() => setTab('shop')} />}
         {!loading && tab === 'team' && <TeamTab game={game} partnerCard={<Summary game={game} />} choices={<Choices game={game} />} />}
         {!loading && tab === 'world' && <World game={game} go={(t) => { setTab(t); window.scrollTo({ top: 0 }) }} />}
         {!loading && tab === 'shop' && <ShopTab game={game} />}
         {!loading && tab === 'dex' && <DexTab game={game} />}
-        {!loading && tab === 'trainer' && <TrainerTab game={game} />}
+        {!loading && tab === 'trainer' && <TrainerTab game={game} nights={view.nights} />}
       </main>
       {help && (
         <div className="recap helpwin" role="dialog" aria-modal="true" aria-label="How it works" onClick={() => setHelp(false)}>
