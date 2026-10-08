@@ -8,6 +8,6 @@ export function golden(g: Game): unknown {
   return JSON.parse(JSON.stringify({
     partner: mon(g.partner), level: g.level, into: g.into, need: g.need, next: g.next, lean: g.lean, display: g.display, aura: g.aura, asleep: g.asleep,
     queue: g.queue.map(mon), nextUp: g.nextUp, graduates: g.graduates.map(mon), dex: g.dex, days: g.days, momentum: g.momentum, perfectDays: g.perfectDays,
-    badges: g.badges, regions: g.regions, league: g.league, hall: g.hall, bag: g.bag, stats: g.stats, moments: g.moments, wild: g.wild,
+    badges: g.badges, regions: g.regions, league: { ...g.league, rust: undefined }, hall: g.hall, bag: g.bag, stats: g.stats, moments: g.moments, wild: g.wild,
   }))
 }

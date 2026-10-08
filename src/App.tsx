@@ -539,7 +539,7 @@ function DexTab({ game }: { game: Game }) {
 }
 
 // ── Trainer card ────────────────────────────────────────────────────────────
-const KIND: Record<Moment['kind'], string> = { level: 'Level', evolve: 'Evolved', graduate: 'Trained', partner: 'Partner', catch: 'Caught', appear: 'Wild', form: 'Form', badge: 'Badge', region: 'Region', gym: 'Gym', league: 'League', item: 'Stone', use: 'Choice', key: 'Key Stone', mega: 'Mega', transfer: 'Professor', quest: 'Quest', season: 'Season', hatch: 'Hatched', chest: 'Chest', feat: 'Feat' }
+const KIND: Record<Moment['kind'], string> = { level: 'Level', evolve: 'Evolved', graduate: 'Trained', partner: 'Partner', catch: 'Caught', appear: 'Wild', form: 'Form', badge: 'Badge', region: 'Region', gym: 'Gym', league: 'League', item: 'Stone', use: 'Choice', key: 'Key Stone', mega: 'Mega', transfer: 'Professor', quest: 'Quest', season: 'Season', hatch: 'Hatched', chest: 'Chest', feat: 'Feat', flee: 'Fled', rust: 'Slipped' }
 const ITEM_WHY = { gym: 'with the badge', perfect: 'for a perfect-day milestone', league: 'from the league' } as const
 function line(m: Moment): string {
   switch (m.kind) {
@@ -571,6 +571,8 @@ function line(m: Moment): string {
     case 'quest': return `${m.name}: ${m.coins ? `+${m.coins} coins` : `+${m.gems} gems`}`
     case 'season': return `Season step ${m.step}: ${m.coins ? `+${m.coins} coins` : m.gems ? `+${m.gems} gems` : itemName(m.item)}`
     case 'hatch': return `A Rare Egg hatched into ${nameOf(m.form)}`
+    case 'flee': return `The wild ${nameOf(m.form)} got away`
+    case 'rust': return `The work stopped: ${[m.heal ? `the leader won back ${m.heal} HP` : '', m.hearts ? `${m.hearts} berry hearts faded` : ''].filter(Boolean).join(', ')}`
     case 'chest': return `Chest ${m.n}: ${m.coins ? `${m.coins} coins` : `${itemName(m.item)}${m.count > 1 ? ` ×${m.count}` : ''}`}`
     case 'feat': return `Feat: ${m.name}${[m.gems ? `+${m.gems} gems` : '', m.coins ? `+${m.coins} coins` : '', ...m.items.map(itemName)].filter(Boolean).map((x, i) => (i ? x : ` (${x}`)).join(', ')}${m.gems || m.coins || m.items.length ? ')' : ''}`
   }
