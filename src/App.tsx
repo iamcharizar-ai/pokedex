@@ -3,8 +3,8 @@ import { isGym, leaderOf, nameOf, spritePath, type Game, type Mon, type Moment, 
 import type { DayFacts, HabitFact } from '../core/facts.ts'
 import { LEAGUES, lineup } from '../core/gyms.ts'
 import {
-  ADVANTAGE_MULT, GEMS, SEASON_STEP, BALL_MULT, BALL_NAME, GAME_START, GRADUATES_PER_REGION, ITEM_NAME, KEY_STONE_BADGES, LEADER_HP, MEGA_DAYS, MOMENTUM_WINDOW,
-  PILLARS_FOR_A_DAY, REGIONS, STAT_DAYS, TIER_XP, V4_START, V6_START, WEAK_MULT, evolveAt, graduateAt, momentumMult, xpForLevel,
+  ADVANTAGE_MULT, GEMS, SEASON_STEP, BALL_MULT, BALL_NAME, GAME_START, GRADUATES_PER_REGION, LEADER_HP, MOMENTUM_WINDOW,
+  PILLARS_FOR_A_DAY, REGIONS, SLIP, STAKES_FROM, STAT_DAYS, WILD_STAY, TIER_XP, WEAK_MULT, evolveAt, graduateAt, momentumMult, xpForLevel,
 } from '../core/rules.ts'
 import { itemName as econName } from '../core/economy.ts'
 import { SPECIES } from '../core/species.ts'
@@ -30,7 +30,7 @@ const weekday = (day: string, len: 1 | 3 = 1) => new Date(day + 'T12:00:00').toL
 const clamp01 = (n: number) => Math.max(0, Math.min(1, n))
 export const plural = (n: number, one: string, many = one + 's') => `${n.toLocaleString('en-IN')} ${n === 1 ? one : many}`
 const dexNo = (n: number) => String(n).padStart(3, '0')
-const itemName = (item: string): string => ITEM_NAME[item] ?? econName(item)
+const itemName = (item: string): string => econName(item)
 const RARITY: Record<string, string> = { C: 'Common', U: 'Uncommon', R: 'Rare', L: 'Legendary' }
 /** How far along its line a form is, as the card frame shows it: 1 bronze, 2 silver, 3 gold (it evolves no further). */
 const frameOf = (form: string): 1 | 2 | 3 => (SPECIES[form]?.e?.length ? (SPECIES[form].s >= 2 ? 2 : 1) : 3)
@@ -283,7 +283,7 @@ function LeaderCard({ game }: { game: Game }) {
               <i className={`hp ${hp <= 0.2 ? 'low' : hp <= 0.5 ? 'mid' : ''}`} style={{ width: `${hp * 100}%` }} />
             </div>
           </div>
-          <div className="hp-sub"><span>{league.waiting ? 'Waiting' : today.strike > 0 ? <>Today <b className="dmg">−{today.strike}</b></> : ''}{league.rust > 0 && <b className="leaving"> Won back {league.rust} HP</b>}</span><b>{league.hp.toLocaleString('en-IN')} / {league.max.toLocaleString('en-IN')}</b></div>
+          <div className="hp-sub"><span>{league.waiting ? 'Waiting' : today.strike > 0 ? <>Today <b className="dmg">−{today.strike}</b></> : ''}{league.slipped > 0 && <b className="leaving"> Won back {league.slipped} HP</b>}</span><b>{league.hp.toLocaleString('en-IN')} / {league.max.toLocaleString('en-IN')}</b></div>
           <div className="weak">
             <img src={`/sprites/types/${t.type}.png`} alt="" width={16} height={16} /><span>{t.type}</span>
             {league.weak.map((w) => <span key={w} className="chip weakchip" data-tag={w}>{TAG_NAME[w] ?? w} ×{WEAK_MULT}</span>)}
@@ -308,7 +308,7 @@ function PartnerTab({ game, facts, nights, onShop }: { game: Game; facts: DayFac
     <div className="home">
       <Scene game={game} />
       <Talk game={game} pillars={habits.filter((h) => h.pillar)} />
-      {game.version >= 5 && <Actions game={game} onShop={onShop} />}
+      <Actions game={game} onShop={onShop} />
       <div className="cols">
         <LeaderCard game={game} />
         <Momentum game={game} />
@@ -319,100 +319,87 @@ function PartnerTab({ game, facts, nights, onShop }: { game: Game; facts: DayFac
   )
 }
 
-// ── Bag ─────────────────────────────────────────────────────────────────────
-// Nothing in here is needed for anything: this tab can be ignored for good and
-// the game plays the same. From version 4 nothing in it costs anything either.
-type Choice = 'mega' | 'show' | 'branch' | 'lead'
+// ── Choices ─────────────────────────────────────────────────────────────────
+// Nothing in here costs anything or is needed for anything: it only changes how
+// a registered Mega is drawn and which way a branching Pokemon evolves.
+type Choice = 'show' | 'branch'
 
 function Choices({ game }: { game: Game }) {
   const [what, setWhat] = useState<Choice | null>(null)
   const [uid, setUid] = useState<string | null>(null)
   const [to, setTo] = useState<string | null>(null)
-  const free = game.version >= 4
-  const stones = Object.entries(game.bag).filter(([, n]) => n > 0).sort((a, b) => itemName(a[0]).localeCompare(itemName(b[0])))
-  const total = stones.reduce((s, [, n]) => s + n, 0)
-  const megas = SPECIES[game.partner.form].m ?? []
   const kept = game.partner.megas ?? []
   const branching = [game.partner, ...game.queue].filter((m) => (SPECIES[m.form].e?.length ?? 0) > 1)
-  // version 3 sold a week of Mega for a stone; version 4 lets you choose which registered form shows
   const uses: [Choice, string, string][] = [
-    free
-      ? ['show', 'Which form shows', 'Your partner has a Mega form registered for good. Choose whether it is drawn as that or as its ordinary self.']
-      : ['mega', 'Mega Evolve', `Your partner takes its Mega form for ${MEGA_DAYS} days, whatever momentum is doing.`],
+    ['show', 'Which form shows', 'Your partner has a Mega form registered for good. Choose whether it is drawn as that or as its ordinary self.'],
     ['branch', 'Choose a branch', 'Decide which way a branching Pokemon evolves. It still evolves on its own, at its level.'],
   ]
   // who each one can be used on right now
-  const can: Record<Choice, Mon[]> = { mega: megas.length ? [game.partner] : [], show: kept.length ? [game.partner] : [], branch: branching, lead: [] }
+  const can: Record<Choice, Mon[]> = { show: kept.length ? [game.partner] : [], branch: branching }
   const why: Record<Choice, string> = {
-    mega: `${nameOf(game.partner.form)} has no Mega form.`,
     show: game.keyStone ? `${nameOf(game.partner.form)} has no Mega Stone forged yet.` : 'Needs the Key Stone and a forged Mega Stone.',
     branch: 'None of your Pokemon has a branching evolution right now.',
-    lead: 'The Box is empty.',
   }
-  const solo = what === 'mega' || what === 'show'
+  const solo = what === 'show'
   const mon = what ? (can[what].find((m) => m.uid === uid) ?? (solo ? game.partner : null)) : null
-  const choices = !what || !mon ? [] : what === 'mega' ? megas : what === 'show' ? ['base', ...kept] : what === 'branch' ? (SPECIES[mon.form].e ?? []) : []
+  const choices = !what || !mon ? [] : what === 'show' ? ['base', ...kept] : (SPECIES[mon.form].e ?? [])
   const chosen = choices.length === 1 ? choices[0] : choices.includes(to ?? '') ? to : null
-  const ready = Boolean(what && mon && (free || total > 0) && (what === 'lead' || chosen))
+  const ready = Boolean(what && mon && chosen)
   const pick = (w: Choice) => { setWhat(what === w ? null : w); setUid(null); setTo(null) }
   const formOf = (f: string) => (f === 'base' && mon ? mon.form : f)
   const confirm = () => {
     if (!what || !mon || !ready) return
-    useItem(free ? '' : stones[0][0], mon.uid, what, chosen ?? undefined)
+    useItem('', mon.uid, what, chosen ?? undefined)
     setWhat(null); setUid(null); setTo(null)
   }
-  const sentence = !what || !mon ? '' : what === 'mega' ? `${nameOf(mon.form)} becomes ${nameOf(chosen ?? '')} for ${MEGA_DAYS} days.`
-    : what === 'show' ? `${nameOf(mon.form)} is drawn as ${nameOf(formOf(chosen ?? ''))} from today.`
-    : what === 'branch' ? `${nameOf(mon.form)} will evolve into ${nameOf(chosen ?? '')} when its level comes.`
-    : `${nameOf(mon.form)} becomes your partner now. ${nameOf(game.partner.form)} goes back to the Box.`
+  const sentence = !what || !mon ? '' : what === 'show' ? `${nameOf(mon.form)} is drawn as ${nameOf(formOf(chosen ?? ''))} from today.`
+    : `${nameOf(mon.form)} will evolve into ${nameOf(chosen ?? '')} when its level comes.`
   return (
-    <>
-      <Win title={free ? 'Choices' : 'Spend a stone'} tone="blue" aside={free ? 'Free' : total ? 'Costs 1' : 'Needs a stone'}>
-        <div className="uses">
-          {uses.map(([id, name, text]) => (
-            <button key={id} className={`use ${what === id ? 'on' : ''}`} aria-pressed={what === id} disabled={(!free && total === 0) || can[id].length === 0} onClick={() => pick(id)}>
-              <b>{name}</b>
-              <span>{can[id].length === 0 && (free || total > 0) ? why[id] : text}</span>
-            </button>
-          ))}
-        </div>
-        {what && (
-          <div className="usebox">
-            {!solo && (
-              <>
-                <p className="muted">{what === 'branch' ? 'Which Pokemon?' : 'Who comes forward?'}</p>
-                <div className="queue pick">
-                  {can[what].map((m) => (
-                    <button key={m.uid} aria-pressed={mon?.uid === m.uid} className={mon?.uid === m.uid ? 'on' : ''} onClick={() => { setUid(m.uid); setTo(null) }} title={nameOf(m.form)}>
-                      <img src={still(m.form, m.shiny)} alt={nameOf(m.form)} width={64} height={64} className="sprite" />
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-            {mon && choices.length > 1 && (
-              <>
-                <p className="muted">{what === 'branch' ? 'Into which?' : 'Which form?'}</p>
-                <div className="queue pick">
-                  {choices.map((f) => (
-                    <button key={f} aria-pressed={chosen === f} className={chosen === f ? 'on' : ''} onClick={() => setTo(f)} title={nameOf(formOf(f))}>
-                      <img src={still(formOf(f), mon.shiny)} alt={nameOf(formOf(f))} width={64} height={64} className={`sprite ${what === 'branch' && !game.dex[f] ? 'unseen' : ''}`} />
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-            {ready && (
-              <div className="confirm">
-                <p>{sentence} {free ? (what === 'lead' ? 'It costs nothing, and you can swap back the same way.' : 'It costs nothing and can be changed again.') : 'This uses one stone and cannot be undone.'}</p>
-                <button className="go" onClick={confirm}>{free ? 'Confirm' : 'Spend a stone'}</button>
-                <button className="plain" onClick={() => setWhat(null)}>Cancel</button>
+    <Win title="Choices" tone="blue" aside="Free">
+      <div className="uses">
+        {uses.map(([id, name, text]) => (
+          <button key={id} className={`use ${what === id ? 'on' : ''}`} aria-pressed={what === id} disabled={can[id].length === 0} onClick={() => pick(id)}>
+            <b>{name}</b>
+            <span>{can[id].length === 0 ? why[id] : text}</span>
+          </button>
+        ))}
+      </div>
+      {what && (
+        <div className="usebox">
+          {!solo && (
+            <>
+              <p className="muted">Which Pokemon?</p>
+              <div className="queue pick">
+                {can[what].map((m) => (
+                  <button key={m.uid} aria-pressed={mon?.uid === m.uid} className={mon?.uid === m.uid ? 'on' : ''} onClick={() => { setUid(m.uid); setTo(null) }} title={nameOf(m.form)}>
+                    <img src={still(m.form, m.shiny)} alt={nameOf(m.form)} width={64} height={64} className="sprite" />
+                  </button>
+                ))}
               </div>
-            )}
-          </div>
-        )}
-      </Win>
-    </>
+            </>
+          )}
+          {mon && choices.length > 1 && (
+            <>
+              <p className="muted">{what === 'branch' ? 'Into which?' : 'Which form?'}</p>
+              <div className="queue pick">
+                {choices.map((f) => (
+                  <button key={f} aria-pressed={chosen === f} className={chosen === f ? 'on' : ''} onClick={() => setTo(f)} title={nameOf(formOf(f))}>
+                    <img src={still(formOf(f), mon.shiny)} alt={nameOf(formOf(f))} width={64} height={64} className={`sprite ${what === 'branch' && !game.dex[f] ? 'unseen' : ''}`} />
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          {ready && (
+            <div className="confirm">
+              <p>{sentence} It costs nothing and can be changed again.</p>
+              <button className="go" onClick={confirm}>Confirm</button>
+              <button className="plain" onClick={() => setWhat(null)}>Cancel</button>
+            </div>
+          )}
+        </div>
+      )}
+    </Win>
   )
 }
 
@@ -539,8 +526,7 @@ function DexTab({ game }: { game: Game }) {
 }
 
 // ── Trainer card ────────────────────────────────────────────────────────────
-const KIND: Record<Moment['kind'], string> = { level: 'Level', evolve: 'Evolved', graduate: 'Trained', partner: 'Partner', catch: 'Caught', appear: 'Wild', form: 'Form', badge: 'Badge', region: 'Region', gym: 'Gym', league: 'League', item: 'Stone', use: 'Choice', key: 'Key Stone', mega: 'Mega', transfer: 'Professor', quest: 'Quest', season: 'Season', hatch: 'Hatched', chest: 'Chest', feat: 'Feat', flee: 'Fled', rust: 'Slipped' }
-const ITEM_WHY = { gym: 'with the badge', perfect: 'for a perfect-day milestone', league: 'from the league' } as const
+const KIND: Record<Moment['kind'], string> = { level: 'Level', evolve: 'Evolved', graduate: 'Trained', partner: 'Partner', catch: 'Caught', appear: 'Wild', form: 'Form', region: 'Region', gym: 'Gym', league: 'League', use: 'Choice', key: 'Key Stone', mega: 'Mega', transfer: 'Professor', quest: 'Quest', season: 'Season', hatch: 'Hatched', chest: 'Chest', feat: 'Feat', flee: 'Fled', slip: 'Slipped' }
 function line(m: Moment): string {
   switch (m.kind) {
     case 'level': return `${nameOf(m.form)} reached level ${m.level}`
@@ -550,7 +536,6 @@ function line(m: Moment): string {
     case 'catch': return `${m.shiny ? 'Shiny ' : ''}${nameOf(m.form)} was caught${m.how === 'perfect' ? ' on the spot, by a perfect day' : m.how === 'ball' ? ' with a thrown ball' : ''} (#${m.n})`
     case 'appear': return `A wild ${nameOf(m.form)} appeared${m.rarity === 'C' ? '' : ` (${RARITY[m.rarity].toLowerCase()})`}`
     case 'form': return `${nameOf(m.form)} registered (${m.what === 'mega' ? 'Mega' : 'Gigantamax'})`
-    case 'badge': return `Badge #${m.n} earned`
     case 'region': return `${REGIONS[m.n - 1]} opened`
     case 'gym': {
       const t = leaderOf(m.league, m.slot), l = LEAGUES[m.league]
@@ -558,21 +543,15 @@ function line(m: Moment): string {
       return isGym(m.league, m.slot) ? `Beat ${t.name} of ${l.name}: ${badgeName(t)}` : m.slot === lineup(l).length - 1 ? `Beat ${t.name}, ${l.name}'s Champion` : `Beat ${t.name} of the ${l.name} Elite Four`
     }
     case 'league': return `The ${leagueName(m.league)} league is yours: entered in the Hall of Fame`
-    case 'item': return `${itemName(m.item)} added to the Bag ${ITEM_WHY[m.why]}`
-    case 'use': {
-      const cost = m.item ? `Spent a ${itemName(m.item)}: ` : ''
-      return m.what === 'mega' ? `${cost}${nameOf(m.form)} Mega Evolves for ${MEGA_DAYS} days`
-        : m.what === 'branch' ? `${cost}${m.item ? 'chose' : 'Chose'} ${nameOf(m.to ?? '')} as the branch`
-        : `${cost}${nameOf(m.form)} came forward as the partner`
-    }
+    case 'use': return m.what === 'branch' ? `Chose ${nameOf(m.to ?? '')} as the branch` : `${nameOf(m.form)} came forward as the partner`
     case 'key': return 'The Key Stone is yours: shards can now forge Mega Stones'
     case 'mega': return `${nameOf(m.form)} registered for good`
-    case 'transfer': return `${nameOf(m.form)} went to the Professor (${m.coins ? `+${m.coins} coins` : `+${m.gems} gems`})`
+    case 'transfer': return `${nameOf(m.form)} went to the Professor (+${m.coins} coins)`
     case 'quest': return `${m.name}: ${m.coins ? `+${m.coins} coins` : `+${m.gems} gems`}`
     case 'season': return `Season step ${m.step}: ${m.coins ? `+${m.coins} coins` : m.gems ? `+${m.gems} gems` : itemName(m.item)}`
     case 'hatch': return `A Rare Egg hatched into ${nameOf(m.form)}`
     case 'flee': return `The wild ${nameOf(m.form)} got away`
-    case 'rust': return `The work stopped: ${[m.heal ? `the leader won back ${m.heal} HP` : '', m.hearts ? `${m.hearts} berry hearts faded` : ''].filter(Boolean).join(', ')}`
+    case 'slip': return `An empty day (${fmtDay(m.empty)}): ${[m.leader ? `the leader won back ${m.leader} HP` : '', m.wild ? `the wild Pokemon ${m.wild} HP` : '', m.xp ? `${m.xp} XP faded` : ''].filter(Boolean).join(', ')}`
     case 'chest': return `Chest ${m.n}: ${m.coins ? `${m.coins} coins` : `${itemName(m.item)}${m.count > 1 ? ` ×${m.count}` : ''}`}`
     case 'feat': return `Feat: ${m.name}${[m.gems ? `+${m.gems} gems` : '', m.coins ? `+${m.coins} coins` : '', ...m.items.map(itemName)].filter(Boolean).map((x, i) => (i ? x : ` (${x}`)).join(', ')}${m.gems || m.coins || m.items.length ? ')' : ''}`
   }
@@ -605,10 +584,7 @@ export function Road({ game }: { game: Game }) {
                 {gym && <KMedal on={state === 'done'} title={`${badgeName(t)}: ${state === 'done' ? 'won' : 'not yet'}`}>{art ? <img src={art} alt="" className="sprite" /> : <span className={`badge b${i} on`} />}</KMedal>}
               </div>
             )
-            // the big step after the eighth badge of the first league
-            return game.version < 6 && index === 0 && i === KEY_STONE_BADGES - 1
-              ? [step, <div key="key" className={`k-step key ${game.keyStone ? 'done' : 'ahead'}`} data-n="★"><KeyStone size={52} held /><div><span className="name">Key Stone</span><small>{game.keyStone ? `Yours since ${fmtDay(game.keyStone)}: Mega forms are kept for good` : 'Comes with this badge. With it, Mega forms are kept for good'}</small></div></div>]
-              : [step]
+            return [step]
           })}
         </div>
       </div>
@@ -689,12 +665,7 @@ function BadgeCase({ game }: { game: Game }) {
       <div className="keyrow">
         <KeyStone size={32} held={Boolean(game.keyStone)} />
         <p className="muted">
-          {game.version >= 6
-            ? game.keyStone ? `Key Stone, held since ${fmtDay(game.keyStone)}. A Mega Stone is forged from three shards, on the Pokemon's own page.`
-              : 'The Key Stone is a feat: any one kind of work, seven days running. Then shards forge Mega Stones.'
-            : game.keyStone ? `Key Stone, held since ${fmtDay(game.keyStone)}. A fully evolved partner keeps its Mega form the first time a leader falls to it, or when it finishes training.`
-            : game.version >= 4 ? `The Key Stone comes with the ${KEY_STONE_BADGES}th Kanto badge. With it, Mega forms are kept for good.`
-            : `From ${fmtDay(V4_START)} the ${KEY_STONE_BADGES}th Kanto badge brings the Key Stone.`}
+          {game.keyStone ? `Key Stone, held since ${fmtDay(game.keyStone)}. A Mega Stone is forged from three shards, on the Pokemon's own page.` : 'The Key Stone is a feat: any one kind of work, seven days running. Then shards forge Mega Stones.'}
         </p>
       </div>
     </Win>
@@ -716,7 +687,7 @@ function FieldNotes({ game }: { game: Game }) {
       <dl className="facts notes">
         {rows.map(([tag, name, text]) => <div key={name} className="noterow" data-tag={tag}><dt>{name}</dt><dd>{text}</dd></div>)}
       </dl>
-      <p className="muted">{game.version >= 6 ? 'Counted for life. Feats read these.' : 'Counted for life. Nothing is earned from these yet.'}</p>
+      <p className="muted">Counted for life. Feats read these.</p>
     </Win>
   )
 }
@@ -813,7 +784,6 @@ function Rule({ title, tone, pic, children }: { title: string; tone: string; pic
 const Arrow = () => <span className="rule-arrow" aria-hidden>▸</span>
 function RulesTab() {
   const [sound, setSound] = useState(soundOn())
-  const v6 = V6_START
   return (
     <section className="k-panel">
       <div className="k-panel-b">
@@ -823,7 +793,7 @@ function RulesTab() {
             Every habit is XP for your partner. Pillars are {TIER_XP.pillar}; chores are small.
           </Rule>
           <Rule title="One day, three hits" tone="blue" pic={<><span className="rule-dot" style={{ background: 'var(--k-blue)' }} /><span className="rule-dot" style={{ background: 'var(--hp-ok)' }} /><span className="rule-dot" style={{ background: 'var(--k-gold)' }} /></>}>
-            How much grows the partner. How whole the day was hurts the wild Pokemon. What kind of work hurts the leader.
+            How much grows the partner. How many habits you tick hurts the wild Pokemon, so showing up catches. What kind of work hurts the leader.
           </Rule>
           <Rule title="Evolves by itself" tone="green" pic={<><span className="rule-chip sm">{evolveAt(3, 1)}</span><Arrow /><span className="rule-chip sm">{evolveAt(3, 2)}</span><Arrow /><span className="rule-chip">{graduateAt(3)}</span></>}>
             At these levels. At {graduateAt(3)} it is fully trained and the next one steps up.
@@ -832,7 +802,7 @@ function RulesTab() {
             Half the chores: ×{BALL_MULT.great}. Four-fifths: ×{BALL_MULT.ultra}. Every habit done catches it on the spot.
           </Rule>
           <Rule title="Coins are not XP" tone="gold" pic={<><Coin size={30} /><Arrow /><ItemIcon id="great-ball" size={34} /></>}>
-            Quests, the season, chests and the Professor pay coins. The Mart sells three deals a day, one of each.
+            Showing up pays coins (more the more you tick), and so do quests, the season, chests and the Professor. The Mart sells three deals a day, and two guards always.
           </Rule>
           <Rule title="Each work, its mark" tone="blue" pic={<>{(['code', 'fitness', 'guitar', 'arbor', 'sleep'] as const).map((t) => <ItemIcon key={t} id={{ code: 'machine-part', fitness: 'iron', guitar: 'poke-flute', arbor: 'grn-apricorn', sleep: 'lunar-wing' }[t]} size={26} />)}</>}>
             A day of coding, gym, guitar, Arbor or good sleep pays one mark, spent only in that kind's own shop.
@@ -856,7 +826,7 @@ function RulesTab() {
             Each leader has {LEADER_HP.toLocaleString('en-IN')} HP and is weak to two kinds of work (×{WEAK_MULT}). Beat one, keep the badge.
           </Rule>
           <Rule title="Your team" tone="blue" pic={<><img src="/sprites/ui/party-on.png" alt="" width={30} height={30} className="pix" /><img src="/sprites/ui/party-on.png" alt="" width={30} height={30} className="pix" /><img src="/sprites/ui/party-empty.png" alt="" width={30} height={30} className="pix" /><span className="rule-chip sm">+10%</span></>}>
-            Three trained Pokemon stand behind you. Each one whose type beats the leader's adds 10%.
+            Six trained Pokemon stand behind you. Each one whose type beats the leader's adds 5%.
           </Rule>
           <Rule title="Gems" tone="green" pic={<><Gem size={34} /><span className="rule-chip sm">{GEMS.catch}</span><span className="rule-chip sm">{GEMS.evolve}</span><span className="rule-chip sm">{GEMS.gym}</span></>}>
             A catch, an evolution, a badge, a feat. They buy eggs, incense, chests and scenes, never a ball.
@@ -864,8 +834,8 @@ function RulesTab() {
           <Rule title="The season" tone="gold" pic={<><span className="rule-chip sm">1</span><Arrow /><span className="rule-chip sm">2</span><Arrow /><span className="rule-chip sm">3</span></>}>
             Every {SEASON_STEP.toLocaleString('en-IN')} XP of the month's work is a step, and each step hands something over.
           </Rule>
-          <Rule title="Nothing is lost" tone="green" pic={<span className="rule-chip">∞</span>}>
-            A day off adds nothing and takes nothing. Hearts, badges, feats and Pokemon are yours for good.
+          <Rule title="An empty day costs" tone="red" pic={<span className="rule-chip">0</span>}>
+            From {fmtDay(STAKES_FROM)}, a day with nothing ticked is settled two days later, so a late tick still saves it. The leader wins back {SLIP.leader} HP, the wild Pokemon {SLIP.wild}, and a tenth of the XP into your current level fades. A wild Pokemon that stays {WILD_STAY.C} days gets away. Levels, evolutions, trained and caught Pokemon, badges, feats and items are never taken back.
           </Rule>
           <Rule title="A day's list" tone="red" pic={<><span className="rule-dot" /><span className="rule-dot" /><span className="rule-dot" style={{ opacity: 0.3 }} /></>}>
             Fixed when the day starts. You can add a habit today; taking one off starts tomorrow.
@@ -873,7 +843,7 @@ function RulesTab() {
         </div>
         <div className="kit-row" style={{ marginTop: 14 }}>
           <button type="button" className={`k-btn ${sound ? 'ok' : ''}`} aria-pressed={sound} onClick={() => { setSoundOn(!sound); setSound(!sound); if (!sound) play('buy') }}>Sound: {sound ? 'on' : 'off'}</button>
-          <span className="muted">Rules version 6, from {fmtDay(v6)}. The game began {fmtDay(GAME_START)}.</span>
+          <span className="muted">Rules version 8. The game began {fmtDay(GAME_START)}.</span>
         </div>
       </div>
     </section>
@@ -893,7 +863,7 @@ const ICON: Record<Tab, ReactNode> = {
 /** Always in view: the partner's level and bar, badges won, Pokemon seen, and the Key Stone once it is held. */
 function TopBar({ game, status, loading, onHelp }: { game: Game; status: string[]; loading: boolean; onHelp: () => void }) {
   const seen = Object.keys(game.dex).filter((id) => !SPECIES[id]?.f).length
-  const v5 = game.version >= 5 && !loading
+  const v5 = !loading
   const nx = game.season.next
   return (
     <header className="topbar">
@@ -907,7 +877,7 @@ function TopBar({ game, status, loading, onHelp }: { game: Game; status: string[
         )}
       </div>
       {v5
-        ? <><KPill icon={<Coin size={28} />}><span title={game.version >= 6 ? 'Coins: from quests, the season, chests and the Professor' : "Coins: one for each XP of the day's work"}><Count value={game.wallet.coins} /></span></KPill><KPill icon={<Gem size={28} />}><span title="Gems: from feats, milestones and weekly quests"><Count value={game.wallet.gems} /></span></KPill></>
+        ? <><KPill icon={<Coin size={28} />}><span title="Coins: for showing up, quests, the season, chests and the Professor"><Count value={game.wallet.coins} /></span></KPill><KPill icon={<Gem size={28} />}><span title="Gems: from feats, milestones and weekly quests"><Count value={game.wallet.gems} /></span></KPill></>
         : <KPill icon={<Ball ball="poke" size={28} />}><span title="Pokemon seen">{seen}</span></KPill>}
       <button type="button" className="k-btn help" aria-label="How it works" onClick={onHelp}>?</button>
       <span className={`sync s-${status[0]}`} role="status" aria-label={status[1]} title={status[1]} />

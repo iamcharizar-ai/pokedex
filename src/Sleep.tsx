@@ -15,7 +15,6 @@ const weekday = (day: string) => new Date(day + 'T12:00:00').toLocaleDateString(
 const STAGES: [keyof SleepNight, string, string][] = [['deepMin', 'Deep', '#6b5be0'], ['remMin', 'REM', '#63c6ff'], ['lightMin', 'Light', '#9aa6c2'], ['awakeMin', 'Awake', '#e0559a']]
 
 export function SleepWin({ game, nights, full }: { game: Game; nights: Record<string, SleepNight>; full?: boolean }) {
-  if (game.version < 6) return null
   const { sleep } = game
   const today = game.today.day
   const night = nights[today]

@@ -9,8 +9,8 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { buildFacts } from '../core/facts.ts'
+import { LEADER_HP } from '../core/rules.ts'
 import { foldGame, leaderOf, nameOf } from '../core/fold.ts'
-import { rulesOn } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
 import { ingest } from '../src/lib/ingest.ts'
 
@@ -24,7 +24,7 @@ const facts = buildFacts(ingest(events, config, today))
 const g = foldGame(facts)
 
 if (args.includes('--days'))
-  for (const day of g.days) console.log(day.day, `v${rulesOn(day.day)}`, `xp ${day.xp}`, `x${day.mult}`, `pillars ${day.pillars}/${day.pillarTotal}`, `habits ${day.done}/${day.total}`, `share ${(day.share * 100).toFixed(0)}%`, `${day.ball}`, `hit ${day.hit}`, `strike ${day.strike}`, day.perfect ? 'PERFECT' : '')
+  for (const day of g.days) console.log(day.day, `xp ${day.xp}`, `x${day.mult}`, `pillars ${day.pillars}/${day.pillarTotal}`, `habits ${day.done}/${day.total}`, `share ${(day.share * 100).toFixed(0)}%`, `${day.ball}`, `hit ${day.hit}`, `strike ${day.strike}`, day.perfect ? 'PERFECT' : '')
 
 // ── the report ──
 const days = g.days, n = days.length
@@ -38,7 +38,7 @@ const idx = (day) => days.findIndex((x) => x.day === day)
 const activeBetween = (a, b) => days.slice(idx(a), idx(b) + 1).filter((x) => x.pillars > 0).length
 
 console.log(`\n${n} days (${days[0]?.day} to ${days[n - 1]?.day}) · ${active.length} with a pillar · ${events.length} events`)
-console.log(`partner ${nameOf(g.partner.form)} Lv ${g.level} · Box ${g.queue.length} · fully trained ${g.graduates.length} · rules today v${g.version}`)
+console.log(`partner ${nameOf(g.partner.form)} Lv ${g.level} · Box ${g.queue.length} · fully trained ${g.graduates.length}`)
 console.log('\nXP')
 console.log(`  a day: mean ${mean(days.map((x) => x.xp))}, median ${q(days.map((x) => x.xp), 0.5)}, best ${Math.max(0, ...days.map((x) => x.xp))} · on days with a pillar: mean ${mean(active.map((x) => x.xp))}`)
 console.log(`  share of the day done: median ${(q(days.map((x) => x.share), 0.5) * 100 || 0).toFixed(0)}%, 90th ${(q(days.map((x) => x.share), 0.9) * 100 || 0).toFixed(0)}% · perfect days ${g.perfectDays} (${n ? ((g.perfectDays / n) * 100).toFixed(0) : 0}%)`)
@@ -81,3 +81,14 @@ console.log('\nThe list')
 console.log(`  pillars today: ${facts.at(-1).habits.filter((h) => h.pillar).map((h) => `${h.id} (${h.tag})`).join(', ') || 'none yet (Life OS lifts them on first open)'}`)
 console.log(`  days with their own frozen list: ${facts.filter((f) => events.some((e) => e.type === 'day_list' && e.day === f.day)).length} of ${n}`)
 for (const w of g.warnings) console.log(`  WARNING ${w}`)
+
+// ── at your pace: what the next weeks would look like if they are like these days ──
+{
+  const meanHit = days.reduce((s, x) => s + x.hit, 0) / Math.max(1, n)
+  const meanStrike = days.reduce((s, x) => s + x.strike, 0) / Math.max(1, n)
+  const meanPay = days.reduce((s, x) => s + x.pay, 0) / Math.max(1, n)
+  console.log('At this pace (targets: a wild Pokemon every 7 to 10 days, a leader every 2 to 3 weeks)')
+  console.log(`  a common wild Pokemon: ${meanHit > 0 ? (700 / meanHit).toFixed(1) : 'never'} days · a rare one: ${meanHit > 0 ? (1600 / meanHit).toFixed(1) : 'never'} days · mean hit ${meanHit.toFixed(0)}`)
+  console.log(`  a leader (${LEADER_HP} HP): ${meanStrike > 0 ? (LEADER_HP / meanStrike).toFixed(1) : 'never'} days · mean strike ${meanStrike.toFixed(0)}`)
+  console.log(`  coins a day for showing up: ${meanPay.toFixed(0)} · empty days so far: ${days.filter((x) => x.done === 0).length} of ${n}`)
+}

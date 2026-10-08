@@ -1,5 +1,5 @@
 // One picture for any item, coin or gem: the sprite whose file name is the item's id.
-import { MARKS, cropOf, itemName, type MarkTag } from '../core/economy.ts'
+import { MARKS, itemName, type MarkTag } from '../core/economy.ts'
 import { BallItem } from './Ball.tsx'
 
 const BIG_BALLS = /^(poke|great|ultra|master|premier|safari)-ball$/
@@ -13,9 +13,6 @@ export function ItemIcon({ id, size = 44, className = '' }: { id: string; size?:
     const [sky, ground] = THEME_SWATCH[id]
     return <span className={`swatch ${className}`} style={{ width: size, height: size, background: `linear-gradient(${sky} 0 55%, ${ground} 55%)` }} />
   }
-  // seeds and crops are the Sunnyside crop pictures: stage 0 is the seed, stage 5 the harvested crop
-  const crop = cropOf(id)
-  if (crop) return <img className={`pix itemimg cropimg ${className}`} src={`/world/${crop}_0${id.startsWith('seed-') ? 0 : 5}.png`} width={size} height={size} alt={itemName(id)} draggable={false} />
   return <img className={`pix itemimg ${className}`} src={`/sprites/items/${FILE[id] ?? id}.png`} width={size} height={size} alt={itemName(id)} draggable={false} />
 }
 

@@ -34,7 +34,6 @@ function FeatRow({ f, game }: { f: Feat; game: Game }) {
 }
 
 export function RunsWin({ game }: { game: Game }) {
-  if (game.version < 6) return null
   const RUN_LABEL: [string, string][] = [['work', 'Two pillars'], ...MARK_TAGS.map((t): [string, string] => [t, TAG_NAME[t]])]
   return (
     <Win title="Runs" tone="green" aside="one rest day is forgiven">
@@ -58,7 +57,6 @@ export function RunsWin({ game }: { game: Game }) {
 }
 
 export function FeatsWin({ game }: { game: Game }) {
-  if (game.version < 6) return null
   const earned = new Set(game.feats.map((f) => f.id))
   const ratio = (f: Feat) => Math.min(1, (game.counters[f.key] ?? 0) / f.n)
   const next = FEATS.filter((f) => !earned.has(f.id)).sort((a, b) => ratio(b) - ratio(a)).slice(0, 4)

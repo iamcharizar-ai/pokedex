@@ -18,7 +18,7 @@ const SEEN_KEY = 'pokedex.seen.v1'
 /** How far back a moment can still be news. Older than this it is history, in the Adventure log. */
 const NEWS_DAYS = 30
 /** Not news by themselves: a level is one of many, a wild Pokemon is on the screen already, a choice was made by hand. */
-const QUIET = new Set<Moment['kind']>(['level', 'appear', 'use', 'item', 'badge', 'quest', 'season', 'transfer', 'chest'])
+const QUIET = new Set<Moment['kind']>(['level', 'appear', 'use', 'quest', 'season', 'transfer', 'chest', 'slip'])
 /** A feat is news only when it paid something no shop sells (the Key Stone has a moment of its own). */
 const prize = (m: Extract<Moment, { kind: 'feat' }>): string | undefined => m.items.find((id) => ITEMS[id]?.kind === 'unique')
 /** Bigger things first. */
@@ -73,7 +73,7 @@ function tell(m: Moment, game: Game): Told {
     case 'form': return { title: m.what === 'mega' ? 'Mega form' : 'Gigantamax', line: `${nameOf(m.form)} is registered in the Pokedex.`, art: 'mon', form: m.form }
     case 'mega': return { title: 'Mega Stone forged', line: `${nameOf(m.form)} is registered to this Pokemon and never runs out.`, art: 'mon', form: m.form }
     case 'feat': { const it = prize(m); return { title: m.name, line: `A feat reached${it ? `: ${itemName(it)} is yours, and no shop sells it` : ''}.`, art: 'item', item: it } }
-    case 'key': return { title: 'Key Stone', line: game.version >= 6 ? 'Three shards now forge a Mega Stone for a fully evolved Pokemon.' : 'From now on a fully evolved partner keeps its Mega form the first time a leader falls to it.', art: 'key' }
+    case 'key': return { title: 'Key Stone', line: 'Three shards now forge a Mega Stone for a fully evolved Pokemon.', art: 'key' }
     case 'region': return { title: 'New region', line: `${REGIONS[m.n - 1]} is open: new species can turn up from now on.`, art: 'none' }
     case 'gym': {
       const t = leaderOf(m.league, m.slot), l = LEAGUES[m.league]

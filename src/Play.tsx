@@ -6,10 +6,10 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import { createPortal } from 'react-dom'
 import { nameOf, spritePath, type Game, type Mon, type Quest } from '../core/fold.ts'
 import {
-  BALLS, CROPS, CROP_IDS, DOMAIN_SHOPS, FORGE_COST, HELD, ITEMS, KITCHEN, LURES, MARKS, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, masteryCost, RARE_SHELF, SELL, TM_SLOTS, YIELD, cropId, forgeShard, itemName, seedId, throwHp, tmType,
+  BALLS, DOMAIN_SHOPS, FORGE_COST, HELD, ITEMS, LURES, MARKS, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, masteryCost, RARE_SHELF, SELL, TM_SLOTS, forgeShard, itemName, throwHp, tmType,
   type MarkTag, type Offer, type ShopId,
 } from '../core/economy.ts'
-import { BALL_NAME, GEMS, HEART_LEVELS, REPEL_DAYS, TEAM_BONUS, bondLevel, levelOf } from '../core/rules.ts'
+import { BALL_NAME, HEART_LEVELS, REPEL_DAYS, TEAM_BONUS, bondLevel, levelOf } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
 import { MonCard, TAG_NAME, Win, plural } from './App.tsx'
 import { Ball, BallItem } from './Ball.tsx'
@@ -107,12 +107,12 @@ export function Actions({ game, onShop }: { game: Game; onShop: () => void }) {
           </button>
         ))
         : (
-          <button type="button" className="k-btn ok act" disabled title="Berries are at the Mart and the Farm">
+          <button type="button" className="k-btn ok act" disabled title="Berries are at the Mart and in the Garden shop">
             <ItemIcon id="oran-berry" size={30} />
             <span>Feed<small>no berries · {hearts} ♥</small></span>
           </button>
         )}
-      {game.version >= 7 && (
+      {(
         <>
           {(game.inv['max-repel'] ?? 0) > 0 && wild && !game.wild?.repel && (
             <button type="button" className="k-btn act" onClick={() => { useItem('max-repel', '', 'repel'); play('tap') }} title={ITEMS['max-repel'].text}>
@@ -120,13 +120,13 @@ export function Actions({ game, onShop }: { game: Game; onShop: () => void }) {
               <span>Max Repel<small>{REPEL_DAYS} more days · {game.inv['max-repel']} left</small></span>
             </button>
           )}
-          {(game.inv['revive'] ?? 0) > 0 && game.league.rust > 0 && (
+          {(game.inv['revive'] ?? 0) > 0 && game.league.slipped > 0 && (
             <button type="button" className="k-btn act" onClick={() => { useItem('revive', '', 'revive'); play('tap') }} title={ITEMS['revive'].text}>
               <ItemIcon id="revive" size={30} />
-              <span>Revive<small>−{game.league.rust} HP on the leader</small></span>
+              <span>Revive<small>−{game.league.slipped} HP on the leader</small></span>
             </button>
           )}
-          {((wild && game.wild?.leavesIn !== undefined && game.wild.leavesIn <= 3 && (game.inv['max-repel'] ?? 0) === 0) || (game.league.rust > 0 && (game.inv['revive'] ?? 0) === 0)) && (
+          {((wild && game.wild?.leavesIn !== undefined && game.wild.leavesIn <= 3 && (game.inv['max-repel'] ?? 0) === 0) || (game.league.slipped > 0 && (game.inv['revive'] ?? 0) === 0)) && (
             <button type="button" className="k-btn act" onClick={onShop}>
               <ItemIcon id="max-repel" size={30} />
               <span>Guards<small>Max Repel and Revive are at the Mart</small></span>
@@ -205,102 +205,17 @@ function Shelf({ game, offers, shop }: { game: Game; offers: Offer[]; shop: Shop
   )
 }
 
-// ── the Farm ────────────────────────────────────────────────────────────────
-/** Which of the crop's pictures a plot shows: young, growing, nearly there, ripe. */
-const stageOf = (p: { grown: number; days: number; ripe: boolean }): number => (p.ripe ? 4 : p.grown / p.days < 1 / 3 ? 1 : p.grown / p.days < 2 / 3 ? 2 : 3)
-
-/** Arbor's plots: plant a seed, a full Arbor morning waters, harvest when ripe, then sell or feed. */
-export function FarmWin({ game }: { game: Game }) {
-  const [picking, setPicking] = useState<number | null>(null)
-  const seeds = CROP_IDS.filter((c) => (game.inv[seedId(c)] ?? 0) > 0)
-  const crops = CROP_IDS.filter((c) => (game.inv[cropId(c)] ?? 0) > 0)
-  const planted = game.plots.filter(Boolean).length
-  return (
-    <Win title="The plots" tone="green" aside={`${planted} / ${game.plots.length} planted`}>
-      <div className="plots">
-        {game.plots.map((p, i) => p
-          ? (
-            <div key={i} className={`plot ${p.ripe ? 'ripe' : ''}`}>
-              <img src={`/world/${p.crop}_0${stageOf(p)}.png`} alt={CROPS[p.crop].name} width={64} height={64} className="pix cropimg" />
-              <b>{CROPS[p.crop].name}</b>
-              {p.ripe
-                ? <button type="button" className="k-btn main" onClick={() => { useItem('', '', 'harvest', String(i)); play('catch') }}>Harvest</button>
-                : <small>{p.grown} / {p.days} mornings</small>}
-            </div>
-          )
-          : (
-            <button key={i} type="button" className={`plot empty ${picking === i ? 'on' : ''}`} onClick={() => setPicking(picking === i ? null : i)} aria-expanded={picking === i}>
-              <span>+</span><small>Plant</small>
-            </button>
-          ))}
-      </div>
-      {picking !== null && (
-        seeds.length > 0
-          ? (
-            <div className="seedpick">
-              {seeds.map((c) => (
-                <button key={c} type="button" className="k-btn main" onClick={() => { useItem(seedId(c), '', 'plant', String(picking)); play('tap'); setPicking(null) }}>
-                  <ItemIcon id={seedId(c)} size={26} />{CROPS[c].name} <small>×{game.inv[seedId(c)]} · {CROPS[c].days} mornings</small>
-                </button>
-              ))}
-            </div>
-          )
-          : <p className="muted">No seeds. Buy some below with Seeds, one for each crop.</p>
-      )}
-      {crops.length > 0 && (
-        <>
-          <span className="k-label">Harvested</span>
-          <div className="baggrid">
-            {crops.map((c) => {
-              const n = game.inv[cropId(c)]
-              return (
-                <div key={c} className="bagtile">
-                  <ItemIcon id={cropId(c)} size={40} />
-                  <b>{CROPS[c].name} ×{n}</b>
-                  <button type="button" className="k-btn ok" onClick={() => { useItem(cropId(c), '', 'sell', 'all'); play('buy') }}>Sell <Price coins={n * CROPS[c].sell} /></button>
-                  <button type="button" className="k-btn" onClick={() => { useItem(cropId(c), '', 'feed'); play('feed') }}>Feed +{CROPS[c].hearts} ♥</button>
-                </div>
-              )
-            })}
-          </div>
-        </>
-      )}
-      {game.version >= 7 && (
-        <>
-          <span className="k-label">The kitchen</span>
-          <div className="baggrid">
-            {Object.entries(KITCHEN).map(([out, need]) => {
-              const have = CROP_IDS.reduce((n, c) => n + (game.inv[cropId(c)] ?? 0), 0)
-              return (
-                <div key={out} className="bagtile">
-                  <ItemIcon id={out} size={40} />
-                  <b>{ITEMS[out].name}</b>
-                  <small>{have} / {need} crops, any kind</small>
-                  <button type="button" className="k-btn main" disabled={have < need} onClick={() => { useItem(out, '', 'cook'); play('buy') }}>Cook</button>
-                </div>
-              )
-            })}
-          </div>
-        </>
-      )}
-      <p className="muted">A full Arbor morning waters every crop one day. A day without it adds nothing and takes nothing: nothing wilts. A ripe plot gives {YIELD}.</p>
-    </Win>
-  )
-}
-
 /** One domain's shop: what its marks buy. */
 export function DomainShop({ game, tag }: { game: Game; tag: MarkTag }) {
   const shop = DOMAIN_SHOPS[tag]
-  const goods = shop.stock.filter((o) => ITEMS[o.item]?.kind !== 'tm' && ITEMS[o.item]?.kind !== 'seed')
-  const seedStock = shop.stock.filter((o) => ITEMS[o.item]?.kind === 'seed')
+  const goods = shop.stock.filter((o) => ITEMS[o.item]?.kind !== 'tm')
   const tms = shop.stock.filter((o) => ITEMS[o.item]?.kind === 'tm')
   const [bump, setBump] = useState<string | null>(null)
   return (
     <>
-    {tag === 'arbor' && game.version >= 6 && <FarmWin game={game} />}
-    <Win title={shop.name} tone={tag === 'sleep' ? 'dark' : tag === 'routine' ? 'gold' : tag === 'code' ? 'blue' : tag === 'fitness' ? 'red' : tag === 'guitar' ? 'purple' : 'green'} aside={<><MarkIcon tag={tag} size={22} /> {game.wallet.marks[tag]} {MARKS[tag].name}</>}>
+    <Win title={shop.name} tone={tag === 'sleep' ? 'dark' : tag === 'code' ? 'blue' : tag === 'fitness' ? 'red' : tag === 'guitar' ? 'purple' : 'green'} aside={<><MarkIcon tag={tag} size={22} /> {game.wallet.marks[tag]} {MARKS[tag].name}</>}>
       <p className="muted">{TAG_NAME[tag]} days pay {MARKS[tag].name}. Nothing here can be bought with coins.{tag === 'sleep' && !game.sleep.band ? ' Bells come only from nights your band measures, so this house stays quiet until the first one.' : ''}</p>
-      {game.version >= 6 && (
+      {(
         <div className="trainrow">
           <MarkIcon tag={tag} size={26} />
           <span><b>{TAG_NAME[tag]} level {game.mastery[tag]} / {MASTERY_MAX}</b><small>every level makes {TAG_NAME[tag].toLowerCase()} work strike leaders {Math.round(MASTERY_STEP * 100)}% harder{game.mastery[tag] > 0 ? ` (now +${Math.round(MASTERY_STEP * 100 * game.mastery[tag])}%)` : ''}</small></span>
@@ -310,21 +225,6 @@ export function DomainShop({ game, tag }: { game: Game; tag: MarkTag }) {
         </div>
       )}
       <Shelf game={game} offers={goods} shop={tag} />
-      {seedStock.length > 0 && (
-        <>
-          <span className="k-label" style={{ marginTop: 14, display: 'block' }}>Seeds: plant them in the plots above</span>
-          <div className="tmgrid">
-            {seedStock.map((o) => (
-              <button key={o.item} type="button" className={`tm ${bump === o.item ? 'bump' : ''}`} disabled={!canBuy(game, o, tag)} onClick={() => { useItem(o.item, '', 'buy', tag); play('buy'); setBump(o.item); setTimeout(() => setBump(null), 350) }} title={ITEMS[o.item].text}>
-                <ItemIcon id={o.item} size={36} />
-                <small>{CROPS[o.item.slice(5)]?.name}</small>
-                <Price marks={o.marks} tag={tag} />
-                {(game.inv[o.item] ?? 0) > 0 && <i>×{game.inv[o.item]}</i>}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
       {tms.length > 0 && (
         <>
           <span className="k-label" style={{ marginTop: 14, display: 'block' }}>TMs: each is yours for good, and you can carry {TM_SLOTS}</span>
@@ -356,7 +256,6 @@ export function ShopTab({ game, only }: { game: Game; only?: ShopId }) {
     if (opened.length > told.current) { setLoot(opened[opened.length - 1]); play('catch') }
     told.current = opened.length
   }, [opened.length]) // eslint-disable-line react-hooks/exhaustive-deps
-  if (game.version < 6) return <Win title="Shop" tone="gold"><p className="muted">The shops open with rules version 6.</p></Win>
   const [which, setWhich] = useState<ShopId>('mart')
   const show = (s: ShopId) => (only ?? which) === s
   const chips: [ShopId, string, ReactNode][] = [['mart', 'Mart', <Coin key="m" size={18} />], ['rare', 'Rare', <Gem key="r" size={18} />], ...MARK_TAGS.map((t): [ShopId, string, ReactNode] => [t, DOMAIN_SHOPS[t].name, <MarkIcon key={t} tag={t} size={18} />])]
@@ -383,7 +282,6 @@ export function ShopTab({ game, only }: { game: Game; only?: ShopId }) {
         <Win title="Rare things" tone="blue" aside={<><Gem size={22} /> <Count value={game.wallet.gems} /></>}>
           <Shelf game={game} offers={RARE_SHELF} shop="rare" />
           {game.egg && <div className="eggrow"><span className="warm"><EggIcon size={44} /></span><div style={{ flex: 1 }}><span className="k-label">An egg is being kept warm</span><KBar value={game.egg.have} max={game.egg.need} kind="gold" label={`${game.egg.have} / ${game.egg.need} days with two pillars`} /></div></div>}
-          {game.egg2 && <div className="eggrow"><span className="warm"><EggIcon size={44} /></span><div style={{ flex: 1 }}><span className="k-label">The Incubator's egg</span><KBar value={game.egg2.have} max={game.egg2.need} kind="gold" label={`${game.egg2.have} / ${game.egg2.need} tidy days`} /></div></div>}
         </Win>
       )}
       {show('rare') && (game.inv['full-incense'] ?? 0) > 0 && (
@@ -427,7 +325,6 @@ export function ShopTab({ game, only }: { game: Game; only?: ShopId }) {
 
 // ── the bag: what is held, carried and burning ──────────────────────────────
 export function Bag({ game }: { game: Game }) {
-  if (game.version < 6) return null
   const have = (id: string) => game.inv[id] ?? 0
   const held = Object.keys(HELD).filter((id) => have(id) > 0 || game.partner.held === id)
   const tms = Object.keys(ITEMS).filter((id) => ITEMS[id].kind === 'tm' && have(id) > 0)
@@ -513,8 +410,8 @@ export function MonPage({ m, game, onClose }: { m: Mon; game: Game; onClose: () 
   const isPartner = game.partner.uid === m.uid
   const inTeam = game.team.some((x) => x.uid === m.uid)
   const hearts = (m.together ?? 0) + (m.fed ?? 0)
-  const v5 = game.version >= 5
-  const v6 = game.version >= 6
+  const v5 = true
+  const v6 = true
   const cap = 3 + (game.inv['exp-share'] ? 1 : 0)
   const setTeam = () => {
     const ids = inTeam ? game.team.filter((x) => x.uid !== m.uid).map((x) => x.uid) : [...game.team.map((x) => x.uid), m.uid].slice(-cap)
@@ -568,8 +465,8 @@ export function MonPage({ m, game, onClose }: { m: Mon; game: Game; onClose: () 
           )}
           <div className="kit-row">
             {inBox && <KButton tone="main" disabled={m.uid === game.nextUp} onClick={() => act('next')}>{m.uid === game.nextUp ? 'Next up' : 'Make next'}</KButton>}
-            {inBox && game.version >= 4 && <KButton onClick={() => act('lead')}>Partner now</KButton>}
-            {inBox && v5 && <button type="button" className="k-btn ok" onClick={() => act('transfer')}>To the Professor {v6 ? <Price coins={sell} /> : <Price gems={GEMS.transfer} />}</button>}
+            {inBox && <KButton onClick={() => act('lead')}>Partner now</KButton>}
+            {inBox && v5 && <button type="button" className="k-btn ok" onClick={() => act('transfer')}>To the Professor <Price coins={sell} /></button>}
             {trained && v5 && <KButton tone={inTeam ? 'neutral' : 'main'} onClick={() => { setTeam(); play('tap') }}>{inTeam ? 'Take off the team' : 'Put on the team'}</KButton>}
           </div>
         </div>
@@ -588,7 +485,7 @@ export function TeamTab({ game, partnerCard, choices }: { game: Game; partnerCar
   const nextAt = HEART_LEVELS[level]
   const inTeam = new Set(game.team.map((m) => m.uid))
   const shown = [game.partner, ...game.queue, ...game.graduates].find((m) => m.uid === page)
-  const v5 = game.version >= 5
+  const v5 = true
   const cap = 3 + (game.inv['exp-share'] ? 1 : 0)
   const berry = ['oran-berry', 'sitrus-berry'].find((b) => (game.inv[b] ?? 0) > 0)
   return (
