@@ -9,7 +9,7 @@ import {
   BALLS, CROPS, CROP_IDS, DOMAIN_SHOPS, FORGE_COST, HELD, ITEMS, LURES, MARKS, MARK_TAGS, ONCE, RARE_SHELF, SELL, TM_SLOTS, YIELD, cropId, forgeShard, itemName, seedId, throwHp, tmType,
   type MarkTag, type Offer, type ShopId,
 } from '../core/economy.ts'
-import { BALL_NAME, GEMS, HEART_LEVELS, TEAM_BONUS, bondLevel, levelOf } from '../core/rules.ts'
+import { BALL_NAME, GEMS, HEART_LEVELS, REPEL_DAYS, TEAM_BONUS, bondLevel, levelOf } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
 import { MonCard, TAG_NAME, Win, plural } from './App.tsx'
 import { Ball, BallItem } from './Ball.tsx'
@@ -112,6 +112,28 @@ export function Actions({ game, onShop }: { game: Game; onShop: () => void }) {
             <span>Feed<small>no berries · {hearts} ♥</small></span>
           </button>
         )}
+      {game.version >= 7 && (
+        <>
+          {(game.inv['max-repel'] ?? 0) > 0 && wild && !game.wild?.repel && (
+            <button type="button" className="k-btn act" onClick={() => { useItem('max-repel', '', 'repel'); play('tap') }} title={ITEMS['max-repel'].text}>
+              <ItemIcon id="max-repel" size={30} />
+              <span>Max Repel<small>{REPEL_DAYS} more days · {game.inv['max-repel']} left</small></span>
+            </button>
+          )}
+          {(game.inv['revive'] ?? 0) > 0 && game.league.rust > 0 && (
+            <button type="button" className="k-btn act" onClick={() => { useItem('revive', '', 'revive'); play('tap') }} title={ITEMS['revive'].text}>
+              <ItemIcon id="revive" size={30} />
+              <span>Revive<small>−{game.league.rust} HP on the leader</small></span>
+            </button>
+          )}
+          {((wild && game.wild?.leavesIn !== undefined && game.wild.leavesIn <= 3 && (game.inv['max-repel'] ?? 0) === 0) || (game.league.rust > 0 && (game.inv['revive'] ?? 0) === 0)) && (
+            <button type="button" className="k-btn act" onClick={onShop}>
+              <ItemIcon id="max-repel" size={30} />
+              <span>Guards<small>Max Repel and Revive are at the Mart</small></span>
+            </button>
+          )}
+        </>
+      )}
       {game.lure && <span className="lurenote"><ItemIcon id={Object.keys(LURES).find((k) => LURES[k] === game.lure)!} size={22} />A lure burns: the next wild Pokemon is a {TAG_NAME[game.lure]} type</span>}
     </div>
   )

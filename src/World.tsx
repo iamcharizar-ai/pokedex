@@ -19,7 +19,7 @@ const W = 4434, H = 2470
 /** Where each place is, as a percentage of the picture. */
 interface Place { id: string; name: string; x: number; y: number; icon: string; mark?: MarkTag; shop?: ShopId; go?: 'team' | 'dex' | 'trainer' }
 const PLACES: Place[] = [
-  { id: 'mart', name: 'The Mart', x: 49.5, y: 55, icon: 'great-ball', shop: 'mart' },
+  { id: 'mart', name: 'The Mart', x: 52, y: 47, icon: 'great-ball', shop: 'mart' },
   { id: 'code', name: 'Silph Co.', x: 37, y: 15, icon: MARKS.code.icon, mark: 'code', shop: 'code' },
   { id: 'fitness', name: 'The Dojo', x: 8, y: 92, icon: MARKS.fitness.icon, mark: 'fitness', shop: 'fitness' },
   { id: 'guitar', name: 'Music Hall', x: 18.5, y: 59, icon: MARKS.guitar.icon, mark: 'guitar', shop: 'guitar' },
@@ -49,7 +49,7 @@ function Fog({ x, y, label }: { x: number; y: number; label: string }) {
   )
 }
 
-export function World({ game, go }: { game: Game; go: (t: 'team' | 'dex' | 'trainer') => void }) {
+export function World({ game, go }: { game: Game; go: (t: 'partner' | 'team' | 'dex' | 'trainer') => void }) {
   const [scale, setScale] = useState(1)
   const box = useRef<HTMLDivElement>(null)
   const drag = useRef<{ x: number; y: number; sl: number; st: number } | null>(null)
@@ -90,7 +90,7 @@ export function World({ game, go }: { game: Game; go: (t: 'team' | 'dex' | 'trai
     setAt(p)
     const done = () => { setWalking(null); then() }
     if (calm) done()
-    else setTimeout(done, 900)
+    else setTimeout(done, 450)
   }
 
   const league = LEAGUES[lg]
@@ -101,11 +101,14 @@ export function World({ game, go }: { game: Game; go: (t: 'team' | 'dex' | 'trai
   }
   const need = (i: number): string => {
     const r = LEAGUES[i].region
-    if (r === null) return 'After the league before it'
+    if (r === null) return 'the league before it'
     return `${r - 1 > 0 ? `${GRADUATES_PER_REGION * (r - 1)} trained Pokemon and ` : ''}the ${LEAGUES.filter((l) => l.region !== null)[r - 2]?.name ?? 'last'} league`
   }
+  const ripe = game.plots.filter((p) => p?.ripe).length
+  const wild = game.wild && !game.wild.caught ? game.wild : null
   const buyable = (p: Place): boolean => {
     if (!v6) return false
+    if (p.id === 'arbor' && ripe > 0) return true
     if (p.id === 'mart') return game.mart.deals.some((o) => !game.mart.bought.includes(o.item) && (o.coins ?? 0) <= game.wallet.coins)
     if (p.mark) return game.wallet.marks[p.mark] >= 6
     if (p.id === 'harbor') return game.wallet.gems >= 30
@@ -131,8 +134,17 @@ export function World({ game, go }: { game: Game; go: (t: 'team' | 'dex' | 'trai
               <button key={p.id} type="button" className={`place ${buyable(p) ? 'news' : ''}`} style={{ left: `${p.x}%`, top: `${p.y}%` }} onClick={() => tap(p)} aria-label={p.name}>
                 <ItemIcon id={p.icon} size={28} />
                 <span>{p.name}</span>
+                {p.id === 'arbor' && ripe > 0 && <em className="ripe">{ripe} ripe</em>}
               </button>
             ))}
+            {wild && (
+              <button type="button" className={`wildspot ${wild.leavesIn !== undefined && wild.leavesIn <= 3 ? 'leaving' : ''}`} style={{ left: '34%', top: '62%' }} onClick={() => visit(stand({ x: 34, y: 62 }), () => go('partner'))} aria-label={`Wild ${nameOf(wild.form)}`}>
+                <img src={still(wild.form, wild.shiny)} alt="" width={44} height={44} className="sprite" />
+                <b>Wild {nameOf(wild.form)}</b>
+                <i className="pinhp"><KBar value={wild.hp} max={wild.max} kind={wild.hp / wild.max <= 0.2 ? 'hp low' : wild.hp / wild.max <= 0.5 ? 'hp mid' : 'hp'} /></i>
+                {wild.leavesIn !== undefined && wild.leavesIn <= 3 && <small>{wild.leavesIn === 0 ? 'leaves tomorrow' : `leaves in ${wild.leavesIn + 1} days`}</small>}
+              </button>
+            )}
             {LEAGUES.map((l, i) => isOpen(i) && (
               <button key={l.name} type="button" className={`pin ${i < game.league.index ? 'done' : i === game.league.index ? 'now' : ''}`} style={{ left: `${LEAGUE_AT[i].x}%`, top: `${LEAGUE_AT[i].y}%` }} onClick={() => visit(stand(LEAGUE_AT[i]), () => { if (i === game.league.index) setLeagueOpen(true) })} aria-label={`${leagueName(i)} league`}>
                 {i === game.league.index && leader?.sprite ? <img src={`/sprites/trainers/${leader.sprite}.png`} alt="" width={44} height={44} className="sprite" /> : <ItemIcon id={i < game.league.index ? 'master-ball' : 'poke-ball'} size={26} />}
@@ -155,7 +167,7 @@ export function World({ game, go }: { game: Game; go: (t: 'team' | 'dex' | 'trai
             <li key={p.id}>
               <button type="button" className={`k-btn ${buyable(p) ? 'ok' : ''}`} onClick={() => tap(p)}>
                 <ItemIcon id={p.icon} size={26} />
-                <span><b>{p.name}</b><small>{p.mark ? `${MARKS[p.mark].name}: ${game.wallet.marks[p.mark]}` : p.shop === 'mart' ? `${game.mart.deals.length - game.mart.bought.length} deals left today` : p.shop === 'rare' ? 'Mystery Egg, Full Incense, chests, themes' : p.id === 'lab' ? 'Your Box and the Professor' : p.id === 'smithy' ? 'Forge Mega Stones from shards' : p.id === 'hall' ? 'Leagues you have won' : 'Every Pokemon you have seen'}</small></span>
+                <span><b>{p.name}</b><small>{p.mark ? `${MARKS[p.mark].name}: ${game.wallet.marks[p.mark]}` : p.shop === 'mart' ? `${game.mart.deals.length - game.mart.bought.length} deals left today` : p.shop === 'rare' ? 'Mystery Egg, Full Incense, chests, themes' : p.id === 'arbor' && ripe > 0 ? `${ripe} ripe: ready to harvest` : p.id === 'lab' ? 'Your Box and the Professor' : p.id === 'smithy' ? 'Forge Mega Stones from shards' : p.id === 'hall' ? 'Leagues you have won' : 'Every Pokemon you have seen'}</small></span>
                 {p.mark && <MarkIcon tag={p.mark} size={22} />}
               </button>
             </li>

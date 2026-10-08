@@ -52,7 +52,7 @@ for (const name of Object.keys(PROFILES)) {
     facts.push({ day: addDays(GAME_START, i), habits })
   }
   // the rules in force now, from the first day
-  const opts = { v3From: GAME_START, v4From: GAME_START, v5From: GAME_START, v6From: GAME_START }
+  const opts = { v3From: GAME_START, v4From: GAME_START, v5From: GAME_START, v6From: GAME_START, v7From: GAME_START }
   // a plain way of spending: every ball the Mart offers today and one ball from each domain shop that can be paid for,
   // thrown while the wild Pokemon is still standing; every Pokemon beyond three in the Box goes to the Professor;
   // a Mega is forged whenever shards allow. Found by folding day by day.
@@ -104,5 +104,6 @@ for (const name of Object.keys(PROFILES)) {
   console.log(`  money: ${(g.wallet.coins + facts.length * 0).toLocaleString()} coins unspent · coins earned ${Math.round(of('quest').reduce((n, q) => n + q.coins, 0) + of('transfer').reduce((n, q) => n + (q.coins ?? 0), 0))} from quests and the Professor, about ${Math.round((of('quest').reduce((n, q) => n + q.coins, 0) + of('transfer').reduce((n, q) => n + (q.coins ?? 0), 0)) / DAYS)} a day · gems ${g.wallet.gems} · marks left ${Object.entries(g.wallet.marks).map(([k, v]) => k + ' ' + v).join(', ')}`)
   console.log(`  farm: ${g.counters.harvests ?? 0} harvests · plots ${g.plots.length}`)
   console.log(`  balls thrown ${facts.reduce((n, f) => n + (f.uses ?? []).filter((u) => u.what === 'throw').length, 0)} of which ${catches.filter((c) => c.how === 'ball').length} finished a wild Pokemon · sent to the Professor ${of('transfer').length} · quests paid ${of('quest').length}`)
+  console.log(`  stakes: ${g.counters.fled ?? 0} wild Pokemon fled (of ${g.moments.filter((m) => m.kind === 'appear').length} that appeared) · ${g.moments.filter((m) => m.kind === 'rust').length} idle days · leader HP won back ${g.moments.reduce((n, m) => n + (m.kind === 'rust' ? m.heal : 0), 0)}`)
   console.log(`  kept: bond lost ${g.graduates.filter((x) => !x.bond).length} (must be 0) · stones ${of('item').length} (must be 0) · natures ${[...new Set(natures)].join(', ') || 'none yet'}`)
 }

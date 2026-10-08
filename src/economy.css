@@ -110,7 +110,7 @@ img.itemimg, img.pix, img.ball, img.keystone { flex: none; vertical-align: middl
 .fog i:nth-child(3) { left: 52%; top: 18%; width: 48%; height: 70%; }
 .fog i:nth-child(4) { left: 10%; top: 42%; width: 78%; height: 52%; }
 .fog i:nth-child(5) { left: 36%; top: 8%; width: 40%; height: 60%; }
-.fog span { position: absolute; left: 50%; bottom: 14%; transform: translateX(-50%); width: 120%; text-align: center; font-family: var(--k-face); font-size: 11px; line-height: 1.1; color: #41507f; }
+.fog span { position: absolute; left: 50%; top: 78%; transform: translateX(-50%); width: max-content; max-width: 190px; padding: 3px 9px 4px; text-align: center; font-family: var(--k-face); font-size: 12px; line-height: 1.15; color: #41507f; background: rgba(255, 255, 255, 0.96); border: 2px solid #9fb1de; border-radius: 10px; }
 
 .placelist { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
 .placelist .k-btn { width: 100%; justify-content: flex-start; gap: 10px; text-align: left; min-height: 52px; padding: 6px 12px 10px; }
@@ -169,3 +169,10 @@ img.itemimg, img.pix, img.ball, img.keystone { flex: none; vertical-align: middl
 .nb.goodnight i { background: var(--k-gold); } .nb.deepnight i { background: #b9a6ff; } .nb.none i { background: rgba(255, 255, 255, 0.14); }
 .nb small { font-size: 10px; color: var(--k-dim); }
 .sleeprules { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 6px; font-size: 13px; color: var(--k-dim); }
+
+/* version 7: things that are about to go */
+.leaving { color: #ff9aa2; font-family: var(--k-face); }
+.place .ripe { font-style: normal; font-size: 12px; padding: 0 6px; color: var(--k-edge); background: var(--k-gold); border-radius: 999px; }
+.wildspot { position: absolute; z-index: 3; transform: translate(-50%, -100%); display: grid; justify-items: center; gap: 1px; padding: 4px 8px 5px; color: #fff; font-family: var(--k-face); font-size: 13px; background: rgba(20, 26, 51, 0.88); border: 2px solid var(--k-edge); border-radius: 12px; box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35); }
+.wildspot.leaving { border-color: var(--k-red); }
+.wildspot small { font-size: 11px; color: #ff9aa2; }

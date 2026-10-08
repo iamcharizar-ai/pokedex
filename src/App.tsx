@@ -112,7 +112,7 @@ function Scene({ game }: { game: Game }) {
                 <i className={`hp ${hp <= 0.2 ? 'low' : hp <= 0.5 ? 'mid' : ''}`} style={{ width: `${hp * 100}%` }} />
               </div>
             </div>
-            <div className="hp-sub"><span>{wild.caught ? 'In your Box' : today.hit > 0 ? `Today −${today.hit}` : ''}</span><b>{wild.hp} / {wild.max}</b></div>
+            <div className="hp-sub"><span>{wild.caught ? 'In your Box' : today.hit > 0 ? `Today −${today.hit}` : ''}{!wild.caught && wild.leavesIn !== undefined && wild.leavesIn <= 3 && <b className="leaving"> {wild.leavesIn === 0 ? 'Gets away tomorrow' : `Gets away in ${wild.leavesIn + 1} days`}</b>}</span><b>{wild.hp} / {wild.max}</b></div>
           </div>
           <div className="pad foe-pad">
             <img src={still(wild.form, wild.shiny)} alt="" width={104} height={104} className={`sprite ${wild.caught ? 'got' : ''}`} />
@@ -156,6 +156,7 @@ function Talk({ game, pillars }: { game: Game; pillars: HabitFact[] }) {
   const me = nameOf(game.display)
   const left = today.total - today.done
   const say: ReactNode = wild?.caught ? <>Gotcha! {nameOf(wild.form)} was caught!</>
+    : game.fled ? <>The wild {nameOf(game.fled)} got away. A new one is here.</>
     : game.asleep ? <>{me} is dozing.</>
     : today.xp > 0 ? <>{me} gained {today.xp} XP today!</>
     : <>What will {me} do today?</>
@@ -283,7 +284,7 @@ function LeaderCard({ game }: { game: Game }) {
               <i className={`hp ${hp <= 0.2 ? 'low' : hp <= 0.5 ? 'mid' : ''}`} style={{ width: `${hp * 100}%` }} />
             </div>
           </div>
-          <div className="hp-sub"><span>{league.waiting ? 'Waiting' : today.strike > 0 ? <>Today <b className="dmg">−{today.strike}</b></> : ''}</span><b>{league.hp.toLocaleString('en-IN')} / {league.max.toLocaleString('en-IN')}</b></div>
+          <div className="hp-sub"><span>{league.waiting ? 'Waiting' : today.strike > 0 ? <>Today <b className="dmg">−{today.strike}</b></> : ''}{league.rust > 0 && <b className="leaving"> Won back {league.rust} HP</b>}</span><b>{league.hp.toLocaleString('en-IN')} / {league.max.toLocaleString('en-IN')}</b></div>
           <div className="weak">
             <img src={`/sprites/types/${t.type}.png`} alt="" width={16} height={16} /><span>{t.type}</span>
             {league.weak.map((w) => <span key={w} className="chip weakchip" data-tag={w}>{TAG_NAME[w] ?? w} ×{WEAK_MULT}</span>)}
