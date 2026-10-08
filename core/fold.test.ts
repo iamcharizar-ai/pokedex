@@ -984,6 +984,15 @@ test('version 6: a held item makes its domain strike harder, and nothing else', 
   assert.equal(c.partner.held, undefined)
 })
 
+test('version 6: a once-only held item cannot be bought again while it is worn', () => {
+  const facts = run(14, { gym: 1 })
+  const worn = fold6(withUse(facts, 12, { item: 'muscle-band', uid: '', what: 'buy', to: 'fitness' }, { item: 'muscle-band', uid: '', what: 'hold', to: 'muscle-band' }))
+  const again = fold6(withUse(facts, 12, { item: 'muscle-band', uid: '', what: 'buy', to: 'fitness' }, { item: 'muscle-band', uid: '', what: 'hold', to: 'muscle-band' }, { item: 'muscle-band', uid: '', what: 'buy', to: 'fitness' }))
+  assert.equal(again.inv['muscle-band'] ?? 0, 0)
+  assert.equal(again.partner.held, 'muscle-band')
+  assert.equal(again.wallet.marks.fitness, worn.wallet.marks.fitness)
+})
+
 test('version 6: a TM counts as one of the partner types against a leader', () => {
   const leader = leaderOf(0, 0)!
   assert.equal(leader.type, 'Rock')

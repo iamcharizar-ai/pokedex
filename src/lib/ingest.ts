@@ -34,13 +34,18 @@ export function ingest(events: LedgerEvent[], config: LedgerEvent | undefined, t
   // in the order things happened, by the server's clock where the device's own cannot be trusted
   const sorted = settled(events)
   const ticks: TickMap = {}
+  // a deleted workout never ticked Gym; another workout the same day still does
+  const gone = new Set(sorted.filter((e) => e.type === 'workout_delete').map((e) => String(e.payload?.id)))
+  const workoutId = (p: LedgerEvent['payload']): string | undefined => {
+    try { return (JSON.parse(String(p.gear)) as { id?: string }).id } catch { return undefined }
+  }
   for (const ev of sorted) {
     const p = ev.payload ?? {}
     const day = (ticks[ev.day] ??= {})
     if (ev.type === 'tick') day[String(p.habitId)] = String(p.at ?? ev.at)
     else if (ev.type === 'untick') delete day[String(p.habitId)]
     // a finished Strong workout is what ticks Gym
-    else if (ev.type === 'workout') day[GYM] ??= String(p.at ?? ev.at)
+    else if (ev.type === 'workout') { const id = workoutId(p); if (!id || !gone.has(id)) day[GYM] ??= String(p.at ?? ev.at) }
     else if (ev.type === 'workout_clear') delete day[GYM]
     // Vitals: a night that began on time ticks that evening's sleep habit (same rule Life OS applies)
     else if (ev.type === 'vitals' && typeof p.bed === 'string' && typeof p.sleepScore !== 'number') {

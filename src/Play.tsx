@@ -6,7 +6,7 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import { createPortal } from 'react-dom'
 import { nameOf, spritePath, type Game, type Mon, type Quest } from '../core/fold.ts'
 import {
-  BALLS, CROPS, CROP_IDS, DOMAIN_SHOPS, FORGE_COST, HELD, ITEMS, LURES, MARKS, MARK_TAGS, RARE_SHELF, SELL, TM_SLOTS, YIELD, cropId, forgeShard, itemName, seedId, throwHp, tmType,
+  BALLS, CROPS, CROP_IDS, DOMAIN_SHOPS, FORGE_COST, HELD, ITEMS, LURES, MARKS, MARK_TAGS, ONCE, RARE_SHELF, SELL, TM_SLOTS, YIELD, cropId, forgeShard, itemName, seedId, throwHp, tmType,
   type MarkTag, type Offer, type ShopId,
 } from '../core/economy.ts'
 import { BALL_NAME, GEMS, HEART_LEVELS, TEAM_BONUS, bondLevel, levelOf } from '../core/rules.ts'
@@ -66,13 +66,16 @@ export const Price = ({ coins, gems, marks, tag }: { coins?: number; gems?: numb
 /** Throw a ball at the wild Pokemon, or feed the partner. A thrown ball flies first, then lands. */
 export function Actions({ game, onShop }: { game: Game; onShop: () => void }) {
   const [flying, setFlying] = useState<string | null>(null)
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  useEffect(() => () => clearTimeout(timer.current), [])
   const wild = game.wild && !game.wild.caught
   const throwIt = (item: string) => {
     if (flying) return
     setFlying(item)
     play('throw')
-    // the ball is seen to fly, then the ledger is told and the HP falls
-    setTimeout(() => { useItem(item, '', 'throw'); setFlying(null); play(hitOf(game, item) >= (game.wild?.hp ?? 1) ? 'catch' : 'hit') }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 650)
+    // the outcome is read from the game as it is now; the ball is seen to fly, then the ledger is told and the HP falls
+    const sound = hitOf(game, item) >= (game.wild?.hp ?? 1) ? 'catch' : 'hit'
+    timer.current = setTimeout(() => { useItem(item, '', 'throw'); setFlying(null); play(sound) }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 650)
   }
   const balls = Object.keys(BALLS).filter((b) => (game.inv[b] ?? 0) > 0).sort((a, b) => hitOf(game, b) - hitOf(game, a))
   const berries = ['oran-berry', 'sitrus-berry'].filter((b) => (game.inv[b] ?? 0) > 0)
@@ -139,7 +142,8 @@ export function Quests({ game }: { game: Game }) {
 // ── shops ───────────────────────────────────────────────────────────────────
 /** Can this be bought now, and with what is it paid. */
 function canBuy(game: Game, o: Offer, shop: ShopId): boolean {
-  const owned = ITEMS[o.item]?.kind === 'tm' || ITEMS[o.item]?.kind === 'theme' ? Boolean(game.inv[o.item]) : false
+  const once = ITEMS[o.item]?.kind === 'tm' || ITEMS[o.item]?.kind === 'theme' || ONCE.has(o.item)
+  const owned = once && (Boolean(game.inv[o.item]) || game.partner.held === o.item)
   if (owned) return false
   if (shop === 'mart' && game.mart.bought.includes(o.item)) return false
   const marks = MARK_TAGS.includes(shop as MarkTag) ? game.wallet.marks[shop as MarkTag] : 0
