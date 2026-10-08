@@ -13,6 +13,7 @@ import { foldGame } from '../core/fold.ts'
 import { addDays } from '../core/facts.ts'
 import { LEAGUES } from '../core/gyms.ts'
 import { GAME_START } from '../core/rules.ts'
+import { SPECIES } from '../core/species.ts'
 
 function rng(seed) {
   let a = seed >>> 0
@@ -51,15 +52,25 @@ for (const name of Object.keys(PROFILES)) {
     facts.push({ day: addDays(GAME_START, i), habits })
   }
   // the rules in force now, from the first day
-  const opts = { v3From: GAME_START, v4From: GAME_START, v5From: GAME_START }
-  // a plain way of spending: an Ultra Ball whenever one can be paid for and the wild Pokemon is still standing,
-  // and every Pokemon beyond three in the Box goes to the Professor. Found by folding day by day.
+  const opts = { v3From: GAME_START, v4From: GAME_START, v5From: GAME_START, v6From: GAME_START }
+  // a plain way of spending: every ball the Mart offers today and one ball from each domain shop that can be paid for,
+  // thrown while the wild Pokemon is still standing; every Pokemon beyond three in the Box goes to the Professor;
+  // a Mega is forged whenever shards allow. Found by folding day by day.
+  const BALLS = new Set(['poke-ball', 'great-ball', 'ultra-ball', 'repeat-ball'])
+  const HITS = { 'poke-ball': 20, 'great-ball': 50, 'ultra-ball': 110, 'repeat-ball': 30 }
+  const DOMAIN_BALL = { code: ['quick-ball', 6], fitness: ['heavy-ball', 6], guitar: ['moon-ball', 6], arbor: ['net-ball', 6], sleep: ['dusk-ball', 6] }
   for (let i = 0; i < DAYS; i++) {
     const now = foldGame(facts.slice(0, i + 1), opts)
-    const uses = []
+    const uses = [], day = facts[i].day
     let coins = now.wallet.coins, hp = now.wild && !now.wild.caught ? now.wild.hp : 0
-    while (coins >= 350 && hp > 0) { uses.push({ day: facts[i].day, item: 'ultra-ball', uid: '', what: 'buy' }, { day: facts[i].day, item: 'ultra-ball', uid: '', what: 'throw' }); coins -= 350; hp -= 200 }
-    for (const m of now.queue.slice(3)) uses.push({ day: facts[i].day, item: '', uid: m.uid, what: 'transfer' })
+    for (const o of now.mart.deals) {
+      if (!BALLS.has(o.item) || now.mart.bought.includes(o.item) || coins < o.coins || hp <= 0) continue
+      uses.push({ day, item: o.item, uid: '', what: 'buy', to: 'mart' }, { day, item: o.item, uid: '', what: 'throw' }); coins -= o.coins; hp -= HITS[o.item]
+    }
+    for (const [tag, [item, price]] of Object.entries(DOMAIN_BALL))
+      if (now.wallet.marks[tag] >= price && hp > 0) { uses.push({ day, item, uid: '', what: 'buy', to: tag }, { day, item, uid: '', what: 'throw' }); hp -= 40 }
+    for (const m of now.queue.slice(3)) uses.push({ day, item: '', uid: m.uid, what: 'transfer' })
+    for (const m of now.graduates) for (const to of SPECIES[m.form]?.m ?? []) if (!m.megas?.includes(to)) uses.push({ day, item: '', uid: m.uid, what: 'forge', to })
     if (uses.length) facts[i].uses = uses
   }
   const g = foldGame(facts, opts)
@@ -74,7 +85,10 @@ for (const name of Object.keys(PROFILES)) {
   console.log(`  raising: ${g.graduates.length} fully trained (first on day ${dayNo(of('graduate')[0])}) · ${(catches.length / Math.max(1, g.graduates.length)).toFixed(1)} caught for each one raised · Box at year end ${g.queue.length} · eggs ${of('partner').filter((x) => x.origin === 'egg').length}`)
   console.log(`  league: ${of('gym').length} leaders beaten · average strike ${Math.round(avg((d) => d.strike))} · leagues beaten ${leagues.map((l) => `${LEAGUES[l.league].name} day ${dayNo(l)}`).join(', ') || 'none'} · regions open ${g.regions}${g.league.waiting ? ' (next league waiting for its region)' : ''}`)
   const natures = g.graduates.map((x) => x.nature?.name).filter(Boolean)
-  console.log(`  mega: Key Stone day ${dayNo(of('key')[0])} · ${of('mega').length} kept for good · ${m.filter((x) => x.kind === 'form' && x.what === 'mega').length} first seen on a full-momentum day · days at full momentum ${g.days.filter((d) => d.mult >= 1.5).length}`)
-  console.log(`  wallet at year end: ${g.wallet.coins} coins, ${g.wallet.gems} gems · balls thrown ${facts.reduce((n, f) => n + (f.uses ?? []).filter((u) => u.what === 'throw').length, 0)} · sent to the Professor ${of('transfer').length} · quests paid ${of('quest').length}`)
+  console.log(`  mega: Key Stone day ${dayNo(of('key')[0])} · ${of('mega').length} forged · ${m.filter((x) => x.kind === 'form' && x.what === 'mega').length} first seen on a full-momentum day · days at full momentum ${g.days.filter((d) => d.mult >= 1.5).length}`)
+  const feats = of('feat')
+  console.log(`  feats: ${feats.length} reached (first on day ${dayNo(feats[0])}, tenth on day ${dayNo(feats[9])}) · runs best ${Object.entries(g.runs).map(([k, r]) => k + ' ' + r.best).join(', ')}`)
+  console.log(`  money: ${(g.wallet.coins + facts.length * 0).toLocaleString()} coins unspent · coins earned ${Math.round(of('quest').reduce((n, q) => n + q.coins, 0) + of('transfer').reduce((n, q) => n + (q.coins ?? 0), 0))} from quests and the Professor, about ${Math.round((of('quest').reduce((n, q) => n + q.coins, 0) + of('transfer').reduce((n, q) => n + (q.coins ?? 0), 0)) / DAYS)} a day · gems ${g.wallet.gems} · marks left ${Object.entries(g.wallet.marks).map(([k, v]) => k + ' ' + v).join(', ')}`)
+  console.log(`  balls thrown ${facts.reduce((n, f) => n + (f.uses ?? []).filter((u) => u.what === 'throw').length, 0)} of which ${catches.filter((c) => c.how === 'ball').length} finished a wild Pokemon · sent to the Professor ${of('transfer').length} · quests paid ${of('quest').length}`)
   console.log(`  kept: bond lost ${g.graduates.filter((x) => !x.bond).length} (must be 0) · stones ${of('item').length} (must be 0) · natures ${[...new Set(natures)].join(', ') || 'none yet'}`)
 }

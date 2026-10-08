@@ -7,8 +7,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { isGym, leaderOf, nameOf, spritePath, type Game, type Moment } from '../core/fold.ts'
 import { LEAGUES, lineup } from '../core/gyms.ts'
+import { ITEMS, itemName } from '../core/economy.ts'
 import { REGIONS, type Ball as BallId } from '../core/rules.ts'
-import { Ball, KeyStone } from './Ball.tsx'
+import { Ball, BallItem, KeyStone } from './Ball.tsx'
+import { ItemIcon } from './Item.tsx'
 import { KMedal, KReveal, type Tier } from './Kit.tsx'
 import { aBall, badgeArt, badgeName, fmtDay, leagueName, still } from './lib/art.ts'
 
@@ -17,11 +19,13 @@ const SEEN_KEY = 'pokedex.seen.v1'
 const NEWS_DAYS = 30
 /** Not news by themselves: a level is one of many, a wild Pokemon is on the screen already, a choice was made by hand. */
 const QUIET = new Set<Moment['kind']>(['level', 'appear', 'use', 'item', 'badge', 'quest', 'season', 'transfer', 'chest'])
+/** A feat is news only when it paid something no shop sells (the Key Stone has a moment of its own). */
+const prize = (m: Extract<Moment, { kind: 'feat' }>): string | undefined => m.items.find((id) => ITEMS[id]?.kind === 'unique')
 /** Bigger things first. */
-const WEIGHT: Partial<Record<Moment['kind'], number>> = { league: 9, key: 8, mega: 7, gym: 6, evolve: 5, graduate: 4, region: 3, catch: 2, form: 1, partner: 0 }
+const WEIGHT: Partial<Record<Moment['kind'], number>> = { league: 9, key: 8, mega: 7, feat: 6.5, gym: 6, evolve: 5, graduate: 4, region: 3, catch: 2, form: 1, partner: 0 }
 
 const keyOf = (m: Moment): string =>
-  `${m.day}|${m.kind}|${'form' in m ? m.form : ''}|${'n' in m ? m.n : ''}|${'league' in m ? m.league : ''}|${'slot' in m ? m.slot : ''}`
+  `${m.day}|${m.kind}|${'form' in m ? m.form : ''}|${'n' in m ? m.n : ''}|${'league' in m ? m.league : ''}|${'slot' in m ? m.slot : ''}|${'id' in m ? m.id : ''}`
 
 function loadSeen(): Set<string> | null {
   try {
@@ -37,7 +41,7 @@ export function freshMoments(game: Game, today: string): Moment[] {
   const from = new Date(today + 'T12:00:00')
   from.setDate(from.getDate() - NEWS_DAYS)
   const floor = from.toISOString().slice(0, 10)
-  const recent = game.moments.filter((m) => m.day >= floor && !QUIET.has(m.kind))
+  const recent = game.moments.filter((m) => m.day >= floor && !QUIET.has(m.kind) && !(m.kind === 'feat' && !prize(m)))
   const seen = loadSeen()
   const fresh = seen ? recent.filter((m) => !seen.has(keyOf(m))) : []
   if (!seen || fresh.length) {
@@ -50,7 +54,7 @@ export function freshMoments(game: Game, today: string): Moment[] {
   return fresh.sort((a, b) => (WEIGHT[b.kind] ?? 0) - (WEIGHT[a.kind] ?? 0) || (a.day < b.day ? 1 : -1))
 }
 
-interface Told { title: string; line: string; art: 'mon' | 'evolve' | 'catch' | 'badge' | 'key' | 'none'; form?: string; from?: string; shiny?: boolean; badge?: string | null; ball?: BallId }
+interface Told { title: string; line: string; art: 'mon' | 'evolve' | 'catch' | 'badge' | 'key' | 'item' | 'none'; form?: string; from?: string; shiny?: boolean; badge?: string | null; ball?: BallId; thrown?: string; item?: string }
 
 function tell(m: Moment, game: Game): Told {
   switch (m.kind) {
@@ -62,12 +66,14 @@ function tell(m: Moment, game: Game): Told {
     case 'hatch': return { title: 'The egg hatched!', line: `${nameOf(m.form)} is in your Box.`, art: 'mon', form: m.form }
     case 'partner': return { title: m.origin === 'egg' ? 'An egg hatched' : 'New partner', line: `${nameOf(m.form)} is your partner now.`, art: 'mon', form: m.form }
     case 'catch': {
-      const ball = game.queue.find((x) => x.uid === m.uid)?.ball ?? game.days.find((d) => d.day === m.day)?.ball ?? 'poke'
-      return { title: m.how === 'perfect' ? 'Perfect day: caught!' : 'Gotcha!', line: `${m.shiny ? 'A shiny ' : ''}${nameOf(m.form)} was caught in ${aBall(ball)} and is in your Box.`, art: 'catch', form: m.form, shiny: m.shiny, ball }
+      const mon = [...game.queue, ...game.graduates, game.partner].find((x) => x.uid === m.uid)
+      const ball = mon?.ball ?? game.days.find((d) => d.day === m.day)?.ball ?? 'poke'
+      return { title: m.how === 'perfect' ? 'Perfect day: caught!' : 'Gotcha!', line: `${m.shiny ? 'A shiny ' : ''}${nameOf(m.form)} was caught in ${mon?.thrown ? `a ${itemName(mon.thrown)}` : aBall(ball)} and is in your Box.`, art: 'catch', form: m.form, shiny: m.shiny, ball, thrown: mon?.thrown }
     }
     case 'form': return { title: m.what === 'mega' ? 'Mega form' : 'Gigantamax', line: `${nameOf(m.form)} is registered in the Pokedex.`, art: 'mon', form: m.form }
-    case 'mega': return { title: 'Mega Evolution, for good', line: `${nameOf(m.form)} is registered to this Pokemon and never runs out.`, art: 'mon', form: m.form }
-    case 'key': return { title: 'Key Stone', line: 'From now on a fully evolved partner keeps its Mega form the first time a leader falls to it.', art: 'key' }
+    case 'mega': return { title: 'Mega Stone forged', line: `${nameOf(m.form)} is registered to this Pokemon and never runs out.`, art: 'mon', form: m.form }
+    case 'feat': { const it = prize(m); return { title: m.name, line: `A feat reached${it ? `: ${itemName(it)} is yours, and no shop sells it` : ''}.`, art: 'item', item: it } }
+    case 'key': return { title: 'Key Stone', line: game.version >= 6 ? 'Three shards now forge a Mega Stone for a fully evolved Pokemon.' : 'From now on a fully evolved partner keeps its Mega form the first time a leader falls to it.', art: 'key' }
     case 'region': return { title: 'New region', line: `${REGIONS[m.n - 1]} is open: new species can turn up from now on.`, art: 'none' }
     case 'gym': {
       const t = leaderOf(m.league, m.slot), l = LEAGUES[m.league]
@@ -83,7 +89,7 @@ function tell(m: Moment, game: Game): Told {
 /** How big a moment is: it picks the whole look of its reveal. */
 const tierOf = (m: Moment): Tier =>
   m.kind === 'key' || m.kind === 'mega' || m.kind === 'league' || (m.kind === 'catch' && m.shiny) ? 'rare'
-    : m.kind === 'evolve' || m.kind === 'gym' || m.kind === 'graduate' || m.kind === 'region' ? 'big' : 'ordinary'
+    : m.kind === 'evolve' || m.kind === 'feat' || m.kind === 'gym' || m.kind === 'graduate' || m.kind === 'region' ? 'big' : 'ordinary'
 
 const STAR = <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden><path d="M12 2l3 6.6 7 .8-5.2 4.8 1.5 7L12 17.6 5.7 21.2l1.5-7L2 9.4l7-.8z" fill="#fff3a8" stroke="#141a33" strokeWidth="2" strokeLinejoin="round" /></svg>
 
@@ -92,10 +98,11 @@ function Art({ t }: { t: Told }) {
   // the old form as a shadow until it opens, then the new one
   if (t.art === 'evolve' && t.form && t.from) return <><img src={still(t.from)} alt="" className="was" /><img src={spritePath(t.form)} alt="" className="now" /></>
   // the ball of that day closes on it, then it is shown beside its ball
-  if (t.art === 'catch' && t.form) return <><img src={spritePath(t.form, t.shiny)} alt="" className="hideuntil" /><span className="ballover"><Ball ball={t.ball ?? 'poke'} size={84} /></span></>
+  if (t.art === 'catch' && t.form) return <><img src={spritePath(t.form, t.shiny)} alt="" className="hideuntil" /><span className="ballover">{t.thrown ? <BallItem id={t.thrown} size={84} /> : <Ball ball={t.ball ?? 'poke'} size={84} />}</span></>
   if (t.art === 'mon' && t.form) return <img src={spritePath(t.form, t.shiny)} alt="" />
   if (t.art === 'badge') return t.badge ? <img src={t.badge} alt="" /> : <KMedal>{STAR}</KMedal>
   if (t.art === 'key') return <KeyStone size={110} />
+  if (t.art === 'item' && t.item) return <ItemIcon id={t.item} size={110} />
   return <KMedal>{STAR}</KMedal>
 }
 

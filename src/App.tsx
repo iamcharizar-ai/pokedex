@@ -3,28 +3,33 @@ import { isGym, leaderOf, nameOf, spritePath, type Game, type Mon, type Moment, 
 import type { DayFacts, HabitFact } from '../core/facts.ts'
 import { LEAGUES, lineup } from '../core/gyms.ts'
 import {
-  ADVANTAGE_MULT, GEMS, SEASON_STEP, V5_START, BALL_MULT, BALL_NAME, GAME_START, GRADUATES_PER_REGION, ITEM_NAME, KEY_STONE_BADGES, LEADER_HP, MEGA_DAYS, MOMENTUM_WINDOW,
-  PILLARS_FOR_A_DAY, REGIONS, STAT_DAYS, TIER_XP, V4_START, WEAK_MULT,   SHOP, evolveAt, graduateAt, momentumMult, xpForLevel, type ShopItem,
+  ADVANTAGE_MULT, GEMS, SEASON_STEP, BALL_MULT, BALL_NAME, GAME_START, GRADUATES_PER_REGION, ITEM_NAME, KEY_STONE_BADGES, LEADER_HP, MEGA_DAYS, MOMENTUM_WINDOW,
+  PILLARS_FOR_A_DAY, REGIONS, STAT_DAYS, TIER_XP, V4_START, V6_START, WEAK_MULT, evolveAt, graduateAt, momentumMult, xpForLevel,
 } from '../core/rules.ts'
+import { itemName as econName } from '../core/economy.ts'
 import { SPECIES } from '../core/species.ts'
 import { beats } from '../core/types.ts'
 import { Ball, KeyStone } from './Ball.tsx'
+import { FeatsWin } from './Feats.tsx'
+import { ItemIcon } from './Item.tsx'
 import { KBar, KMedal, KPill, KRibbon } from './Kit.tsx'
 import { Actions, Coin, Count, Gem, Pop, Quests, ShopTab, TeamTab } from './Play.tsx'
 import { Recap } from './Recap.tsx'
+import { World } from './World.tsx'
 import { aBall, badgeArt, badgeName, fmtDay, leagueName, still } from './lib/art.ts'
 import { play, setSoundOn, soundOn } from './lib/sfx.ts'
 import { LIFEOS_URL, start, useItem, useView } from './lib/store.ts'
 import './skin.css'
+import './economy.css'
 
-type Tab = 'partner' | 'team' | 'shop' | 'dex' | 'trainer'
-const TABS: [Tab, string][] = [['partner', 'Home'], ['team', 'Team'], ['shop', 'Shop'], ['dex', 'Pokedex'], ['trainer', 'Trainer']]
+type Tab = 'partner' | 'team' | 'world' | 'shop' | 'dex' | 'trainer'
+const TABS: [Tab, string][] = [['partner', 'Home'], ['team', 'Team'], ['world', 'World'], ['shop', 'Shop'], ['dex', 'Pokedex'], ['trainer', 'Trainer']]
 export const TAG_NAME: Record<string, string> = { code: 'Code', fitness: 'Gym', guitar: 'Guitar', arbor: 'Arbor', sleep: 'Sleep', routine: 'Routine', balanced: 'Balance', health: 'Health tracker' }
 const weekday = (day: string, len: 1 | 3 = 1) => new Date(day + 'T12:00:00').toLocaleDateString('en-US', { weekday: len === 1 ? 'narrow' : 'short' })
 const clamp01 = (n: number) => Math.max(0, Math.min(1, n))
 export const plural = (n: number, one: string, many = one + 's') => `${n.toLocaleString('en-IN')} ${n === 1 ? one : many}`
 const dexNo = (n: number) => String(n).padStart(3, '0')
-const itemName = (item: string): string => ITEM_NAME[item] ?? item
+const itemName = (item: string): string => ITEM_NAME[item] ?? econName(item)
 const RARITY: Record<string, string> = { C: 'Common', U: 'Uncommon', R: 'Rare', L: 'Legendary' }
 /** How far along its line a form is, as the card frame shows it: 1 bronze, 2 silver, 3 gold (it evolves no further). */
 const frameOf = (form: string): 1 | 2 | 3 => (SPECIES[form]?.e?.length ? (SPECIES[form].s >= 2 ? 2 : 1) : 3)
@@ -37,7 +42,7 @@ export function MonCard({ m, form = m.form, size, level, bar, note }: { m: Mon; 
         {m.ball && <Ball ball={m.ball} size={Math.max(14, Math.round(size / 4.5))} className="mon-ball" />}
         {m.nature?.up && <span className="mon-gem" data-tag={m.nature.up} title={`${m.nature.name}: raised most on ${TAG_NAME[m.nature.up]}`} />}
       </span>
-      <span className="mon-pips" title={stage === 3 ? 'Fully evolved' : `Stage ${stage}`} aria-hidden>{[1, 2, 3].map((n) => <i key={n} className={n <= stage ? 'on' : ''} />)}</span>
+      <span className="mon-pips" title={stage === 3 ? 'Fully evolved' : `Stage ${stage}`} aria-hidden>{[1, 2, 3].map((n) => <img key={n} src={`/sprites/ui/party-${n <= stage ? 'on' : 'empty'}.png`} width={14} height={14} className="pix" alt="" />)}</span>
       {level !== undefined && <b className="mon-lv">Lv {level}</b>}
       {bar}
       {note && <small className="mon-note">{note}</small>}
@@ -54,7 +59,7 @@ function Sprite({ form, shiny, size, className = '' }: { form: string; shiny?: b
 }
 
 /** A game window: coloured title strip over a cream body. */
-export function Win({ title, aside, tone = '', children }: { title: string; aside?: ReactNode; tone?: '' | 'blue' | 'green' | 'gold' | 'dark'; children: ReactNode }) {
+export function Win({ title, aside, tone = '', children }: { title: string; aside?: ReactNode; tone?: '' | 'blue' | 'green' | 'gold' | 'dark' | 'red' | 'purple'; children: ReactNode }) {
   return (
     <section className={`win ${tone ? `t-${tone}` : ''}`}>
       <header className="win-h"><h2>{title}</h2>{aside !== undefined && <span className="aside">{aside}</span>}</header>
@@ -337,7 +342,7 @@ function Choices({ game }: { game: Game }) {
   const can: Record<Choice, Mon[]> = { mega: megas.length ? [game.partner] : [], show: kept.length ? [game.partner] : [], branch: branching, lead: [] }
   const why: Record<Choice, string> = {
     mega: `${nameOf(game.partner.form)} has no Mega form.`,
-    show: game.keyStone ? `${nameOf(game.partner.form)} has no Mega form registered yet.` : 'Needs the Key Stone and a registered Mega form.',
+    show: game.keyStone ? `${nameOf(game.partner.form)} has no Mega Stone forged yet.` : 'Needs the Key Stone and a forged Mega Stone.',
     branch: 'None of your Pokemon has a branching evolution right now.',
     lead: 'The Box is empty.',
   }
@@ -531,7 +536,7 @@ function DexTab({ game }: { game: Game }) {
 }
 
 // ── Trainer card ────────────────────────────────────────────────────────────
-const KIND: Record<Moment['kind'], string> = { level: 'Level', evolve: 'Evolved', graduate: 'Trained', partner: 'Partner', catch: 'Caught', appear: 'Wild', form: 'Form', badge: 'Badge', region: 'Region', gym: 'Gym', league: 'League', item: 'Stone', use: 'Choice', key: 'Key Stone', mega: 'Mega', transfer: 'Professor', quest: 'Quest', season: 'Season', hatch: 'Hatched', chest: 'Chest' }
+const KIND: Record<Moment['kind'], string> = { level: 'Level', evolve: 'Evolved', graduate: 'Trained', partner: 'Partner', catch: 'Caught', appear: 'Wild', form: 'Form', badge: 'Badge', region: 'Region', gym: 'Gym', league: 'League', item: 'Stone', use: 'Choice', key: 'Key Stone', mega: 'Mega', transfer: 'Professor', quest: 'Quest', season: 'Season', hatch: 'Hatched', chest: 'Chest', feat: 'Feat' }
 const ITEM_WHY = { gym: 'with the badge', perfect: 'for a perfect-day milestone', league: 'from the league' } as const
 function line(m: Moment): string {
   switch (m.kind) {
@@ -557,17 +562,18 @@ function line(m: Moment): string {
         : m.what === 'branch' ? `${cost}${m.item ? 'chose' : 'Chose'} ${nameOf(m.to ?? '')} as the branch`
         : `${cost}${nameOf(m.form)} came forward as the partner`
     }
-    case 'key': return 'The Key Stone is yours: Mega forms can now be kept for good'
+    case 'key': return 'The Key Stone is yours: shards can now forge Mega Stones'
     case 'mega': return `${nameOf(m.form)} registered for good`
-    case 'transfer': return `${nameOf(m.form)} went to the Professor (+${m.gems} gems)`
+    case 'transfer': return `${nameOf(m.form)} went to the Professor (${m.coins ? `+${m.coins} coins` : `+${m.gems} gems`})`
     case 'quest': return `${m.name}: ${m.coins ? `+${m.coins} coins` : `+${m.gems} gems`}`
-    case 'season': return `Season step ${m.step}: ${m.coins ? `+${m.coins} coins` : m.gems ? `+${m.gems} gems` : (SHOP[m.item as ShopItem]?.name ?? m.item)}`
+    case 'season': return `Season step ${m.step}: ${m.coins ? `+${m.coins} coins` : m.gems ? `+${m.gems} gems` : itemName(m.item)}`
     case 'hatch': return `A Rare Egg hatched into ${nameOf(m.form)}`
-    case 'chest': return `Chest ${m.n}: ${m.coins ? `${m.coins} coins` : `${SHOP[m.item as ShopItem]?.name ?? m.item}${m.count > 1 ? ` ×${m.count}` : ''}`}`
+    case 'chest': return `Chest ${m.n}: ${m.coins ? `${m.coins} coins` : `${itemName(m.item)}${m.count > 1 ? ` ×${m.count}` : ''}`}`
+    case 'feat': return `Feat: ${m.name}${[m.gems ? `+${m.gems} gems` : '', m.coins ? `+${m.coins} coins` : '', ...m.items.map(itemName)].filter(Boolean).map((x, i) => (i ? x : ` (${x}`)).join(', ')}${m.gems || m.coins || m.items.length ? ')' : ''}`
   }
 }
 /** The league being challenged, as a road: one step per leader, a tick on those behind you, a marker where you stand. */
-function Road({ game }: { game: Game }) {
+export function Road({ game }: { game: Game }) {
   const { league } = game
   const done = league.index >= LEAGUES.length
   const index = Math.min(league.index, LEAGUES.length - 1)
@@ -595,7 +601,7 @@ function Road({ game }: { game: Game }) {
               </div>
             )
             // the big step after the eighth badge of the first league
-            return index === 0 && i === KEY_STONE_BADGES - 1
+            return game.version < 6 && index === 0 && i === KEY_STONE_BADGES - 1
               ? [step, <div key="key" className={`k-step key ${game.keyStone ? 'done' : 'ahead'}`} data-n="★"><KeyStone size={52} held /><div><span className="name">Key Stone</span><small>{game.keyStone ? `Yours since ${fmtDay(game.keyStone)}: Mega forms are kept for good` : 'Comes with this badge. With it, Mega forms are kept for good'}</small></div></div>]
               : [step]
           })}
@@ -678,7 +684,10 @@ function BadgeCase({ game }: { game: Game }) {
       <div className="keyrow">
         <KeyStone size={32} held={Boolean(game.keyStone)} />
         <p className="muted">
-          {game.keyStone ? `Key Stone, held since ${fmtDay(game.keyStone)}. A fully evolved partner keeps its Mega form the first time a leader falls to it, or when it finishes training.`
+          {game.version >= 6
+            ? game.keyStone ? `Key Stone, held since ${fmtDay(game.keyStone)}. A Mega Stone is forged from three shards, on the Pokemon's own page.`
+              : 'The Key Stone is a feat: any one kind of work, seven days running. Then shards forge Mega Stones.'
+            : game.keyStone ? `Key Stone, held since ${fmtDay(game.keyStone)}. A fully evolved partner keeps its Mega form the first time a leader falls to it, or when it finishes training.`
             : game.version >= 4 ? `The Key Stone comes with the ${KEY_STONE_BADGES}th Kanto badge. With it, Mega forms are kept for good.`
             : `From ${fmtDay(V4_START)} the ${KEY_STONE_BADGES}th Kanto badge brings the Key Stone.`}
         </p>
@@ -702,7 +711,7 @@ function FieldNotes({ game }: { game: Game }) {
       <dl className="facts notes">
         {rows.map(([tag, name, text]) => <div key={name} className="noterow" data-tag={tag}><dt>{name}</dt><dd>{text}</dd></div>)}
       </dl>
-      <p className="muted">Counted for life. Nothing is earned from these yet.</p>
+      <p className="muted">{game.version >= 6 ? 'Counted for life. Feats read these.' : 'Counted for life. Nothing is earned from these yet.'}</p>
     </Win>
   )
 }
@@ -746,6 +755,7 @@ function TrainerTab({ game }: { game: Game }) {
         <Road game={game} />
         <StatsRadar stats={game.stats} />
       </div>
+      <FeatsWin game={game} />
       <div className="cols">
         <FieldNotes game={game} />
         {game.league.index > 0 && <BadgeCase game={game} />}
@@ -797,6 +807,7 @@ function Rule({ title, tone, pic, children }: { title: string; tone: string; pic
 const Arrow = () => <span className="rule-arrow" aria-hidden>▸</span>
 function RulesTab() {
   const [sound, setSound] = useState(soundOn())
+  const v6 = V6_START
   return (
     <section className="k-panel">
       <div className="k-panel-b">
@@ -814,26 +825,38 @@ function RulesTab() {
           <Rule title="Chores pick the ball" tone="red" pic={<><Ball ball="poke" size={30} /><Arrow /><Ball ball="great" size={34} /><Arrow /><Ball ball="ultra" size={38} /></>}>
             Half the chores: ×{BALL_MULT.great}. Four-fifths: ×{BALL_MULT.ultra}. Every habit done catches it on the spot.
           </Rule>
-          <Rule title="Throw to finish" tone="gold" pic={<><Coin size={30} /><Arrow /><Ball ball="ultra" size={36} /><span className="rule-chip sm">−200</span></>}>
-            A coin for each XP of work. Buy a ball, throw it, and the HP drops at once.
+          <Rule title="Coins are not XP" tone="gold" pic={<><Coin size={30} /><Arrow /><ItemIcon id="great-ball" size={34} /></>}>
+            Quests, the season, chests and the Professor pay coins. The Mart sells three deals a day, one of each.
+          </Rule>
+          <Rule title="Each work, its mark" tone="blue" pic={<>{(['code', 'fitness', 'guitar', 'arbor', 'sleep'] as const).map((t) => <ItemIcon key={t} id={{ code: 'machine-part', fitness: 'iron', guitar: 'poke-flute', arbor: 'grn-apricorn', sleep: 'lunar-wing' }[t]} size={26} />)}</>}>
+            A day of coding, gym, guitar, Arbor or good sleep pays one mark, spent only in that kind's own shop.
+          </Rule>
+          <Rule title="Balls have conditions" tone="red" pic={<><ItemIcon id="net-ball" size={30} /><ItemIcon id="quick-ball" size={30} /><ItemIcon id="timer-ball" size={30} /></>}>
+            A Net Ball hits Water and Bug double. A Quick Ball is best the day it appears. A Timer Ball grows each day it waits.
+          </Rule>
+          <Rule title="TMs and held items" tone="purple" pic={<><ItemIcon id="tm-water" size={30} /><ItemIcon id="muscle-band" size={30} /></>}>
+            Carry three TMs: each counts as one of the partner's types against a leader. Hold one item: it strengthens its kind of work.
+          </Rule>
+          <Rule title="Feats" tone="gold" pic={<><ItemIcon id="key-stone" size={30} /><ItemIcon id="master-ball" size={30} /><ItemIcon id="choice-band" size={30} /></>}>
+            Runs of days and lifetime totals pay things no shop sells. One rest day inside a run is forgiven.
+          </Rule>
+          <Rule title="Mega, forged" tone="purple" pic={<><ItemIcon id="red-shard" size={26} /><ItemIcon id="blue-shard" size={26} /><Arrow /><KeyStone size={38} /></>}>
+            The Key Stone is a feat. Three shards forge a Mega Stone for one Pokemon: red for X, blue or yellow for Y.
           </Rule>
           <Rule title="Leaders and badges" tone="purple" pic={<><span className="rule-chip">{(LEADER_HP / 1000).toFixed(0)}k</span><Arrow /><KMedal><span className="badge b3 on" style={{ width: 30 }} /></KMedal></>}>
             Each leader has {LEADER_HP.toLocaleString('en-IN')} HP and is weak to two kinds of work (×{WEAK_MULT}). Beat one, keep the badge.
           </Rule>
-          <Rule title="Your team" tone="blue" pic={<><span className="rule-dot" /><span className="rule-dot" /><span className="rule-dot" /><span className="rule-chip sm">+10%</span></>}>
+          <Rule title="Your team" tone="blue" pic={<><img src="/sprites/ui/party-on.png" alt="" width={30} height={30} className="pix" /><img src="/sprites/ui/party-on.png" alt="" width={30} height={30} className="pix" /><img src="/sprites/ui/party-empty.png" alt="" width={30} height={30} className="pix" /><span className="rule-chip sm">+10%</span></>}>
             Three trained Pokemon stand behind you. Each one whose type beats the leader's adds 10%.
           </Rule>
-          <Rule title="Mega, for good" tone="purple" pic={<><KeyStone size={38} /></>}>
-            The Key Stone comes with badge {KEY_STONE_BADGES}. After it, a fully evolved partner keeps its Mega.
-          </Rule>
           <Rule title="Gems" tone="green" pic={<><Gem size={34} /><span className="rule-chip sm">{GEMS.catch}</span><span className="rule-chip sm">{GEMS.evolve}</span><span className="rule-chip sm">{GEMS.gym}</span></>}>
-            A catch, an evolution, a badge. Or send a Box Pokemon to the Professor for {GEMS.transfer}.
+            A catch, an evolution, a badge, a feat. They buy eggs, incense, chests and scenes, never a ball.
           </Rule>
           <Rule title="The season" tone="gold" pic={<><span className="rule-chip sm">1</span><Arrow /><span className="rule-chip sm">2</span><Arrow /><span className="rule-chip sm">3</span></>}>
             Every {SEASON_STEP.toLocaleString('en-IN')} XP of the month's work is a step, and each step hands something over.
           </Rule>
           <Rule title="Nothing is lost" tone="green" pic={<span className="rule-chip">∞</span>}>
-            A day off adds nothing and takes nothing. Hearts, badges and Pokemon are yours for good.
+            A day off adds nothing and takes nothing. Hearts, badges, feats and Pokemon are yours for good.
           </Rule>
           <Rule title="A day's list" tone="red" pic={<><span className="rule-dot" /><span className="rule-dot" /><span className="rule-dot" style={{ opacity: 0.3 }} /></>}>
             Fixed when the day starts. You can add a habit today; taking one off starts tomorrow.
@@ -841,7 +864,7 @@ function RulesTab() {
         </div>
         <div className="kit-row" style={{ marginTop: 14 }}>
           <button type="button" className={`k-btn ${sound ? 'ok' : ''}`} aria-pressed={sound} onClick={() => { setSoundOn(!sound); setSound(!sound); if (!sound) play('buy') }}>Sound: {sound ? 'on' : 'off'}</button>
-          <span className="muted">Rules version 5, from {fmtDay(V5_START)}. The game began {fmtDay(GAME_START)}.</span>
+          <span className="muted">Rules version 6, from {fmtDay(v6)}. The game began {fmtDay(GAME_START)}.</span>
         </div>
       </div>
     </section>
@@ -855,6 +878,7 @@ const ICON: Record<Tab, ReactNode> = {
   shop: <svg viewBox="0 0 24 24" aria-hidden><path d="M8 8V6a4 4 0 0 1 8 0v2" fill="none" stroke="#141a33" strokeWidth="2.4" /><rect x="3.5" y="8" width="17" height="13" rx="3" fill="#e9a23b" stroke="#141a33" strokeWidth="2" /><rect x="9.5" y="12" width="5" height="4" rx="1" fill="#fff3a8" stroke="#141a33" strokeWidth="1.6" /></svg>,
   dex: <svg viewBox="0 0 24 24" aria-hidden><rect x="4" y="3" width="16" height="18" rx="3" fill="#dc3b45" stroke="#141a33" strokeWidth="2" /><circle cx="9" cy="8" r="2.6" fill="#63c6ff" stroke="#141a33" strokeWidth="1.6" /><rect x="7" y="13" width="10" height="5" rx="1" fill="#f8f5ea" stroke="#141a33" strokeWidth="1.6" /></svg>,
   trainer: <svg viewBox="0 0 24 24" aria-hidden><path d="M8 13l-2 9 6-3 6 3-2-9" fill="#7b5cf0" stroke="#141a33" strokeWidth="2" strokeLinejoin="round" /><circle cx="12" cy="9" r="7" fill="#f5b800" stroke="#141a33" strokeWidth="2" /><path d="M12 5l1.3 2.700 2.900.3-2.2 2 .7 2.900L12 11.5 9.300 12.900l.7-2.900-2.2-2 2.900-.3z" fill="#fff3a8" stroke="#141a33" strokeWidth="1.2" strokeLinejoin="round" /></svg>,
+  world: <svg viewBox="0 0 24 24" aria-hidden><circle cx="12" cy="12" r="9.5" fill="#63c6ff" stroke="#141a33" strokeWidth="2" /><path d="M6 9c2-3 5-2 6 0s-1 3 1 4 4-1 5 1M7 17c1-2 3-1 4-2" fill="#3fd07a" stroke="#141a33" strokeWidth="1.6" strokeLinejoin="round" /></svg>,
   team: <svg viewBox="0 0 24 24" aria-hidden><circle cx="7" cy="9" r="4" fill="#63c6ff" stroke="#141a33" strokeWidth="2" /><circle cx="17" cy="9" r="4" fill="#f5b800" stroke="#141a33" strokeWidth="2" /><circle cx="12" cy="15" r="5" fill="#3fd07a" stroke="#141a33" strokeWidth="2" /></svg>,
 }
 
@@ -870,12 +894,12 @@ function TopBar({ game, status, loading, onHelp }: { game: Game; status: string[
         {v5 && (
           <div className="k-bar gold" role="progressbar" aria-valuemin={0} aria-valuemax={game.season.need} aria-valuenow={game.season.into} aria-label="Progress to the next season step">
             <i style={{ width: `${clamp01(game.season.into / game.season.need) * 100}%` }} />
-            <span className="nextprize">{game.season.into.toLocaleString('en-IN')} / {game.season.need.toLocaleString('en-IN')} · next {nx.coins ? <><Coin size={16} />{nx.coins}</> : nx.gems ? <><Gem size={16} />{nx.gems}</> : (SHOP[nx.item as ShopItem]?.name ?? '')}</span>
+            <span className="nextprize">{game.season.into.toLocaleString('en-IN')} / {game.season.need.toLocaleString('en-IN')} · next {nx.coins ? <><Coin size={16} />{nx.coins}</> : nx.gems ? <><Gem size={16} />{nx.gems}</> : (nx.item ? itemName(nx.item) : '')}</span>
           </div>
         )}
       </div>
       {v5
-        ? <><KPill icon={<Coin size={28} />}><span title="Coins: one for each XP of the day's work"><Count value={game.wallet.coins} /></span></KPill><KPill icon={<Gem size={28} />}><span title="Gems: from milestones and weekly quests"><Count value={game.wallet.gems} /></span></KPill></>
+        ? <><KPill icon={<Coin size={28} />}><span title={game.version >= 6 ? 'Coins: from quests, the season, chests and the Professor' : "Coins: one for each XP of the day's work"}><Count value={game.wallet.coins} /></span></KPill><KPill icon={<Gem size={28} />}><span title="Gems: from feats, milestones and weekly quests"><Count value={game.wallet.gems} /></span></KPill></>
         : <KPill icon={<Ball ball="poke" size={28} />}><span title="Pokemon seen">{seen}</span></KPill>}
       <button type="button" className="k-btn help" aria-label="How it works" onClick={onHelp}>?</button>
       <span className={`sync s-${status[0]}`} role="status" aria-label={status[1]} title={status[1]} />
@@ -903,6 +927,7 @@ export default function App() {
         )}
         {!loading && tab === 'partner' && <PartnerTab game={game} facts={view.facts} onShop={() => setTab('shop')} />}
         {!loading && tab === 'team' && <TeamTab game={game} partnerCard={<Summary game={game} />} choices={<Choices game={game} />} />}
+        {!loading && tab === 'world' && <World game={game} go={(t) => { setTab(t); window.scrollTo({ top: 0 }) }} />}
         {!loading && tab === 'shop' && <ShopTab game={game} />}
         {!loading && tab === 'dex' && <DexTab game={game} />}
         {!loading && tab === 'trainer' && <TrainerTab game={game} />}
