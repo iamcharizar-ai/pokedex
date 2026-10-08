@@ -711,7 +711,7 @@ test('version 5 starts on its own day and leaves every earlier day alone', () =>
   assert.deepEqual(g.moments.filter((m) => m.day < far(cut)), old.moments)
   assert.deepEqual([g.version, old.version], [5, 4])
   // nothing was earned before it began
-  assert.deepEqual(old.wallet, { coins: 0, gems: 0, coinsToday: 0, gemsToday: 0, marks: { code: 0, fitness: 0, guitar: 0, arbor: 0, sleep: 0 }, marksToday: { code: 0, fitness: 0, guitar: 0, arbor: 0, sleep: 0 } })
+  assert.deepEqual(old.wallet, { coins: 0, gems: 0, coinsToday: 0, gemsToday: 0, marks: { code: 0, fitness: 0, guitar: 0, arbor: 0, sleep: 0, routine: 0 }, marksToday: { code: 0, fitness: 0, guitar: 0, arbor: 0, sleep: 0, routine: 0 } })
 })
 
 test('version 5: a coin for each XP of the work, quests pay by themselves, and XP is untouched', () => {
@@ -1326,4 +1326,29 @@ test('version 7: a Lucky Egg is bought once for gems', () => {
   const buy = { item: 'lucky-egg', uid: '', what: 'buy', to: 'rare' }
   // 500 gems is a long way off: nothing is taken and nothing is given
   assert.equal(fold7(withUse(run(2, ALL), 1, buy)).inv['lucky-egg'] ?? 0, 0)
+})
+
+test('version 7: a tidy day pays Shine, and the Incubator keeps a second egg warm on tidy days', () => {
+  // four-fifths of the chores is tidy; half is not
+  const tidy = fold7(run(3, { chores: 1 })), half = fold7(run(3, { chores: 0.5 }))
+  assert.equal(tidy.wallet.marks.routine, 3)
+  assert.equal(half.wallet.marks.routine, 0)
+  assert.equal(tidy.counters['days:routine'], 3)
+  // an egg per slot: gems buy them, the Incubator is bought with Shine
+  const buy = { item: 'incubator', uid: '', what: 'buy', to: 'routine' }
+  const poor = fold7(withUse(run(3, { chores: 1 }), 2, buy))
+  assert.equal(poor.inv['incubator'] ?? 0, 0) // 15 marks is a fortnight of tidy days
+  const rich = fold7(withUse(run(16, { chores: 1 }), 15, buy))
+  assert.equal(rich.inv['incubator'], 1)
+  assert.equal(fold7(withUse(withUse(run(17, { chores: 1 }), 15, buy), 16, buy)).inv['incubator'], 1) // once
+  // version 6 has no Home marks to spend on it
+  assert.equal(fold6(run(16, { chores: 1 })).wallet.marks.routine, 16)
+})
+
+test('version 7: a day of 10,000 steps pays an extra Iron mark', () => {
+  const walk = (steps: number) => run(5, { code: 1 }).map((f) => ({ ...f, body: { steps } }))
+  const far = fold7(walk(10000)), near = fold7(walk(9000))
+  assert.equal(far.wallet.marks.fitness - near.wallet.marks.fitness, 5)
+  assert.equal(far.counters.walk, 5)
+  assert.equal(fold6(walk(10000)).wallet.marks.fitness, fold6(walk(9000)).wallet.marks.fitness)
 })

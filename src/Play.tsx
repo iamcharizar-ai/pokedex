@@ -298,7 +298,7 @@ export function DomainShop({ game, tag }: { game: Game; tag: MarkTag }) {
   return (
     <>
     {tag === 'arbor' && game.version >= 6 && <FarmWin game={game} />}
-    <Win title={shop.name} tone={tag === 'sleep' ? 'dark' : tag === 'code' ? 'blue' : tag === 'fitness' ? 'red' : tag === 'guitar' ? 'purple' : 'green'} aside={<><MarkIcon tag={tag} size={22} /> {game.wallet.marks[tag]} {MARKS[tag].name}</>}>
+    <Win title={shop.name} tone={tag === 'sleep' ? 'dark' : tag === 'routine' ? 'gold' : tag === 'code' ? 'blue' : tag === 'fitness' ? 'red' : tag === 'guitar' ? 'purple' : 'green'} aside={<><MarkIcon tag={tag} size={22} /> {game.wallet.marks[tag]} {MARKS[tag].name}</>}>
       <p className="muted">{TAG_NAME[tag]} days pay {MARKS[tag].name}. Nothing here can be bought with coins.{tag === 'sleep' && !game.sleep.band ? ' Bells come only from nights your band measures, so this house stays quiet until the first one.' : ''}</p>
       {game.version >= 6 && (
         <div className="trainrow">
@@ -383,6 +383,7 @@ export function ShopTab({ game, only }: { game: Game; only?: ShopId }) {
         <Win title="Rare things" tone="blue" aside={<><Gem size={22} /> <Count value={game.wallet.gems} /></>}>
           <Shelf game={game} offers={RARE_SHELF} shop="rare" />
           {game.egg && <div className="eggrow"><span className="warm"><EggIcon size={44} /></span><div style={{ flex: 1 }}><span className="k-label">An egg is being kept warm</span><KBar value={game.egg.have} max={game.egg.need} kind="gold" label={`${game.egg.have} / ${game.egg.need} days with two pillars`} /></div></div>}
+          {game.egg2 && <div className="eggrow"><span className="warm"><EggIcon size={44} /></span><div style={{ flex: 1 }}><span className="k-label">The Incubator's egg</span><KBar value={game.egg2.have} max={game.egg2.need} kind="gold" label={`${game.egg2.have} / ${game.egg2.need} tidy days`} /></div></div>}
         </Win>
       )}
       {show('rare') && (game.inv['full-incense'] ?? 0) > 0 && (

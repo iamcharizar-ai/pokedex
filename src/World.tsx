@@ -25,6 +25,7 @@ const PLACES: Place[] = [
   { id: 'fitness', name: 'The Dojo', x: 8, y: 92, icon: MARKS.fitness.icon, mark: 'fitness', shop: 'fitness' },
   { id: 'guitar', name: 'Music Hall', x: 18.5, y: 59, icon: MARKS.guitar.icon, mark: 'guitar', shop: 'guitar' },
   { id: 'arbor', name: 'The Farm', x: 16.5, y: 22, icon: MARKS.arbor.icon, mark: 'arbor', shop: 'arbor' },
+  { id: 'routine', name: 'The Home', x: 30, y: 76, icon: MARKS.routine.icon, mark: 'routine', shop: 'routine' },
   { id: 'sleep', name: 'Dream House', x: 96, y: 41, icon: MARKS.sleep.icon, mark: 'sleep', shop: 'sleep' },
   { id: 'harbor', name: 'The Harbor', x: 84, y: 66, icon: 'rare-egg', shop: 'rare' },
   { id: 'lab', name: 'The Lab', x: 40.5, y: 43, icon: 'poke-ball', go: 'team' },
