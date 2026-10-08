@@ -1299,3 +1299,31 @@ test('version 7: a catch by wearing the wild Pokemon down can be shiny', () => {
   assert.ok(g.moments.some((m) => m.kind === 'catch' && m.shiny))
   assert.ok(!fold6(run(1500, { code: 1, gym: 1, guitar: 1 })).moments.some((m) => m.kind === 'catch' && m.shiny))
 })
+
+test('version 7: crops cooked in the Farm kitchen make a guard', () => {
+  const grow = run(7, { arbor: 1, code: 1 })
+  const plant = (i: number) => ({ item: 'seed-radish', uid: '', what: 'plant', to: String(i) })
+  const reap = (i: number) => ({ item: '', uid: '', what: 'harvest', to: String(i) })
+  const seed = { item: 'seed-radish', uid: '', what: 'buy', to: 'arbor' }
+  const cook = { item: 'max-repel', uid: '', what: 'cook' }
+  let facts = withUse(grow, 0, plant(0), plant(1))
+  facts = withUse(facts, 3, reap(0), reap(1), seed, seed, plant(0), plant(1))
+  const four = fold7(withUse(facts, 3, reap(0), reap(1)))
+  assert.equal(four.inv['crop-radish'], 2 * YIELD)
+  // eight crops on the sixth day: one Max Repel, and the crops are used up
+  const g = fold7(withUse(facts, 6, reap(0), reap(1), cook))
+  assert.equal(g.inv['max-repel'], 1)
+  assert.equal(g.inv['crop-radish'] ?? 0, 0)
+  assert.equal(g.counters.cooked, 1)
+  // not enough crops, or version 6: nothing is cooked
+  assert.equal(fold7(withUse(facts, 3, reap(0), reap(1), cook)).inv['max-repel'] ?? 0, 0)
+  assert.equal(fold6(withUse(facts, 6, reap(0), reap(1), cook)).inv['max-repel'] ?? 0, 0)
+})
+
+test('version 7: a Lucky Egg is bought once for gems', () => {
+  const rich = fold7(run(2, ALL))
+  assert.ok(rich.wallet.gems > 0)
+  const buy = { item: 'lucky-egg', uid: '', what: 'buy', to: 'rare' }
+  // 500 gems is a long way off: nothing is taken and nothing is given
+  assert.equal(fold7(withUse(run(2, ALL), 1, buy)).inv['lucky-egg'] ?? 0, 0)
+})

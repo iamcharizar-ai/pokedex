@@ -4,11 +4,12 @@
 // exists elsewhere in the game; the map itself changes no rule.
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
 import { createPortal } from 'react-dom'
-import { MARKS, type MarkTag, type ShopId } from '../core/economy.ts'
+import { HAIRS, MARKS, hairId, type MarkTag, type ShopId } from '../core/economy.ts'
 import { leaderOf, nameOf, type Game } from '../core/fold.ts'
-import { LEAGUES } from '../core/gyms.ts'
+import { LEAGUES, lineup } from '../core/gyms.ts'
 import { GRADUATES_PER_REGION } from '../core/rules.ts'
 import { Road, Win } from './App.tsx'
+import { useItem } from './lib/store.ts'
 import { ItemIcon, MarkIcon } from './Item.tsx'
 import { KBar, KClose } from './Kit.tsx'
 import { leagueName, still } from './lib/art.ts'
@@ -58,7 +59,17 @@ export function World({ game, go }: { game: Game; go: (t: 'partner' | 'team' | '
   const lg = Math.min(game.league.index, LEAGUES.length - 1)
   // the trainer stands just below its league's pin, not behind it
   const stand = (p: { x: number; y: number }) => ({ x: p.x + 2.4, y: p.y + 3.2 })
-  const [at, setAt] = useState(stand(LEAGUE_AT[lg]))
+  // the journey: the trainer is on the road from this league's start to the next one's, as far along as the leaders beaten and the damage done to the one who is up
+  const frac = (() => {
+    const l = LEAGUES[lg]
+    if (!l || game.league.index >= LEAGUES.length) return 1
+    return Math.min(1, (game.league.slot + (game.league.max ? 1 - game.league.hp / game.league.max : 0)) / lineup(l).length)
+  })()
+  const from = LEAGUE_AT[lg], to = LEAGUE_AT[Math.min(lg + 1, LEAGUE_AT.length - 1)]
+  const now = { x: from.x + (to.x - from.x) * frac, y: from.y + (to.y - from.y) * frac }
+  const home = stand(now)
+  const [at, setAt] = useState(home)
+  useEffect(() => { setAt(home) }, [home.x, home.y]) // eslint-disable-line react-hooks/exhaustive-deps
   const [walking, setWalking] = useState<'l' | 'r' | null>(null)
   const w = Math.round(W * SCALES[scale]), h = Math.round(H * SCALES[scale])
   const v6 = game.version >= 6
@@ -88,12 +99,13 @@ export function World({ game, go }: { game: Game; go: (t: 'partner' | 'team' | '
     const calm = matchMedia('(prefers-reduced-motion: reduce)').matches
     setWalking(p.x < at.x ? 'l' : 'r')
     setAt(p)
-    const done = () => { setWalking(null); then() }
+    const done = () => { setWalking(null); then(); setTimeout(() => setAt(home), 1500) }
     if (calm) done()
     else setTimeout(done, 450)
   }
 
   const league = LEAGUES[lg]
+  const pace = game.days.slice(-7).reduce((n, d) => n + d.strike, 0) / 7
   const leader = leaderOf(game.league.index, game.league.slot)
   const isOpen = (i: number): boolean => {
     const l = LEAGUES[i]
@@ -120,6 +132,17 @@ export function World({ game, go }: { game: Game; go: (t: 'partner' | 'team' | '
 
   return (
     <>
+      <Win title="The journey" tone="gold" aside={`${Math.min(game.league.slot, league.gyms.length)} / ${league.gyms.length} badges`}>
+        <div className="journey">
+          {leader?.sprite && <img src={`/sprites/trainers/${leader.sprite}.png`} alt="" width={56} height={56} className="sprite" />}
+          <div>
+            <b>{game.league.index >= LEAGUES.length ? 'Every league is yours' : `Next stop: ${leader?.name ?? 'the next leader'}`}</b>
+            <small>{leagueName(lg)} league · stop {Math.min(game.league.slot + 1, lineup(league).length)} of {lineup(league).length}{game.league.waiting ? ' · waiting for the region to open' : ''}</small>
+            <KBar value={Math.round((lg + frac) * 100)} max={LEAGUES.length * 100} label={`League ${Math.min(lg + 1, LEAGUES.length)} of ${LEAGUES.length}`} />
+            <small>{pace > 0 && game.league.index < LEAGUES.length ? `About ${Math.ceil(game.league.hp / pace)} days to ${leader?.name ?? 'the next stop'} at this week's pace.` : 'The trainer walks as the work lands on the leader.'}</small>
+          </div>
+        </div>
+      </Win>
       <Win title="The world" tone="blue" aside={
         <span className="zoom">
           <button type="button" className="k-btn" aria-label="Zoom out" disabled={scale === 0} onClick={() => setScale((s) => Math.max(0, s - 1))}>−</button>
@@ -129,6 +152,10 @@ export function World({ game, go }: { game: Game; go: (t: 'partner' | 'team' | '
         <div ref={box} className="worldview" onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerLeave={onUp} role="region" aria-label="Map of the world. Places are listed below it too.">
           <div className="worldmap" style={{ width: w, height: h }}>
             <img src="/world/scene.png" alt="" width={w} height={h} draggable={false} className="worldimg" />
+            <svg className="route" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden>
+              <polyline className="all" points={LEAGUE_AT.map((p) => `${p.x},${p.y}`).join(' ')} vectorEffect="non-scaling-stroke" />
+              <polyline className="walked" points={[...LEAGUE_AT.slice(0, lg + 1), now].map((p) => `${p.x},${p.y}`).join(' ')} vectorEffect="non-scaling-stroke" />
+            </svg>
             {LEAGUES.map((l, i) => !isOpen(i) && <Fog key={l.name} x={LEAGUE_AT[i].x} y={LEAGUE_AT[i].y} label={`${l.name}: needs ${need(i)}`} />)}
             {PLACES.map((p) => (
               <button key={p.id} type="button" className={`place ${buyable(p) ? 'news' : ''}`} style={{ left: `${p.x}%`, top: `${p.y}%` }} onClick={() => tap(p)} aria-label={p.name}>
@@ -152,7 +179,7 @@ export function World({ game, go }: { game: Game; go: (t: 'partner' | 'team' | '
                 {i === game.league.index && leader && <i className="pinhp"><KBar value={game.league.hp} max={game.league.max} kind={hp <= 0.2 ? 'hp low' : hp <= 0.5 ? 'hp mid' : 'hp'} /></i>}
               </button>
             ))}
-            <div className={`trainer ${walking ? `walk ${walking}` : ''}`} style={{ left: `${at.x}%`, top: `${at.y}%` } as CSSProperties} aria-hidden>
+            <div className={`trainer ${walking ? `walk ${walking}` : ''}`} style={{ left: `${at.x}%`, top: `${at.y}%`, ...(game.outfit ? { '--hi': `url(/world/char/${game.outfit}hair_idle_strip9.png)`, '--hw': `url(/world/char/${game.outfit}hair_walk_strip8.png)` } : {}) } as CSSProperties} aria-hidden>
               <span className="body" /><span className="hair" />
               <img src={still(game.display, game.partner.shiny)} alt="" width={40} height={40} className="buddy sprite" />
             </div>
@@ -161,6 +188,13 @@ export function World({ game, go }: { game: Game; go: (t: 'partner' | 'team' | '
         <p className="muted">Drag to look around. Tap a place to walk there. Cloud covers what is not open yet.</p>
       </Win>
 
+      {(game.inv ? HAIRS.some((hh) => game.inv[hairId(hh)]) : false) && (
+        <Win title="Your look" tone="dark">
+          <div className="shopchips">
+            {['', ...HAIRS.filter((hh) => game.inv[hairId(hh)])].map((hh) => <button key={hh || 'short'} type="button" className={`k-btn ${game.outfit === hh ? 'main' : ''}`} onClick={() => useItem('', '', 'outfit', hh)}>{hh ? `${hh[0].toUpperCase()}${hh.slice(1)} hair` : 'Short hair'}</button>)}
+          </div>
+        </Win>
+      )}
       <Win title="Places" tone="dark">
         <ul className="placelist">
           {PLACES.map((p) => (
