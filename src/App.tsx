@@ -17,15 +17,14 @@ import { ItemIcon } from './Item.tsx'
 import { KBar, KMedal, KPill, KRibbon } from './Kit.tsx'
 import { Actions, Coin, Count, Gem, Pop, Quests, ShopTab, TeamTab } from './Play.tsx'
 import { Recap } from './Recap.tsx'
-import { World } from './World.tsx'
 import { aBall, badgeArt, badgeName, fmtDay, leagueName, still } from './lib/art.ts'
 import { play, setSoundOn, soundOn } from './lib/sfx.ts'
 import { LIFEOS_URL, start, useItem, useView } from './lib/store.ts'
 import './skin.css'
 import './economy.css'
 
-type Tab = 'partner' | 'team' | 'world' | 'shop' | 'dex' | 'trainer'
-const TABS: [Tab, string][] = [['partner', 'Home'], ['team', 'Team'], ['world', 'World'], ['shop', 'Shop'], ['dex', 'Pokedex'], ['trainer', 'Trainer']]
+type Tab = 'partner' | 'team' | 'shop' | 'dex' | 'trainer'
+const TABS: [Tab, string][] = [['partner', 'Home'], ['team', 'Team'], ['shop', 'Shop'], ['dex', 'Pokedex'], ['trainer', 'Trainer']]
 export const TAG_NAME: Record<string, string> = { code: 'Code', fitness: 'Gym', guitar: 'Guitar', arbor: 'Arbor', sleep: 'Sleep', routine: 'Routine', balanced: 'Balance', health: 'Health tracker' }
 const weekday = (day: string, len: 1 | 3 = 1) => new Date(day + 'T12:00:00').toLocaleDateString('en-US', { weekday: len === 1 ? 'narrow' : 'short' })
 const clamp01 = (n: number) => Math.max(0, Math.min(1, n))
@@ -888,7 +887,6 @@ const ICON: Record<Tab, ReactNode> = {
   shop: <svg viewBox="0 0 24 24" aria-hidden><path d="M8 8V6a4 4 0 0 1 8 0v2" fill="none" stroke="#141a33" strokeWidth="2.4" /><rect x="3.5" y="8" width="17" height="13" rx="3" fill="#e9a23b" stroke="#141a33" strokeWidth="2" /><rect x="9.5" y="12" width="5" height="4" rx="1" fill="#fff3a8" stroke="#141a33" strokeWidth="1.6" /></svg>,
   dex: <svg viewBox="0 0 24 24" aria-hidden><rect x="4" y="3" width="16" height="18" rx="3" fill="#dc3b45" stroke="#141a33" strokeWidth="2" /><circle cx="9" cy="8" r="2.6" fill="#63c6ff" stroke="#141a33" strokeWidth="1.6" /><rect x="7" y="13" width="10" height="5" rx="1" fill="#f8f5ea" stroke="#141a33" strokeWidth="1.6" /></svg>,
   trainer: <svg viewBox="0 0 24 24" aria-hidden><path d="M8 13l-2 9 6-3 6 3-2-9" fill="#7b5cf0" stroke="#141a33" strokeWidth="2" strokeLinejoin="round" /><circle cx="12" cy="9" r="7" fill="#f5b800" stroke="#141a33" strokeWidth="2" /><path d="M12 5l1.3 2.700 2.900.3-2.2 2 .7 2.900L12 11.5 9.300 12.900l.7-2.900-2.2-2 2.900-.3z" fill="#fff3a8" stroke="#141a33" strokeWidth="1.2" strokeLinejoin="round" /></svg>,
-  world: <svg viewBox="0 0 24 24" aria-hidden><circle cx="12" cy="12" r="9.5" fill="#63c6ff" stroke="#141a33" strokeWidth="2" /><path d="M6 9c2-3 5-2 6 0s-1 3 1 4 4-1 5 1M7 17c1-2 3-1 4-2" fill="#3fd07a" stroke="#141a33" strokeWidth="1.6" strokeLinejoin="round" /></svg>,
   team: <svg viewBox="0 0 24 24" aria-hidden><circle cx="7" cy="9" r="4" fill="#63c6ff" stroke="#141a33" strokeWidth="2" /><circle cx="17" cy="9" r="4" fill="#f5b800" stroke="#141a33" strokeWidth="2" /><circle cx="12" cy="15" r="5" fill="#3fd07a" stroke="#141a33" strokeWidth="2" /></svg>,
 }
 
@@ -937,7 +935,6 @@ export default function App() {
         )}
         {!loading && tab === 'partner' && <PartnerTab game={game} facts={view.facts} nights={view.nights} onShop={() => setTab('shop')} />}
         {!loading && tab === 'team' && <TeamTab game={game} partnerCard={<Summary game={game} />} choices={<Choices game={game} />} />}
-        {!loading && tab === 'world' && <World game={game} go={(t) => { setTab(t); window.scrollTo({ top: 0 }) }} />}
         {!loading && tab === 'shop' && <ShopTab game={game} />}
         {!loading && tab === 'dex' && <DexTab game={game} />}
         {!loading && tab === 'trainer' && <TrainerTab game={game} nights={view.nights} />}
