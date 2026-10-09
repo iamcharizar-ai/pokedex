@@ -316,6 +316,7 @@ export function ShopTab({ game, only }: { game: Game; only?: ShopId }) {
             <li><Gem size={22} /> feats, a catch, an evolution, a badge, weekly quests</li>
             <li>{MARK_TAGS.map((t) => <MarkIcon key={t} tag={t} size={22} />)} one a day for each kind of work done: coding, gym, guitar, Arbor, sleep</li>
             <li><ItemIcon id="red-shard" size={22} /><ItemIcon id="blue-shard" size={22} /><ItemIcon id="yellow-shard" size={22} /><ItemIcon id="green-shard" size={22} /> shards come from feats: streaks and lifetime totals</li>
+            <li><ItemIcon id="comet-shard" size={22} /> a Comet Shard for every month-end review done in Life OS; it fits any Mega</li>
           </ul>
         </Win>
       )}
@@ -456,7 +457,7 @@ export function MonPage({ m, game, onClose }: { m: Mon; game: Game; onClose: () 
                 return (
                   <div key={f} className="forgeline">
                     <ItemIcon id="key-stone" size={30} className={done ? '' : 'unheld'} />
-                    <span><b>{nameOf(f)}</b><small>{done ? 'Forged: this Pokemon keeps it for good' : !game.keyStone ? 'Needs the Key Stone (a week of running on any one kind of work)' : shard ? `${FORGE_COST} ${itemName(shard)}` : `needs ${FORGE_COST} ${megas.length > 1 ? (i === 0 ? 'Red' : 'Blue or Yellow') : 'matching'} Shards`}</small></span>
+                    <span><b>{nameOf(f)}</b><small>{done ? 'Forged: this Pokemon keeps it for good' : !game.keyStone ? 'Needs the Key Stone (a week of running on any one kind of work)' : shard ? `${FORGE_COST} ${itemName(shard)}` : `needs ${FORGE_COST} ${megas.length > 1 ? (i === 0 ? 'Red' : 'Blue or Yellow') : 'matching'} Shards (a Comet Shard fits any)`}</small></span>
                     {!done && <button type="button" className="k-btn main" disabled={!game.keyStone || !shard} onClick={() => { useItem('', m.uid, 'forge', f); play('catch') }}>Forge</button>}
                   </div>
                 )

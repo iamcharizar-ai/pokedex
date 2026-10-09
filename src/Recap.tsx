@@ -73,6 +73,7 @@ function tell(m: Moment, game: Game): Told {
     case 'form': return { title: m.what === 'mega' ? 'Mega form' : 'Gigantamax', line: `${nameOf(m.form)} is registered in the Pokedex.`, art: 'mon', form: m.form }
     case 'mega': return { title: 'Mega Stone forged', line: `${nameOf(m.form)} is registered to this Pokemon and never runs out.`, art: 'mon', form: m.form }
     case 'feat': { const it = prize(m); return { title: m.name, line: `A feat reached${it ? `: ${itemName(it)} is yours, and no shop sells it` : ''}.`, art: 'item', item: it } }
+    case 'review': return { title: 'Month reviewed', line: 'A Comet Shard is yours. It fits any Mega: three forge a stone.', art: 'item', item: 'comet-shard' }
     case 'key': return { title: 'Key Stone', line: 'Three shards now forge a Mega Stone for a fully evolved Pokemon.', art: 'key' }
     case 'region': return { title: 'New region', line: `${REGIONS[m.n - 1]} is open: new species can turn up from now on.`, art: 'none' }
     case 'gym': {

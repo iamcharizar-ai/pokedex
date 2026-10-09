@@ -722,3 +722,15 @@ test('a Mega Stone is forged from shards, and nothing makes one by itself', () =
   assert.equal(fold(withUse(facts, 899, { item: '', uid: m.uid, what: 'forge', to: 'missingno' })).graduates.find((x) => x.uid === m.uid)!.megas, undefined)
 })
 
+
+test('a month-end review pays a Comet Shard, found by the day it was ticked, and it forges any Mega', () => {
+  const facts = buildFacts({ habits: [], ticks: { '2026-09-01': { 'month-review': '2026-10-05T09:00:00' } }, today: '2026-10-06' })
+  assert.equal(facts.find((f) => f.day === '2026-10-05')?.reviews, 1)
+  assert.equal(facts.find((f) => f.day === '2026-10-04')?.reviews, undefined)
+  const g = fold(facts)
+  assert.equal(g.inv['comet-shard'], 1)
+  assert.deepEqual(g.moments.filter((m) => m.kind === 'review').map((m) => m.day), ['2026-10-05'])
+  assert.equal(forgeShard(2, 0, undefined, { 'comet-shard': FORGE_COST }), 'comet-shard')
+  assert.equal(forgeShard(2, 0, undefined, { 'red-shard': FORGE_COST, 'comet-shard': FORGE_COST }), 'red-shard')
+  assert.equal(forgeShard(1, 0, undefined, { 'comet-shard': FORGE_COST - 1 }), null)
+})
