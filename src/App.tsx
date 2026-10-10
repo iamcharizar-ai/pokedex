@@ -14,7 +14,7 @@ import { FeatsWin } from './Feats.tsx'
 import { SleepWin } from './Sleep.tsx'
 import type { SleepNight } from '../core/events.ts'
 import { ItemIcon } from './Item.tsx'
-import { KBar, KMedal, KPill, KRibbon } from './Kit.tsx'
+import { KBar, KPill, KRibbon } from './Kit.tsx'
 import { Actions, Coin, Count, Gem, Pop, Quests, ShopTab, TeamTab } from './Play.tsx'
 import { Recap } from './Recap.tsx'
 import { aBall, badgeArt, badgeName, fmtDay, leagueName, still } from './lib/art.ts'
@@ -70,17 +70,8 @@ export function Win({ title, aside, tone = '', children }: { title: string; asid
 }
 
 /** An egg, drawn here pixel by pixel (no artwork is borrowed for it). */
-const EGG = [
-  '....oooo....', '...owwwwo...', '..owwggwwo..', '..owwggwwo..', '.owwwwwwwwo.', '.owgwwwwwgo.', 'owggwwwwwwwo',
-  'owwwwwwggwwo', 'owwwwwwggwso', 'owwgwwwwwsso', '.owwwwwwsso.', '.oswwwwssso.', '..osssssso..', '...oooooo...',
-]
-const EGG_FILL: Record<string, string> = { o: '#23283a', w: '#fbf6e3', g: '#5fbf7a', s: '#ddd3b4' }
 function Egg() {
-  return (
-    <svg className="egg" viewBox="0 0 12 14" shapeRendering="crispEdges" role="img" aria-label="An egg">
-      {EGG.flatMap((row, y) => [...row].map((c, x) => (c === '.' ? null : <rect key={`${x}-${y}`} x={x} y={y} width="1" height="1" fill={EGG_FILL[c]} />)))}
-    </svg>
-  )
+  return <img className="egg pix" src="/sprites/items/mystery-egg.png" width={72} height={72} alt="An egg" draggable={false} />
 }
 
 // ── Partner: the battle screen ──────────────────────────────────────────────
@@ -582,7 +573,7 @@ export function Road({ game }: { game: Game }) {
                   <small>{gym ? badgeName(t) : i === all.length - 1 ? 'Champion' : 'Elite Four'} · {t.type}</small>
                   {state === 'now' && <div style={{ marginTop: 6 }}><KBar value={league.hp} max={league.max} kind={hp <= 0.2 ? 'hp low' : hp <= 0.5 ? 'hp mid' : 'hp'} label={`${league.hp.toLocaleString('en-IN')} HP left`} /></div>}
                 </div>
-                {gym && <KMedal on={state === 'done'} title={`${badgeName(t)}: ${state === 'done' ? 'won' : 'not yet'}`}>{art ? <img src={art} alt="" className="sprite" /> : <span className={`badge b${i} on`} />}</KMedal>}
+                {gym && <GymBadge art={art} on={state === 'done'} n={i + 1} size={40} title={`${badgeName(t)}: ${state === 'done' ? 'won' : 'not yet'}`} />}
               </div>
             )
             return [step]
@@ -657,8 +648,8 @@ function BadgeCase({ game }: { game: Game }) {
               const on = index < game.league.index || i < game.league.slot
               const title = `${badgeName(t)}: ${on ? `won from ${t.name}` : `beat ${t.name}`}`
               const art = badgeArt(index, i)
-              // the real badge where there is a picture of it; a plain shape for the regions without one
-              return <KMedal key={i} on={on} title={title} color={index < game.league.index ? undefined : '#63c6ff'}>{art ? <img src={art} alt={title} className="sprite" /> : <span className={`badge b${i} on`} />}</KMedal>
+              // the real badge where there is a picture of it; an empty numbered place for the regions without one
+              return <GymBadge key={i} art={art} on={on} n={i + 1} title={title} />
             })}
           </div>
         </div>
@@ -823,7 +814,7 @@ function RulesTab() {
           <Rule title="Mega, forged" tone="purple" pic={<><ItemIcon id="red-shard" size={26} /><ItemIcon id="blue-shard" size={26} /><Arrow /><KeyStone size={38} /></>}>
             The Key Stone is a feat. Three shards forge a Mega Stone for one Pokemon: red for X, blue or yellow for Y.
           </Rule>
-          <Rule title="Leaders and badges" tone="purple" pic={<><span className="rule-chip">{(LEADER_HP / 1000).toFixed(0)}k</span><Arrow /><KMedal><span className="badge b3 on" style={{ width: 30 }} /></KMedal></>}>
+          <Rule title="Leaders and badges" tone="purple" pic={<><span className="rule-chip">{(LEADER_HP / 1000).toFixed(0)}k</span><Arrow /><img src="/sprites/badges/1-1.png" alt="" width={32} height={32} className="gymbadge pix" /></>}>
             Each leader has {LEADER_HP.toLocaleString('en-IN')} HP and is weak to two kinds of work (×{WEAK_MULT}). Beat one, keep the badge.
           </Rule>
           <Rule title="Your team" tone="blue" pic={<><img src="/sprites/ui/party-on.png" alt="" width={30} height={30} className="pix" /><img src="/sprites/ui/party-on.png" alt="" width={30} height={30} className="pix" /><img src="/sprites/ui/party-empty.png" alt="" width={30} height={30} className="pix" /><span className="rule-chip sm">+10%</span></>}>
@@ -853,13 +844,17 @@ function RulesTab() {
 
 // ── the frame every tab shares ──────────────────────────────────────────────
 /** Tab icons, drawn here as plain shapes. */
-const ICON: Record<Tab, ReactNode> = {
-  partner: <svg viewBox="0 0 24 24" aria-hidden><path d="M12 21s-8-5.2-8-11a4.6 4.6 0 0 1 8-3 4.6 4.6 0 0 1 8 3c0 5.8-8 11-8 11z" fill="#ff6b78" stroke="#141a33" strokeWidth="2" strokeLinejoin="round" /></svg>,
-  shop: <svg viewBox="0 0 24 24" aria-hidden><path d="M8 8V6a4 4 0 0 1 8 0v2" fill="none" stroke="#141a33" strokeWidth="2.4" /><rect x="3.5" y="8" width="17" height="13" rx="3" fill="#e9a23b" stroke="#141a33" strokeWidth="2" /><rect x="9.5" y="12" width="5" height="4" rx="1" fill="#fff3a8" stroke="#141a33" strokeWidth="1.6" /></svg>,
-  dex: <svg viewBox="0 0 24 24" aria-hidden><rect x="4" y="3" width="16" height="18" rx="3" fill="#dc3b45" stroke="#141a33" strokeWidth="2" /><circle cx="9" cy="8" r="2.6" fill="#63c6ff" stroke="#141a33" strokeWidth="1.6" /><rect x="7" y="13" width="10" height="5" rx="1" fill="#f8f5ea" stroke="#141a33" strokeWidth="1.6" /></svg>,
-  trainer: <svg viewBox="0 0 24 24" aria-hidden><path d="M8 13l-2 9 6-3 6 3-2-9" fill="#7b5cf0" stroke="#141a33" strokeWidth="2" strokeLinejoin="round" /><circle cx="12" cy="9" r="7" fill="#f5b800" stroke="#141a33" strokeWidth="2" /><path d="M12 5l1.3 2.700 2.900.3-2.2 2 .7 2.900L12 11.5 9.300 12.900l.7-2.900-2.2-2 2.900-.3z" fill="#fff3a8" stroke="#141a33" strokeWidth="1.2" strokeLinejoin="round" /></svg>,
-  team: <svg viewBox="0 0 24 24" aria-hidden><circle cx="7" cy="9" r="4" fill="#63c6ff" stroke="#141a33" strokeWidth="2" /><circle cx="17" cy="9" r="4" fill="#f5b800" stroke="#141a33" strokeWidth="2" /><circle cx="12" cy="15" r="5" fill="#3fd07a" stroke="#141a33" strokeWidth="2" /></svg>,
+/** A gym badge: the sprite itself, nothing behind it. One that is not won yet is its dark outline; a region with no sprite yet is an empty numbered place. */
+export function GymBadge({ art, on, title, n, size = 48 }: { art: string | null; on: boolean; title: string; n: number; size?: number }) {
+  return art
+    ? <img src={art} alt={title} title={title} width={size} height={size} className={`gymbadge pix ${on ? '' : 'off'}`} draggable={false} />
+    : <span className={`badgeslot ${on ? 'on' : ''}`} title={title} style={{ width: size, height: size }}>{n}</span>
 }
+/** The bottom bar: sprites from the item sheet, nothing drawn. */
+const TAB_SPRITE: Record<Tab, string> = { partner: 'poke-ball', team: 'tm-case', shop: 'coin-case', dex: 'journal', trainer: 'member-card' }
+const ICON: Record<Tab, ReactNode> = Object.fromEntries(
+  (Object.keys(TAB_SPRITE) as Tab[]).map((t) => [t, <img key={t} src={`/sprites/items/${TAB_SPRITE[t]}.png`} width={48} height={48} alt="" className="tabicon pix" draggable={false} />]),
+) as Record<Tab, ReactNode>
 
 /** Always in view: the partner's level and bar, badges won, Pokemon seen, and the Key Stone once it is held. */
 function TopBar({ game, status, loading, onHelp }: { game: Game; status: string[]; loading: boolean; onHelp: () => void }) {

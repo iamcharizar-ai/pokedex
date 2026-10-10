@@ -189,10 +189,10 @@ test('a Revive undoes the HP the leader won back on an empty day, and stays in t
 })
 
 // ── the team, the Mart, mastery ─────────────────────────────────────────────
-test('six trained Pokemon can stand behind the partner', () => {
-  assert.equal(TEAM_SIZE, 6)
+test('a party of six: the partner and five trained Pokemon behind it', () => {
+  assert.equal(TEAM_SIZE, 5)
   assert.equal(TEAM_BONUS, 0.05)
-  assert.ok(fold(run(400, ALL)).team.length <= 6)
+  assert.ok(fold(run(400, ALL)).team.length <= 5)
 })
 
 test('the Mart: three deals a day, the same on every device, and the guards and chore TMs always', () => {

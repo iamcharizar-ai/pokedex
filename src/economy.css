@@ -14,8 +14,6 @@ img.itemimg, img.pix, img.ball, img.keystone { flex: none; vertical-align: middl
 .win.t-purple .win-h { background: var(--k-purple); }
 
 /* six tabs */
-.navbar { grid-template-columns: repeat(6, 1fr); }
-.navbar button { font-size: 12.5px; }
 
 /* shelves */
 .good.sold { opacity: 0.6; }

@@ -11,7 +11,7 @@ import { ITEMS, itemName } from '../core/economy.ts'
 import { REGIONS, type Ball as BallId } from '../core/rules.ts'
 import { Ball, BallItem, KeyStone } from './Ball.tsx'
 import { ItemIcon } from './Item.tsx'
-import { KMedal, KReveal, type Tier } from './Kit.tsx'
+import { KReveal, type Tier } from './Kit.tsx'
 import { aBall, badgeArt, badgeName, fmtDay, leagueName, still } from './lib/art.ts'
 
 const SEEN_KEY = 'pokedex.seen.v1'
@@ -92,7 +92,7 @@ const tierOf = (m: Moment): Tier =>
   m.kind === 'key' || m.kind === 'mega' || m.kind === 'league' || (m.kind === 'catch' && m.shiny) ? 'rare'
     : m.kind === 'evolve' || m.kind === 'feat' || m.kind === 'gym' || m.kind === 'graduate' || m.kind === 'region' ? 'big' : 'ordinary'
 
-const STAR = <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden><path d="M12 2l3 6.6 7 .8-5.2 4.8 1.5 7L12 17.6 5.7 21.2l1.5-7L2 9.4l7-.8z" fill="#fff3a8" stroke="#141a33" strokeWidth="2" strokeLinejoin="round" /></svg>
+const STAR = <ItemIcon id="star-piece" size={72} />
 
 /** What stands in the middle of the reveal. */
 function Art({ t }: { t: Told }) {
@@ -101,10 +101,10 @@ function Art({ t }: { t: Told }) {
   // the ball of that day closes on it, then it is shown beside its ball
   if (t.art === 'catch' && t.form) return <><img src={spritePath(t.form, t.shiny)} alt="" className="hideuntil" /><span className="ballover">{t.thrown ? <BallItem id={t.thrown} size={84} /> : <Ball ball={t.ball ?? 'poke'} size={84} />}</span></>
   if (t.art === 'mon' && t.form) return <img src={spritePath(t.form, t.shiny)} alt="" />
-  if (t.art === 'badge') return t.badge ? <img src={t.badge} alt="" /> : <KMedal>{STAR}</KMedal>
+  if (t.art === 'badge') return t.badge ? <img src={t.badge} alt="" className="gymbadge pix" style={{ width: 120, height: 120 }} /> : <span className="badgeslot on" style={{ width: 96, height: 96 }}>★</span>
   if (t.art === 'key') return <KeyStone size={110} />
   if (t.art === 'item' && t.item) return <ItemIcon id={t.item} size={110} />
-  return <KMedal>{STAR}</KMedal>
+  return STAR
 }
 
 /** One window for everything new: the biggest thing drawn large, the rest as a list. One tap, anywhere, closes it. */

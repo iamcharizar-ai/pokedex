@@ -25,13 +25,13 @@ h1, h2, h3 { font-family: var(--k-face); letter-spacing: 0.03em; text-transform:
 
 /* ── frame: bottom bar. Five tabs; only the open one is lifted, lit and named ── */
 .navbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: grid; grid-template-columns: repeat(5, 1fr); max-width: 1000px; margin: 0 auto; padding-bottom: env(safe-area-inset-bottom); background: linear-gradient(#3a4680, #232c58); border: 4px solid var(--k-edge); border-bottom: 0; border-radius: 16px 16px 0 0; }
-.navbar button { position: relative; display: grid; justify-items: center; align-content: center; gap: 1px; min-height: 66px; padding: 8px 2px 6px; font-family: var(--k-face); font-size: 14px; color: transparent; border-left: 2px solid rgba(0, 0, 0, 0.28); transition: transform 0.12s; }
+.navbar button { position: relative; display: grid; justify-items: center; align-content: center; gap: 1px; min-height: 72px; padding: 6px 2px 4px; font-family: var(--k-face); font-size: 14px; color: transparent; border-left: 2px solid rgba(0, 0, 0, 0.28); transition: transform 0.12s; }
 .navbar button:first-child { border-left: 0; border-radius: 12px 0 0 0; } .navbar button:last-child { border-radius: 0 12px 0 0; }
-.navbar button svg { width: 34px; height: 34px; filter: drop-shadow(0 2px 0 var(--k-edge)); opacity: 0.82; transition: transform 0.12s; }
-.navbar button:hover svg { opacity: 1; }
+.navbar button .tabicon { width: 48px; height: 48px; image-rendering: pixelated; filter: drop-shadow(0 2px 0 var(--k-edge)); opacity: 0.85; transition: transform 0.12s; }
+.navbar button:hover .tabicon { opacity: 1; }
 .navbar button:active { transform: translateY(2px); }
 .navbar button.on { color: #fff; -webkit-text-stroke: 3px var(--k-edge); paint-order: stroke fill; background: linear-gradient(#6176c8, #3b4c94); box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.28); transform: translateY(-6px); border-radius: 10px 10px 0 0; }
-.navbar button.on svg { opacity: 1; transform: scale(1.12); }
+.navbar button.on .tabicon { opacity: 1; transform: scale(1.08); }
 .navbar button:focus-visible { outline-offset: -4px; }
 
 /* ── frame: windows. A thick frame and a header that is an object ── */
@@ -154,14 +154,16 @@ main .win-b a { color: #fff; }
 .caserow { grid-template-columns: 1fr; gap: 6px; margin-bottom: 14px; }
 .caserow .k-ribbon { font-size: 17px; min-height: 36px; }
 .casemedals { display: flex; flex-wrap: wrap; gap: 8px 6px; padding: 4px 4px 0; }
-.casemedals .k-medal > span img { width: 44px; height: 44px; max-width: none; max-height: none; }
-.casemedals .k-medal .badge { width: 34px; }
+.gymbadge { image-rendering: pixelated; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.45)); }
+.gymbadge.off { filter: brightness(0) opacity(0.35); }
+.badgeslot { display: inline-grid; place-items: center; box-sizing: border-box; border: 2px dashed rgba(255, 255, 255, 0.3); border-radius: 8px; color: rgba(255, 255, 255, 0.45); font-family: var(--k-face); font-size: 16px; }
+.badgeslot.on { border-style: solid; border-color: var(--k-gold); color: var(--k-gold); }
 .keyrow { border-top-color: rgba(255, 255, 255, 0.2); }
 .noterow { color: #fff; background: var(--k-tile); border-color: var(--k-edge); border-left: 9px solid var(--c); border-radius: 10px; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.1); }
 .noterow dt { font-family: var(--k-face); font-size: 15px; color: #fff; text-transform: none; }
 .road-win .k-road { gap: 8px; }
 .k-step img.sprite { width: 52px; height: 52px; }
-.k-step .k-medal { transform: scale(0.72); margin: -10px -8px; }
+.k-step .gymbadge, .k-step .badgeslot { flex: none; }
 .k-step .role { font-family: var(--k-face); font-size: 12px; color: var(--k-dim); }
 .k-step.ahead img.sprite { filter: brightness(0) opacity(0.4); }
 .k-step .nopic { width: 52px; height: 52px; }
@@ -410,7 +412,7 @@ main .queue.pick button.on img { background: none; outline: 0; }
   .topbar { margin: 0 -12px 14px; padding: 8px 12px 10px; gap: 6px 10px; }
   .topbar .lv { flex-basis: 100%; }
   .navbar { border-left: 0; border-right: 0; border-radius: 0; }
-  .navbar button { min-height: 60px; font-size: 12px; } .navbar button:first-child, .navbar button:last-child { border-radius: 0; }
+  .navbar button { min-height: 64px; font-size: 12px; } .navbar button .tabicon { width: 48px; height: 48px; } .navbar button:first-child, .navbar button:last-child { border-radius: 0; }
   .moves { padding: 0 10px 12px; border-top: 0; }
   .say { font-size: 20px; padding: 14px 16px 10px; }
   .detail { bottom: 78px; }
@@ -426,5 +428,5 @@ main .queue.pick button.on img { background: none; outline: 0; }
 @media (prefers-reduced-motion: reduce) {
   .monpage, .mp-art img, .tabin, .foe-pad > img, .foe img, .pop, .k-btn.main.act, .thrown, .good.bump { animation: none !important; }
   .pop { display: none; }
-  .navbar button, .navbar button svg, .go, .plain { transition: none; }
+  .navbar button, .navbar button .tabicon, .go, .plain { transition: none; }
 }

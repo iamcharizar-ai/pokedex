@@ -9,7 +9,7 @@ import {
   BALLS, DOMAIN_SHOPS, FORGE_COST, HELD, ITEMS, LURES, MARKS, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, masteryCost, RARE_SHELF, SELL, TM_SLOTS, forgeShard, itemName, throwHp, tmType,
   type MarkTag, type Offer, type ShopId,
 } from '../core/economy.ts'
-import { BALL_NAME, HEART_LEVELS, REPEL_DAYS, TEAM_BONUS, bondLevel, levelOf } from '../core/rules.ts'
+import { BALL_NAME, HEART_LEVELS, REPEL_DAYS, TEAM_BONUS, TEAM_SIZE, bondLevel, levelOf } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
 import { MonCard, TAG_NAME, Win, plural } from './App.tsx'
 import { Ball, BallItem } from './Ball.tsx'
@@ -20,9 +20,8 @@ import { play } from './lib/sfx.ts'
 import { useItem } from './lib/store.ts'
 
 export { Coin, EggIcon, Gem }
-const Heart = ({ on }: { on: boolean }) => (
-  <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden><path d="M12 21s-8-5.200-8-11a4.600 4.600 0 0 1 8-3 4.600 4.600 0 0 1 8 3c0 5.800-8 11-8 11z" fill={on ? '#ff6b78' : '#39405f'} stroke="#141a33" strokeWidth="2" strokeLinejoin="round" /></svg>
-)
+/** A bond heart: the Heart Scale sprite, dark until it is earned. */
+const Heart = ({ on }: { on: boolean }) => <img src="/sprites/items/heart-scale.png" width={24} height={24} alt="" draggable={false} className="pix" style={on ? undefined : { filter: 'brightness(0) opacity(0.35)' }} />
 
 const isBall = (id: string): boolean => id in BALLS
 /** What a thrown ball would take off the wild Pokemon in front of you today. */
@@ -341,7 +340,17 @@ export function Bag({ game }: { game: Game }) {
   const empty = !held.length && !tms.length && !lures.length && !rest.length && !stuff.length
   return (
     <Win title="Bag" tone="purple" aside={game.keyStone ? <><ItemIcon id="key-stone" size={22} /> Key Stone</> : undefined}>
-      {empty && <p className="muted">Nothing yet. The Mart opens each morning, and feats hand out the rest.</p>}
+      <span className="k-label">Money and marks</span>
+      <div className="baggrid wallet">
+        <div className="bagtile" title="Coins: for showing up, quests, the season, chests and the Professor"><Coin size={40} /><b>Coins</b><small>{game.wallet.coins.toLocaleString('en-IN')}{game.wallet.coinsToday > 0 ? ` · +${game.wallet.coinsToday} today` : ''}</small></div>
+        <div className="bagtile" title="Gems: catches, evolutions, badges and feats"><Gem size={40} /><b>Gems</b><small>{game.wallet.gems.toLocaleString('en-IN')}{game.wallet.gemsToday > 0 ? ` · +${game.wallet.gemsToday} today` : ''}</small></div>
+        {MARK_TAGS.map((t) => (
+          <div key={t} className="bagtile" title={`${MARKS[t].name}: a ${TAG_NAME[t].toLowerCase()} day pays one. Spent in ${DOMAIN_SHOPS[t].name}`}>
+            <MarkIcon tag={t} size={40} /><b>{MARKS[t].name}</b><small>{game.wallet.marks[t]}{game.wallet.marksToday[t] > 0 ? ` · +${game.wallet.marksToday[t]} today` : ''}</small>
+          </div>
+        ))}
+      </div>
+      {empty && <p className="muted">No items yet. The Mart opens each morning, and feats hand out the rest.</p>}
       {stuff.length > 0 && (
         <div className="baggrid">
           {stuff.map((id) => <div key={id} className="bagtile" title={ITEMS[id].text}><ItemIcon id={id} size={40} /><b>{itemName(id)}</b><small>×{have(id)} · {isBall(id) ? 'thrown from Home' : 'fed from Home'}</small></div>)}
@@ -413,7 +422,7 @@ export function MonPage({ m, game, onClose }: { m: Mon; game: Game; onClose: () 
   const hearts = (m.together ?? 0) + (m.fed ?? 0)
   const v5 = true
   const v6 = true
-  const cap = 3 + (game.inv['exp-share'] ? 1 : 0)
+  const cap = TEAM_SIZE
   const setTeam = () => {
     const ids = inTeam ? game.team.filter((x) => x.uid !== m.uid).map((x) => x.uid) : [...game.team.map((x) => x.uid), m.uid].slice(-cap)
     useItem('', '', 'team', ids.join(','))
@@ -487,7 +496,7 @@ export function TeamTab({ game, partnerCard, choices }: { game: Game; partnerCar
   const inTeam = new Set(game.team.map((m) => m.uid))
   const shown = [game.partner, ...game.queue, ...game.graduates].find((m) => m.uid === page)
   const v5 = true
-  const cap = 3 + (game.inv['exp-share'] ? 1 : 0)
+  const cap = TEAM_SIZE
   const berry = ['oran-berry', 'sitrus-berry'].find((b) => (game.inv[b] ?? 0) > 0)
   return (
     <>
@@ -500,13 +509,14 @@ export function TeamTab({ game, partnerCard, choices }: { game: Game; partnerCar
         </div>
       </Win>
       {v5 && (
-        <Win title="Team" tone="gold" aside={game.teamEdge ? `+${Math.round(game.teamEdge * TEAM_BONUS * 100)}% on this leader` : `${game.team.length} / ${cap}`}>
+        <Win title="Party" tone="gold" aside={game.teamEdge ? `+${Math.round(game.teamEdge * TEAM_BONUS * 100)}% on this leader` : `${1 + game.team.length} / ${cap + 1}`}>
           <div className="teamrow">
+            <button type="button" className="slot partner" onClick={() => setPage(game.partner.uid)} title={`${nameOf(game.partner.form)}, your partner`}><MonCard m={game.partner} size={64} /><small>Partner</small></button>
             {Array.from({ length: cap }, (_, i) => {
               const m = game.team[i]
               return m
                 ? <button key={m.uid} type="button" className="slot" onClick={() => setPage(m.uid)} title={nameOf(m.form)}><MonCard m={m} size={64} /></button>
-                : <span key={i} className="slot empty" aria-label="Empty team place"><img src="/sprites/ui/party-empty.png" alt="" width={32} height={32} className="pix" /></span>
+                : <span key={i} className="slot empty" aria-label="Empty party place"><img src="/sprites/ui/party-empty.png" alt="" width={32} height={32} className="pix" /></span>
             })}
           </div>
           {game.graduates.length > 0
