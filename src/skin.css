@@ -430,3 +430,18 @@ main .queue.pick button.on img { background: none; outline: 0; }
   .pop { display: none; }
   .navbar button, .navbar button .tabicon, .go, .plain { transition: none; }
 }
+
+/* ── rewards to collect, and the fly into the pocket (Claim.tsx, lib/fly.ts) ── */
+.claims { margin: 0 0 14px; padding: 8px 10px 10px; background: linear-gradient(#2c3970, #1b2448); border: 3px solid var(--k-edge); border-radius: 10px; color: #fff; }
+.claims-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; }
+.claims-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
+.claim-chip { flex: none; display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 12px 6px 8px; color: #1a1200; text-align: left; background: #ffd800; border: 3px solid var(--k-edge); border-radius: 10px; box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35); cursor: pointer; animation: claim-bob 1.6s ease-in-out infinite; }
+.claim-chip:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35); }
+.claim-ico { display: flex; gap: 2px; }
+.claim-txt { display: grid; line-height: 1.15; }
+.claim-txt small { font-size: 11px; opacity: 0.75; }
+@keyframes claim-bob { 50% { transform: translateY(-2px); } }
+.fly-reward { position: fixed; left: 0; top: 0; z-index: 80; pointer-events: none; padding: 2px 8px; font: 800 14px/1 var(--k-face, inherit); color: #1a1200; background: #ffd800; border: 2px solid #000; border-radius: 999px; box-shadow: 2px 2px 0 #000; white-space: nowrap; will-change: transform, opacity; }
+.reward-pulse { animation: reward-pulse 0.4s ease-out; }
+@keyframes reward-pulse { 0% { filter: brightness(1); transform: scale(1); } 35% { filter: brightness(1.7); transform: scale(1.25); } 100% { filter: brightness(1); transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .claim-chip { animation: none; } .reward-pulse { animation: none; } }

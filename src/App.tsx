@@ -17,6 +17,7 @@ import { ItemIcon } from './Item.tsx'
 import { KBar, KPill, KRibbon } from './Kit.tsx'
 import { Actions, Coin, Count, Gem, Pop, Quests, ShopTab, TeamTab } from './Play.tsx'
 import { Recap } from './Recap.tsx'
+import { Claims } from './Claim.tsx'
 import { aBall, badgeArt, badgeName, fmtDay, leagueName, still } from './lib/art.ts'
 import { play, setSoundOn, soundOn } from './lib/sfx.ts'
 import { LIFEOS_URL, start, useItem, useView } from './lib/store.ts'
@@ -876,7 +877,7 @@ function TopBar({ game, status, loading, onHelp }: { game: Game; status: string[
         )}
       </div>
       {v5
-        ? <><KPill icon={<Coin size={28} />}><span title="Coins: for showing up, quests, the season, chests and the Professor"><Count value={game.wallet.coins} /></span></KPill><KPill icon={<Gem size={28} />}><span title="Gems: from feats, milestones and weekly quests"><Count value={game.wallet.gems} /></span></KPill></>
+        ? <><KPill icon={<Coin size={28} />}><span data-reward-target="coins" title="Coins: for showing up, quests, the season, chests and the Professor"><Count value={game.wallet.coins} /></span></KPill><KPill icon={<Gem size={28} />}><span data-reward-target="gems" title="Gems: from feats, milestones and weekly quests"><Count value={game.wallet.gems} /></span></KPill></>
         : <KPill icon={<Ball ball="poke" size={28} />}><span title="Pokemon seen">{seen}</span></KPill>}
       <button type="button" className="k-btn help" aria-label="How it works" onClick={onHelp}>?</button>
       <span className={`sync s-${status[0]}`} role="status" aria-label={status[1]} title={status[1]} />
@@ -896,6 +897,7 @@ export default function App() {
   return (
     <div className="shell">
       <TopBar game={game} status={status} loading={loading} onHelp={() => setHelp(true)} />
+      {!loading && <Claims game={game} today={view.today} />}
       <main key={tab} className="tabin">
         {loading && (
           <Win title="Loading" tone="dark">
@@ -917,7 +919,7 @@ export default function App() {
         </div>
       )}
       <nav className="navbar" role="tablist" aria-label="Sections">
-        {TABS.map(([id, text]) => <button key={id} role="tab" aria-selected={tab === id} aria-label={text} className={tab === id ? 'on' : ''} onClick={() => { setTab(id); play('tap'); window.scrollTo({ top: 0 }) }}>{ICON[id]}{text}</button>)}
+        {TABS.map(([id, text]) => <button key={id} role="tab" aria-selected={tab === id} aria-label={text} data-reward-target={id === 'team' ? 'bag' : undefined} className={tab === id ? 'on' : ''} onClick={() => { setTab(id); play('tap'); window.scrollTo({ top: 0 }) }}>{ICON[id]}{text}</button>)}
       </nav>
       {!loading && <Recap game={game} today={view.today} />}
     </div>
