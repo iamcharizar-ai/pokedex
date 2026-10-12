@@ -76,6 +76,8 @@ export interface DayMarks {
   clean?: number
   /** song parts that became owned on this day */
   owned?: number
+  /** the routine of each Strong workout finished on this day (a routine you made yourself is not listed), one entry per workout */
+  gear?: string[]
 }
 
 export interface HabitFact {

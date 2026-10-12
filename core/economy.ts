@@ -1,5 +1,5 @@
-// GAME CORE, rules version 6: items, the Mart, the five domain shops, feats.
-// Pure data and small functions, no DOM. See ECONOMY-V6.md for why each thing is here.
+// GAME CORE: items, the Mart, the five domain shops, feats. Rules version 9.
+// Pure data and small functions, no DOM. See ECONOMY-V6.md and RULES-V9.md for why each thing is here.
 //
 // An item's id is the name of its sprite file (public/sprites/items/<id>.png),
 // so a new item is one line here and one picture.
@@ -47,7 +47,7 @@ export const MARK_RECORD = 2
 export const MARK_OWNED = 3
 
 // ── items ───────────────────────────────────────────────────────────────────
-export type ItemKind = 'guard' | 'ball' | 'berry' | 'held' | 'tm' | 'lure' | 'shard' | 'key' | 'unique' | 'egg' | 'chest' | 'theme' | 'incense'
+export type ItemKind = 'gear' | 'guard' | 'ball' | 'berry' | 'held' | 'tm' | 'lure' | 'shard' | 'key' | 'unique' | 'egg' | 'chest' | 'theme' | 'incense'
 export interface ItemDef { name: string; kind: ItemKind; text: string }
 
 const TYPES = ['Bug', 'Dark', 'Dragon', 'Electric', 'Fighting', 'Fire', 'Flying', 'Ghost', 'Grass', 'Ground', 'Ice', 'Normal', 'Poison', 'Psychic', 'Rock', 'Steel', 'Water'] as const
@@ -110,11 +110,16 @@ export const HELD: Record<string, { tag?: MarkTag; mult: number }> = {
   'choice-specs': { tag: 'code', mult: 1.3 }, 'choice-band': { tag: 'fitness', mult: 1.3 }, metronome: { tag: 'guitar', mult: 1.3 },
   'big-root': { tag: 'arbor', mult: 1.3 }, 'focus-band': { tag: 'sleep', mult: 1.3 }, 'life-orb': { mult: 1.1 },
 }
-export const heldMult = (item: string | undefined, tag: Tag): number => {
+/** What the held item adds to strikes of this kind of work (0.15, 0.3), and what an item with no domain adds to all of them. Bonuses are added, not multiplied. */
+export const heldBonus = (item: string | undefined, tag: Tag): number => {
   const h = item ? HELD[item] : undefined
-  return h && (!h.tag || h.tag === tag) ? h.mult : 1
+  return h?.tag && h.tag === tag ? Math.round((h.mult - 1) * 100) / 100 : 0
 }
-/** A lure burns, and the next wild Pokemon is one of this domain's types. */
+export const heldCommon = (item: string | undefined): number => {
+  const h = item ? HELD[item] : undefined
+  return h && !h.tag ? Math.round((h.mult - 1) * 100) / 100 : 0
+}
+/** An incense shows three Pokemon of this domain's types and you pick the next wild one. (Full Incense shows three of any.) */
 export const LURES: Record<string, Tag> = { 'odd-incense': 'code', 'rock-incense': 'fitness', 'pure-incense': 'guitar', 'rose-incense': 'arbor', 'lax-incense': 'sleep', 'sea-incense': 'routine' }
 export const lureTypes = (tag: Tag): string[] => Object.entries(TYPE_DOMAIN).filter(([, d]) => d === tag).map(([t]) => t)
 
@@ -156,12 +161,12 @@ export const ITEMS: Record<string, ItemDef> = {
   'yellow-shard': { name: 'Yellow Shard', kind: 'shard', text: 'Guitar. Three forge a Mega Y.' },
   'green-shard': { name: 'Green Shard', kind: 'shard', text: 'Arbor. Three forge a Mega with only one form.' },
   'comet-shard': { name: 'Comet Shard', kind: 'shard', text: 'A month reviewed. Fits any Mega: three forge one.' },
-  'odd-incense': { name: 'Odd Incense', kind: 'lure', text: 'Burn it: the next wild Pokemon is a code type (Psychic, Electric, Ghost).' },
-  'rock-incense': { name: 'Rock Incense', kind: 'lure', text: 'Burn it: the next wild Pokemon is a gym type (Fighting, Rock, Ground, Steel, Fire, Dragon).' },
-  'pure-incense': { name: 'Pure Incense', kind: 'lure', text: 'Burn it: the next wild Pokemon is a guitar type (Fairy, Normal, Flying).' },
-  'rose-incense': { name: 'Rose Incense', kind: 'lure', text: 'Burn it: the next wild Pokemon is a Grass type.' },
-  'lax-incense': { name: 'Lax Incense', kind: 'lure', text: 'Burn it: the next wild Pokemon is a Dark type.' },
-  'full-incense': { name: 'Full Incense', kind: 'incense', text: 'Choose the next wild Pokemon from three.' },
+  'odd-incense': { name: 'Odd Incense', kind: 'lure', text: 'Pick the next wild Pokemon from three code types (Psychic, Electric, Ghost).' },
+  'rock-incense': { name: 'Rock Incense', kind: 'lure', text: 'Pick the next wild Pokemon from three gym types (Fighting, Rock, Ground, Steel, Fire, Dragon).' },
+  'pure-incense': { name: 'Pure Incense', kind: 'lure', text: 'Pick the next wild Pokemon from three guitar types (Fairy, Normal, Flying).' },
+  'rose-incense': { name: 'Rose Incense', kind: 'lure', text: 'Pick the next wild Pokemon from three Grass types.' },
+  'lax-incense': { name: 'Lax Incense', kind: 'lure', text: 'Pick the next wild Pokemon from three Dark types.' },
+  'full-incense': { name: 'Full Incense', kind: 'incense', text: 'Pick the next wild Pokemon from three of any type.' },
   'rare-egg': { name: 'Mystery Egg', kind: 'egg', text: 'Hatches into a rare Pokemon after five days with two pillars.' },
   chest: { name: 'Chest', kind: 'chest', text: 'Open it for coins, balls, berries or, now and then, incense.' },
   'theme-beach': { name: 'Beach', kind: 'theme', text: 'A new place for the battle scene.' },
@@ -170,10 +175,24 @@ export const ITEMS: Record<string, ItemDef> = {
 }
 ITEMS['max-repel'] = { name: 'Max Repel', kind: 'guard', text: `Use it on the wild Pokemon: it stays ${REPEL_DAYS} days longer before it flees. Once for each Pokemon.` }
 ITEMS['revive'] = { name: 'Revive', kind: 'guard', text: 'Use it on the gym leader: everything they won back while the work stopped is taken off again.' }
-ITEMS['sea-incense'] = { name: 'Sea Incense', kind: 'lure', text: 'Burn it: the next wild Pokemon is a chore type (Water, Ice, Bug, Poison).' }
+ITEMS['sea-incense'] = { name: 'Sea Incense', kind: 'lure', text: 'Pick the next wild Pokemon from three chore types (Water, Ice, Bug, Poison).' }
 ITEMS['lucky-egg'] = { name: 'Lucky Egg', kind: 'unique', text: 'Catches made by wearing a wild Pokemon down are shiny one time in 25 instead of 50. Bought once.' }
 for (const t of TYPES) ITEMS[tmId(t)] = { name: `TM ${t}`, kind: 'tm', text: tmText(t) }
 export const itemName = (id: string): string => ITEMS[id]?.name ?? id
+
+// ── Strong's training gear ──────────────────────────────────────────────────
+/** Each routine in Strong's split drops its own piece of gear (the names and pictures are Strong's). One of each of the seven is a Red Shard. */
+export const GEAR: Record<string, string> = {
+  'd1-chest-delts': 'protector', 'd2-lats-biceps': 'silver-wing', 'd3-legs': 'power-anklet', 'd4-delts-triceps': 'power-lens',
+  'd5-back-biceps': 'power-bracer', 'd6-chest-flys': 'power-band', 'd7-arms-delts': 'power-weight',
+}
+export const GEAR_ITEMS: string[] = Object.values(GEAR)
+export const GEAR_FOR: Record<string, string> = Object.fromEntries(Object.entries(GEAR).map(([r, i]) => [i, r]))
+const GEAR_INFO: Record<string, [string, string]> = {
+  protector: ['Protector', 'Upper chest and side delts'], 'silver-wing': ['Silver Wing', 'Lats, rear delts and biceps'], 'power-anklet': ['Power Anklet', 'Legs'],
+  'power-lens': ['Power Lens', 'Side delts and triceps'], 'power-bracer': ['Power Bracer', 'Back and biceps'], 'power-band': ['Power Band', 'Chest and flys'], 'power-weight': ['Power Weight', 'Arms and delts'],
+}
+for (const [id, [name, what]] of Object.entries(GEAR_INFO)) ITEMS[id] = { name, kind: 'gear', text: `Dropped by the ${what} workout in Strong. One of all seven forges a Red Shard.` }
 
 // ── shops ───────────────────────────────────────────────────────────────────
 export interface Offer { item: string; coins?: number; gems?: number; marks?: number }
@@ -181,7 +200,7 @@ export type ShopId = 'mart' | 'rare' | MarkTag
 
 /** The pool the Mart draws its daily deals from (coins). The chore types (Water, Ice, Bug, Poison) have no domain shop, so their ball and lure are here. */
 export const MART_POOL: Offer[] = [
-  { item: 'poke-ball', coins: 60 }, { item: 'great-ball', coins: 150 }, { item: 'ultra-ball', coins: 380 },
+  { item: 'great-ball', coins: 150 }, { item: 'ultra-ball', coins: 380 },
   { item: 'repeat-ball', coins: 250 }, { item: 'net-ball', coins: 200 }, { item: 'oran-berry', coins: 50 }, { item: 'sitrus-berry', coins: 130 },
   { item: 'sea-incense', coins: 220 },
 ]
@@ -273,14 +292,9 @@ export function forgeShard(count: number, index: number, own: Tag | undefined, i
 
 // ── quests, the season and chests ───────────────────────────────────────────
 export interface QuestDef { id: string; name: string; coins?: number; gems?: number }
-export const DAILY_QUESTS: QuestDef[] = [
-  { id: 'two-pillars', name: 'Finish two pillars', coins: 30 },
-  { id: 'all-pillars', name: 'Finish every pillar', coins: 50 },
-  { id: 'perfect', name: 'A perfect day', gems: 5 },
-]
+/** Only the week has quests. The day's own reward is its pay (DAILY_PAY in rules.ts), and a perfect day pays gems by itself. */
 export const WEEKLY_QUESTS: QuestDef[] = [
   { id: 'five-days', name: '5 days with two pillars', coins: 100, gems: 10 },
-  { id: 'week-xp', name: '2,000 XP of work', coins: 100 },
   { id: 'catch', name: 'Catch a Pokemon', gems: 10 },
 ]
 export interface SeasonReward { coins?: number; gems?: number; item?: string }
@@ -307,15 +321,15 @@ function domainFeats(): Feat[] {
   const out: Feat[] = []
   for (const tag of MARK_TAGS) {
     const w = DOMAIN_WORD[tag]
+    // the gym's red shards come from Strong's training kit as well, so its 100 days pay gems only
+    const hundred = tag === 'fitness' ? {} : shardOf(tag)
     out.push(
       { id: `run7-${tag}`, name: `${w.run}, seven running`, text: `${w.unit} on seven days running (one rest day is forgiven)`, group: 'run', key: `run:${tag}`, n: 7, reward: { gems: 10, items: shardOf(tag) }, tag },
       { id: `run30-${tag}`, name: `${w.run}, a month running`, text: `${w.unit} for thirty days running`, group: 'run', key: `run:${tag}`, n: 30, reward: { gems: 25, items: { ...shardOf(tag), [UNIQUE_HELD[tag]]: 1 } }, tag },
-      { id: `days25-${tag}`, name: `${w.run}, 25 days`, text: `${w.unit}, 25 in all`, group: 'total', key: `days:${tag}`, n: 25, reward: { gems: 5, items: shardOf(tag) }, tag },
-      { id: `days100-${tag}`, name: `${w.run}, 100 days`, text: `${w.unit}, 100 in all`, group: 'total', key: `days:${tag}`, n: 100, reward: { gems: 30, items: shardOf(tag) }, tag },
+      { id: `days100-${tag}`, name: `${w.run}, 100 days`, text: `${w.unit}, 100 in all`, group: 'total', key: `days:${tag}`, n: 100, reward: { gems: 30, items: hundred }, tag },
     )
     if (tag !== 'sleep') out.push(
       { id: `run100-${tag}`, name: `${w.run}, a hundred running`, text: `${w.unit} for a hundred days running`, group: 'run', key: `run:${tag}`, n: 100, reward: { gems: 60, items: shardOf(tag, 2) }, tag },
-      { id: `days250-${tag}`, name: `${w.run}, 250 days`, text: `${w.unit}, 250 in all`, group: 'total', key: `days:${tag}`, n: 250, reward: { gems: 80 }, tag },
     )
   }
   return out
@@ -324,7 +338,6 @@ export const FEATS: Feat[] = [
   { id: 'work7', name: 'A week running', text: 'Any one kind of work on seven days running (one rest day is forgiven)', group: 'run', key: 'run:any', n: 7, reward: { gems: 10, items: { 'key-stone': 1 } } },
   { id: 'work14', name: 'A fortnight', text: 'Three pillars a day for fourteen days running (one rest day is forgiven)', group: 'run', key: 'run:work3', n: 14, reward: { gems: 15, items: { 'amulet-coin': 1 } } },
   { id: 'work30', name: 'A month of it', text: 'Three pillars a day for thirty days running', group: 'run', key: 'run:work3', n: 30, reward: { gems: 40, items: { 'master-ball': 1 } } },
-  { id: 'work60', name: 'Two months', text: 'Three pillars a day for sixty days running', group: 'run', key: 'run:work3', n: 60, reward: { gems: 100 } },
   ...domainFeats(),
   { id: 'walk30', name: 'Thirty long walks', text: 'Thirty days of 10,000 steps', group: 'total', key: 'walk', n: 30, reward: { gems: 25 } },
   { id: 'walk100', name: 'A hundred long walks', text: 'A hundred days of 10,000 steps', group: 'total', key: 'walk', n: 100, reward: { gems: 70 } },

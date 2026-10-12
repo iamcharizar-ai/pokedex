@@ -7,8 +7,8 @@ import {
   PILLARS_FOR_A_DAY, REGIONS, SLIP, STAKES_FROM, STAT_DAYS, WILD_STAY, TIER_XP, WEAK_MULT, evolveAt, graduateAt, momentumMult, xpForLevel,
 } from '../core/rules.ts'
 import { itemName as econName } from '../core/economy.ts'
+import { TEAM_BONUS, TEAM_NATURE, type Tag as TagKind } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
-import { beats } from '../core/types.ts'
 import { Ball, KeyStone } from './Ball.tsx'
 import { FeatsWin } from './Feats.tsx'
 import { SleepWin } from './Sleep.tsx'
@@ -248,10 +248,28 @@ function Summary({ game }: { game: Game }) {
       </dl>
       </div>
       {game.lean.length > 0 && <p className="muted">It evolves by itself at level {game.next.level}, into whichever your habits lean to most by then.</p>}
-      {game.asleep && <p className="notice warn">Dozing after two days without a pillar. Finish one pillar to wake it. Nothing is lost.</p>}
+      {game.asleep && <p className="notice warn">Dozing after two days without a pillar. Finish one pillar to wake it. Nothing finished is lost{game.today.day >= STAKES_FROM ? '; a day with nothing ticked also costs what is still in progress (see How it works)' : `. From ${fmtDay(STAKES_FROM)} a day with nothing ticked also costs what is still in progress`}.</p>}
       {game.aura === 'mega' && <p className="notice good">{partner.megas?.length ? 'Mega form: registered for good. Choose which form shows in the Bag.' : 'Mega form: full momentum and every pillar done today.'}</p>}
       {game.aura === 'gmax' && <p className="notice gmax">Perfect day: Gigantamax for today.</p>}
     </Win>
+  )
+}
+
+const pct = (x: number): string => `${Math.round(x * 100)}%`
+/** Everything that raises a strike, added: what applies to all work, then what applies to one kind of work. The sum is applied once. */
+function PowerLine({ game }: { game: Game }) {
+  const { power } = game
+  const common = power.team + power.bond + power.mega + power.item
+  const parts: [string, number][] = [['Team', power.team], ['Bond', power.bond], ['Mega', power.mega], ['Life Orb', power.item]]
+  const kinds = (Object.keys(power.domain) as TagKind[]).map((t) => [t, power.domain[t]] as const).filter(([, d]) => d.held + d.mastery + d.nature > 0)
+  return (
+    <div className="power" aria-label="What raises a strike">
+      <span className="chip" title={parts.filter(([, v]) => v > 0).map(([n, v]) => `${n} +${pct(v)}`).join(' · ') || 'Nothing yet: a team, a bond level or a Mega adds here'}>All work +{pct(common)}</span>
+      {kinds.map(([t, d]) => (
+        <span key={t} className="chip" data-tag={t} title={[['Held item', d.held], ['Mastery', d.mastery], ['Natures on the team', d.nature]].filter(([, v]) => (v as number) > 0).map(([n, v]) => `${n} +${pct(v as number)}`).join(' · ')}>{TAG_NAME[t]} +{pct(d.held + d.mastery + d.nature)}</span>
+      ))}
+      <small className="muted">all added together, once</small>
+    </div>
   )
 }
 
@@ -284,11 +302,11 @@ function LeaderCard({ game }: { game: Game }) {
       </div>
       {league.waiting && <p className="muted">{l.name} opens with {((l.region ?? 1) - 1) * GRADUATES_PER_REGION} fully trained Pokemon (you have {game.graduates.length}).</p>}
       {game.team.length > 0 && (
-        <div className="backing" title={`Your team. Each one whose type beats ${t.type} adds 10% to every strike.`}>
-          {game.team.map((m) => <img key={m.uid} src={still(m.form, m.shiny)} alt={nameOf(m.form)} width={40} height={40} className={`sprite ${beats([SPECIES[m.form].t, SPECIES[m.form].t2], t.type) ? 'edge' : ''}`} />)}
-          {game.teamEdge > 0 && <span className="chip mega">team +{game.teamEdge * 10}%</span>}
+        <div className="backing" title="Your team. Each adds to every strike, and more to the work its nature raised.">
+          {game.team.map((m) => <img key={m.uid} src={still(m.form, m.shiny)} alt={nameOf(m.form)} width={40} height={40} className="sprite" />)}
         </div>
       )}
+      <PowerLine game={game} />
     </Win>
   )
 }
@@ -517,7 +535,7 @@ function DexTab({ game }: { game: Game }) {
 }
 
 // ── Trainer card ────────────────────────────────────────────────────────────
-const KIND: Record<Moment['kind'], string> = { level: 'Level', evolve: 'Evolved', graduate: 'Trained', partner: 'Partner', catch: 'Caught', appear: 'Wild', form: 'Form', region: 'Region', gym: 'Gym', league: 'League', use: 'Choice', key: 'Key Stone', review: 'Review', mega: 'Mega', transfer: 'Professor', quest: 'Quest', season: 'Season', hatch: 'Hatched', chest: 'Chest', feat: 'Feat', flee: 'Fled', slip: 'Slipped' }
+const KIND: Record<Moment['kind'], string> = { level: 'Level', evolve: 'Evolved', graduate: 'Trained', partner: 'Partner', catch: 'Caught', appear: 'Wild', form: 'Form', region: 'Region', gym: 'Gym', league: 'League', use: 'Choice', key: 'Key Stone', review: 'Review', mega: 'Mega', transfer: 'Professor', quest: 'Quest', season: 'Season', hatch: 'Hatched', chest: 'Chest', feat: 'Feat', gear: 'Gear', kit: 'Kit', flee: 'Fled', slip: 'Slipped' }
 function line(m: Moment): string {
   switch (m.kind) {
     case 'level': return `${nameOf(m.form)} reached level ${m.level}`
@@ -545,6 +563,8 @@ function line(m: Moment): string {
     case 'flee': return `The wild ${nameOf(m.form)} got away`
     case 'slip': return `An empty day (${fmtDay(m.empty)}): ${[m.leader ? `the leader won back ${m.leader} HP` : '', m.wild ? `the wild Pokemon ${m.wild} HP` : '', m.xp ? `${m.xp} XP faded` : ''].filter(Boolean).join(', ')}`
     case 'chest': return `Chest ${m.n}: ${m.coins ? `${m.coins} coins` : `${itemName(m.item)}${m.count > 1 ? ` ×${m.count}` : ''}`}`
+    case 'gear': return `${itemName(m.item)} dropped by a Strong workout`
+    case 'kit': return `All seven pieces of gear became a Red Shard (set ${m.n})`
     case 'feat': return `Feat: ${m.name}${[m.gems ? `+${m.gems} gems` : '', m.coins ? `+${m.coins} coins` : '', ...m.items.map(itemName)].filter(Boolean).map((x, i) => (i ? x : ` (${x}`)).join(', ')}${m.gems || m.coins || m.items.length ? ')' : ''}`
   }
 }
@@ -664,26 +684,6 @@ function BadgeCase({ game }: { game: Game }) {
   )
 }
 
-/** Each domain counted in its own unit. Nothing is earned from these yet. */
-function FieldNotes({ game }: { game: Game }) {
-  const n = game.notes
-  const rows: [string, string, string][] = [
-    ['code', 'Code', plural(n.codeDays, 'coding day')],
-    ['fitness', 'Strength', `${plural(n.workouts, 'workout')} · ${plural(n.records, 'record')} beaten`],
-    ['guitar', 'Guitar', `${plural(n.guitarDays, 'full session')} · ${plural(n.clean, 'clean play')} · ${plural(n.owned, 'part')} owned`],
-    ['arbor', 'Arbor', plural(n.arborDays, 'full morning')],
-    ['routine', 'Steps', n.stepDays ? `${n.steps.toLocaleString('en-IN')} steps over ${plural(n.stepDays, 'measured day')}` : 'not measured yet'],
-  ]
-  return (
-    <Win title="Field notes" tone="green" aside="for life">
-      <dl className="facts notes">
-        {rows.map(([tag, name, text]) => <div key={name} className="noterow" data-tag={tag}><dt>{name}</dt><dd>{text}</dd></div>)}
-      </dl>
-      <p className="muted">Counted for life. Feats read these.</p>
-    </Win>
-  )
-}
-
 const DAYS_SHOWN = 30
 function TrainerTab({ game, nights }: { game: Game; nights: Record<string, SleepNight> }) {
   const days = game.days.slice(-DAYS_SHOWN)
@@ -725,10 +725,7 @@ function TrainerTab({ game, nights }: { game: Game; nights: Record<string, Sleep
       </div>
       <SleepWin game={game} nights={nights} full />
       <FeatsWin game={game} />
-      <div className="cols">
-        <FieldNotes game={game} />
-        {game.league.index > 0 && <BadgeCase game={game} />}
-      </div>
+      {game.league.index > 0 && <BadgeCase game={game} />}
       <HallOfFame game={game} />
 
       <Win title="XP per day" tone="blue" aside={`last ${plural(days.length, 'day')}`}>
@@ -790,11 +787,11 @@ function RulesTab() {
           <Rule title="Evolves by itself" tone="green" pic={<><span className="rule-chip sm">{evolveAt(3, 1)}</span><Arrow /><span className="rule-chip sm">{evolveAt(3, 2)}</span><Arrow /><span className="rule-chip">{graduateAt(3)}</span></>}>
             At these levels. At {graduateAt(3)} it is fully trained and the next one steps up.
           </Rule>
-          <Rule title="Chores pick the ball" tone="red" pic={<><Ball ball="poke" size={30} /><Arrow /><Ball ball="great" size={34} /><Arrow /><Ball ball="ultra" size={38} /></>}>
-            Half the chores: ×{BALL_MULT.great}. Four-fifths: ×{BALL_MULT.ultra}. Every habit done catches it on the spot.
+          <Rule title="The ball is the day" tone="red" pic={<><Ball ball="poke" size={30} /><Arrow /><Ball ball="great" size={34} /><Arrow /><Ball ball="ultra" size={38} /></>}>
+            Half the day's habits ticked: ×{BALL_MULT.great}. Four-fifths: ×{BALL_MULT.ultra}. Every habit ticked catches it on the spot.
           </Rule>
           <Rule title="Coins are not XP" tone="gold" pic={<><Coin size={30} /><Arrow /><ItemIcon id="great-ball" size={34} /></>}>
-            Showing up pays coins (more the more you tick), and so do quests, the season, chests and the Professor. The Mart sells three deals a day, and two guards always.
+            Showing up pays coins (more the more you tick), and so do the weekly quests, the season, chests and the Professor. The Mart sells three deals a day, and two guards always.
           </Rule>
           <Rule title="Each work, its mark" tone="blue" pic={<>{(['code', 'fitness', 'guitar', 'arbor', 'sleep'] as const).map((t) => <ItemIcon key={t} id={{ code: 'machine-part', fitness: 'iron', guitar: 'poke-flute', arbor: 'grn-apricorn', sleep: 'lunar-wing' }[t]} size={26} />)}</>}>
             A day of coding, gym, guitar, Arbor or good sleep pays one mark, spent only in that kind's own shop.
@@ -806,7 +803,7 @@ function RulesTab() {
             A Net Ball hits Water and Bug double. A Quick Ball is best the day it appears. A Timer Ball grows each day it waits.
           </Rule>
           <Rule title="TMs and held items" tone="purple" pic={<><ItemIcon id="tm-water" size={30} /><ItemIcon id="muscle-band" size={30} /></>}>
-            Carry three TMs: each counts as one of the partner's types against a leader. Hold one item: it strengthens its kind of work.
+            Carry three TMs: each counts as one of the partner's types against a leader. Hold one item: it adds to its kind of work. Incense shows three Pokemon and you pick the next wild one.
           </Rule>
           <Rule title="Feats" tone="gold" pic={<><ItemIcon id="key-stone" size={30} /><ItemIcon id="master-ball" size={30} /><ItemIcon id="choice-band" size={30} /></>}>
             Runs of days and lifetime totals pay things no shop sells. One rest day inside a run is forgiven.
@@ -814,11 +811,17 @@ function RulesTab() {
           <Rule title="Mega, forged" tone="purple" pic={<><ItemIcon id="red-shard" size={26} /><ItemIcon id="blue-shard" size={26} /><Arrow /><KeyStone size={38} /></>}>
             The Key Stone is a feat. Three shards forge a Mega Stone for one Pokemon: red for X, blue or yellow for Y.
           </Rule>
+          <Rule title="Added, not stacked" tone="purple" pic={<><span className="rule-chip sm">+</span><span className="rule-chip sm">+</span><span className="rule-chip sm">+</span><Arrow /><span className="rule-chip">×1</span></>}>
+            Team, bond, a Mega, the held item, mastery and natures are added together and applied once. The leader card shows the sum.
+          </Rule>
+          <Rule title="Strong's training kit" tone="red" pic={<><ItemIcon id="protector" size={28} /><ItemIcon id="power-band" size={28} /><Arrow /><ItemIcon id="red-shard" size={30} /></>}>
+            Each workout in Strong's split drops its own piece of gear. One of all seven forges a Red Shard.
+          </Rule>
           <Rule title="Leaders and badges" tone="purple" pic={<><span className="rule-chip">{(LEADER_HP / 1000).toFixed(0)}k</span><Arrow /><img src="/sprites/badges/1-1.png" alt="" width={32} height={32} className="gymbadge pix" /></>}>
             Each leader has {LEADER_HP.toLocaleString('en-IN')} HP and is weak to two kinds of work (×{WEAK_MULT}). Beat one, keep the badge.
           </Rule>
           <Rule title="Your team" tone="blue" pic={<><img src="/sprites/ui/party-on.png" alt="" width={30} height={30} className="pix" /><img src="/sprites/ui/party-on.png" alt="" width={30} height={30} className="pix" /><img src="/sprites/ui/party-empty.png" alt="" width={30} height={30} className="pix" /><span className="rule-chip sm">+10%</span></>}>
-            Six trained Pokemon stand behind you. Each one whose type beats the leader's adds 5%.
+            Six trained Pokemon stand behind you. Each adds {Math.round(TEAM_BONUS * 100)}% to every strike, and {Math.round(TEAM_NATURE * 100)}% more to the work its nature raised.
           </Rule>
           <Rule title="Gems" tone="green" pic={<><Gem size={34} /><span className="rule-chip sm">{GEMS.catch}</span><span className="rule-chip sm">{GEMS.evolve}</span><span className="rule-chip sm">{GEMS.gym}</span></>}>
             A catch, an evolution, a badge, a feat. They buy eggs, incense, chests and scenes, never a ball.

@@ -9,10 +9,10 @@ import { foldGame, isGym, leaderOf, statsOf } from './fold.ts'
 import { LEAGUES, lineup } from './gyms.ts'
 import { beats, weakDomains } from './types.ts'
 import {
-  BALL_MULT, DAILY_PAY, EGG_DAYS, GAME_START, GEMS, LEADER_HP, REPEL_DAYS, SEASON_STEP, SLEEP_DEEP, SLIP, STAKES_FROM, TEAM_BONUS, TEAM_SIZE, WEAK_MULT, WILD_HP, WILD_STAY,
+  BALL_MULT, DAILY_PAY, EGG_DAYS, GAME_START, GEMS, LEADER_HP, MEGA_BONUS, REPEL_DAYS, SEASON_STEP, SLEEP_DEEP, SLIP, STAKES_FROM, TEAM_BONUS, TEAM_NATURE, TEAM_SIZE, WEAK_MULT, WILD_HP, WILD_STAY,
   ballFor, bondLevel, evolveAt, graduateAt, levelOf, momentumMult, regionsOpen, wildHit, xpForLevel,
 } from './rules.ts'
-import { BALLS, CHEST, DOMAIN_SHOPS, FEATS, FORGE_COST, MART_POOL, SELL, STANDING, forgeShard, lureTypes, martDeals, throwHp } from './economy.ts'
+import { BALLS, CHEST, DOMAIN_SHOPS, FEATS, FORGE_COST, GEAR, GEAR_ITEMS, LURES, MART_POOL, SELL, STANDING, forgeShard, lureTypes, martDeals, throwHp } from './economy.ts'
 import { SPECIES } from './species.ts'
 
 const H = (id: string, tag: HabitFact['tag'], worth: number, frac: number): HabitFact =>
@@ -46,6 +46,10 @@ const use = (facts: DayFacts[], i: number, ...uses: { what: string; item?: strin
 const THREE = { code: 1, gym: 1, guitar: 1 }
 const PILLARS = { code: 1, gym: 1, guitar: 1, arbor: 1 } // no chores: never a perfect day, so nothing is caught on the spot
 const HALF = { code: 1, gym: 1 }
+/** four fifths of the day ticked and next to no XP (the ten chores, the morning block, last night's sleep): 90 coins a day, an Ultra Ball, and a leader that hardly moves */
+const PAYING = { chores: 1, arbor: 1, sleep: 1 }
+/** the same facts with the routines of the Strong workouts finished on day `i` */
+const withGear = (facts: DayFacts[], i: number, ...routines: string[]) => facts.map((f, k) => (k === i ? { ...f, marks: { ...f.marks, gear: routines } } : f))
 const far = (n: number) => addDays(GAME_START, n)
 const ev = (at: string, ins: string | undefined, type = 'tick') => ({ at, inserted_at: ins, type })
 function night(n: number, score: number, o: Parameters<typeof day>[1] = {}): DayFacts {
@@ -69,13 +73,24 @@ test('the wild Pokemon is worn down by how many habits were ticked, not by how m
   const g = fold([day(0, { chores: 0.5 })])
   assert.equal(g.today.done, 5)
   assert.equal(g.today.total, 15)
-  assert.equal(g.today.hit, wildHit(5 / 15, BALL_MULT[ballFor(0.5)]))
-  assert.ok(g.today.hit > 20)
+  assert.equal(g.today.hit, wildHit(5 / 15, BALL_MULT[ballFor(5 / 15)]))
+  assert.ok(g.today.hit > 15)
   // the same number of ticks as pillars does the same to the wild Pokemon, and far more to the leader
   const p = fold([day(0, { code: 1, gym: 1, guitar: 1, arbor: 1, sleep: 1 })])
   assert.equal(p.today.hit, wildHit(5 / 15, BALL_MULT.poke))
   assert.ok(g.today.strike <= 5) // five chores are worth five XP
   assert.ok(p.today.strike > 400)
+})
+
+test('the ball is how full the day was, whatever was ticked: one share, one curve', () => {
+  assert.deepEqual([0.3, 0.49, 0.5, 0.79, 0.8, 1].map(ballFor), ['poke', 'poke', 'great', 'great', 'ultra', 'ultra'])
+  // 12 of 15 habits ticked is an Ultra Ball whether they were chores or pillars
+  const chores = fold([day(0, { chores: 1, arbor: 1, sleep: 1 })]), work = fold([day(0, { code: 1, gym: 1, guitar: 1, arbor: 1, chores: 0.8 })])
+  assert.deepEqual([chores.today.ball, work.today.ball], ['ultra', 'ultra'])
+  assert.equal(chores.today.hit, work.today.hit)
+  // 7 of 15 is a Poke Ball even when all of the chores were done
+  assert.equal(fold([day(0, { chores: 0.7 })]).today.ball, 'poke')
+  assert.equal(fold([day(0, { chores: 1 })]).today.ball, 'great') // 10 of 15
 })
 
 test('a run of chore days catches in the end, and a perfect day catches on the spot', () => {
@@ -87,21 +102,24 @@ test('a run of chore days catches in the end, and a perfect day catches on the s
 })
 
 test('showing up pays coins by how much was ticked', () => {
-  assert.deepEqual(DAILY_PAY.map((t) => t.coins), [20, 45, 80])
+  assert.deepEqual(DAILY_PAY.map((t) => t.coins), [40, 90, 140])
   const pay = (chores: number, rest = {}) => fold([day(0, { chores, ...rest })]).today.pay
   assert.equal(pay(0), 0)
-  assert.equal(pay(0.6, { code: 1, gym: 1 }), 20) // 8 of 15
-  assert.equal(pay(0.9, { code: 1, gym: 1, guitar: 1 }), 45) // 12 of 15
-  assert.equal(pay(1, ALL), 80)
+  assert.equal(pay(0.6, { code: 1, gym: 1 }), 40) // 8 of 15
+  assert.equal(pay(0.9, { code: 1, gym: 1, guitar: 1 }), 90) // 12 of 15
+  assert.equal(pay(1, ALL), 140)
 })
 
-test('quests pay once, and a week pays on the fifth day', () => {
+test('only the week has quests, and a week pays on the fifth counting day', () => {
   const g = fold(run(7, PILLARS))
   const quests = g.moments.flatMap((m) => (m.kind === 'quest' ? [m] : []))
-  assert.equal(quests.filter((q) => q.id === 'two-pillars').length, 7)
-  assert.equal(quests.filter((q) => q.id === 'five-days').length, 1)
-  assert.equal(g.quests.daily.map((q) => q.id).join(), 'two-pillars,all-pillars,perfect')
-  assert.ok(g.quests.daily.every((q) => q.done || q.id === 'perfect'))
+  assert.deepEqual(quests.map((q) => q.id), ['five-days'])
+  assert.equal(g.quests.weekly.map((q) => q.id).join(), 'five-days,catch')
+  assert.ok(!('daily' in g.quests))
+  // the day's own reward is its pay, and a perfect day pays gems by itself
+  const perfect = fold([day(0, ALL)])
+  assert.ok(perfect.wallet.gems >= GEMS.perfect + GEMS.catch)
+  assert.equal(perfect.wallet.coins, 140)
 })
 
 test('a mark per domain per day, and a day of 10,000 steps pays an extra Iron mark', () => {
@@ -166,33 +184,54 @@ test('a wild Pokemon that is not caught in time flees, and the next one takes it
 
 test('Max Repel keeps a wild Pokemon longer, once; both guards are always on the Mart shelf', () => {
   const buy = (item: string) => ({ item, uid: '', what: 'buy', to: 'mart' })
-  const facts = around(2, Array.from({ length: 8 }, () => PILLARS))
-  const g = fold(withUse(facts, 6, buy('max-repel'), buy('revive')))
+  const facts = around(2, Array.from({ length: 24 }, () => PAYING))
+  const g = fold(withUse(facts, 12, buy('max-repel'), buy('revive')))
   assert.equal(g.inv['max-repel'], 1)
   assert.equal(g.inv['revive'], 1)
   assert.deepEqual(STANDING.map((o) => o.item).slice(0, 2), ['max-repel', 'revive'])
-  const repel = withUse(withUse(facts, 6, buy('max-repel')), 7, { item: 'max-repel', uid: '', what: 'repel' })
+  // a day on which a wild Pokemon is still standing after the day's hit
+  const k = facts.findIndex((_, i) => i >= 12 && (() => { const w = fold(facts.slice(0, i + 1)).wild; return Boolean(w && !w.caught) })())
+  assert.ok(k >= 12)
+  const repel = withUse(facts.slice(0, k + 1), k, buy('max-repel'), { item: 'max-repel', uid: '', what: 'repel' })
   assert.equal(fold(repel).wild?.repel, REPEL_DAYS)
   assert.equal(fold(repel).inv['max-repel'] ?? 0, 0)
 })
 
 test('a Revive undoes the HP the leader won back on an empty day, and stays in the Bag when there is nothing to undo', () => {
-  const plan = [PILLARS, PILLARS, {}, PILLARS, PILLARS, PILLARS]
+  const plan = Array.from({ length: 14 }, (_, i) => (i === 3 ? {} : PAYING))
   const facts = around(2, plan)
   const plain = fold(facts)
   assert.equal(plain.league.slipped, SLIP.leader)
-  const g = fold(withUse(facts, 5, { item: 'revive', uid: '', what: 'buy', to: 'mart' }, { item: 'revive', uid: '', what: 'revive' }))
+  const g = fold(withUse(facts, 13, { item: 'revive', uid: '', what: 'buy', to: 'mart' }, { item: 'revive', uid: '', what: 'revive' }))
   assert.equal(g.league.slipped, 0)
   assert.equal(plain.league.hp - g.league.hp, SLIP.leader)
-  const none = fold(withUse(around(2, Array.from({ length: 6 }, () => PILLARS)), 5, { item: 'revive', uid: '', what: 'buy', to: 'mart' }, { item: 'revive', uid: '', what: 'revive' }))
+  const none = fold(withUse(around(2, Array.from({ length: 14 }, () => PAYING)), 13, { item: 'revive', uid: '', what: 'buy', to: 'mart' }, { item: 'revive', uid: '', what: 'revive' }))
   assert.equal(none.inv['revive'], 1)
 })
 
 // ── the team, the Mart, mastery ─────────────────────────────────────────────
-test('a party of six: the partner and five trained Pokemon behind it', () => {
+test('a party of six: the partner and five trained Pokemon behind it, each adding to every strike and more to what its nature raised', () => {
   assert.equal(TEAM_SIZE, 5)
-  assert.equal(TEAM_BONUS, 0.05)
-  assert.ok(fold(run(400, ALL)).team.length <= 5)
+  assert.deepEqual([TEAM_BONUS, TEAM_NATURE], [0.02, 0.03])
+  const g = fold(run(400, ALL))
+  assert.ok(g.team.length > 0 && g.team.length <= 5)
+  assert.equal(g.power.team, TEAM_BONUS * g.team.length)
+  for (const t of ['code', 'fitness', 'guitar', 'arbor', 'sleep', 'routine'] as const)
+    assert.equal(g.power.domain[t].nature, TEAM_NATURE * g.team.filter((m) => m.nature?.up === t).length, t)
+  // the type of a team member no longer matters: the bonus is the same for any leader
+  assert.equal(fold(run(400, ALL)).power.team, g.power.team)
+})
+
+test('every strike bonus is added and applied once, and the sum is shown', () => {
+  const none = fold(run(1, { gym: 1 }))
+  assert.deepEqual([none.power.team, none.power.bond, none.power.mega, none.power.item], [0, 0, 0, 0])
+  assert.equal(none.today.strike, Math.round(100 * (none.league.weak.includes('fitness') ? WEAK_MULT : 1) * (none.league.edge ? 1.2 : 1)))
+  // a held item adds to its own work only, and the Life Orb to all of it
+  const buy = (n: number) => withUse(run(14, { gym: 1 }), n, { item: 'muscle-band', uid: '', what: 'buy', to: 'fitness' }, { item: 'muscle-band', uid: '', what: 'hold', to: 'muscle-band' })
+  const held = fold(buy(12))
+  assert.equal(held.power.domain.fitness.held, 0.15)
+  assert.equal(held.power.domain.code.held, 0)
+  assert.equal(MEGA_BONUS, 0.1)
 })
 
 test('the Mart: three deals a day, the same on every device, and the guards and chore TMs always', () => {
@@ -387,15 +426,25 @@ test('a TM counts as one of the partner types against a leader', () => {
   assert.equal(twice.inv['tm-grass'], 1)
 })
 
-test('a lure turns the next wild Pokemon toward its domain', () => {
+test('a domain incense offers three of that domain\'s types, and the one picked is the next wild Pokemon', () => {
   const facts = run(8, ALL) // a perfect day catches on the spot, so a new wild Pokemon appears each morning
-  const lure = fold(withUse(facts, 2, { item: 'odd-incense', uid: '', what: 'buy', to: 'code' }, { item: 'odd-incense', uid: '', what: 'lure' }))
-  assert.equal(lure.inv['odd-incense'] ?? 0, 0)
-  const wild = lure.moments.flatMap((m) => (m.kind === 'appear' ? [m] : []))
-  const next = wild.find((m) => m.day > facts[2].day)!
-  const t = SPECIES[next.form]
-  assert.ok(lureTypes('code').includes(t.t) || (t.t2 !== undefined && lureTypes('code').includes(t.t2)), `${next.form} is ${t.t}`)
-  assert.equal(lure.lure, null)
+  const g = fold(withUse(facts, 2, { item: 'odd-incense', uid: '', what: 'buy', to: 'code' }))
+  const options = g.wish.options['odd-incense']
+  assert.equal(options.length, 3)
+  for (const f of options) {
+    const t = SPECIES[f]
+    assert.ok(lureTypes('code').includes(t.t) || (t.t2 !== undefined && lureTypes('code').includes(t.t2)), `${f} is ${t.t}`)
+  }
+  // all of the incense in the game are one mechanic, and each has its own three
+  assert.deepEqual(Object.keys(g.wish.options).sort(), ['full-incense', ...Object.keys(LURES)].sort())
+  const want = fold(run(3, ALL)).wish.options['odd-incense'][1]
+  const picked = fold(withUse(facts, 2, { item: 'odd-incense', uid: '', what: 'buy', to: 'code' }, { item: 'odd-incense', uid: '', what: 'wish', to: fold(facts.slice(0, 3)).wish.options['odd-incense'][1] }))
+  assert.equal(picked.inv['odd-incense'] ?? 0, 0)
+  assert.equal(picked.moments.filter((m) => m.kind === 'appear' && m.day > facts[2].day)[0].form, fold(facts.slice(0, 3)).wish.options['odd-incense'][1])
+  assert.ok(want)
+  // one that is not among the three is ignored, and the incense is kept
+  const junk = fold(withUse(facts, 2, { item: 'odd-incense', uid: '', what: 'buy', to: 'code' }, { item: 'odd-incense', uid: '', what: 'wish', to: 'mewtwo' }))
+  assert.deepEqual([junk.inv['odd-incense'], junk.wish.chosen], [1, null])
 })
 
 test('the Professor pays coins by rarity, and gems for nothing', () => {
@@ -489,13 +538,17 @@ test('sleep: the night is read from the ledger with its bed and wake times', () 
 
 // ── version 7: stakes ───────────────────────────────────────────────────────
 test('buy a ball, throw it, and the wild Pokemon loses that much at once', () => {
-  const facts = run(30, PILLARS) // 80 coins a day from the quests
-  // a day on which the Mart has a ball for sale, late enough to afford it
-  const k = facts.findIndex((f, i) => i >= 6 && martDeals(f.day).some((o) => BALLS[o.item]))
+  const facts = run(30, PAYING) // 90 coins a day for showing up
+  // a day on which the Mart has a ball we can pay for, and a wild Pokemon is still standing after the day
+  const afford = (i: number) => {
+    const g = fold(facts.slice(0, i + 1))
+    return martDeals(facts[i].day).find((o) => BALLS[o.item] && o.coins! <= g.wallet.coins) && g.wild && !g.wild.caught
+  }
+  const k = facts.findIndex((_, i) => i >= 6 && afford(i))
   assert.ok(k >= 6)
   const upto = facts.slice(0, k + 1)
-  const deal = martDeals(upto[k].day).find((o) => BALLS[o.item])!
   const base = fold(upto)
+  const deal = martDeals(upto[k].day).find((o) => BALLS[o.item] && o.coins! <= base.wallet.coins)!
   assert.ok(base.wild && !base.wild.caught)
   const buy = { what: 'buy', item: deal.item, to: 'mart' }
   const bought = fold(use(upto, k, buy))
@@ -512,6 +565,11 @@ test('buy a ball, throw it, and the wild Pokemon loses that much at once', () =>
   assert.equal(thrown.partner.xp, base.partner.xp) // throwing gives no XP
 })
 
+test('the Mart no longer sells the Poke Ball', () => {
+  assert.ok(!MART_POOL.some((o) => o.item === 'poke-ball'))
+  assert.ok(MART_POOL.every((o) => BALLS[o.item]?.hp !== 20))
+})
+
 test('a berry is a heart, hearts raise the bond, and the Professor pays coins for a Box Pokemon', () => {
   const facts = run(4, ALL) // four perfect days: four in the Box, and Sprouts to spend
   const g = fold(facts)
@@ -526,17 +584,50 @@ test('a berry is a heart, hearts raise the bond, and the Professor pays coins fo
   assert.equal(fold(use(facts, 3, { what: 'transfer', uid: g.partner.uid })).partner.uid, g.partner.uid)
 })
 
-test('incense chooses the next wild Pokemon from three', () => {
+test('Full Incense chooses the next wild Pokemon from three of any type', () => {
   const facts = run(20, ALL) // plenty of gems; a catch every day
   const g = fold(facts.slice(0, 19))
-  assert.equal(g.wish.options.length, 3)
-  const want = g.wish.options[2]
-  const wished = fold(use(facts, 18, { what: 'buy', item: 'full-incense', to: 'rare' }, { what: 'wish', to: want }, { what: 'wish', to: g.wish.options[0] }))
+  assert.equal(g.wish.options['full-incense'].length, 3)
+  const want = g.wish.options['full-incense'][2]
+  const wished = fold(use(facts, 18, { what: 'buy', item: 'full-incense', to: 'rare' }, { what: 'wish', item: 'full-incense', to: want }, { what: 'wish', item: 'full-incense', to: g.wish.options['full-incense'][0] }))
   assert.equal(wished.moments.filter((m) => m.kind === 'appear').at(-1)!.form, want)
   assert.equal(wished.inv['full-incense'], 0)
   // something that is not one of the three is ignored and the incense is kept
-  const junk = fold(use(facts.slice(0, 19), 18, { what: 'buy', item: 'full-incense', to: 'rare' }, { what: 'wish', to: 'mewtwo' }))
+  const junk = fold(use(facts.slice(0, 19), 18, { what: 'buy', item: 'full-incense', to: 'rare' }, { what: 'wish', item: 'full-incense', to: 'mewtwo' }))
   assert.deepEqual([junk.inv['full-incense'], junk.wish.chosen], [1, null])
+})
+
+test('Strong\'s training gear: each routine drops its own piece, and one of all seven forges a Red Shard', () => {
+  assert.equal(GEAR_ITEMS.length, 7)
+  const routines = Object.keys(GEAR)
+  const facts = run(10, {})
+  // the same routine seven times is seven of one piece and no shard
+  const same = fold(routines.length ? routines.map((_, i) => i).reduce((f, i) => withGear(f, i, 'd1-chest-delts'), facts) : facts)
+  assert.equal(same.inv['protector'], 7)
+  assert.equal(same.inv['red-shard'] ?? 0, 0)
+  // a routine of your own drops nothing
+  assert.equal(fold(withGear(facts, 0, 'my-routine')).inv['protector'] ?? 0, 0)
+  // seven different ones, on seven days: a Red Shard, and the pieces are used up
+  const cycle = routines.reduce((f, r, i) => withGear(f, i, r), facts)
+  const g = fold(cycle)
+  assert.equal(g.inv['red-shard'], 1)
+  assert.ok(GEAR_ITEMS.every((i) => (g.inv[i] ?? 0) === 0))
+  assert.equal(g.counters.sets, 1)
+  assert.ok(g.moments.some((m) => m.kind === 'kit' && m.n === 1))
+  assert.equal(g.moments.filter((m) => m.kind === 'gear').length, 7)
+  // an eighth piece carries over to the next set
+  const more = fold(withGear(cycle, 8, 'd3-legs'))
+  assert.deepEqual([more.inv['red-shard'], more.inv['power-anklet']], [1, 1])
+  // two workouts on one day count as two
+  assert.equal(fold(withGear(facts, 0, 'd1-chest-delts', 'd2-lats-biceps')).inv['silver-wing'], 1)
+})
+
+test('feats say each thing once: no 25 or 250 day totals, and the gym pays red shards through the kit', () => {
+  const ids = FEATS.map((f) => f.id)
+  assert.ok(!ids.some((id) => /^days(25|250)-/.test(id)) && !ids.includes('work60'))
+  const hundred = FEATS.find((f) => f.id === 'days100-fitness')!
+  assert.deepEqual(hundred.reward.items ?? {}, {})
+  assert.ok(FEATS.find((f) => f.id === 'days100-code')!.reward.items?.['blue-shard'])
 })
 
 test('the team backs the partner, and a theme is bought once', () => {

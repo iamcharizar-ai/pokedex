@@ -18,7 +18,7 @@ const SEEN_KEY = 'pokedex.seen.v1'
 /** How far back a moment can still be news. Older than this it is history, in the Adventure log. */
 const NEWS_DAYS = 30
 /** Not news by themselves: a level is one of many, a wild Pokemon is on the screen already, a choice was made by hand. */
-const QUIET = new Set<Moment['kind']>(['level', 'appear', 'use', 'quest', 'season', 'transfer', 'chest', 'slip'])
+const QUIET = new Set<Moment['kind']>(['level', 'appear', 'use', 'quest', 'season', 'transfer', 'chest', 'slip', 'gear'])
 /** A feat is news only when it paid something no shop sells (the Key Stone has a moment of its own). */
 const prize = (m: Extract<Moment, { kind: 'feat' }>): string | undefined => m.items.find((id) => ITEMS[id]?.kind === 'unique')
 /** Bigger things first. */
@@ -72,6 +72,7 @@ function tell(m: Moment, game: Game): Told {
     }
     case 'form': return { title: m.what === 'mega' ? 'Mega form' : 'Gigantamax', line: `${nameOf(m.form)} is registered in the Pokedex.`, art: 'mon', form: m.form }
     case 'mega': return { title: 'Mega Stone forged', line: `${nameOf(m.form)} is registered to this Pokemon and never runs out.`, art: 'mon', form: m.form }
+    case 'kit': return { title: 'Training kit complete', line: 'All seven pieces of Strong gear became a Red Shard.', art: 'item', item: 'red-shard' }
     case 'feat': { const it = prize(m); return { title: m.name, line: `A feat reached${it ? `: ${itemName(it)} is yours, and no shop sells it` : ''}.`, art: 'item', item: it } }
     case 'review': return { title: 'Month reviewed', line: 'A Comet Shard is yours. It fits any Mega: three forge a stone.', art: 'item', item: 'comet-shard' }
     case 'key': return { title: 'Key Stone', line: 'Three shards now forge a Mega Stone for a fully evolved Pokemon.', art: 'key' }
@@ -90,7 +91,7 @@ function tell(m: Moment, game: Game): Told {
 /** How big a moment is: it picks the whole look of its reveal. */
 const tierOf = (m: Moment): Tier =>
   m.kind === 'key' || m.kind === 'mega' || m.kind === 'league' || (m.kind === 'catch' && m.shiny) ? 'rare'
-    : m.kind === 'evolve' || m.kind === 'feat' || m.kind === 'gym' || m.kind === 'graduate' || m.kind === 'region' ? 'big' : 'ordinary'
+    : m.kind === 'evolve' || m.kind === 'feat' || m.kind === 'kit' || m.kind === 'gym' || m.kind === 'graduate' || m.kind === 'region' ? 'big' : 'ordinary'
 
 const STAR = <ItemIcon id="star-piece" size={72} />
 

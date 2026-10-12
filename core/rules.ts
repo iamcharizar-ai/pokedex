@@ -3,9 +3,9 @@
 // into Life OS. Pure TypeScript, no DOM, no dependencies.
 //
 // Every number that shapes the game is in this file (the shops and prices are
-// in economy.ts). There is one ruleset: version 8. The older versions were
-// removed when the game was restarted from a clean fold on 2026-10-09; the last
-// commit that still carries them is the git tag `pre-v8`.
+// in economy.ts). There is one ruleset: version 9 (RULES-V9.md). Version 8 and
+// the older ones were replaced when the game was folded again from the ledger
+// on 2026-10-12; the last commit that still carries them is the git tag `pre-v9`.
 
 /** Days before this are not part of the game. */
 export const GAME_START = '2026-10-03'
@@ -87,11 +87,11 @@ export const WILD_HP: Record<Rarity, number> = { C: 700, U: 1100, R: 1600, L: 30
  * Showing up catches, so a day of chores wears it down even when no pillar was done.
  */
 export const wildHit = (share: number, ball: number): number => Math.round(100 * Math.pow(share, 1.5) * ball)
-/** The ball comes from the chores: the share of routine habits done. */
+/** The ball is how full the day was: the share of the day's habits ticked, the same share that wears the wild Pokemon down. */
 export type Ball = 'poke' | 'great' | 'ultra'
-export const BALL_MULT: Record<Ball, number> = { poke: 1, great: 1.25, ultra: 1.5 }
+export const BALL_MULT: Record<Ball, number> = { poke: 1, great: 1.3, ultra: 1.6 }
 export const BALL_NAME: Record<Ball, string> = { poke: 'Poke Ball', great: 'Great Ball', ultra: 'Ultra Ball' }
-export const ballFor = (routineShare: number): Ball => (routineShare >= 0.8 ? 'ultra' : routineShare >= 0.5 ? 'great' : 'poke')
+export const ballFor = (share: number): Ball => (share >= 0.8 ? 'ultra' : share >= 0.5 ? 'great' : 'poke')
 /** A perfect day catches the wild Pokemon on the spot, and that catch is shiny one time in this many. */
 export const SHINY_ODDS = 10
 /** A catch made by wearing the wild Pokemon down is shiny one time in this many (a Lucky Egg halves it). */
@@ -104,11 +104,15 @@ export const LEADER_HP = 2000
 export const WEAK_MULT = 1.5
 /** If the partner's type is super effective against the leader's, everything hits this much harder. */
 export const ADVANTAGE_MULT = 1.2
-/** A party of six: the partner and up to this many fully trained Pokemon standing behind it. Each whose type beats the leader's adds TEAM_BONUS to every strike. */
+/**
+ * A party of six: the partner and up to this many fully trained Pokemon standing behind it. Every strike gets +TEAM_BONUS for each of them, and
+ * +TEAM_NATURE more on the kind of work that member's nature raised. All the strike bonuses are added together, then applied once.
+ */
 export const TEAM_SIZE = 5
-export const TEAM_BONUS = 0.05
-/** A partner with a Mega registered strikes this much harder. */
-export const MEGA_MULT = 1.1
+export const TEAM_BONUS = 0.02
+export const TEAM_NATURE = 0.03
+/** A partner with a Mega registered adds this to every strike. */
+export const MEGA_BONUS = 0.1
 
 // ── trainer stats ───────────────────────────────────────────────────────────
 /** Stats are an average over this many days. */
@@ -133,15 +137,14 @@ export const NATURES: Record<NatureStat, Record<NatureStat, string>> = {
 
 // ── gems, bond, quests, season, eggs ────────────────────────────────────────
 /** Gems for the things that happen by themselves. */
-export const GEMS = { catch: 3, shiny: 20, evolve: 10, gym: 20, elite: 30, league: 50, graduate: 15 } as const
+export const GEMS = { catch: 3, shiny: 20, evolve: 10, gym: 20, elite: 30, league: 50, graduate: 15, perfect: 5, kit: 10 } as const
 
 /** Hearts at which a partner's bond steps up a level. Hearts only ever count up. */
 export const HEART_LEVELS = [10, 30, 60] as const
 export const bondLevel = (hearts: number): number => HEART_LEVELS.filter((n) => hearts >= n).length
 
-/** Coins for showing up: by the share of the day's habits ticked, the best bar reached. */
-export const DAILY_PAY: { share: number; coins: number }[] = [{ share: 0.5, coins: 20 }, { share: 0.75, coins: 45 }, { share: 1, coins: 80 }]
-export const WEEK_XP = 2000
+/** Coins for showing up: by the share of the day's habits ticked, the best bar reached. (Version 9 folded the daily quests, which paid for the same days, into these.) */
+export const DAILY_PAY: { share: number; coins: number }[] = [{ share: 0.5, coins: 40 }, { share: 0.75, coins: 90 }, { share: 1, coins: 140 }]
 export const WEEK_DAYS = 5
 /** Every SEASON_STEP XP of the month's work is a step on the season ladder. */
 export const SEASON_STEP = 1500

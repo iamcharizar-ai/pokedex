@@ -6,10 +6,10 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import { createPortal } from 'react-dom'
 import { nameOf, spritePath, type Game, type Mon, type Quest } from '../core/fold.ts'
 import {
-  BALLS, DOMAIN_SHOPS, FORGE_COST, HELD, ITEMS, LURES, MARKS, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, masteryCost, RARE_SHELF, SELL, TM_SLOTS, forgeShard, itemName, throwHp, tmType,
+  BALLS, DOMAIN_SHOPS, FORGE_COST, GEAR_ITEMS, HELD, ITEMS, LURES, MARKS, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, masteryCost, RARE_SHELF, SELL, TM_SLOTS, forgeShard, itemName, throwHp, tmType,
   type MarkTag, type Offer, type ShopId,
 } from '../core/economy.ts'
-import { BALL_NAME, HEART_LEVELS, REPEL_DAYS, TEAM_BONUS, TEAM_SIZE, bondLevel, levelOf } from '../core/rules.ts'
+import { BALL_NAME, DAILY_PAY, HEART_LEVELS, REPEL_DAYS, TEAM_BONUS, TEAM_NATURE, TEAM_SIZE, bondLevel, levelOf } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
 import { MonCard, TAG_NAME, Win, plural } from './App.tsx'
 import { Ball, BallItem } from './Ball.tsx'
@@ -133,7 +133,6 @@ export function Actions({ game, onShop }: { game: Game; onShop: () => void }) {
           )}
         </>
       )}
-      {game.lure && <span className="lurenote"><ItemIcon id={Object.keys(LURES).find((k) => LURES[k] === game.lure)!} size={22} />A lure burns: the next wild Pokemon is a {TAG_NAME[game.lure]} type</span>}
     </div>
   )
 }
@@ -148,14 +147,56 @@ function QuestRow({ q }: { q: Quest }) {
   )
 }
 export function Quests({ game }: { game: Game }) {
-  if (!game.quests.daily.length) return null
-  const done = [...game.quests.daily, ...game.quests.weekly].filter((q) => q.done).length
+  const t = game.today
+  const done = game.quests.weekly.filter((q) => q.done).length
   return (
-    <Win title="Quests" tone="green" aside={`${done} / ${game.quests.daily.length + game.quests.weekly.length}`}>
+    <Win title="Pay and quests" tone="green" aside={t.pay > 0 ? <><Coin size={20} /> +{t.pay} today</> : `${done} / ${game.quests.weekly.length} this week`}>
       <div className="questcols">
-        <div><span className="k-label">Today</span><ul className="quests">{game.quests.daily.map((q) => <QuestRow key={q.id} q={q} />)}</ul></div>
+        <div>
+          <span className="k-label">Today's pay: the share of your habits ticked</span>
+          <div className="paytiers">
+            {DAILY_PAY.map((p) => <span key={p.share} className={`paytier ${t.ticked >= p.share ? 'on' : ''}`}><b>{Math.round(p.share * 100)}%</b><Price coins={p.coins} /></span>)}
+          </div>
+          <KBar value={t.done} max={Math.max(1, t.total)} label={`${t.done} / ${t.total} habits ticked`} />
+        </div>
         <div><span className="k-label">This week</span><ul className="quests">{game.quests.weekly.map((q) => <QuestRow key={q.id} q={q} />)}</ul></div>
       </div>
+    </Win>
+  )
+}
+
+// ── incense: one mechanic, three Pokemon to pick from ───────────────────────
+const INCENSE = ['full-incense', ...Object.keys(LURES)]
+/** Every incense shows three candidates and the one you tap is the next wild Pokemon. Full Incense offers any type; the others offer one domain's types. */
+export function IncenseWin({ game }: { game: Game }) {
+  const [open, setOpen] = useState<string | null>(null)
+  const owned = INCENSE.filter((id) => (game.inv[id] ?? 0) > 0)
+  if (!owned.length && !game.wish.chosen) return null
+  const sel = open && owned.includes(open) ? open : owned[0]
+  return (
+    <Win title="Incense" tone="green" aside={game.wish.chosen ? 'Chosen' : owned.length ? 'Pick one' : ''}>
+      {game.wish.chosen && <p className="muted"><b>{nameOf(game.wish.chosen)}</b> is the next wild Pokemon.</p>}
+      {owned.length > 0 && (
+        <div className="baggrid">
+          {owned.map((id) => (
+            <button key={id} type="button" className={`bagtile ${id === sel ? 'on' : ''}`} onClick={() => setOpen(id)} title={ITEMS[id].text}>
+              <ItemIcon id={id} size={40} /><b>{itemName(id)}</b><small>×{game.inv[id]} · {id === 'full-incense' ? 'any type' : `${TAG_NAME[LURES[id]]} types`}</small>
+            </button>
+          ))}
+        </div>
+      )}
+      {sel && !game.wish.chosen && (
+        <>
+          <div className="queue pick">
+            {(game.wish.options[sel] ?? []).map((f, i) => (
+              <button key={`${f}${i}`} type="button" onClick={() => { useItem(sel, '', 'wish', f); play('tap') }} title={nameOf(f)}>
+                <img src={still(f)} alt={nameOf(f)} width={72} height={72} className={`sprite ${game.dex[f]?.own ? '' : 'unseen'}`} />
+              </button>
+            ))}
+          </div>
+          <p className="muted">The one you tap appears next, and the incense is used up.</p>
+        </>
+      )}
     </Win>
   )
 }
@@ -204,6 +245,28 @@ function Shelf({ game, offers, shop }: { game: Game; offers: Offer[]; shop: Shop
   )
 }
 
+/** Strong's seven pieces of gear, and how close the next Red Shard is. */
+function TrainingKit({ game }: { game: Game }) {
+  const have = GEAR_ITEMS.filter((g) => (game.inv[g] ?? 0) > 0).length
+  const sets = game.counters.sets ?? 0
+  return (
+    <div className="kit">
+      <span className="k-label">Strong's training kit: {have} of {GEAR_ITEMS.length}</span>
+      <div className="kitrow">
+        {GEAR_ITEMS.map((g) => {
+          const n = game.inv[g] ?? 0
+          return (
+            <span key={g} className={`gear ${n > 0 ? 'on' : ''}`} title={`${itemName(g)}: ${ITEMS[g].text}`}>
+              <ItemIcon id={g} size={34} />{n > 1 && <i>×{n}</i>}<small>{itemName(g)}</small>
+            </span>
+          )
+        })}
+      </div>
+      <p className="muted">Each workout in Strong's split drops its own piece. One of all seven, a full cycle of the split, forges a Red Shard by itself{sets > 0 ? `. ${sets} so far.` : '.'}</p>
+    </div>
+  )
+}
+
 /** One domain's shop: what its marks buy. */
 export function DomainShop({ game, tag }: { game: Game; tag: MarkTag }) {
   const shop = DOMAIN_SHOPS[tag]
@@ -223,6 +286,7 @@ export function DomainShop({ game, tag }: { game: Game; tag: MarkTag }) {
           </button>
         </div>
       )}
+      {tag === 'fitness' && <TrainingKit game={game} />}
       <Shelf game={game} offers={goods} shop={tag} />
       {tms.length > 0 && (
         <>
@@ -283,18 +347,7 @@ export function ShopTab({ game, only }: { game: Game; only?: ShopId }) {
           {game.egg && <div className="eggrow"><span className="warm"><EggIcon size={44} /></span><div style={{ flex: 1 }}><span className="k-label">An egg is being kept warm</span><KBar value={game.egg.have} max={game.egg.need} kind="gold" label={`${game.egg.have} / ${game.egg.need} days with two pillars`} /></div></div>}
         </Win>
       )}
-      {show('rare') && (game.inv['full-incense'] ?? 0) > 0 && (
-        <Win title="Full Incense" tone="green" aside={game.wish.chosen ? 'Chosen' : 'Pick one'}>
-          <div className="queue pick">
-            {game.wish.options.map((f, i) => (
-              <button key={`${f}${i}`} type="button" aria-pressed={game.wish.chosen === f} className={game.wish.chosen === f ? 'on' : ''} disabled={Boolean(game.wish.chosen)} onClick={() => useItem('full-incense', '', 'wish', f)} title={nameOf(f)}>
-                <img src={still(f)} alt={nameOf(f)} width={72} height={72} className={`sprite ${game.dex[f] ? '' : 'unseen'}`} />
-              </button>
-            ))}
-          </div>
-          <p className="muted">{game.wish.chosen ? `${nameOf(game.wish.chosen)} is the next wild Pokemon.` : 'The one you tap appears next.'}</p>
-        </Win>
-      )}
+      {show('rare') && <IncenseWin game={game} />}
       {MARK_TAGS.filter((t) => show(t)).map((t) => <DomainShop key={t} game={game} tag={t} />)}
       {loot && createPortal(
         <div className="recap" role="dialog" aria-modal="true" aria-label="What was in the chest" onClick={() => setLoot(null)}>
@@ -328,7 +381,6 @@ export function Bag({ game }: { game: Game }) {
   const have = (id: string) => game.inv[id] ?? 0
   const held = Object.keys(HELD).filter((id) => have(id) > 0 || game.partner.held === id)
   const tms = Object.keys(ITEMS).filter((id) => ITEMS[id].kind === 'tm' && have(id) > 0)
-  const lures = Object.keys(LURES).filter((id) => have(id) > 0)
   const equipped = game.partner.moves ?? []
   const toggleTm = (id: string) => {
     const next = equipped.includes(id) ? equipped.filter((x) => x !== id) : [...equipped, id].slice(-TM_SLOTS)
@@ -337,7 +389,7 @@ export function Bag({ game }: { game: Game }) {
   }
   const rest = Object.keys(game.inv).filter((id) => have(id) > 0 && ['shard', 'key', 'unique'].includes(ITEMS[id]?.kind) && !HELD[id])
   const stuff = Object.keys(game.inv).filter((id) => have(id) > 0 && ['ball', 'berry'].includes(ITEMS[id]?.kind))
-  const empty = !held.length && !tms.length && !lures.length && !rest.length && !stuff.length
+  const empty = !held.length && !tms.length && !rest.length && !stuff.length
   return (
     <Win title="Bag" tone="purple" aside={game.keyStone ? <><ItemIcon id="key-stone" size={22} /> Key Stone</> : undefined}>
       <span className="k-label">Money and marks</span>
@@ -382,19 +434,6 @@ export function Bag({ game }: { game: Game }) {
               <button key={id} type="button" className={`tm ${equipped.includes(id) ? 'on' : ''}`} aria-pressed={equipped.includes(id)} onClick={() => toggleTm(id)}>
                 <ItemIcon id={id} size={36} /><small>{tmType(id)}</small>
               </button>
-            ))}
-          </div>
-        </>
-      )}
-      {lures.length > 0 && (
-        <>
-          <span className="k-label">Lures: burn one and the next wild Pokemon is of its kind{game.lure ? ' (one is burning)' : ''}</span>
-          <div className="baggrid">
-            {lures.map((id) => (
-              <div key={id} className="bagtile" title={ITEMS[id].text}>
-                <ItemIcon id={id} size={40} /><b>{itemName(id)}</b><small>×{have(id)} · {TAG_NAME[LURES[id]]} types</small>
-                <button type="button" className="k-btn main" disabled={Boolean(game.lure)} onClick={() => { useItem(id, '', 'lure'); play('tap') }}>Burn</button>
-              </div>
             ))}
           </div>
         </>
@@ -451,6 +490,7 @@ export function MonPage({ m, game, onClose }: { m: Mon; game: Game; onClose: () 
             {m.held && <div className="k-tile"><span className="k-label">Holding</span><b className="holdline"><ItemIcon id={m.held} size={22} />{itemName(m.held)}</b></div>}
           </div>
           {m.nature?.up && m.nature.down && <p className="muted">Raised most on {TAG_NAME[m.nature.up]}, least on {TAG_NAME[m.nature.down]}.</p>}
+          {m.nature?.up && trained && <p className="muted">On the team it adds {Math.round(TEAM_BONUS * 100)}% to every strike and {Math.round(TEAM_NATURE * 100)}% more to {TAG_NAME[m.nature.up]} work.</p>}
           {m.ball && <p className="muted ballname">{m.thrown ? <BallItem id={m.thrown} size={20} /> : <Ball ball={m.ball} size={18} />}Caught in {m.thrown ? `a ${itemName(m.thrown)}` : aBall(m.ball)}.</p>}
           <div className="mp-line">
             {m.path.map((f, i) => <span key={f} className="path-step">{i > 0 && <span className="arrow">▸</span>}<img src={still(f, m.shiny)} alt={nameOf(f)} title={nameOf(f)} width={48} height={48} className="sprite" /></span>)}
@@ -509,7 +549,7 @@ export function TeamTab({ game, partnerCard, choices }: { game: Game; partnerCar
         </div>
       </Win>
       {v5 && (
-        <Win title="Party" tone="gold" aside={game.teamEdge ? `+${Math.round(game.teamEdge * TEAM_BONUS * 100)}% on this leader` : `${1 + game.team.length} / ${cap + 1}`}>
+        <Win title="Party" tone="gold" aside={game.team.length ? `+${Math.round(game.power.team * 100)}% to every strike` : `${1 + game.team.length} / ${cap + 1}`}>
           <div className="teamrow">
             <button type="button" className="slot partner" onClick={() => setPage(game.partner.uid)} title={`${nameOf(game.partner.form)}, your partner`}><MonCard m={game.partner} size={64} /><small>Partner</small></button>
             {Array.from({ length: cap }, (_, i) => {
@@ -529,10 +569,11 @@ export function TeamTab({ game, partnerCard, choices }: { game: Game; partnerCar
                 ))}
               </div>
             )
-            : <p className="muted">Fully trained Pokemon stand here. Each one whose type beats the leader's adds {Math.round(TEAM_BONUS * 100)}% to every strike.</p>}
+            : <p className="muted">Fully trained Pokemon stand here. Each adds {Math.round(TEAM_BONUS * 100)}% to every strike, and {Math.round(TEAM_NATURE * 100)}% more to the work its nature raised.</p>}
         </Win>
       )}
       <Bag game={game} />
+      <IncenseWin game={game} />
       <Win title="Box" tone="dark" aside={plural(game.queue.length, 'Pokemon', 'Pokemon')}>
         {game.queue.length === 0 ? <p className="muted">Empty. Catch the wild Pokemon and it comes here.</p> : (
           <>

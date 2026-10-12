@@ -8,7 +8,7 @@ import { ITEMS } from '../linked/woodshed/course.ts'
 import { statsOf, type ShedState } from '../linked/woodshed/model.ts'
 
 interface DoneSet { kg: number | null; reps: number }
-interface Workout { id: string; finishedAt: string; exercises: { exerciseId: string; sets: DoneSet[] }[] }
+interface Workout { id: string; finishedAt: string; routineId?: string | null; exercises: { exerciseId: string; sets: DoneSet[] }[] }
 type ExType = 'weight' | 'bodyweight' | 'weighted' | 'assisted' | 'duration'
 
 const parse = <T>(raw: unknown): T | null => {
@@ -39,7 +39,7 @@ function best(type: ExType, sets: DoneSet[]): number[] {
 /** Pass events oldest first, and the folded Woodshed state. */
 export function marksOf(events: LedgerEvent[], shed: ShedState): Record<string, DayMarks> {
   const out: Record<string, DayMarks> = {}
-  const add = (day: string, k: keyof DayMarks, n = 1) => { (out[day] ??= {})[k] = (out[day][k] ?? 0) + n }
+  const add = (day: string, k: Exclude<keyof DayMarks, 'gear'>, n = 1) => { (out[day] ??= {})[k] = (out[day][k] ?? 0) + n }
 
   // ── Strong: a deleted workout is gone, and the same workout sent twice counts once ──
   const gone = new Set(events.filter((e) => e.type === 'workout_delete').map((e) => String(e.payload?.id)))
@@ -55,6 +55,8 @@ export function marksOf(events: LedgerEvent[], shed: ShedState): Record<string, 
   const before: Record<string, DoneSet[]> = {}
   for (const { day, w } of [...workouts.values()].sort((a, b) => (a.w.finishedAt < b.w.finishedAt ? -1 : 1))) {
     add(day, 'workouts')
+    // the routine this workout was, so the Dojo can drop its piece of gear (core/economy.ts GEAR)
+    if (w.routineId) (out[day] ??= {}).gear = [...((out[day] ?? {}).gear ?? []), w.routineId]
     for (const e of w.exercises) {
       const type = types[e.exerciseId] ?? 'weight'
       const old = before[e.exerciseId]
