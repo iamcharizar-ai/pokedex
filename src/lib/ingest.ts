@@ -3,6 +3,7 @@
 // core the same days.
 import type { FactsInput, HabitLite, TickMap } from '../../core/facts.ts'
 import { BODY_EVENT, LIST_EVENT, USE_EVENT, bodyOf, listsOf, usesOf } from '../../core/events.ts'
+import { BOSS_DAY_EVENT, CARD_EVENT, bossOf } from '../../core/boss.ts'
 import { settled } from '../../core/order.ts'
 import { emptyArbor, foldArbor, type LedgerEvent } from '../linked/arbor-model.ts'
 import { emptyShed, foldShed } from '../linked/woodshed/model.ts'
@@ -14,7 +15,7 @@ const SLEEP = 'sleep-before-10'
 const BED_BY = '22:30'
 const EPOCH = '1970-01-01'
 
-export const TYPES = ['tick', 'untick', 'workout', 'workout_clear', 'workout_delete', 'skill', 'plan', 'guitar', 'guitar_plan', BODY_EVENT, USE_EVENT, LIST_EVENT]
+export const TYPES = ['tick', 'untick', 'workout', 'workout_clear', 'workout_delete', 'skill', 'plan', 'guitar', 'guitar_plan', BODY_EVENT, USE_EVENT, LIST_EVENT, CARD_EVENT, BOSS_DAY_EVENT]
 
 /** The habit library from the newest `config` event. */
 export function habitsFrom(config: LedgerEvent | undefined): HabitLite[] {
@@ -63,6 +64,7 @@ export function ingest(events: LedgerEvent[], config: LedgerEvent | undefined, t
     lists: listsOf(sorted),
     body: bodyOf(sorted),
     uses: usesOf(sorted),
+    boss: bossOf(sorted),
     today,
   }
 }

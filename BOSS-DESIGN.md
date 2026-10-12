@@ -1,6 +1,41 @@
 # The weekly boss: design and plan
 
-Written 12 Oct 2026, revised the same day after your answers. **Nothing here is built.** This is the design to approve, and the plan to build it.
+Written 12 Oct 2026, revised after your answers. **Built on 13 Oct 2026 as rules version 10.** The design below is what was built, except where "As built" says otherwise.
+
+## As built: what changed from the design, and why
+
+The simulator (`node tools/boss-sim.mjs`) was run before anything shipped, and it showed two things the first numbers got wrong.
+
+1. **Catching was far too easy.** Three throws at 60 to 95% each come to a near-certain catch whenever the boss is in range. One throw is now worth much less, a finished card is most of the chance, HP still standing costs more, and a party the boss is too strong for throws worse:
+   `one throw = (0.05 + 0.03 × trained + 0.30 if every task is done + ball) × (1 − 1.2 × HP left) × (0.6 + 0.4 × strike)`, ball: Great +0.04, Ultra +0.08, Master 0.9 flat.
+2. **Kills almost never happened, even for the best party.** Damage above the 95% cap was being thrown away, so finishing the last task only added that day's sliver. What the work deals is now kept in full, and the cap only hides it until the card is complete.
+
+What 3,000 simulated weeks give with three Ultra Balls (killed / in throwing range / caught):
+
+| Party of six | Boss | 80% of the card | Every task |
+|---|---|---|---|
+| Six commons, partner Lv 10 | rare | 0 / 0 / 0% | 0 / 86 / 54% |
+| | legendary or Mega | never in range | never in range |
+| Mixed uncommon/rare, no Mega | rare | 0 / 100 / 46% | 0 / 100 / 88% |
+| | legendary | 0 / 1 / 0% | 0 / 97 / 62% |
+| | Mega legendary | never in range | never in range |
+| Rares, two Megas | rare | 0 / 100 / 60% | **100** / 100 / 91% |
+| | legendary | 0 / 99 / 39% | 0 / 100 / 83% |
+| | Mega legendary | 0 / 50 / 16% | 0 / 100 / 71% |
+| Legendaries and Megas | rare | 0 / 100 / 61% | **100** / 100 / 93% |
+| | legendary | 0 / 100 / 56% | **100** / 100 / 90% |
+| | Mega legendary | 0 / 100 / 45% | **59** / 100 / 88% |
+
+So: six weak Pokemon never kill anything and cannot even throw at a legendary; only a strong party with every task done kills; and a catch is close to sure only for that party on a perfect week.
+
+Smaller differences:
+- **The card and each day's progress are both written to the ledger** (`boss_card`, `boss_day`) by the Pokedex. Life OS reads them, so both apps fold exactly the same fight and Life OS needs no measuring code.
+- **Arbor and Woodshed tasks** are drawn from the skills and pieces you logged most in the last three weeks, not from the coaches' working sets (the Pokedex does not carry the coaches). Arbor has two templates (each skill on four days; three days with all of them); Woodshed has one (each piece Clean on three days). The tempo and new-best templates are not built.
+- **A card is only drawn on Monday to Wednesday**, so a party filled on a Friday meets its first boss the next Monday.
+- **A kind with no history is left off the card** and its share goes to the Life task.
+- **The Trainer tab's boss history, the Home card, the locked line, the throw sequence, the Recap news and the Life OS strip line are built.** The dev preview shows a boss with `?boss` whatever the party is.
+
+**Not verified:** the throw sequence on screen (it needs a boss at 40% HP, which the empty preview cannot reach; the outcome logic is covered by tests), and a real week against your ledger, since your party is not six yet.
 
 ## 0. Decisions made
 
@@ -93,6 +128,8 @@ Notes:
 - **Undoing counts.** Progress is recomputed from the events, so unticking or deleting a workout takes it back.
 
 ## 6. The catch
+
+*First-pass numbers: the formula and the table in this section were replaced after the simulator ran. See "As built" at the top.*
 
 Killing the boss and catching it are different things, and you do not have to kill it to try. Once its HP is **at or below 40%**, you can throw up to **three balls** (the Bag already has them). A throw is a ledger event and uses the ball.
 

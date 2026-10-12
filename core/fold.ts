@@ -19,9 +19,13 @@ import {
   type Ball, type NatureStat, type Rarity, type Tag,
 } from './rules.ts'
 import { COMET_SHARD } from './economy.ts'
+import {
+  BOSS_CATCH_GEMS, BOSS_HEAL, BOSS_HP_PER_LEVEL, BOSS_KILL_GEMS, BOSS_MILESTONES, BOSS_SHINY, BOSS_TAG, BOSS_TASK_COINS, BOSS_TASK_MARKS, KILL_CAP, THROWS, THROW_AT, TYPE_EDGE,
+  cardDone, cardWork, catchChance, strikeOf, type BossCard, type BossTask, type Member,
+} from './boss.ts'
 import { SPECIES, type SpeciesRec } from './species.ts'
 import {
-  AMULET_MULT, BALLS, BERRY_HEARTS, BOND_PARTY, BOND_STEP, CHEST, EGG_DAYS_OLD_CHARM, FEATS, FORGE_COST, GEAR, GEAR_ITEMS, HELD, LURES, MARK_OWNED, MARK_RECORD, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, SELL,
+  AMULET_MULT, BALLS, BERRY_HEARTS, MARKS, BOND_PARTY, BOND_STEP, CHEST, EGG_DAYS_OLD_CHARM, FEATS, FORGE_COST, GEAR, GEAR_ITEMS, HELD, LURES, MARK_OWNED, MARK_RECORD, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, SELL,
   STANDING, TM_SLOTS, WEEKLY_QUESTS, ballClass, dayGap, dealsFor, forgeShard, heldBonus, heldCommon, isMarkTag, lureTypes, martDeals, masteryCost, offerFor, rng, seasonReward, throwHp, tmType,
   type MarkTag, type Offer, type Reward, type ShopId,
 } from './economy.ts'
@@ -96,6 +100,8 @@ export type Moment =
   | { kind: 'flee'; day: string; form: string; rarity: Rarity }
   /** a day with nothing ticked at all, and what it cost (told on the day it was settled, two days later) */
   | { kind: 'slip'; day: string; empty: string; leader: number; wild: number; xp: number }
+  /** the weekly boss: it appeared, was killed, was caught (or a throw missed: `n` is which throw), or left */
+  | { kind: 'boss'; day: string; week: string; form: string; level: number; what: 'appear' | 'kill' | 'catch' | 'miss' | 'left'; n?: number; shiny?: boolean; uid?: string }
   /** a month-end review was done and paid a Comet Shard; `n` counts reviews for life */
   | { kind: 'review'; day: string; n: number }
   /** a Strong workout dropped a piece of training gear, and a full set of seven turned into a Red Shard (`n` counts sets for life) */
@@ -226,7 +232,42 @@ export interface Notes {
 /** A reward earned and waiting to be collected. Counted in the wallet only once claimed (or after CLAIM_AUTO days). */
 export interface Held { key: string; day: string; title: string; coins: number; gems: number; items: [string, number][] }
 
+/** This week's boss, as the screens show it. */
+export interface BossView {
+  week: string
+  species: string
+  form: string
+  rarity: 'R' | 'L'
+  mega: boolean
+  level: number
+  max: number
+  hp: number
+  /** share of its HP taken so far, and still standing */
+  taken: number
+  hpLeft: number
+  /** how hard the party hits it (0.12 to 1), and what is added to every strike */
+  strike: number
+  common: number
+  tasks: (BossTask & { p: number })[]
+  allDone: boolean
+  /** days of its week still to come after today */
+  daysLeft: number
+  throws: number
+  throwsLeft: number
+  canThrow: boolean
+  /** trained members standing behind the partner: what a throw's chance is worked from */
+  trained: number
+  killed: boolean
+  caught: boolean
+  fled: boolean
+}
+export interface BossPast { week: string; form: string; level: number; taken: number; killed: boolean; caught: boolean }
+
 export interface Game {
+  /** the weekly boss: this week's (null when there is none), every earlier one, and how full the party is (a boss needs six) */
+  boss: BossView | null
+  bossLog: BossPast[]
+  bossParty: number
   /** rewards waiting to be collected, oldest first */
   held: Held[]
   partner: Mon
@@ -368,6 +409,11 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
   const earn = (coins: number, gems: number) => {
     wallet.coins += coins; wallet.gems += gems; wallet.coinsToday += coins; wallet.gemsToday += gems
   }
+  // ── the weekly boss (boss.ts) ──
+  interface BossRun { card: BossCard; from: string; taken: number; /** what the work has dealt, before the cap: more than the cap is kept, so the last task finishes it */ dealt: number; work: number; p: number[]; throws: number; killed: boolean; caught: boolean; fled: boolean; paid: Set<number>; done: Set<number>; strike: number; common: number }
+  let boss: BossRun | null = null
+  const bossLog: BossPast[] = []
+  const bossWeeks = new Set<string>()
   // ── rewards that wait to be collected ──
   const held = new Map<string, Held>()
   /** pay it into the wallet and the bag (not today's tally: that counted when it was earned) */
@@ -708,6 +754,33 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
         if (u.to) release(u.to, day)
         return
       }
+      case 'boss-throw': {
+        // a ball at the boss: only once it is weak enough, three in a week, and never a sure thing
+        const b = boss
+        if (!b || b.caught || b.fled || b.throws >= THROWS || !BALLS[item] || !inv[item]) return
+        const hpLeft = 1 - b.taken
+        if (hpLeft > THROW_AT + 1e-9) return
+        inv[item]--
+        b.throws++
+        const chance = catchChance(item, teamNow().length, cardDone(b.card, b.p), hpLeft, b.strike)
+        if (rng(`boss-catch:${b.card.week}:${b.throws}`)() < chance) {
+          const shiny = rng(`boss-shiny:${b.card.week}`)() < 1 / BOSS_SHINY
+          const mon = make(b.card.species, 'catch', day, shiny)
+          mon.thrown = item
+          queue.push(mon)
+          catches++
+          see(mon.form, day, shiny)
+          b.caught = true
+          earn(0, BOSS_CATCH_GEMS)
+          bump('bosses')
+          if (shiny) bump('shiny')
+          moments.push({ kind: 'boss', day, week: b.card.week, form: b.card.form, level: b.card.level, what: 'catch', shiny, uid: mon.uid })
+        } else {
+          moments.push({ kind: 'boss', day, week: b.card.week, form: b.card.form, level: b.card.level, what: 'miss', n: b.throws })
+          if (b.throws >= THROWS) b.fled = true
+        }
+        return
+      }
       case 'team': {
         const ids = (u.to ?? '').split(',').filter((id) => graduates.some((m) => m.uid === id))
         teamPick = [...new Set(ids)].slice(0, TEAM_SIZE)
@@ -754,6 +827,17 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
   const leagueOpen = (): boolean => {
     const l = LEAGUES[lg.index]
     return Boolean(l) && (l.region === null || l.region <= regions)
+  }
+
+  /** The task that stood for the most of the boss's HP: its colour is the shard a kill pays. */
+  const hardest = (card: BossCard): BossTask => card.tasks.reduce((a, t) => (t.share > a.share ? t : a), card.tasks[0])
+  /** A boss whose week is over: it goes into the log, and if it was not caught it has left. */
+  const closeBoss = (day: string) => {
+    const b = boss
+    if (!b) return
+    bossLog.push({ week: b.card.week, form: b.card.form, level: b.card.level, taken: b.taken, killed: b.killed, caught: b.caught })
+    if (!b.caught) moments.push({ kind: 'boss', day, week: b.card.week, form: b.card.form, level: b.card.level, what: 'left' })
+    boss = null
   }
 
   /** What the strike is raised by right now. */
@@ -983,6 +1067,57 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
       moments.push({ kind: 'season', day: f.day, step, coins: r.coins ?? 0, gems: r.gems ?? 0, item: r.item ?? '' })
     }
 
+    // ── the weekly boss: the card's work, taken off its HP ──
+    if (boss && (!f.boss || f.boss.card.week !== boss.card.week)) closeBoss(f.day)
+    if (f.boss && !boss && !bossWeeks.has(f.boss.card.week)) {
+      const card = f.boss.card
+      bossWeeks.add(card.week)
+      boss = { card, from: f.day, taken: 0, dealt: 0, work: 0, p: card.tasks.map(() => 0), throws: 0, killed: false, caught: false, fled: false, paid: new Set(), done: new Set(), strike: 0, common: 0 }
+      see(card.form, f.day, false, false)
+      moments.push({ kind: 'boss', day: f.day, week: card.week, form: card.form, level: card.level, what: 'appear' })
+    }
+    if (boss && f.boss) {
+      const b: BossRun = boss
+      const members = [partner, ...teamNow()]
+      const party: Member[] = members.map((m) => ({ level: levelOf(m.xp), rarity: rec(m.base).r ?? 'C', mega: Boolean(m.megas?.length) }))
+      const pw = powerOf()
+      const type = rec(b.card.form).t
+      b.strike = strikeOf(party, b.card)
+      b.common = pw.team + pw.bond + pw.mega + pw.item + TYPE_EDGE * members.filter((m) => beats(typesOf(m), type)).length
+      const work = cardWork(b.card, f.boss.p)
+      const moved = work - b.work
+      if (!b.caught && !b.fled) {
+        // progress takes HP (and work undone gives it back); a day with none lets it heal
+        if (Math.abs(moved) > 1e-9) b.dealt += b.strike * (1 + b.common) * moved
+        else if (f.day > b.from && !b.killed) b.dealt -= BOSS_HEAL
+        b.dealt = Math.max(0, b.dealt)
+        // the last of its HP only falls once every task is done; what was dealt past the cap still counts then
+        b.taken = Math.min(cardDone(b.card, f.boss.p) ? 1 : KILL_CAP, b.dealt)
+      }
+      b.work = work
+      b.p = f.boss.p
+      // a finished task pays in its own kind
+      b.card.tasks.forEach((t, k) => {
+        if ((b.p[k] ?? 0) < 1 || b.done.has(k)) return
+        b.done.add(k)
+        const tag = BOSS_TAG[t.kind]
+        if (isMarkTag(tag)) { wallet.marks[tag] += BOSS_TASK_MARKS; wallet.marksToday[tag] += BOSS_TASK_MARKS }
+        else hold(`boss:${b.card.week}:task${k}`, f.day, 'Boss task done', BOSS_TASK_COINS, 0)
+      })
+      BOSS_MILESTONES.forEach((m, k) => {
+        if (b.taken + 1e-9 < m.at || b.paid.has(k)) return
+        b.paid.add(k)
+        hold(`boss:${b.card.week}:${Math.round(m.at * 100)}`, f.day, `Boss at ${Math.round((1 - m.at) * 100)}% HP`, m.coins ?? 0, m.gems ?? 0, m.items ?? [])
+      })
+      if (b.taken >= 1 - 1e-9 && !b.killed) {
+        b.killed = true
+        const shard = isMarkTag(BOSS_TAG[hardest(b.card).kind]) ? MARKS[BOSS_TAG[hardest(b.card).kind] as MarkTag].shard : undefined
+        hold(`boss:${b.card.week}:kill`, f.day, 'Boss beaten', 0, BOSS_KILL_GEMS, shard ? [[shard, 1]] : [])
+        bump('bosskills')
+        moments.push({ kind: 'boss', day: f.day, week: b.card.week, form: b.card.form, level: b.card.level, what: 'kill' })
+      }
+    }
+
     for (const u of f.uses ?? []) spend(u, f.day)
 
     // an egg: one kept warm at a time, a day nearer on each day with two pillars
@@ -1041,6 +1176,22 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
   })
 
   const last = days[days.length - 1]
+  /** This week's boss as the screens show it: only while the last day is still inside its week. */
+  const bossView = (): BossView | null => {
+    const b = boss
+    if (!b || !last || weekOf(last.day) !== b.card.week) return null
+    const max = b.card.level * BOSS_HP_PER_LEVEL
+    const hpLeft = Math.max(0, 1 - b.taken)
+    return {
+      week: b.card.week, species: b.card.species, form: b.card.form, rarity: b.card.rarity, mega: b.card.mega, level: b.card.level,
+      max, hp: Math.round(hpLeft * max), taken: b.taken, hpLeft, strike: b.strike, common: b.common,
+      tasks: b.card.tasks.map((t, k) => ({ ...t, p: b.p[k] ?? 0 })), allDone: cardDone(b.card, b.p),
+      daysLeft: Math.max(0, 6 - dayGap(b.card.week, last.day)),
+      throws: b.throws, throwsLeft: Math.max(0, THROWS - b.throws),
+      canThrow: !b.caught && !b.fled && b.throws < THROWS && hpLeft <= THROW_AT + 1e-9,
+      trained: teamNow().length, killed: b.killed, caught: b.caught, fled: b.fled,
+    }
+  }
   // the quests as they stand today
   const lastFacts = facts[facts.length - 1]
   const wkNow = last ? weekOf(last.day) : ''
@@ -1137,6 +1288,9 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
     keyStone,
     fled: fledToday,
     slip: slipToday,
+    boss: bossView(),
+    bossLog,
+    bossParty: 1 + teamNow().length,
     notes,
     warnings,
     stats: statsOf(facts),

@@ -2,12 +2,14 @@
 // Everything you see is earned in Life OS; the one thing written here is an
 // item being used from the Bag.
 import { useSyncExternalStore } from 'react'
-import { buildFacts, type DayFacts } from '../../core/facts.ts'
+import { BOSS_DAY_EVENT, CARD_EVENT, bossDayChanged } from '../../core/boss.ts'
+import { addDays, buildFacts, mondayOf, type DayFacts, type FactsInput } from '../../core/facts.ts'
 import { USE_EVENT, sleepOf, type SleepNight } from '../../core/events.ts'
 import { settled } from '../../core/order.ts'
 import { foldGame, type Game } from '../../core/fold.ts'
 import { dayISO, type LedgerEvent } from '../linked/arbor-model.ts'
 import { createLedger, type LedgerStatus } from './ledger.ts'
+import { measure, planCard } from './boss.ts'
 import { TYPES, ingest } from './ingest.ts'
 
 const env = import.meta.env
@@ -37,6 +39,8 @@ export interface View {
 }
 
 const events: LedgerEvent[] = []
+/** what the last compute read from the ledger: the boss is planned and measured from it (declared before the first compute below) */
+let input: FactsInput | null = null
 const keyOf = (e: LedgerEvent): string => `${e.device}|${e.at}|${e.type}|${JSON.stringify(e.payload)}`
 const seen = new Set<string>()
 let config: LedgerEvent | undefined
@@ -46,7 +50,8 @@ const listeners = new Set<() => void>()
 
 function compute(): View {
   const today = dayISO()
-  const facts = buildFacts(ingest(events, config, today))
+  input = ingest(events, config, today)
+  const facts = buildFacts(input)
   const vit = events.filter((e) => e.type === 'vitals').sort((a, b) => (a.at < b.at ? -1 : 1))
   const last = vit.map((e) => e.day).sort().pop()
   let body: BodyDay | null = null
@@ -58,7 +63,40 @@ function compute(): View {
 }
 function refresh(): void {
   view = compute()
+  syncBoss()
   listeners.forEach((l) => l())
+}
+
+/** In the dev preview, `?boss` brings a boss whatever the party is, so the screens can be seen. */
+const FORCE_BOSS = env.DEV && typeof location !== 'undefined' && new URLSearchParams(location.search).has('boss')
+let bossBusy = false
+/**
+ * The boss lives in the ledger: this week's card is written once (by whoever
+ * opens the Pokedex first: the draw is seeded, so two devices write the same
+ * one and the earlier stands), and each day's progress whenever it has changed.
+ * Nothing is written until the ledger has been read, or a card could be drawn
+ * for a week that already has one.
+ */
+function syncBoss(): void {
+  if (bossBusy || status === 'connecting' || status === 'error' || !input) return
+  const today = view.today, week = mondayOf(today)
+  const wrote: LedgerEvent[] = []
+  let card = input.boss?.cards[week]
+  if (!card) {
+    const drawn = planCard(week, today, view.game, input, events, Object.keys(input.boss?.cards ?? {}).length, FORCE_BOSS)
+    if (!drawn) return
+    card = drawn
+    wrote.push(ledger.emit(CARD_EVENT, { card: JSON.stringify(drawn) }, week))
+  }
+  for (let d = week; d <= today; d = addDays(d, 1)) {
+    const p = measure(card, input, events, d)
+    if (bossDayChanged(input.boss?.days[d], p)) wrote.push(ledger.emit(BOSS_DAY_EVENT, { p: JSON.stringify(p) }, d))
+  }
+  if (!wrote.length) return
+  bossBusy = true
+  for (const ev of wrote) { seen.add(keyOf(ev)); events.push(ev) }
+  view = compute()
+  bossBusy = false
 }
 
 /** Only the newest habit library matters, and each one is a full copy: fetch just that row. */
@@ -101,6 +139,8 @@ export function start(): void {
   started = true
   void pullConfig()
   ledger.start()
+  // with no ledger to wait for, the boss is planned and measured straight away
+  refresh()
   // the day rolls over while the tab is open
   setInterval(() => {
     if (document.hidden) return // nobody is looking: the next visible minute catches up

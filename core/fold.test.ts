@@ -2,7 +2,8 @@
 import fs from 'node:fs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { addDays, buildFacts, inTime, type DayFacts, type FactsInput, type HabitFact } from './facts.ts'
+import { addDays, buildFacts, inTime, mondayOf, type DayFacts, type FactsInput, type HabitFact } from './facts.ts'
+import { BOSS_HEAL, BOSS_KILL_GEMS, KILL_CAP, bossDayChanged, bossLevel, bossOf, catchChance, memberPower, strikeOf, weekChance, type BossCard, type Member } from './boss.ts'
 import { listAdds, listsOf, sleepOf } from './events.ts'
 import { happenedAt, inOrder, settled } from './order.ts'
 import { foldGame, isGym, leaderOf, statsOf } from './fold.ts'
@@ -12,7 +13,7 @@ import {
   BALL_MULT, CLAIM_AUTO, DAILY_PAY, PAY_STREAK, REVIEW_GEMS, EGG_DAYS, GAME_START, GEMS, LEADER_HP, MEGA_BONUS, REPEL_DAYS, SEASON_STEP, SLEEP_DEEP, SLIP, STAKES_FROM, TEAM_BONUS, TEAM_NATURE, TEAM_SIZE, WEAK_MULT, WILD_HP, WILD_STAY,
   ballFor, bondLevel, evolveAt, graduateAt, levelOf, momentumMult, regionsOpen, wildHit, xpForLevel,
 } from './rules.ts'
-import { BALLS, BOND_PARTY, CHEST, DOMAIN_SHOPS, FEATS, FORGE_COST, GEAR, GEAR_ITEMS, LURES, MART_POOL, SELL, STANDING, forgeShard, lureTypes, martDeals, throwHp } from './economy.ts'
+import { BALLS, BOND_PARTY, CHEST, rng, DOMAIN_SHOPS, FEATS, FORGE_COST, GEAR, GEAR_ITEMS, LURES, MART_POOL, SELL, STANDING, forgeShard, lureTypes, martDeals, throwHp } from './economy.ts'
 import { SPECIES } from './species.ts'
 
 const H = (id: string, tag: HabitFact['tag'], worth: number, frac: number): HabitFact =>
@@ -393,7 +394,7 @@ test('every entry in the species table can be reached', async () => {
 
 test('Life OS runs the same core', { skip: !fs.existsSync(new URL('../../lifeos/src/game-core', import.meta.url)) }, () => {
   const read = (u: URL) => fs.readFileSync(u, 'utf8').replace(/\r\n/g, '\n')
-  for (const f of ['rules.ts', 'facts.ts', 'fold.ts', 'order.ts', 'species.ts', 'gyms.ts', 'events.ts', 'types.ts', 'economy.ts'])
+  for (const f of ['rules.ts', 'facts.ts', 'fold.ts', 'order.ts', 'species.ts', 'gyms.ts', 'events.ts', 'types.ts', 'economy.ts', 'boss.ts'])
     assert.ok(read(new URL(`../../lifeos/src/game-core/${f}`, import.meta.url)) === read(new URL(`./${f}`, import.meta.url)), `${f} differs: run npm run core`)
 })
 
@@ -863,4 +864,137 @@ test('a second day running at the streak bar pays a little more, and a month rev
   const held = r.held.find((h) => h.key === 'review:1')
   assert.equal(held?.gems, REVIEW_GEMS)
   assert.deepEqual(held?.items, [['comet-shard', 1]])
+})
+
+// ── version 10: the weekly boss ─────────────────────────────────────────────
+
+const SHARES = [0.3, 0.25, 0.2, 0.15, 0.1]
+const KINDS = ['gym', 'arbor', 'shed', 'sleep', 'life'] as const
+const bossCard = (week: string, level: number, o: Partial<BossCard> = {}): BossCard => ({
+  week, species: 'dratini', form: 'dragonite', rarity: 'R', mega: false, level,
+  tasks: KINDS.map((kind, i) => ({ kind, template: 't', target: 1, share: SHARES[i], text: kind })), ...o,
+})
+/** `lead` ordinary days, then a boss week whose progress on each day is `ps[day]` (one number for every task, or five). */
+function bossWeek(lead: DayFacts[], level: number, ps: (number | number[])[], o: Partial<BossCard> = {}): DayFacts[] {
+  const start = addDays(mondayOf(lead[lead.length - 1].day), 7)
+  const fill: DayFacts[] = []
+  for (let d = addDays(lead[lead.length - 1].day, 1); d < start; d = addDays(d, 1)) fill.push(dayOn(d, ALL))
+  const card = bossCard(start, level, o)
+  return [...lead, ...fill, ...ps.map((p, i) => ({ ...dayOn(addDays(start, i), ALL), boss: { card, p: Array.isArray(p) ? p : SHARES.map(() => p) } }))]
+}
+
+test('boss arithmetic: power is level x rarity x Mega, an empty slot is nothing, and a weak six cannot hurt a Mega legendary much', () => {
+  const m = (level: number, rarity: 'C' | 'U' | 'R' | 'L', mega = false): Member => ({ level, rarity, mega })
+  assert.equal(memberPower(m(50, 'L', true)), 50 * 1.5 * 1.15)
+  assert.equal(bossLevel(160), 42)
+  const weak = [m(10, 'C'), ...Array.from({ length: 5 }, () => m(30, 'C'))]
+  const elite = [m(50, 'L'), m(50, 'L', true), m(50, 'L', true), m(50, 'R', true), m(50, 'L'), m(50, 'R', true)]
+  const rare = { level: 42, rarity: 'R' as const, mega: false }
+  const megaL = { level: 42, rarity: 'L' as const, mega: true }
+  assert.ok(Math.abs(strikeOf(weak, rare) - Math.pow(160 / (6 * 42), 1.2)) < 1e-9)
+  assert.ok(strikeOf(weak, megaL) < 0.36, 'six commons barely scratch a Mega legendary')
+  assert.equal(strikeOf(elite, { level: 67, rarity: 'R', mega: false }), 1)
+  assert.ok(strikeOf(elite, { level: 67, rarity: 'L', mega: true }) > strikeOf(weak, megaL) * 2)
+  // one member is far weaker than six of them: the size of the party counts
+  assert.ok(strikeOf([m(50, 'L', true)], rare) < strikeOf(elite, rare) / 2)
+  assert.equal(strikeOf([], rare), 0.12)
+})
+
+test('a boss week: progress takes HP, the last of it needs every task, an idle day heals, and a kill pays', () => {
+  const lead = run(400, ALL)
+  // a boss far below the party: every strike is at full strength
+  const most = foldGame(bossWeek(lead, 5, [0.5, 0.99]))
+  assert.ok(most.boss)
+  assert.equal(most.boss.strike, 1)
+  assert.equal(most.boss.taken, KILL_CAP, 'without every task done it stops at the cap')
+  assert.equal(most.boss.killed, false)
+  assert.equal(most.boss.daysLeft, 5)
+  const dead = foldGame(bossWeek(lead, 5, [0.5, 1]))
+  assert.equal(dead.boss?.taken, 1)
+  assert.equal(dead.boss?.hp, 0)
+  assert.ok(dead.boss?.killed)
+  assert.ok(dead.moments.some((x) => x.kind === 'boss' && x.what === 'appear'))
+  assert.ok(dead.moments.some((x) => x.kind === 'boss' && x.what === 'kill'))
+  assert.ok(dead.held.some((h) => h.key.endsWith(':kill') && h.gems === BOSS_KILL_GEMS), 'the kill waits in the Collect strip')
+  assert.equal(dead.held.filter((h) => /:(25|50|75)$/.test(h.key)).length, 3)
+  // a day with no progress gives some back
+  const low = foldGame(bossWeek(lead, 400, [0.5]))
+  const idle = foldGame(bossWeek(lead, 400, [0.5, 0.5]))
+  assert.ok(low.boss && idle.boss)
+  assert.ok(Math.abs(idle.boss.taken - (low.boss.taken - BOSS_HEAL)) < 1e-9)
+  // work undone comes back off
+  const undone = foldGame(bossWeek(lead, 400, [0.5, 0.2]))
+  assert.ok(undone.boss && undone.boss.taken < low.boss.taken)
+  // no card, no boss
+  assert.equal(foldGame(lead).boss, null)
+})
+
+test('a boss that is too strong can only be wounded, however much of the card is done', () => {
+  const g = foldGame(bossWeek(run(20, ALL), 60, [1], { rarity: 'L', mega: true }))
+  assert.ok(g.boss)
+  assert.ok(g.boss.strike < 0.2)
+  assert.ok(g.boss.taken < 0.35)
+  assert.equal(g.boss.canThrow, false, 'it is far too healthy to throw at')
+})
+
+test('throwing at a boss: only when it is weak, three times, each one a seeded chance', () => {
+  const lead = run(400, ALL)
+  const week = bossWeek(lead, 5, [1, 1, 1])
+  const start = week[week.length - 3].day
+  const at = (i: number, ...uses: { item: string; what: string }[]): DayFacts[] => week.map((f) => (f.day === addDays(start, i) ? { ...f, uses: uses.map((u) => ({ day: f.day, uid: '', ...u })) } : f))
+  const instant = (f: DayFacts[]) => foldGame(f, { instant: true })
+  const before = instant(week)
+  assert.ok(before.boss?.canThrow)
+  const balls = before.inv['great-ball'] ?? 0
+  assert.ok(balls > 0, 'the first milestone handed over a Great Ball')
+  const one = instant(at(1, { item: 'great-ball', what: 'boss-throw' }))
+  assert.equal(one.inv['great-ball'] ?? 0, balls - 1)
+  assert.equal(one.boss?.throws, 1)
+  const chance = catchChance('great-ball', before.boss!.trained, true, 0, before.boss!.strike)
+  const hit = rng(`boss-catch:${start}:1`)() < chance
+  assert.equal(one.boss?.caught, hit, 'the throw follows the seeded roll')
+  assert.equal(one.moments.some((x) => x.kind === 'boss' && x.what === (hit ? 'catch' : 'miss')), true)
+  if (hit) assert.ok(one.queue.some((x) => x.base === 'dratini' && x.thrown === 'great-ball'))
+  // something that is not a ball, or a boss still healthy, is a tap that does nothing
+  assert.equal(instant(at(1, { item: 'oran-berry', what: 'boss-throw' })).boss?.throws, 0)
+  const healthy = instant(bossWeek(lead, 400, [0.2, 0.2]).map((f, i, all) => (i === all.length - 1 ? { ...f, uses: [{ day: f.day, uid: '', item: 'great-ball', what: 'boss-throw' }] } : f)))
+  assert.equal(healthy.boss?.throws, 0)
+  // the chances themselves
+  assert.ok(Math.abs(catchChance('ultra-ball', 5, true, 0) - 0.58) < 1e-9)
+  assert.ok(Math.abs(catchChance('ultra-ball', 5, false, 0.25) - 0.28 * 0.7) < 1e-9, 'HP still standing costs the throw')
+  assert.ok(Math.abs(catchChance('ultra-ball', 5, true, 0, 0.5) - 0.58 * 0.8) < 1e-9, 'an outmatched party throws worse')
+  assert.ok(weekChance(catchChance('ultra-ball', 5, true, 0)) > 0.9, 'three throws on a finished card are close to sure')
+  assert.ok(weekChance(catchChance('ultra-ball', 5, false, 0.4)) < 0.4, 'three throws at a healthy boss are not')
+  assert.equal(catchChance('master-ball', 0, false, 0.4), 0.9)
+  assert.equal(catchChance('oran-berry', 5, true, 0), 0)
+})
+
+test('a boss week ends: an uncaught one leaves and is logged, and the card and its days are read from the ledger', () => {
+  const lead = run(400, ALL)
+  const week = bossWeek(lead, 400, [0.3, 0.4])
+  const after = [...week, ...Array.from({ length: 7 }, (_, i) => dayOn(addDays(week[week.length - 1].day, i + 1), ALL))]
+  const g = foldGame(after)
+  assert.equal(g.boss, null)
+  assert.equal(g.bossLog.length, 1)
+  assert.equal(g.bossLog[0].caught, false)
+  assert.ok(g.moments.some((x) => x.kind === 'boss' && x.what === 'left'))
+  // the first card of a week stands; the last progress written for a day stands; a day with none carries the last one forward
+  const card = bossCard('2026-10-12', 30)
+  const ev = (type: string, day: string, payload: Record<string, unknown>) => ({ type, day, at: day, payload })
+  const input = bossOf([
+    ev('boss_card', '2026-10-12', { card: JSON.stringify(card) }),
+    ev('boss_card', '2026-10-12', { card: JSON.stringify({ ...card, level: 99 }) }),
+    ev('boss_day', '2026-10-12', { p: JSON.stringify([0.1, 0, 0, 0, 0]) }),
+    ev('boss_day', '2026-10-12', { p: JSON.stringify([0.5, 0.2, 0, 0, 0]) }),
+    ev('boss_card', '2026-10-19', { card: 'not json' }),
+  ])
+  assert.equal(input.cards['2026-10-12'].level, 30)
+  assert.equal(input.cards['2026-10-19'], undefined)
+  assert.deepEqual(input.days['2026-10-12'], [0.5, 0.2, 0, 0, 0])
+  const facts = buildFacts({ habits: [], ticks: {}, boss: input, today: '2026-10-14' })
+  assert.deepEqual(facts.find((f) => f.day === '2026-10-14')?.boss?.p, [0.5, 0.2, 0, 0, 0])
+  assert.equal(facts.find((f) => f.day === '2026-10-11')?.boss, undefined)
+  assert.equal(bossDayChanged(undefined, [0, 0, 0, 0, 0]), false)
+  assert.equal(bossDayChanged([0.5, 0.2, 0, 0, 0], [0.5, 0.2, 0, 0, 0]), false)
+  assert.equal(bossDayChanged([0.5, 0.2, 0, 0, 0], [0.6, 0.2, 0, 0, 0]), true)
 })

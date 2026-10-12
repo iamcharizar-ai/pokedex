@@ -2,7 +2,7 @@
 
 Written 13 Oct 2026. Source: `clash-royale-study/animation-study/` (the spec, and its motion kit). What is taken from it is **choreography only**: timings, easing, the order of beats, the idea of a reward as a state machine. Every sprite, colour, word and sound here is ours.
 
-Status key: **done** = built and in the app · **boss** = built with the weekly boss · **next** = not built, worth doing · **no** = looked at and left out.
+Status key: **done** = built and in the app · **next** = not built, worth doing · **no** = looked at and left out.
 
 ## 1. What the study says, in five lines
 
@@ -33,10 +33,10 @@ Status key: **done** = built and in the app · **boss** = built with the weekly 
 | **Blurred popup backdrop** | Recap and capsule windows blur the game behind them | done |
 | **Shock ring** | A catch, a forge | done |
 | **Fly to where it is kept** (ours, not from the study) | Collected rewards fly to the coin pill, the gem pill or the Bag tab | done |
-| **Rarity layers** (glow colour, lift, build-up) | Capsule glow by rarity; boss reveals by rarity | boss |
-| **Battle intro and "FIGHT" stamp** | The boss appearing on Monday | boss |
-| **Health bar variants and segments** | The boss's five-segment HP bar | boss |
-| **Three-throw state machine** | Throwing at the boss: shake, shake, click or break out | boss |
+| **Rarity layers** (glow colour, lift, build-up) | Capsule glow by rarity; the boss's stage glows purple, gold for a legendary, cyan for a Mega | done |
+| **Battle intro and stamps** | The boss drops in the long way as it appears; "BOSS DOWN", "GOTCHA!", "BROKE FREE" | done |
+| **Health bar variants and segments** | The boss's HP bar, cut into one segment per task | done |
+| **Three-throw state machine** | Throwing at the boss: the ball arcs out, rocks three times, then clicks shut or bursts open | done (not seen on screen: see BOSS-DESIGN.md) |
 | **Card flip** (scaleX 1, 0.22, 1) | Not used: nothing in the game is face-down yet | next |
 | **Mystery box with three spins and an upgrade chance** | Would suit the Rare shop's chest becoming a spin | next |
 | **Trophy-road node states** (locked, unlocked, collect, collected) | Feats and the season ladder are lists today, not a road | next |

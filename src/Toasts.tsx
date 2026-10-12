@@ -9,10 +9,11 @@ import { nameOf, type Game, type Moment } from '../core/fold.ts'
 const KEY = 'pokedex.toasted.v1'
 const SHOWN_MS = 4200
 
-const keyOf = (m: Moment): string => `${m.day}|${m.kind}|${'level' in m ? m.level : ''}|${'form' in m ? m.form : ''}`
+const keyOf = (m: Moment): string => `${m.day}|${m.kind}|${m.kind === 'boss' ? m.what : 'level' in m ? m.level : ''}|${'form' in m ? m.form : ''}`
 const textOf = (m: Moment): { title: string; line: string } | null =>
   m.kind === 'level' ? { title: `Level ${m.level}`, line: `${nameOf(m.form)} grew.` }
     : m.kind === 'flee' ? { title: 'It got away', line: `The wild ${nameOf(m.form)} left.` }
+      : m.kind === 'boss' && m.what === 'left' ? { title: 'The boss left', line: `${nameOf(m.form)} is gone. Another comes on Monday.` }
       : null
 
 function load(): Set<string> | null {

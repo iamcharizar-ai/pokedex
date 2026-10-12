@@ -24,10 +24,10 @@ const QUIET = new Set<Moment['kind']>(['level', 'appear', 'use', 'quest', 'seaso
 /** A feat is news only when it paid something no shop sells (the Key Stone has a moment of its own). */
 const prize = (m: Extract<Moment, { kind: 'feat' }>): string | undefined => m.items.find((id) => ITEMS[id]?.kind === 'unique')
 /** Bigger things first. */
-const WEIGHT: Partial<Record<Moment['kind'], number>> = { league: 9, key: 8, mega: 7, feat: 6.5, gym: 6, evolve: 5, graduate: 4, region: 3, catch: 2, form: 1, partner: 0 }
+const WEIGHT: Partial<Record<Moment['kind'], number>> = { league: 9, boss: 8.5, key: 8, mega: 7, feat: 6.5, gym: 6, evolve: 5, graduate: 4, region: 3, catch: 2, form: 1, partner: 0 }
 
 const keyOf = (m: Moment): string =>
-  `${m.day}|${m.kind}|${'form' in m ? m.form : ''}|${'n' in m ? m.n : ''}|${'league' in m ? m.league : ''}|${'slot' in m ? m.slot : ''}|${'id' in m ? m.id : ''}`
+  `${m.day}|${m.kind}|${'form' in m ? m.form : ''}|${'n' in m ? m.n : ''}|${'league' in m ? m.league : ''}|${'slot' in m ? m.slot : ''}|${'id' in m ? m.id : ''}${m.kind === 'boss' ? `|${m.what}` : ''}`
 
 function loadSeen(): Set<string> | null {
   try {
@@ -76,6 +76,11 @@ function tell(m: Moment, game: Game): Told {
     case 'mega': return { title: 'Mega Stone forged', line: `${nameOf(m.form)} is registered to this Pokemon and never runs out.`, art: 'mon', form: m.form }
     case 'kit': return { title: 'Training kit complete', line: 'All seven pieces of Strong gear became a Red Shard.', art: 'item', item: 'red-shard' }
     case 'feat': { const it = prize(m); return { title: m.name, line: `A feat reached${it ? `: ${itemName(it)} is yours, and no shop sells it` : ''}.`, art: 'item', item: it } }
+    case 'boss':
+      if (m.what === 'appear') return { title: 'A boss appeared', line: `Lv ${m.level} ${nameOf(m.form)} is here for the week. Its card is on Home.`, art: 'mon', form: m.form }
+      if (m.what === 'kill') return { title: 'Boss beaten', line: `${nameOf(m.form)} is down. Its prize waits in Collect.`, art: 'mon', form: m.form }
+      if (m.what === 'catch') return { title: 'Boss caught!', line: `${m.shiny ? 'A shiny ' : ''}${nameOf(m.form)} is in your Box.`, art: 'mon', form: m.form, shiny: m.shiny }
+      return { title: '', line: '', art: 'none' }
     case 'review': return { title: 'Month reviewed', line: 'A Comet Shard is yours. It fits any Mega: three forge a stone.', art: 'item', item: 'comet-shard' }
     case 'key': return { title: 'Key Stone', line: 'Three shards now forge a Mega Stone for a fully evolved Pokemon.', art: 'key' }
     case 'region': return { title: 'New region', line: `${REGIONS[m.n - 1]} is open: new species can turn up from now on.`, art: 'none' }
@@ -92,8 +97,8 @@ function tell(m: Moment, game: Game): Told {
 
 /** How big a moment is: it picks the whole look of its reveal. */
 const tierOf = (m: Moment): Tier =>
-  m.kind === 'key' || m.kind === 'mega' || m.kind === 'league' || (m.kind === 'catch' && m.shiny) ? 'rare'
-    : m.kind === 'evolve' || m.kind === 'feat' || m.kind === 'kit' || m.kind === 'gym' || m.kind === 'graduate' || m.kind === 'region' ? 'big' : 'ordinary'
+  m.kind === 'key' || m.kind === 'mega' || m.kind === 'league' || (m.kind === 'catch' && m.shiny) || (m.kind === 'boss' && m.what !== 'appear') ? 'rare'
+    : m.kind === 'boss' || m.kind === 'evolve' || m.kind === 'feat' || m.kind === 'kit' || m.kind === 'gym' || m.kind === 'graduate' || m.kind === 'region' ? 'big' : 'ordinary'
 
 const STAR = <ItemIcon id="star-piece" size={72} />
 

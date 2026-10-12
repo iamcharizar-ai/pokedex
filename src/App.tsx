@@ -17,6 +17,8 @@ import { ItemIcon } from './Item.tsx'
 import { KBar, KPill, KRibbon } from './Kit.tsx'
 import { Actions, Coin, Count, Gem, Pop, Quests, ShopTab, TeamTab } from './Play.tsx'
 import { Recap } from './Recap.tsx'
+import { BossCard, BossLog } from './Boss.tsx'
+import { BOSS_HEAL, KILL_CAP, THROWS, THROW_AT } from '../core/boss.ts'
 import { Claims } from './Claim.tsx'
 import { Toasts } from './Toasts.tsx'
 import { aBall, badgeArt, badgeName, fmtDay, leagueName, still } from './lib/art.ts'
@@ -411,6 +413,7 @@ function PartnerTab({ game, facts, nights, onShop }: { game: Game; facts: DayFac
       <SlipNote game={game} />
       <Talk game={game} pillars={habits.filter((h) => h.pillar)} />
       <NextUp game={game} />
+      <BossCard game={game} />
       <Actions game={game} onShop={onShop} />
       <div className="cols">
         <LeaderCard game={game} />
@@ -629,7 +632,7 @@ function DexTab({ game }: { game: Game }) {
 }
 
 // ── Trainer card ────────────────────────────────────────────────────────────
-const KIND: Record<Moment['kind'], string> = { level: 'Level', evolve: 'Evolved', graduate: 'Trained', partner: 'Partner', catch: 'Caught', appear: 'Wild', form: 'Form', region: 'Region', gym: 'Gym', league: 'League', use: 'Choice', key: 'Key Stone', review: 'Review', mega: 'Mega', transfer: 'Professor', quest: 'Quest', season: 'Season', hatch: 'Hatched', chest: 'Chest', feat: 'Feat', gear: 'Gear', kit: 'Kit', flee: 'Fled', slip: 'Slipped' }
+const KIND: Record<Moment['kind'], string> = { level: 'Level', evolve: 'Evolved', graduate: 'Trained', partner: 'Partner', catch: 'Caught', appear: 'Wild', form: 'Form', region: 'Region', gym: 'Gym', league: 'League', use: 'Choice', key: 'Key Stone', review: 'Review', boss: 'Boss', mega: 'Mega', transfer: 'Professor', quest: 'Quest', season: 'Season', hatch: 'Hatched', chest: 'Chest', feat: 'Feat', gear: 'Gear', kit: 'Kit', flee: 'Fled', slip: 'Slipped' }
 function line(m: Moment): string {
   switch (m.kind) {
     case 'level': return `${nameOf(m.form)} reached level ${m.level}`
@@ -654,6 +657,10 @@ function line(m: Moment): string {
     case 'season': return `Season step ${m.step}: ${m.coins ? `+${m.coins} coins` : m.gems ? `+${m.gems} gems` : itemName(m.item)}`
     case 'hatch': return `A Rare Egg hatched into ${nameOf(m.form)}`
     case 'review': return `Month reviewed (${m.n}): a Comet Shard, which fits any Mega`
+    case 'boss': {
+      const who = `Lv ${m.level} ${nameOf(m.form)}`
+      return m.what === 'appear' ? `A boss appeared: ${who}` : m.what === 'kill' ? `Boss beaten: ${who}` : m.what === 'catch' ? `Boss caught: ${m.shiny ? 'a shiny ' : ''}${who}` : m.what === 'miss' ? `${nameOf(m.form)} broke free of throw ${m.n}` : `The boss ${nameOf(m.form)} left`
+    }
     case 'flee': return `The wild ${nameOf(m.form)} got away`
     case 'slip': return `An empty day (${fmtDay(m.empty)}): ${[m.leader ? `the leader won back ${m.leader} HP` : '', m.wild ? `the wild Pokemon ${m.wild} HP` : '', m.xp ? `${m.xp} XP faded` : ''].filter(Boolean).join(', ')}`
     case 'chest': return `Chest ${m.n}: ${m.coins ? `${m.coins} coins` : `${itemName(m.item)}${m.count > 1 ? ` ×${m.count}` : ''}`}`
@@ -794,6 +801,7 @@ function TrainerTab({ game, nights }: { game: Game; nights: Record<string, Sleep
   }, [])
   return (
     <>
+      <BossLog game={game} />
       <section className="card" aria-label="Trainer card">
         <div>
           <h2>Trainer card</h2>
@@ -956,6 +964,9 @@ function RulesTab() {
           <Rule title="Steps and the trainer card" tone="green" pic={<><span className="rule-chip sm">10k</span><Arrow /><ItemIcon id="iron" size={28} /></>}>
             A day of {STEPS_GOAL.toLocaleString('en-IN')} steps pays an extra Iron mark and counts as a full Speed day. The Trainer tab shows you, not the partner, averaged over the last {STAT_DAYS} days.
           </Rule>
+          <Rule title="The weekly boss" tone="purple" pic={<><ItemIcon id="master-ball" size={30} /><span className="rule-chip sm">6</span><Arrow /><span className="rule-chip">5</span></>}>
+            Once your party is six, a boss comes each Monday for the week. Its card has five tasks, from Strong, Arbor, Woodshed, your sleep and your days, each a share of its HP. It is levelled to your party, and how hard you hit depends on how strong the six are: their levels, how rare their lines are, their Megas, the bond, and whose type beats its type. Without every task done its last {Math.round((1 - KILL_CAP) * 100)}% never falls, and a day the card does not move heals it {Math.round(BOSS_HEAL * 100)}%. At {Math.round(THROW_AT * 100)}% HP or less you get {THROWS} throws: a chance, never a sure thing, and better the weaker it is.
+          </Rule>
           <Rule title="An empty day costs" tone="red" pic={<span className="rule-chip">0</span>}>
             Since {fmtDay(STAKES_FROM)}, a day with nothing ticked is settled two days later, so a late tick still saves it. The leader wins back {SLIP.leader} HP, the wild Pokemon {SLIP.wild}, and a tenth of the XP into your current level fades. A wild Pokemon that stays {WILD_STAY.C} days gets away. Levels, evolutions, trained and caught Pokemon, badges, feats and items are never taken back.
           </Rule>
@@ -965,7 +976,7 @@ function RulesTab() {
         </div>
         <div className="kit-row" style={{ marginTop: 14 }}>
           <button type="button" className={`k-btn ${sound ? 'ok' : ''}`} aria-pressed={sound} onClick={() => { setSoundOn(!sound); setSound(!sound); if (!sound) play('buy') }}>Sound: {sound ? 'on' : 'off'}</button>
-          <span className="muted">Rules version 9. The game began {fmtDay(GAME_START)}.</span>
+          <span className="muted">Rules version 10. The game began {fmtDay(GAME_START)}.</span>
         </div>
       </div>
     </section>

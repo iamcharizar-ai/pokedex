@@ -1,6 +1,7 @@
 // Turns what the apps know (habits, ticks, the Arbor and Woodshed blocks) into
 // one plain list of days. The game itself (fold.ts) only ever sees this list,
 // so Life OS and Pokedex cannot disagree about what happened on a day.
+import type { BossCard, BossInput } from './boss.ts'
 import type { ListedHabit } from './events.ts'
 import { ARBOR_HABIT, GAME_START, GRACE_DAYS, GUITAR_HABIT, REVIEW_HABIT, SLEEP_DONE, SLEEP_HABIT, TIER_XP, isTag, tagOf, tierXp, type Tag } from './rules.ts'
 
@@ -59,6 +60,8 @@ export interface FactsInput {
   uses?: ItemUse[]
   /** day → what the other apps recorded in their own units (see DayMarks) */
   marks?: Record<string, DayMarks>
+  /** the weekly boss: each week's card and each day's progress on it, as written to the ledger (boss.ts) */
+  boss?: BossInput
   today: string
 }
 
@@ -106,6 +109,14 @@ export interface DayFacts {
   marks?: DayMarks
   /** month-end reviews ticked on this day (by the day the tick was made, not the month it closes) */
   reviews?: number
+  /** this week's boss card, and how far each of its tasks is by the end of this day */
+  boss?: { card: BossCard; p: number[] }
+}
+
+/** The Monday of the week a day is in. */
+export function mondayOf(day: string): string {
+  const dow = new Date(day + 'T12:00:00').getDay() // 0 Sun
+  return addDays(day, -((dow + 6) % 7))
 }
 
 export function addDays(day: string, n: number): string {
@@ -192,7 +203,15 @@ export function factsFor(input: FactsInput, day: string, band: string | null = b
   }
   const marks = input.marks?.[day]
   const reviews = reviewsOn(input.ticks, day)
-  return { day, habits, ...(body ? { body } : {}), ...(uses?.length ? { uses } : {}), ...(marks ? { marks } : {}), ...(reviews ? { reviews } : {}) }
+  // the boss: this week's card, with the newest progress written for this day or an earlier one of the week
+  const card = input.boss?.cards[mondayOf(day)]
+  let boss: DayFacts['boss']
+  if (card) {
+    let p: number[] | undefined
+    for (let d = day; d >= card.week && !p; d = addDays(d, -1)) p = input.boss?.days[d]
+    boss = { card, p: card.tasks.map((_, i) => p?.[i] ?? 0) }
+  }
+  return { day, habits, ...(body ? { body } : {}), ...(uses?.length ? { uses } : {}), ...(marks ? { marks } : {}), ...(reviews ? { reviews } : {}), ...(boss ? { boss } : {}) }
 }
 
 /** Every day of the game so far, oldest first. */

@@ -66,3 +66,33 @@
 .claim-chip.breathe:nth-child(3n) { animation-delay: 0.2s; }
 @keyframes breathe-sm { 0% { transform: scale(1); animation-timing-function: cubic-bezier(0.7, 0, 0.84, 0.3); } 54% { transform: scale(1.05); animation-timing-function: cubic-bezier(0.16, 0.84, 0.3, 1); } 100% { transform: scale(1); } }
 .scene, .leadrow { position: relative; }
+
+/* ── the weekly boss (Boss.tsx) ── */
+.bosslock { display: flex; align-items: center; gap: 12px; margin: 0 0 12px; padding: 10px 14px; color: #fff; background: linear-gradient(120deg, #2a1f5c, #4a2f9e); border: 3px solid var(--k-edge); border-radius: 12px; }
+.bosslock > span:nth-child(2) { flex: 1; display: grid; line-height: 1.2; }
+.bosslock small { opacity: 0.8; font-size: 12px; }
+.bosslock-pips { display: flex; gap: 4px; }
+.bosslock-pips i { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--k-edge); background: rgba(8, 12, 30, 0.6); }
+.bosslock-pips i.on { background: #ffd800; box-shadow: 0 0 6px #ffd800; }
+.boss { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+.boss-stage { position: relative; flex: none; width: 150px; height: 140px; display: grid; place-items: center; border-radius: 12px; background: radial-gradient(circle at 50% 70%, rgba(192, 76, 255, 0.35), transparent 65%); overflow: visible; }
+.boss.r-L .boss-stage { background: radial-gradient(circle at 50% 70%, rgba(255, 216, 0, 0.45), transparent 65%); }
+.boss.mega .boss-stage { background: radial-gradient(circle at 50% 70%, rgba(127, 227, 255, 0.5), rgba(192, 76, 255, 0.25) 45%, transparent 68%); }
+.boss-stage img.sprite { width: 120px; height: 120px; image-rendering: pixelated; filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.35)); }
+.boss-stage img.sprite.gone { opacity: 0.25; filter: grayscale(1); }
+.boss-ball, .boss-caught { position: absolute; left: 50%; top: 50%; margin: -22px 0 0 -22px; z-index: 3; }
+.boss-info { flex: 1 1 220px; min-width: 0; display: grid; gap: 6px; }
+.boss-hp { position: relative; }
+.boss-segs { position: absolute; inset: 0; pointer-events: none; }
+.boss-segs i { position: absolute; top: 2px; bottom: 2px; width: 3px; margin-left: -1px; background: var(--k-edge); opacity: 0.85; }
+.boss-line { margin: 0; font-size: 13px; }
+.boss-tasks { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
+.boss-tasks li { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border: 2px solid var(--k-edge); border-radius: 10px; background: rgba(8, 12, 30, 0.06); }
+.boss-tasks li.done { background: rgba(125, 255, 155, 0.18); }
+.boss-task { flex: 1; min-width: 0; display: grid; gap: 3px; }
+.boss-task small { opacity: 0.7; font-size: 12px; }
+.boss-throws { margin-top: 10px; }
+.boss-log { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.boss-log li { display: flex; align-items: center; gap: 10px; }
+.boss-log li > span:nth-child(2) { flex: 1; display: grid; line-height: 1.2; }
+.boss-log small { opacity: 0.7; font-size: 12px; }
