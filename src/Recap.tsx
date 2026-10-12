@@ -4,7 +4,7 @@
 // only the telling. Closing it, skipping it or never seeing it changes nothing.
 // What has been shown is remembered on this device alone (it is not progress,
 // so it does not belong in the ledger).
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { isGym, leaderOf, nameOf, spritePath, type Game, type Moment } from '../core/fold.ts'
 import { LEAGUES, lineup } from '../core/gyms.ts'
 import { ITEMS, itemName } from '../core/economy.ts'
@@ -12,6 +12,8 @@ import { REGIONS, type Ball as BallId } from '../core/rules.ts'
 import { Ball, BallItem, KeyStone } from './Ball.tsx'
 import { ItemIcon } from './Item.tsx'
 import { KReveal, type Tier } from './Kit.tsx'
+import { EvoReveal } from './Reveal.tsx'
+import { party } from './lib/fx.ts'
 import { aBall, badgeArt, badgeName, fmtDay, leagueName, still } from './lib/art.ts'
 
 const SEEN_KEY = 'pokedex.seen.v1'
@@ -125,23 +127,36 @@ export function Recap({ game, today }: { game: Game; today: string }) {
     window.addEventListener('keydown', close)
     return () => window.removeEventListener('keydown', close)
   }, [told.length])
+  // big news waits to be opened: the first tap opens it, the next one closes the window
+  const [opened, setOpened] = useState(false)
+  const [force, setForce] = useState(false)
+  const win = useRef<HTMLDivElement>(null)
+  const head = told[0]?.m
+  useEffect(() => { setOpened(false); setForce(false) }, [head])
   if (!told.length) return null
   const [top, ...rest] = told
   const days = new Set(told.map((x) => x.m.day))
+  const tier = tierOf(top.m)
+  const evolving = top.t.art === 'evolve' && top.t.form && top.t.from
+  const close = () => setFresh([])
+  const tap = () => { if (opened || evolving) close(); else setForce(true) }
+  const onOpen = () => { setOpened(true); if (tier === 'rare') party(win.current, 60) }
   return (
-    <div className="recap" role="dialog" aria-modal="true" aria-label="What is new" onClick={() => setFresh([])}>
-      <div className="rc-win">
+    <div className="recap" role="dialog" aria-modal="true" aria-label="What is new" onClick={tap}>
+      <div className="rc-win" ref={win}>
         <div className="rc-body">
         <div className="rc-eyebrow">{days.size > 1 ? 'While you were away' : top.m.day === today ? 'Today' : fmtDay(top.m.day)}</div>
-        <KReveal tier={tierOf(top.m)} title={top.t.title}><Art t={top.t} /></KReveal>
-        <p>{top.t.line}</p>
+        {evolving
+          ? <EvoReveal from={still(top.t.from!)} to={spritePath(top.t.form!)} title={top.t.title} />
+          : <KReveal tier={tier} title={top.t.title} wait={tier !== 'ordinary'} force={force} onOpen={onOpen}><Art t={top.t} /></KReveal>}
+        <p style={opened || evolving ? undefined : { visibility: 'hidden' }}>{top.t.line}</p>
         {rest.length > 0 && (
           <ul className="rc-list">
             {rest.slice(0, 8).map(({ m, t }, i) => <li key={i}><b>{t.title}</b><span>{t.line}</span><small>{fmtDay(m.day)}</small></li>)}
             {rest.length > 8 && <li className="more">and {rest.length - 8} more, in the Adventure log on the Trainer tab.</li>}
           </ul>
         )}
-        <button className="go" autoFocus>Continue</button>
+        <button className={`go ${opened || evolving ? '' : 'breathe'}`} autoFocus>{opened || evolving ? 'Continue' : 'Tap to open'}</button>
         <small className="rc-note">Already saved. Tap anywhere to close.</small>
         </div>
       </div>

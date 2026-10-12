@@ -62,18 +62,24 @@ export function KCard({ stage = 1, mega, missing, level, gem, gemColor, ball, ba
  */
 export type Tier = 'ordinary' | 'big' | 'rare'
 const SPARKS: Record<Tier, number> = { ordinary: 10, big: 18, rare: 28 }
-export function KReveal({ tier = 'ordinary', title, children, replay = 0 }: { tier?: Tier; title: string; children: ReactNode; replay?: number }) {
+export function KReveal({ tier = 'ordinary', title, children, replay = 0, wait = false, force = false, onOpen }: {
+  tier?: Tier; title: string; children: ReactNode; replay?: number
+  /** stay in idle until it is tapped (or `force` turns true): a reward that waits to be opened */
+  wait?: boolean; force?: boolean; onOpen?: () => void
+}) {
   const [phase, setPhase] = useState<'appear' | 'idle' | 'open'>('appear')
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
   useEffect(() => {
     setPhase('appear')
     timer.current = setTimeout(() => {
       setPhase('idle')
-      timer.current = setTimeout(() => setPhase('open'), tier === 'rare' ? 1500 : tier === 'big' ? 1100 : 700)
+      if (!wait) timer.current = setTimeout(() => setPhase('open'), tier === 'rare' ? 1500 : tier === 'big' ? 1100 : 700)
     }, 600)
     return () => clearTimeout(timer.current)
-  }, [tier, replay])
+  }, [tier, replay, wait])
   const hurry = () => { clearTimeout(timer.current); setPhase('open') }
+  useEffect(() => { if (force) hurry() }, [force])
+  useEffect(() => { if (phase === 'open') onOpen?.() }, [phase])
   const n = SPARKS[tier]
   return (
     <div className={`k-reveal ${tier === 'ordinary' ? '' : tier} ${phase}`} onClick={hurry} role="img" aria-label={title}>

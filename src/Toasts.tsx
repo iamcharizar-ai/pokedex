@@ -2,6 +2,8 @@
 // They slide in at the top for a few seconds and go. Said once per device (the
 // first run says nothing: history is not news), and never blocking.
 import { useEffect, useRef, useState } from 'react'
+import { motionConfig } from './lib/fx.ts'
+import { toast } from './lib/motion.js'
 import { nameOf, type Game, type Moment } from '../core/fold.ts'
 
 const KEY = 'pokedex.toasted.v1'
@@ -42,7 +44,7 @@ export function Toasts({ game, today }: { game: Game; today: string }) {
   if (!rail.length) return null
   return (
     <div className="toast-rail" role="status" aria-live="polite">
-      {rail.map((t) => <div key={t.key} className="toast"><b>{t.title}</b> {t.line}</div>)}
+      {rail.map((t) => <div key={t.key} className="toast" ref={(el) => { if (el && !el.dataset.on && !motionConfig.reduced) { el.dataset.on = '1'; void toast(el, { hold: SHOWN_MS - 1000 }) } }}><b>{t.title}</b> {t.line}</div>)}
     </div>
   )
 }

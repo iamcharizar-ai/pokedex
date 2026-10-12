@@ -1,0 +1,68 @@
+/* Motion layer: the stages the motion kit animates (Reveal.tsx, lib/fx.ts).
+   Timings live in lib/motion.js; this file is only what the pieces look like. */
+
+/* ── words stamped over something, and numbers that float off it ── */
+.fx-stamp { position: absolute; left: 50%; top: 42%; z-index: 20; translate: -50% -50%; padding: 4px 16px 8px; font-family: var(--k-face); font-size: 34px; line-height: 1; white-space: nowrap; color: #fff; -webkit-text-stroke: 5px var(--k-edge); paint-order: stroke fill; text-shadow: 0 4px 0 rgba(0, 0, 0, 0.45); pointer-events: none; overflow: hidden; border-radius: 10px; }
+.fx-stamp.gold { color: #ffd800; }
+.fx-stamp.red { color: #ff6b6b; }
+.fx-stamp.green { color: #7dff9b; }
+.fx-stamp.purple { color: #d8b4ff; }
+.fx-float { position: absolute; left: 50%; top: 30%; z-index: 20; translate: -50% 0; font-family: var(--k-face); font-size: 22px; color: #fff; -webkit-text-stroke: 4px var(--k-edge); paint-order: stroke fill; pointer-events: none; white-space: nowrap; }
+.fx-float.gold { color: #ffd800; }
+.fx-float.red { color: #ff8a8a; }
+.fx-float.green { color: #7dff9b; }
+
+/* ── an evolution: the "unlocked" popup, inside the news window ── */
+.evo { position: relative; width: 100%; height: 260px; display: grid; place-items: center; overflow: hidden; border: 3px solid var(--k-edge); border-radius: 12px; background: radial-gradient(circle at 50% 55%, #3b2a78, #141a33 75%); }
+.evo > * { grid-area: 1 / 1; }
+.evo-dim { position: absolute; inset: 0; background: #070a18; opacity: 0; }
+.evo-burst { position: absolute; width: 460px; height: 460px; opacity: 0; }
+.evo-rays { position: absolute; inset: 0; border-radius: 50%; background: repeating-conic-gradient(rgba(255, 216, 0, 0.42) 0 9deg, transparent 9deg 18deg); mask-image: radial-gradient(circle, #000 20%, transparent 68%); -webkit-mask-image: radial-gradient(circle, #000 20%, transparent 68%); }
+.evo-bloom { position: absolute; width: 16px; height: 16px; border-radius: 50%; background: radial-gradient(circle, #fff, rgba(255, 255, 255, 0) 70%); opacity: 0; mix-blend-mode: plus-lighter; }
+.evo-wing { position: absolute; top: 46%; width: 26px; height: 26px; opacity: 0; background: linear-gradient(135deg, #fff3a8, #ffd800); clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); filter: drop-shadow(0 0 8px #ffd800); }
+.evo-wing.l { left: calc(50% - 13px - 54px); }
+.evo-wing.r { left: calc(50% - 13px + 54px); }
+.evo-card { position: relative; z-index: 2; width: 132px; height: 132px; display: grid; place-items: center; }
+.evo-card img { width: 128px; height: 128px; image-rendering: pixelated; filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.35)); }
+.evo-card img.was { filter: brightness(0.25) drop-shadow(0 6px 0 rgba(0, 0, 0, 0.35)); }
+.evo-charge { position: absolute; inset: 2px; background: #fff; opacity: 0; mask-size: contain; -webkit-mask-size: contain; mask-repeat: no-repeat; -webkit-mask-repeat: no-repeat; mask-position: center; -webkit-mask-position: center; image-rendering: pixelated; pointer-events: none; }
+.evo-shinebox { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.evo-shine { position: absolute; left: 50%; top: -20%; width: 46px; height: 140%; margin-left: -23px; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9), transparent); rotate: 18deg; opacity: 0; mix-blend-mode: plus-lighter; }
+.evo-title { position: absolute; left: 0; right: 0; bottom: 14px; z-index: 4; text-align: center; font-size: 26px; opacity: 0; }
+
+/* ── a reward that waits to be opened ── */
+.capsule { position: fixed; inset: 0; z-index: 40; display: grid; align-content: center; justify-items: center; gap: 8px; padding: 16px; background: rgba(10, 14, 30, 0.78); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); color: #fff; animation: rc-fade 0.38s linear; cursor: pointer; }
+.capsule-stage { position: relative; width: min(320px, 90vw); height: 260px; display: grid; place-items: center; }
+.capsule-stage::before { content: ''; position: absolute; width: 240px; height: 240px; border-radius: 50%; background: radial-gradient(circle, rgba(155, 208, 255, 0.35), transparent 68%); }
+.capsule.r-rare .capsule-stage::before { background: radial-gradient(circle, rgba(255, 154, 60, 0.45), transparent 68%); }
+.capsule.r-epic .capsule-stage::before { background: radial-gradient(circle, rgba(192, 76, 255, 0.5), transparent 68%); }
+.capsule.r-legendary .capsule-stage::before { background: radial-gradient(circle, rgba(255, 243, 192, 0.6), transparent 68%); }
+.capsule-box { position: relative; z-index: 2; display: grid; place-items: center; filter: drop-shadow(0 8px 0 rgba(0, 0, 0, 0.4)); }
+.capsule-box img, .capsule-prize img { image-rendering: pixelated; }
+.capsule-prize { position: relative; z-index: 2; display: grid; place-items: center; filter: drop-shadow(0 8px 0 rgba(0, 0, 0, 0.4)); }
+.capsule-title { font-size: 30px; min-height: 36px; text-align: center; }
+.capsule-line { margin: 0; color: #c9d4ff; }
+.capsule-go { margin-top: 8px; font-size: 20px; padding: 9px 30px 13px; }
+
+/* the claim button's breathing: 1 → up (617 ms, ease-in) → 1 (517 ms, ease-out), a 1.13 s loop */
+.breathe { animation: breathe 1.134s infinite; }
+@keyframes breathe { 0% { transform: scale(1); animation-timing-function: cubic-bezier(0.7, 0, 0.84, 0.3); } 54% { transform: scale(1.12); animation-timing-function: cubic-bezier(0.16, 0.84, 0.3, 1); } 100% { transform: scale(1); } }
+
+/* popups sit on a blurred game, not a flat tint */
+.recap { backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .breathe, .capsule { animation: none; }
+  .evo-title, .evo-burst { opacity: 1; }
+}
+
+/* a shard on its way into the Key Stone */
+.fx-shard { position: absolute; z-index: 5; width: 28px; height: 28px; background-size: contain; background-repeat: no-repeat; image-rendering: pixelated; pointer-events: none; overflow: hidden; }
+
+/* chips breathe with the claim button's timing but a smaller swing, and the row leaves them room */
+.claims-row { padding: 6px 4px 8px; }
+.claim-chip.breathe { animation-name: breathe-sm; }
+.claim-chip.breathe:nth-child(2n) { animation-delay: 0.1s; }
+.claim-chip.breathe:nth-child(3n) { animation-delay: 0.2s; }
+@keyframes breathe-sm { 0% { transform: scale(1); animation-timing-function: cubic-bezier(0.7, 0, 0.84, 0.3); } 54% { transform: scale(1.05); animation-timing-function: cubic-bezier(0.16, 0.84, 0.3, 1); } 100% { transform: scale(1); } }
+.scene, .leadrow { position: relative; }

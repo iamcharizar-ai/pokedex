@@ -55,9 +55,9 @@ export function Claims({ game, today }: { game: Game; today: string }) {
           const parts = partsOf(h)
           const left = daysLeft(h, today)
           return (
-            <button key={h.key} type="button" className="claim-chip" data-pocket={parts[0]?.pocket} ref={(el) => { if (el) refs.current.set(h.key, el); else refs.current.delete(h.key) }} onClick={() => claim([h])}>
+            <button key={h.key} type="button" className="claim-chip breathe" data-pocket={parts[0]?.pocket} ref={(el) => { if (el) refs.current.set(h.key, el); else refs.current.delete(h.key) }} onClick={() => claim([h])}>
               <span className="claim-ico">
-                {parts.map((p, i) => (p.pocket === 'coins' ? <Coin key={i} size={26} /> : p.pocket === 'gems' ? <Gem key={i} size={26} /> : <ItemIcon key={i} id={p.item ?? ''} size={26} />))}
+                {parts.map((p, i) => (p.pocket === 'coins' ? (p.n >= 250 ? <ItemIcon key={i} id="loot-sack" size={30} /> : p.n >= 100 ? <ItemIcon key={i} id="big-nugget" size={28} /> : <Coin key={i} size={26} />) : p.pocket === 'gems' ? <Gem key={i} size={26} /> : <ItemIcon key={i} id={p.item ?? ''} size={26} />))}
               </span>
               <span className="claim-txt">
                 <b>{h.title}</b>

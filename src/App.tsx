@@ -22,7 +22,10 @@ import { Toasts } from './Toasts.tsx'
 import { aBall, badgeArt, badgeName, fmtDay, leagueName, still } from './lib/art.ts'
 import { play, setSoundOn, soundOn } from './lib/sfx.ts'
 import { LIFEOS_URL, start, useItem, useView } from './lib/store.ts'
+import { dropIn, floatNote, hit, party, ring, stamp, tapPop } from './lib/fx.ts'
+import { ChestOpener } from './Reveal.tsx'
 import './skin.css'
+import './motion.css'
 import './economy.css'
 
 type Tab = 'partner' | 'team' | 'shop' | 'dex' | 'trainer'
@@ -98,11 +101,27 @@ function Scene({ game }: { game: Game }) {
     }
     lastXp.current = game.into
   }, [game.into])
+  // ── battle feel: what just happened is played on the sprite it happened to ──
+  const stage = useRef<HTMLElement>(null)
+  const was = useRef<{ wild: string | null; hit: number; caught: boolean; perfect: boolean } | null>(null)
+  useEffect(() => {
+    const el = stage.current
+    if (!el) return
+    const foe = el.querySelector('.foe-pad img.sprite')
+    const now = { wild: wild ? wild.form : null, hit: today.hit, caught: Boolean(wild?.caught), perfect: today.perfect }
+    const prev = was.current
+    was.current = now
+    if (!prev) { dropIn(el.querySelector('.me-pad img.sprite')); return } // sent out as the screen opens
+    if (now.wild && now.wild !== prev.wild && !now.caught) dropIn(foe, wild?.rarity === 'L')
+    else if (now.hit > prev.hit && !now.caught) hit(foe)
+    if (now.caught && !prev.caught) { stamp(el, 'GOTCHA!', 'gold'); ring(el.querySelector('.foe-pad')); if (wild?.shiny) party(el) }
+    if (now.perfect && !prev.perfect) { stamp(el, 'PERFECT DAY', 'green'); party(el, 36) }
+  }, [wild?.form, wild?.caught, today.hit, today.perfect])
   const pct = clamp01(game.into / game.need)
   const before = Math.min(pct, clamp01(game.intoBeforeToday / game.need))
   const hp = wild && wild.max ? wild.hp / wild.max : 0
   return (
-    <section className={`scene ${game.theme || `tod-${timeOfDay()}`} ${game.aura ? `aura-${game.aura}` : ''}`} aria-label="Today, as a battle">
+    <section ref={stage} className={`scene ${game.theme || `tod-${timeOfDay()}`} ${game.aura ? `aura-${game.aura}` : ''}`} aria-label="Today, as a battle">
       {wild && (
         <>
           <div className="hpbox foe-box">
@@ -295,15 +314,26 @@ function PowerLine({ game }: { game: Game }) {
 
 /** Who is up in the league, with their HP: worn down by the kind of work you do. */
 function LeaderCard({ game }: { game: Game }) {
-  const { league, today } = game
+  const { league } = game
   const t = leaderOf(league.index, league.slot)
   if (!t) return <Win title="League" tone="gold" aside="All beaten"><p className="muted">Every league is beaten.</p></Win>
   const l = LEAGUES[league.index]
+  return <LeaderBody game={game} t={t} l={l} />
+}
+function LeaderBody({ game, t, l }: { game: Game; t: NonNullable<ReturnType<typeof leaderOf>>; l: (typeof LEAGUES)[number] }) {
+  const { league, today } = game
+  // the leader flinches when today's strike lands
+  const row = useRef<HTMLDivElement>(null)
+  const lastStrike = useRef(today.strike)
+  useEffect(() => {
+    if (today.strike > lastStrike.current) { hit(row.current?.querySelector('.foe'), 'left'); floatNote(row.current, `−${today.strike - lastStrike.current}`, 'red') }
+    lastStrike.current = today.strike
+  }, [today.strike])
   const role = isGym(league.index, league.slot) ? `Gym ${league.slot + 1} of ${l.gyms.length}` : league.slot === lineup(l).length - 1 ? 'Champion' : 'Elite Four'
   const hp = league.hp / league.max
   return (
     <Win title={`${l.name}: ${t.name}`} tone="gold" aside={role}>
-      <div className="leadrow">
+      <div className="leadrow" ref={row}>
         <span className={`foe ${hp <= 0.2 ? 'crit' : hp <= 0.5 ? 'hurt' : ''}`}>{t.sprite ? <img src={`/sprites/trainers/${t.sprite}.png`} alt="" width={72} height={72} className="sprite" /> : <span className="nopic" aria-hidden>?</span>}<Pop value={league.waiting ? 0 : today.strike} /></span>
         <div className="leadinfo">
           <div className="hp-row">
@@ -995,6 +1025,7 @@ export default function App() {
       <TopBar game={game} status={status} loading={loading} onHelp={() => setHelp(true)} />
       {!loading && <Claims game={game} today={view.today} />}
       {!loading && <Toasts game={game} today={view.today} />}
+      {!loading && <ChestOpener game={game} />}
       <main key={tab} className="tabin">
         {loading && (
           <Win title="Loading" tone="dark">
@@ -1016,7 +1047,7 @@ export default function App() {
         </div>
       )}
       <nav className="navbar" role="tablist" aria-label="Sections">
-        {TABS.map(([id, text]) => <button key={id} role="tab" aria-selected={tab === id} aria-label={text} data-reward-target={id === 'team' ? 'bag' : undefined} className={tab === id ? 'on' : ''} onClick={() => { setTab(id); play('tap'); window.scrollTo({ top: 0 }) }}>{ICON[id]}{text}</button>)}
+        {TABS.map(([id, text]) => <button key={id} role="tab" aria-selected={tab === id} aria-label={text} data-reward-target={id === 'team' ? 'bag' : undefined} className={tab === id ? 'on' : ''} onClick={(e) => { setTab(id); play('tap'); tapPop(e.currentTarget.querySelector('.tabicon')); window.scrollTo({ top: 0 }) }}>{ICON[id]}{text}</button>)}
       </nav>
       {!loading && <Recap game={game} today={view.today} />}
     </div>

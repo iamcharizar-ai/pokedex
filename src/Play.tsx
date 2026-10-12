@@ -16,6 +16,7 @@ import { Ball, BallItem } from './Ball.tsx'
 import { Coin, EggIcon, Gem, ItemIcon, MarkIcon } from './Item.tsx'
 import { KBar, KButton, KClose, KReveal } from './Kit.tsx'
 import { aBall, fmtDay, still } from './lib/art.ts'
+import { buyPop, forgeSlam } from './lib/fx.ts'
 import { play } from './lib/sfx.ts'
 import { useItem } from './lib/store.ts'
 
@@ -215,7 +216,7 @@ function canBuy(game: Game, o: Offer, shop: ShopId): boolean {
 /** A shelf of goods. `shop` is told to the game so a price is taken from the right purse. */
 function Shelf({ game, offers, shop }: { game: Game; offers: Offer[]; shop: ShopId }) {
   const [bump, setBump] = useState<string | null>(null)
-  const buy = (item: string) => { useItem(item, '', 'buy', shop); play('buy'); setBump(item); setTimeout(() => setBump(null), 350) }
+  const buy = (item: string, tile: Element | null) => { useItem(item, '', 'buy', shop); play('buy'); buyPop(tile); setBump(item); setTimeout(() => setBump(null), 350) }
   const tag = MARK_TAGS.includes(shop as MarkTag) ? (shop as MarkTag) : undefined
   return (
     <div className="shelf">
@@ -237,7 +238,7 @@ function Shelf({ game, offers, shop }: { game: Game; offers: Offer[]; shop: Shop
                 : <span className="owned">Owned</span>
               : sold
                 ? <span className="owned">Sold today</span>
-                : <button type="button" className="k-btn ok" disabled={!canBuy(game, o, shop)} onClick={() => buy(o.item)}><Price coins={o.coins} gems={o.gems} marks={o.marks} tag={tag} /></button>}
+                : <button type="button" className="k-btn ok" disabled={!canBuy(game, o, shop)} onClick={(e) => buy(o.item, e.currentTarget.closest('.good'))}><Price coins={o.coins} gems={o.gems} marks={o.marks} tag={tag} /></button>}
           </div>
         )
       })}
@@ -507,7 +508,7 @@ export function MonPage({ m, game, onClose }: { m: Mon; game: Game; onClose: () 
                   <div key={f} className="forgeline">
                     <ItemIcon id="key-stone" size={30} className={done ? '' : 'unheld'} />
                     <span><b>{nameOf(f)}</b><small>{done ? 'Forged: this Pokemon keeps it for good' : !game.keyStone ? 'Needs the Key Stone (a week of running on any one kind of work)' : shard ? `${FORGE_COST} ${itemName(shard)}` : `needs ${FORGE_COST} ${megas.length > 1 ? (i === 0 ? 'Red' : 'Blue or Yellow') : 'matching'} Shards (a Comet Shard fits any)`}</small></span>
-                    {!done && <button type="button" className="k-btn main" disabled={!game.keyStone || !shard} onClick={() => { useItem('', m.uid, 'forge', f); play('catch') }}>Forge</button>}
+                    {!done && <button type="button" className="k-btn main" disabled={!game.keyStone || !shard} onClick={(e) => { const line = e.currentTarget.closest('.forgeline'); e.currentTarget.disabled = true; void forgeSlam(line, `/sprites/items/${shard}.png`, () => { useItem('', m.uid, 'forge', f); play('catch') }) }}>Forge</button>}
                   </div>
                 )
               })}
