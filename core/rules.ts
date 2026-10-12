@@ -9,8 +9,8 @@
 
 /** Days before this are not part of the game. */
 export const GAME_START = '2026-10-03'
-/** The first day stakes apply. Two weeks of play first, so the numbers can be checked against real days. */
-export const STAKES_FROM = '2026-10-23'
+/** The first day stakes apply: brought forward from 23 Oct to 12 Oct 2026. Never earlier than a day already lived, or old empty days would be punished after the fact. */
+export const STAKES_FROM = '2026-10-12'
 
 // ── XP ──────────────────────────────────────────────────────────────────────
 export type Tier = 'pillar' | 'core' | 'standard' | 'basic'

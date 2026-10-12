@@ -133,7 +133,9 @@ test('a mark per domain per day, and a day of 10,000 steps pays an extra Iron ma
 
 // ── version 8: stakes ───────────────────────────────────────────────────────
 test('before the stakes begin an empty day costs nothing', () => {
-  const facts = [...run(10, THREE), day(10, {}), day(11, THREE), day(12, THREE)]
+  // 3 to 11 Oct are before STAKES_FROM: an empty day among them (and its settling) costs nothing
+  const facts = [...run(3, THREE), day(3, {}), ...Array.from({ length: 4 }, (_, i) => day(4 + i, THREE))]
+  assert.ok(facts[7].day < STAKES_FROM)
   assert.equal(fold(facts).moments.filter((m) => m.kind === 'slip').length, 0)
 })
 
