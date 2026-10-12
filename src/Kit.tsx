@@ -4,7 +4,6 @@
 // before any real screen changes.
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { Ball, KeyStone } from './Ball.tsx'
-import './kit.css'
 
 // ── pieces ──────────────────────────────────────────────────────────────────
 type Tone = 'neutral' | 'main' | 'ok'

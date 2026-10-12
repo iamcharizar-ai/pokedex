@@ -29,9 +29,6 @@ import { LIFEOS_URL, start, useItem, useView } from './lib/store.ts'
 import { FIXTURE } from './lib/fixture-boot.ts'
 import { dropIn, floatNote, hit, party, ring, stamp, tapPop } from './lib/fx.ts'
 import { ChestOpener, HatchOpener } from './Reveal.tsx'
-import './skin.css'
-import './motion.css'
-import './economy.css'
 
 type Tab = 'partner' | 'team' | 'shop' | 'dex' | 'trainer'
 const TABS: [Tab, string][] = [['partner', 'Home'], ['team', 'Team'], ['shop', 'Shop'], ['dex', 'Pokedex'], ['trainer', 'Trainer']]

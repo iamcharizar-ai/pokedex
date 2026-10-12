@@ -1,0 +1,28 @@
+/* THE STYLES: one entry, and the cascade order decided in one place.
+
+   Layers, lowest first:
+
+     tokens   every colour, face and size (tokens.css). Nothing else defines one.
+     legacy   all the CSS written before the overhaul, in the order it has always
+              cascaded in: index (the cream-window game), the kit, the skin laid
+              over both, motion, and the shop/economy screens. Kept as one layer
+              ON PURPOSE. The skin retints the cream screens by out-ranking them
+              on specificity (a plain `.kind` over `.kind.k-catch`, and so on),
+              and a layer beats specificity, so splitting these into layers
+              would flip them. Screenshots under every fixture confirm that one
+              layer behaves exactly as the files did.
+     screens  the rebuilt screens, one small file each (phase 2 of UI-OVERHAUL.md).
+              A screen moves here when it is rebuilt on the kit, and its old
+              rules are deleted from legacy in the same change. Beats legacy.
+     motion   keyframes and the moving parts of the rebuilt screens. Beats all.
+
+   When a screen is rebuilt it needs no long selector to win: being in a later
+   layer is enough. When the last screen has moved, legacy is empty and goes. */
+@layer tokens, legacy, screens, motion;
+
+@import './tokens.css' layer(tokens);
+@import '../index.css' layer(legacy);
+@import '../kit.css' layer(legacy);
+@import '../skin.css' layer(legacy);
+@import '../motion.css' layer(legacy);
+@import '../economy.css' layer(legacy);

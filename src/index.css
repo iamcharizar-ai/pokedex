@@ -3,31 +3,7 @@
    box, today's wild Pokemon top-right with an HP bar that is the habits you
    have left. Everything else is a cream game window on a navy ground.
    Gold stripes always mean "today"; green means "already banked". */
-:root {
-  --bg: #1a2240;
-  --bg-2: #222c52;
-  --win: #f8f5ea;
-  --win-2: #ebe6d5;
-  --win-3: #dcd6c1;
-  --edge: #23283a;
-  --ink: #23283a;
-  --muted: #5b6278;
-  --red: #dc3b45;
-  --red-dk: #a8242f;
-  --blue: #2f7fd0;
-  --sky: #63c6ff;
-  --green: #2fae66;
-  --gold: #f5b800;
-  --pink: #e0559a;
-  --orange: #ee7b2f;
-  --hp-ok: #3fd07a;
-  --hp-mid: #f5c400;
-  --hp-low: #ee4b3e;
-  --stripe: repeating-linear-gradient(135deg, transparent 0 4px, rgba(0, 0, 0, 0.3) 4px 6px);
-  --px: 'Pixelify Sans', 'Space Grotesk', system-ui, sans-serif;
-  --lbl: 'Silkscreen', monospace;
-  color-scheme: light;
-}
+/* the palette, type and sizes are in styles/tokens.css */
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--bg); }
 body {

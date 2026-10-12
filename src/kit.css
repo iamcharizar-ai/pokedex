@@ -1,29 +1,8 @@
 /* THE KIT — the shared look every Pokedex screen is built from.
    Chunky objects, layered panels, ribbon headers, one heavy outlined face.
-   Everything is prefixed k- and reads its colours from the tokens below, so
-   the look can be retuned in one place. No screen uses it yet: see ?kit. */
-:root {
-  --k-edge: #141a33;
-  --k-night: #1a2240;
-  --k-body: #26315e;
-  --k-tile: #33417a;
-  --k-tile-hi: #42539a;
-  --k-frame: #f8f5ea;
-  --k-frame-lo: #d9d2b8;
-  --k-text: #ffffff;
-  --k-dim: #aab6e6;
-  --k-gold: #f5b800;
-  --k-gold-hi: #ffd84a;
-  --k-blue: #2f7fd0;
-  --k-green: #2fae66;
-  --k-red: #dc3b45;
-  --k-grey: #8089a8;
-  --k-purple: #7b5cf0;
-  --k-pink: #e0559a;
-  --k-bronze: #c47a3c;
-  --k-silver: #b9c4d8;
-  --k-face: 'Lilita One', 'Pixelify Sans', system-ui, sans-serif;
-}
+   Everything is prefixed k- and reads its colours from styles/tokens.css, so
+   the look can be retuned in one place. See ?kit for the pieces on their own. */
+/* the kit's colours and face are in styles/tokens.css */
 
 /* ── type: white, dark outline, hard shadow below ── */
 .k-type { font-family: var(--k-face); font-weight: 400; color: var(--k-text); letter-spacing: 0.02em; -webkit-text-stroke: 4px var(--k-edge); paint-order: stroke fill; text-shadow: 0 3px 0 var(--k-edge); line-height: 1.1; }

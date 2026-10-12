@@ -6,7 +6,6 @@
 
 /* ── frame: type ── */
 /* body text in a plain face: in the pixel face a 5 read as an S */
-:root { --px: 'Space Grotesk', system-ui, sans-serif; }
 body { -webkit-font-smoothing: auto; font-size: 16px; }
 .num { font-family: var(--k-face); }
 h1, h2, h3 { font-family: var(--k-face); letter-spacing: 0.03em; text-transform: none; }

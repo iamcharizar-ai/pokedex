@@ -9,7 +9,7 @@ import '@fontsource/space-grotesk/latin-600.css'
 import '@fontsource/pixelify-sans/latin-400.css'
 import '@fontsource/pixelify-sans/latin-600.css'
 import '@fontsource/lilita-one/latin-400.css'
-import './index.css'
+import './styles/index.css'
 import App from './App.tsx'
 import { KitPage } from './Kit.tsx'
 
