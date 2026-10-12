@@ -25,6 +25,7 @@ import { Toasts } from './Toasts.tsx'
 import { aBall, badgeArt, badgeName, fmtDay, leagueName, still } from './lib/art.ts'
 import { play, setSoundOn, soundOn } from './lib/sfx.ts'
 import { LIFEOS_URL, start, useItem, useView } from './lib/store.ts'
+import { FIXTURE } from './lib/fixture-boot.ts'
 import { dropIn, floatNote, hit, party, ring, stamp, tapPop } from './lib/fx.ts'
 import { ChestOpener, HatchOpener } from './Reveal.tsx'
 import './skin.css'
@@ -1036,6 +1037,7 @@ export default function App() {
   const status = view.status === 'live' ? ['live', 'Synced'] : view.status === 'connecting' ? ['connecting', 'Loading'] : view.status === 'error' ? ['error', 'Offline'] : ['off', 'Local only']
   return (
     <div className="shell">
+      {FIXTURE && <a className="fixturetag" href={location.pathname} title={`${FIXTURE.note} Nothing here is your game, and nothing is saved. Tap to leave.`}>Fixture: {FIXTURE.name} · {fmtDay(FIXTURE.today)} · not your game ✕</a>}
       <TopBar game={game} status={status} loading={loading} onHelp={() => setHelp(true)} />
       {!loading && <Claims game={game} today={view.today} />}
       {!loading && <Toasts game={game} today={view.today} />}

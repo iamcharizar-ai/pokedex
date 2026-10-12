@@ -1,86 +1,154 @@
 # A complete UI overhaul: the plan
 
-Written 13 Oct 2026. **A plan, not a build.** It comes from reading the Pokedex end to end (about 1,370 lines of CSS in five files, a 1,070-line `App.tsx`, five tabs) and from the motion study. Nothing here changes the game's rules.
+Written 13 Oct 2026, revised 14 Oct after your answers. **Phase 0 is built; the rest is a plan.** It comes from reading the Pokedex end to end (about 1,370 lines of CSS in five files, a 1,070-line `App.tsx`, five tabs) and from the motion study.
+
+## 0. Where this stands
+
+**Your decisions**
+- **No light theme.** Dark only.
+- **The Home scene: as alive as I like.**
+- **Every tab has one job.** Shop and Pokedex already do. Team mostly does. Home and Trainer are a mix, and Trainer is not used: its trainer card, trainer profile and "Your work" are dead weight, and last night's sleep belongs on Home.
+- **Team needs a forge:** a place for Mega Stones, using the evolution choreography from the motion kit.
+- **Mega Stones come too often** against how many Pokemon can use one.
+
+**On hold until the rest is settled** (yours, recorded so they are not lost):
+1. The egg gets a dedicated space, not a card on Home.
+2. Steps from Vitals hatch the egg.
+3. No second egg appears while one is warming; eggs themselves can be rewards.
+4. Life OS: the XP chip should push out, hang for about a second, then be pulled in more slowly.
+5. Life OS: the breathing month-review button looks shabby, and so does the square behind the Comet Shard.
+
+**Built so far:** phase 0 (section 3).
 
 ## 1. What is wrong with the UI today
 
-1. **Two visual systems at once.** `index.css` is the original cream-window game (`--lbl`, `--gold`); `kit.css` and `skin.css` are the newer dark Clash-style one (`--k-*`). `skin.css` repaints the old classes, `economy.css` and `motion.css` add more on top. A change has to be made in two or three places, and the cascade order decides who wins.
-2. **Home is one long scroll.** Scene, notices, the talk bubble, next-up, boss, egg, actions, leader, momentum, sleep, quests: eleven blocks, most below the fold. The day's one question ("what do I do next?") is answered by three of them in three places.
-3. **Five tabs hold nine ideas.** "Team" is the party, the bond, the bag and the Box. "Trainer" is a stats card, the season, bosses, feats, work and the adventure log. Nobody searching for their coins finds the Bag under Team.
-4. **Two card designs.** `MonCard` (older) and `KCard` (the kit's frame by stage) both exist; only the kit page uses the better one.
-5. **Windows, not sheets.** Item pages and popups are centred modals, which are the hardest thing to reach with a thumb on a phone, and the app is used on a phone.
-6. **The Pokedex grid draws a whole region at once** (up to about 150 cells, each an animated GIF), and the sprite files are loaded one by one.
-7. **Only dark.** A bright room, a large-text setting and a high-contrast need are unserved.
-8. **No empty states except one.** A new device, or a reset ledger, is a screen of zeros.
-9. **The preview cannot show the game.** An empty ledger shows no collect strip, no boss, no chest. Every screen I have built since the claim had to be tested by calling pieces by hand.
+1. **Two visual systems at once.** `index.css` is the original cream-window game; `kit.css` and `skin.css` are the newer dark one. `skin.css` repaints the old classes and two more files sit on top. A change is made in two or three places and the cascade order decides who wins.
+2. **Home is eleven blocks long**, and "what do I do next?" is answered in three of them.
+3. **Tabs hold several ideas each.** Trainer is a stats card, the season, bosses, feats, work, sleep, badges, a chart and a log.
+4. **Two card designs.** `MonCard` (older) and `KCard` (the kit's); only the kit page uses the better one.
+5. **Windows, not sheets.** Centred modals are the hardest thing to reach with a thumb.
+6. **Several overlays can open at once.** Seen in the `late` fixture: a chest capsule over the news window over a toast. They need one queue.
+7. **The Pokedex grid draws a whole region at once** (up to about 150 animated GIFs).
 
-## 2. The overhaul, in the order it should happen
+## 2. Five tabs, one job each
 
-### Phase 0: a fixture ledger (small, and the key to everything after)
-`?fixture=<name>` loads a canned ledger instead of the network: `week` (a normal week with quests and a chest), `boss` (party of six, a boss at 35% HP, a Master Ball in the Bag), `late` (a hundred days, Megas, shiny, full feats), `empty`. Then every screen can be shown, screenshotted and diffed. Add a Playwright run that opens each tab under each fixture and compares screenshots. **Every later phase leans on this.** (About half a day.)
+Each tab answers one question. Nothing appears in two places.
+
+| Tab | The question | What is in it | What leaves |
+|---|---|---|---|
+| **Today** (was Home) | What is happening today? | The scene (partner against the wild Pokemon). Today's XP, the pillars and the week's seven momentum pips as one strip. Collect. **Last night** (moved here from Trainer). Throw and feed. Two compact tiles: the leader, and this week's boss (HP, days left, tasks done), each opening its full view as a sheet. | The momentum window and the quests window (to Journey). The egg card (on hold: it gets its own space). |
+| **Party** (was Team) | What do I have, and what can I do with it? | The partner's summary. The party of six. The bond. Choices (branch, which form shows). **The Forge** (new, below). The Box. The Bag. | Nothing. |
+| **Shop** | What can I buy? | As now. | |
+| **Pokedex** | What have I seen and caught? | As now. | |
+| **Journey** (was Trainer) | Where am I going, and what is next to earn? | Roads, top to bottom: the league (leaders and badges), the season, the week's quests, the feats, bosses beaten. The Hall of Fame. The adventure log, folded shut at the bottom. | **Trainer card, Trainer profile, Your work, XP per day**: deleted. Last night: to Today. |
+
+Why this split: **Today** is everything that changes while you tick; **Party** is everything you own; **Journey** is everything you are walking toward. A thing that is none of those (the trainer card's totals, the 28-day stats, the per-domain "work" table) had no reader, so it goes. What the work table held that mattered is already elsewhere: runs are on the feats road, mastery levels are in each domain's shop.
+
+### The Forge (Party tab)
+A window of its own, not a line on a Pokemon's page:
+- **The stone and the shards.** The Key Stone (dark until it is earned, with the feat that earns it), and your shards by colour as counts.
+- **Who can Mega.** Every fully evolved Pokemon you own that has a Mega form, as cards: forged ones lit, forgeable ones breathing with their shard cost, the rest dark with what they need (the Key Stone, or which colour).
+- **Forging** plays the full choreography: three shards slam into the stone one after another, the stone pulses, then the motion kit's "unlocked" popup (dimmer, sunburst, bloom, the Mega form slamming in, the title, the shine). Today it is a button on a Pokemon's page and only the slam plays.
+- It also gives Megas a place to be *seen*: today a forged Mega is a chip on one page.
+
+## 3. Phase 0, built: fixtures
+
+`?fixture=<name>` loads a canned ledger instead of the network.
+
+| Fixture | What it shows |
+|---|---|
+| `empty` | A new device: a habit library, nothing ticked. |
+| `week` | Eleven ordinary days: partner at level 23, a wild Pokemon at 219 of 1,100 HP, two rewards to collect, the Key Stone just earned. |
+| `late` | Five months: four trained Pokemon, a Box of 29, 22 feats, an egg warming, chests opened, 16,000 coins. |
+| `boss` | A party of six on the Wednesday of a boss week: Dragonite at 958 of 6,200 HP, four kinds of ball to throw, eight rewards to collect. |
+
+- **Add `&news`** to have everything recent told again on every load (reveals, toasts, chests, hatches). Without it a fixture opens quietly, so a screen can be looked at with nothing over it.
+- **A fixture is ordinary ledger events** (a library, ticks, things bought) folded by the real rules, so it cannot show a state the game cannot reach.
+- **It cannot touch your game.** The ledger is switched off while one is loaded, and this device's own memory (which news was told, the device id) is kept under a `fx.<name>.` prefix. A yellow tag on screen says it is a fixture.
+- **`tools/fixtures.test.mjs`** folds each one and fails if a rules change leaves it showing nothing (no boss in `boss`, nothing to collect in `week`). It runs with `npm test`.
+
+**What it found on its first day:**
+- **The boss's throw animation never played.** The outcome was right, but the scene looked for the ball before the page had drawn it. Fixed, and seen working: the ball flies, rocks three times, the boss breaks free.
+- **Overlays stack** (item 6 above).
+- **The chest capsule works with real taps.**
+
+**Not built: screenshot comparison.** It needs Playwright, which downloads a browser of about 150 MB. Say the word and I will add it; until then fixtures are checked by eye and by the fold test.
+
+## 4. Mega Stones: the numbers, and a proposal
+
+Shards do not come from quests, seasons or pillars. They come from four places:
+
+| Source | How many |
+|---|---|
+| **Feats** | 15 of the 52 pay one: a run of 7 days (1 each for code, gym, guitar, Arbor), a run of 30 (1 each), 100 days in all (1 each, not gym), a run of 100 (2 each). **19 in all, ever.** |
+| **Strong's training kit** | A Red Shard for every full set of the seven routines, **with no limit**. |
+| **A month-end review** | One Comet Shard a month, which fits any Mega. |
+| **A boss kill** | One, rarely. |
+
+A stone costs 3. Measured on the fixtures, **from feats alone**:
+
+| | Days played | Trained | Can Mega | Shards | Stones |
+|---|---|---|---|---|---|
+| `late` | 151 | 4 | **1** (Charizard) | 8 | **2** |
+| `boss` | 425 | 16 | **6** | 16 | **5** |
+
+So feats alone give two stones for the first Pokemon that can use one, and the fixtures have no Strong workouts or month reviews in them. With a seven-routine split and a review every month, five months is about 8 + 10 + 5 = 23 shards: **seven stones for one Pokemon**. You are right, and the unlimited source is the gear kit.
+
+**Proposal (rules version 11, not built):**
+1. **The gear kit pays a Red Shard on every third full set**, and gems and Iron on the others. It stays worth doing; it stops being a tap.
+2. **A run of 7 days pays gems, not a shard.** Those four arrive in the first fortnight, months before anything can Mega. The Key Stone still comes from a run of 7.
+3. **A stone still costs 3.** With the two changes, five months gives about 4 (feats) + 3 (kit) + 5 (reviews) = 12 shards, four stones, against one to three Pokemon that can use them: scarce enough to choose, not so scarce that a review feels wasted.
+4. **Nothing already earned is taken back.** Shards in the Bag stay.
+
+## 5. The rest of the overhaul, in order
 
 ### Phase 1: one token layer and cascade layers
-- `tokens.css`: a single palette with dark and light values, a 4-pixel spacing scale, three radii, three elevations, one type scale (display, title, body, label, number), and motion tokens that mirror `motion.js` (`--t-pop: 250ms`, `--ease-out`, ...).
-- `@layer reset, tokens, kit, screens, motion;` so order is decided once and `skin.css` stops fighting `index.css`.
-- Delete the old cream-window skin once every screen is on the kit's pieces (`KPanel`, `KRibbon`, `KBar`, `KCard`, `KButton`).
-- Result: five overlapping files become one tokens file, one kit file and a small file per screen, with the 112-rule cleanup done earlier as the model.
+- `tokens.css`: one dark palette, a 4-pixel spacing scale, three radii, three elevations, one type scale, and motion tokens that mirror `motion.js`.
+- `@layer reset, tokens, kit, screens, motion;` so order is decided once.
+- Delete the old cream-window skin once every screen is on the kit's pieces.
 
-### Phase 2: the screens, rebuilt on the kit
-- **Home becomes "Today".** One screen, no scroll for the main question: the scene; under it a row of three tiles (**Next up**, **Boss**, **Collect**); then an accordion for the rest (momentum, sleep, quests, leader). The Collect strip becomes a badge on the top bar that opens a bottom sheet, so unclaimed rewards are one tap from anywhere.
-- **Team becomes "Party".** Partner, the five, the bond card. The Bag and the Box get their own tab.
-- **Shop** stays one shop at a time, adds an "I can afford" toggle and a search, and shows what each shelf item does at a glance (the stat it moves) instead of a paragraph.
-- **Dex** keeps its region pages, and gets a completion ring, a search, and still sprites in the grid with the animated one only on the detail page.
-- **Trainer becomes "Journey".** The season road, the feats road, bosses, the 28-day card and the adventure log, as one scroll of roads rather than six windows.
-- Every Pokemon is a `KCard`. `MonCard` is deleted.
+### Phase 2: the five tabs of section 2
+Built on the kit, with every Pokemon a `KCard` and `MonCard` deleted. The Forge is part of this phase. Order: Journey first (it is mostly deleting), then Today, then Party and the Forge.
 
 ### Phase 3: how it is held
-- **Bottom sheets** instead of centred modals for item pages, the Box, the throw and Collect, draggable down to close, so the thumb never reaches the top.
-- **Swipe between tabs**, with the bar following.
-- **Haptics** (`navigator.vibrate`) on a collect, a hit, a catch and a level banner, off with sound.
-- **A top HUD with a level ring** around the partner's face, coin and gem pills that show the change as it lands, and a Collect badge with a count.
+- **Bottom sheets** instead of centred modals (item pages, the Box, the boss, the leader, Collect), dragged down to close.
+- **One overlay queue**, so a chest, the news and a toast take turns.
+- **Swipe between tabs. Haptics** on a collect, a hit, a catch and a level banner, off with sound.
+- **A top bar with a level ring** round the partner's face, pills that show the change as it lands, and a Collect badge with a count.
 
 ### Phase 4: the scene
-The Home scene is the game's face and is currently two sprites on a flat sky. Layered parallax (sky, far hills, near ground), a sky that follows the real clock and the weather the sleep score implies (a good night is clear), the partner idling and turning to look at what the wild Pokemon does, and a tap on the partner that makes it react (no reward, just life). This is the highest "feels alive" return and the most taste-dependent, so it comes after the structure is settled.
+Layered parallax (sky, far hills, near ground), a sky on the real clock with the weather last night's sleep implies, the partner idling and turning toward what the wild Pokemon does, and reacting when tapped. No reward for tapping: it is life, not a mechanic.
 
 ### Phase 5: readable data
-- Replace the XP bars-per-day with a **calendar heat map** of the last 12 weeks (each cell a day, brighter for more pillars, a ring for a perfect day, a dot for a boss week).
-- Momentum as seven pips with the bonus on the end.
-- Leader and boss HP bars share one component with the same segment marks.
+With the trainer card gone this is small: a 12-week calendar heat map on Journey in place of the XP chart (a cell a day, a ring for a perfect day, a dot for a boss week), and one HP-bar component for the wild Pokemon, the leader and the boss.
 
 ### Phase 6: for everyone
-- **Light theme, large text, high contrast**, picked in the help window and remembered. Tokens make this a values change, not a rewrite.
-- **A first-run tour** of five cards (what Life OS is, what a tick does, the partner, collect, the boss) and **empty states** for every list.
-- **Accessibility pass:** every tap target 44 pixels or more, every motion has a non-motion equivalent (a label or a colour), focus rings checked on each screen, live regions for claims and news.
-- **Performance:** split the code per tab, one sprite sheet for item icons, cache the fold by day boundary, stop GIFs off screen.
+A first-run tour of five cards and an empty state for every list; an accessibility pass (44-pixel targets, a non-motion equivalent for every motion, focus rings, live regions); performance (code split per tab, one sprite sheet for item icons, the fold cached by day, GIFs stopped off screen).
 
 ### Phase 7: Life OS gets the same kit
-Today the two apps share a core and nothing else. Share the tokens and motion kit the same way the core is shared (copy script into `src/ui-kit/`). Life OS gets: a stamp on a tick, the claim-button breathing on the month review and the Sunday panel (started), a streak flame, and the partner strip using the Pokedex's top-bar pieces.
+Share the tokens and motion kit the way the core is shared. This is where the on-hold Life OS items are done properly.
 
-## 3. What I would not do
+## 6. What I would not do
 
-- **A rewrite in another framework or a game engine.** The game is a spreadsheet of events with a face. React is enough; the cost is in design and testing, not in rendering.
-- **Re-skin by hand per screen without Phase 0.** That is how the two visual systems happened.
-- **More currencies, more tabs or more windows.** The overhaul should leave the game with fewer places to look, not more.
+- **A rewrite in another framework or a game engine.** The game is a spreadsheet of events with a face.
+- **More currencies, more tabs or more windows.** The overhaul should leave fewer places to look.
 - **Anything that copies art or sound** from the study. The kit is choreography; the look stays ours.
 
-## 4. Size and risk
+## 7. Size
 
-| Phase | Effort | Risk | Why it is in this order |
-|---|---|---|---|
-| 0 Fixtures and screenshot tests | half a day | low | nothing else can be checked without it |
-| 1 Tokens and layers | 1 session | medium (visual drift) | stops the two skins fighting; screenshots catch drift |
-| 2 Screens on the kit | 3 sessions | medium | the structural win: Home and the tab layout |
-| 3 Sheets, swipe, haptics, HUD | 1 session | low | reach and feel |
-| 4 The scene | 1 to 2 sessions | taste | after the structure is stable |
-| 5 Data views | 1 session | low | |
-| 6 Themes, tour, a11y, perf | 2 sessions | low | |
-| 7 Shared kit with Life OS | 1 session | low | after the Pokedex kit has settled |
+| Phase | Effort | State |
+|---|---|---|
+| 0 Fixtures | half a day | **done** (screenshot comparison waits on your go-ahead for Playwright) |
+| 1 Tokens and layers | 1 session | |
+| 2 Five tabs and the Forge | 3 sessions | |
+| 3 Sheets, queue, swipe, haptics, top bar | 1 session | |
+| 4 The scene | 1 to 2 sessions | |
+| 5 Data views | half a session | |
+| 6 Tour, accessibility, performance | 2 sessions | |
+| 7 Shared kit with Life OS, and the on-hold Life OS items | 1 session | |
 
-**Total: about eleven sessions.** Phases 0 to 2 are the part that matters; everything after is polish on a clean base.
+## 8. Decisions I still need
 
-## 5. Decisions for you
-
-1. **Home as "Today" with three tiles:** is Next up, Boss and Collect the right three?
-2. **Bag and Box as their own tab,** taking the Team tab's overload with them, or leave them under Party?
-3. **Light theme:** do you want one, or is dark-only the look?
-4. **Phase 4's scene:** how much life do you want on Home (a parallax scene and a reacting partner, or keep it simple)?
+1. **The Mega proposal in section 4:** go ahead as written (rules version 11)?
+2. **Playwright for screenshot comparison:** a 150 MB browser download. Yes or no?
+3. **The boss on Today as a tile that opens a sheet** (rather than a full card on a tab): right, or do you want the whole card always visible?

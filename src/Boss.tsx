@@ -6,6 +6,7 @@
 // one `boss-throw` event. The throw's outcome is a seeded roll, so this screen
 // can know it a moment early and play the right ending.
 import { useEffect, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { BOSS_PARTY, BOSS_WHERE, KILL_CAP, THROW_AT, catchChance, type BossKind } from '../core/boss.ts'
 import { BALLS, itemName, rng } from '../core/economy.ts'
 import { nameOf, spritePath, type BossView, type Game } from '../core/fold.ts'
@@ -78,7 +79,8 @@ function Fight({ boss, game }: { boss: BossView; game: Game }) {
     .sort((a, b) => odds(b) - odds(a))
   const toss = async (item: string) => {
     if (busy || !stage.current || !sprite.current) return
-    setBusy(item)
+    // the ball has to be on the page before the scene can move it
+    flushSync(() => setBusy(item))
     play('throw')
     // the same seeded roll the game makes, so the ending shown is the one that happens
     const caught = rng(`boss-catch:${boss.week}:${boss.throws + 1}`)() < odds(item)

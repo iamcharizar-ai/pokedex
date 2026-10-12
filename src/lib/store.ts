@@ -10,10 +10,12 @@ import { foldGame, type Game } from '../../core/fold.ts'
 import { dayISO, type LedgerEvent } from '../linked/arbor-model.ts'
 import { createLedger, type LedgerStatus } from './ledger.ts'
 import { measure, planCard } from './boss.ts'
+import { FIXTURE } from './fixture-boot.ts'
 import { TYPES, ingest } from './ingest.ts'
 
 const env = import.meta.env
-const OFF = env.VITE_SUPABASE_DISABLE === '1'
+// a fixture is a canned ledger: the real one is never read or written while it is loaded
+const OFF = env.VITE_SUPABASE_DISABLE === '1' || FIXTURE !== null
 const URL_ = OFF ? '' : ((env.VITE_SUPABASE_URL as string | undefined) ?? '')
 const KEY = OFF ? '' : ((env.VITE_SUPABASE_ANON_KEY as string | undefined) ?? '')
 
@@ -38,18 +40,20 @@ export interface View {
   today: string
 }
 
-const events: LedgerEvent[] = []
+const events: LedgerEvent[] = FIXTURE ? [...FIXTURE.events] : []
 /** what the last compute read from the ledger: the boss is planned and measured from it (declared before the first compute below) */
 let input: FactsInput | null = null
 const keyOf = (e: LedgerEvent): string => `${e.device}|${e.at}|${e.type}|${JSON.stringify(e.payload)}`
 const seen = new Set<string>()
-let config: LedgerEvent | undefined
+let config: LedgerEvent | undefined = FIXTURE?.config
+/** A fixture carries its own date; the real game uses the clock. */
+const todayISO = (): string => FIXTURE?.today ?? dayISO()
 let status: LedgerStatus = URL_ && KEY ? 'connecting' : 'off'
 let view: View = compute()
 const listeners = new Set<() => void>()
 
 function compute(): View {
-  const today = dayISO()
+  const today = todayISO()
   input = ingest(events, config, today)
   const facts = buildFacts(input)
   const vit = events.filter((e) => e.type === 'vitals').sort((a, b) => (a.at < b.at ? -1 : 1))
@@ -78,7 +82,8 @@ let bossBusy = false
  * for a week that already has one.
  */
 function syncBoss(): void {
-  if (bossBusy || status === 'connecting' || status === 'error' || !input) return
+  // a fixture is frozen: its card and its days are part of it
+  if (FIXTURE || bossBusy || status === 'connecting' || status === 'error' || !input) return
   const today = view.today, week = mondayOf(today)
   const wrote: LedgerEvent[] = []
   let card = input.boss?.cards[week]
@@ -144,14 +149,14 @@ export function start(): void {
   // the day rolls over while the tab is open
   setInterval(() => {
     if (document.hidden) return // nobody is looking: the next visible minute catches up
-    if (dayISO() !== view.today) refresh()
+    if (todayISO() !== view.today) refresh()
     else void pullConfig()
   }, 60_000)
 }
 
 /** Something chosen by hand: who is next, a branch, who leads, which form shows. None of it costs anything from version 4; `item` is only sent for a stone spent under version 3. */
 export function useItem(item: string, uid: string, what: string, to?: string): void {
-  const ev = ledger.emit(USE_EVENT, { ...(item ? { item } : {}), uid, what, ...(to ? { to } : {}), n: Math.random().toString(36).slice(2, 10) })
+  const ev = ledger.emit(USE_EVENT, { ...(item ? { item } : {}), uid, what, ...(to ? { to } : {}), n: Math.random().toString(36).slice(2, 10) }, view.today)
   seen.add(keyOf(ev))
   events.push(ev)
   refresh()

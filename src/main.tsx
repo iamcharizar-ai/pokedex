@@ -1,3 +1,5 @@
+// first, so a fixture's own memory is in place before anything reads this device's
+import './lib/fixture-boot.ts'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import '@fontsource/silkscreen/latin-400.css'
