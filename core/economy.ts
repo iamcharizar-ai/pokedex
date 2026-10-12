@@ -277,6 +277,8 @@ export const MASTERY_STEP = 0.03
 export const masteryCost = (level: number): number => 4 * (level + 1)
 /** A bond level (10, 30 and 60 hearts) makes every strike this much harder. */
 export const BOND_STEP = 0.05
+/** A fully trained Pokemon in the party keeps its hearts: each of its bond levels adds this to the party bonus, on top of TEAM_BONUS. */
+export const BOND_PARTY = 0.01
 
 // ── the Professor, the Smithy ──────────────────────────────────────────────
 /** What a Box Pokemon is worth to the Professor, by rarity. */

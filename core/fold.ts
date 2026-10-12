@@ -21,7 +21,7 @@ import {
 import { COMET_SHARD } from './economy.ts'
 import { SPECIES, type SpeciesRec } from './species.ts'
 import {
-  AMULET_MULT, BALLS, BERRY_HEARTS, BOND_STEP, CHEST, EGG_DAYS_OLD_CHARM, FEATS, FORGE_COST, GEAR, GEAR_ITEMS, HELD, LURES, MARK_OWNED, MARK_RECORD, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, SELL,
+  AMULET_MULT, BALLS, BERRY_HEARTS, BOND_PARTY, BOND_STEP, CHEST, EGG_DAYS_OLD_CHARM, FEATS, FORGE_COST, GEAR, GEAR_ITEMS, HELD, LURES, MARK_OWNED, MARK_RECORD, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, SELL,
   STANDING, TM_SLOTS, WEEKLY_QUESTS, ballClass, dayGap, dealsFor, forgeShard, heldBonus, heldCommon, isMarkTag, lureTypes, martDeals, masteryCost, offerFor, rng, seasonReward, throwHp, tmType,
   type MarkTag, type Offer, type Reward, type ShopId,
 } from './economy.ts'
@@ -761,7 +761,8 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
     const members = teamNow()
     const domain = {} as Power['domain']
     for (const t of TAGS) domain[t] = { held: heldBonus(partner.held, t), mastery: isMarkTag(t) ? MASTERY_STEP * mastery[t] : 0, nature: TEAM_NATURE * members.filter((m) => m.nature?.up === t).length }
-    return { team: TEAM_BONUS * members.length, bond: BOND_STEP * bondLevel((partner.together ?? 0) + (partner.fed ?? 0)), mega: partner.megas?.length ? MEGA_BONUS : 0, item: heldCommon(partner.held), domain }
+    const hearts = (m: Mon): number => (m.together ?? 0) + (m.fed ?? 0)
+    return { team: members.reduce((sum, m) => sum + TEAM_BONUS + BOND_PARTY * bondLevel(hearts(m)), 0), bond: BOND_STEP * bondLevel((partner.together ?? 0) + (partner.fed ?? 0)), mega: partner.megas?.length ? MEGA_BONUS : 0, item: heldCommon(partner.held), domain }
   }
 
   let display = partner.form
