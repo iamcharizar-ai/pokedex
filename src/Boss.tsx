@@ -48,7 +48,7 @@ async function throwScene(stage: HTMLElement, sprite: HTMLElement, caught: boole
   void run(sprite, K(180, [[0, { t: { s: 1 }, o: 1 }, EASE.in], [180, { t: { s: 0.05 }, o: 0 }]]), { dur: 180 })
   for (let i = 0; i < 3; i++) {
     await run(ball, K(520, [[0, { t: { r: 0 } }, EASE.inOut], [130, { t: { r: -22 } }, EASE.inOut], [260, { t: { r: 18 } }, EASE.inOut], [390, { t: { r: -8 } }, EASE.inOut], [520, { t: { r: 0 } }]]), { dur: 520, delay: 180 })
-    play('hit')
+    play('click', i)
   }
   if (caught) {
     await run(ball, K(260, [[0, { t: { s: 1 } }, EASE.out], [100, { t: { s: 1.22 } }, EASE.inOut], [260, { t: { s: 1 } }]]), { dur: 260 })

@@ -3,15 +3,20 @@
 // first run says nothing: history is not news), and never blocking.
 import { useEffect, useRef, useState } from 'react'
 import { motionConfig } from './lib/fx.ts'
-import { toast } from './lib/motion.js'
+import { levelUp, toast } from './lib/motion.js'
+import { play } from './lib/sfx.ts'
+import { ItemIcon } from './Item.tsx'
 import { nameOf, type Game, type Moment } from '../core/fold.ts'
 
 const KEY = 'pokedex.toasted.v1'
 const SHOWN_MS = 4200
 
 const keyOf = (m: Moment): string => `${m.day}|${m.kind}|${m.kind === 'boss' ? m.what : 'level' in m ? m.level : ''}|${'form' in m ? m.form : ''}`
-const textOf = (m: Moment): { title: string; line: string } | null =>
-  m.kind === 'level' ? { title: `Level ${m.level}`, line: `${nameOf(m.form)} grew.` }
+/** Levels that get a banner: every fifth, except where an evolution or graduation already has its own moment (25, 30, 50). */
+export const bigLevel = (level: number): boolean => level % 5 === 0 && ![25, 30, 50].includes(level)
+
+const textOf = (m: Moment): { title: string; line: string; big?: boolean } | null =>
+  m.kind === 'level' ? { title: `Level ${m.level}`, line: `${nameOf(m.form)} grew.`, ...(bigLevel(m.level) ? { big: true } : {}) }
     : m.kind === 'flee' ? { title: 'It got away', line: `The wild ${nameOf(m.form)} left.` }
       : m.kind === 'boss' && m.what === 'left' ? { title: 'The boss left', line: `${nameOf(m.form)} is gone. Another comes on Monday.` }
       : null
@@ -26,7 +31,7 @@ function load(): Set<string> | null {
 }
 
 export function Toasts({ game, today }: { game: Game; today: string }) {
-  const [rail, setRail] = useState<{ key: string; title: string; line: string }[]>([])
+  const [rail, setRail] = useState<{ key: string; title: string; line: string; big?: boolean }[]>([])
   const seen = useRef<Set<string> | null | undefined>(undefined)
   useEffect(() => {
     if (seen.current === undefined) seen.current = load()
@@ -45,7 +50,23 @@ export function Toasts({ game, today }: { game: Game; today: string }) {
   if (!rail.length) return null
   return (
     <div className="toast-rail" role="status" aria-live="polite">
-      {rail.map((t) => <div key={t.key} className="toast" ref={(el) => { if (el && !el.dataset.on && !motionConfig.reduced) { el.dataset.on = '1'; void toast(el, { hold: SHOWN_MS - 1000 }) } }}><b>{t.title}</b> {t.line}</div>)}
+      {rail.map((t) => t.big ? <Banner key={t.key} title={t.title} line={t.line} /> : <div key={t.key} className="toast" ref={(el) => { if (el && !el.dataset.on && !motionConfig.reduced) { el.dataset.on = '1'; void toast(el, { hold: SHOWN_MS - 1000 }) } }}><b>{t.title}</b> {t.line}</div>)}
+    </div>
+  )
+}
+
+/** A level worth a banner: the title drops in with a squash, the star pops 0.1 → 1.48 → 0.7 → 1.09, the word follows. */
+function Banner({ title, line }: { title: string; line: string }) {
+  const t = useRef<HTMLElement>(null), i = useRef<HTMLSpanElement>(null), b = useRef<HTMLElement>(null)
+  useEffect(() => {
+    play('level')
+    if (!motionConfig.reduced) void levelUp({ title: t.current, icon: i.current, button: b.current })
+  }, [])
+  return (
+    <div className="levelbanner">
+      <span ref={i} className="lb-star"><ItemIcon id="star-piece" size={44} /></span>
+      <span className="lb-txt"><b ref={t} className="k-type">{title}</b><small>{line}</small></span>
+      <b ref={b} className="lb-ok k-type">Nice</b>
     </div>
   )
 }

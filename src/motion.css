@@ -96,3 +96,26 @@
 .boss-log li { display: flex; align-items: center; gap: 10px; }
 .boss-log li > span:nth-child(2) { flex: 1; display: grid; line-height: 1.2; }
 .boss-log small { opacity: 0.7; font-size: 12px; }
+
+/* ── roads, the egg and the level banner ── */
+.k-road-done { margin: 0 0 8px 44px; }
+.k-road-done .k-rung { display: block; text-align: center; }
+.k-road { display: grid; gap: 10px; margin-left: 44px; }
+.k-step.now { animation: breathe-sm 1.134s infinite; }
+.eggcard { display: flex; align-items: center; gap: 12px; margin: 0 0 12px; padding: 10px 14px; color: #fff; background: linear-gradient(120deg, #1f3a5c, #2f5d9e); border: 3px solid var(--k-edge); border-radius: 12px; }
+.eggpic { position: relative; flex: none; width: 56px; height: 56px; }
+.eggcard.tomorrow .eggpic { animation: eggshake 1.6s ease-in-out infinite; }
+.eggpic .crack { position: absolute; background: var(--k-edge); opacity: 0; width: 3px; height: 14px; border-radius: 2px; transform: rotate(18deg); }
+.eggpic .c1 { left: 24px; top: 14px; opacity: calc(var(--warm, 0) * 2 - 0.3); }
+.eggpic .c2 { left: 30px; top: 26px; height: 12px; transform: rotate(-30deg); opacity: calc(var(--warm, 0) * 2 - 0.9); }
+.eggpic .c3 { left: 20px; top: 32px; height: 10px; transform: rotate(40deg); opacity: calc(var(--warm, 0) * 2 - 1.4); }
+.eggtxt { flex: 1; min-width: 0; display: grid; gap: 4px; line-height: 1.2; }
+.eggtxt small { opacity: 0.8; }
+@keyframes eggshake { 0%, 60%, 100% { transform: rotate(0); } 68% { transform: rotate(-9deg); } 76% { transform: rotate(8deg); } 84% { transform: rotate(-5deg); } 92% { transform: rotate(3deg); } }
+.levelbanner { display: flex; align-items: center; gap: 12px; padding: 10px 14px; color: #fff; background: linear-gradient(120deg, #4a2f9e, #7b5cf0); border: 3px solid var(--k-edge); border-radius: 12px; box-shadow: 0 4px 0 rgba(0, 0, 0, 0.4); }
+.lb-star { flex: none; display: grid; place-items: center; }
+.lb-txt { flex: 1; display: grid; line-height: 1.1; }
+.lb-txt b { font-size: 26px; color: #ffd800; }
+.lb-txt small { opacity: 0.85; }
+.lb-ok { font-size: 16px; padding: 2px 12px 6px; background: var(--k-gold); color: var(--k-edge); border-radius: 8px; border: 2px solid var(--k-edge); }
+@media (prefers-reduced-motion: reduce) { .k-step.now, .eggcard.tomorrow .eggpic { animation: none; } }

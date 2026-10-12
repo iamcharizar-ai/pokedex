@@ -10,7 +10,7 @@
 // the telling, and closing or skipping one changes nothing.
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { itemName } from '../core/economy.ts'
-import type { Game, Moment } from '../core/fold.ts'
+import { nameOf, spritePath, type Game, type Moment } from '../core/fold.ts'
 import { Coin, ItemIcon } from './Item.tsx'
 import { flyReward } from './lib/fly.ts'
 import { K, motion, motionConfig, run } from './lib/fx.ts'
@@ -151,6 +151,36 @@ export function ChestOpener({ game }: { game: Game }) {
   return (
     <Capsule key={c.n} box={<ItemIcon id="chest" size={120} />} rarity={rare} title={c.coins ? `${c.coins} coins` : `${c.count > 1 ? `${c.count} × ` : ''}${itemName(c.item)}`} line={`Chest ${c.n}`} onDone={done}>
       {c.coins ? <Coin size={110} /> : <ItemIcon id={c.item} size={110} />}
+    </Capsule>
+  )
+}
+
+// ── eggs, as they hatch ─────────────────────────────────────────────────────
+const HATCH_KEY = 'pokedex.hatched.v1'
+type Hatch = Extract<Moment, { kind: 'hatch' }>
+const loadHatched = (): Set<string> | null => {
+  try { const raw = localStorage.getItem(HATCH_KEY); return raw ? new Set(JSON.parse(raw) as string[]) : null } catch { return null }
+}
+
+/** The egg on screen, tapped open: what hatched comes out of it. The first run on a device hatches nothing. */
+export function HatchOpener({ game }: { game: Game }) {
+  const [queue, setQueue] = useState<Hatch[]>([])
+  const seen = useRef<Set<string> | null | undefined>(undefined)
+  const count = game.moments.length
+  useEffect(() => {
+    if (seen.current === undefined) seen.current = loadHatched()
+    const all = game.moments.filter((m): m is Hatch => m.kind === 'hatch')
+    const known = seen.current
+    const fresh = known ? all.filter((h) => !known.has(h.uid)) : []
+    seen.current = new Set(all.map((h) => h.uid))
+    try { localStorage.setItem(HATCH_KEY, JSON.stringify([...seen.current])) } catch { /* it would only hatch twice */ }
+    if (fresh.length) setQueue((q) => [...q, ...fresh])
+  }, [count])
+  const h = queue[0]
+  if (!h) return null
+  return (
+    <Capsule key={h.uid} box={<ItemIcon id="rare-egg" size={130} />} rarity="epic" title={`${nameOf(h.form)}!`} line="The egg hatched. It is in your Box." onDone={() => setQueue((q) => q.slice(1))}>
+      <img src={spritePath(h.form)} alt="" width={128} height={128} className="sprite" />
     </Capsule>
   )
 }

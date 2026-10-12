@@ -39,8 +39,8 @@ Status key: **done** = built and in the app · **next** = not built, worth doing
 | **Three-throw state machine** | Throwing at the boss: the ball arcs out, rocks three times, then clicks shut or bursts open | done (not seen on screen: see BOSS-DESIGN.md) |
 | **Card flip** (scaleX 1, 0.22, 1) | Not used: nothing in the game is face-down yet | next |
 | **Mystery box with three spins and an upgrade chance** | Would suit the Rare shop's chest becoming a spin | next |
-| **Trophy-road node states** (locked, unlocked, collect, collected) | Feats and the season ladder are lists today, not a road | next |
-| **Level-up banner** | Levels are a toast; a full banner at evolution levels only would be right | next |
+| **Trophy-road node states** (locked, unlocked, collect, collected) | The season and the closest feats are roads; the node you are on breathes | done |
+| **Level-up banner** | Every fifth level (not where evolution or graduation already speaks) | done |
 | **Status tints** (heal, poison, rage) | Nothing in the game has a status | no |
 | **Projectiles, spell radii, unit run cycles** | There is no arena | no |
 
@@ -53,16 +53,21 @@ Status key: **done** = built and in the app · **next** = not built, worth doing
 - **A forge was a button.** It is now three shards going into the stone.
 - **Two unused keyframes** left by the earlier claim work were removed.
 
-## 4. Worth doing next (not built)
+## 4. The next items, 13 Oct 2026
 
-Ordered by how much it would add.
+Built from the list this section held before:
 
-1. **A road for the season and the feats.** The study's trophy road is four node states and a toast. The season ladder (a step every 1,500 XP) and the feats would read far better as a road you walk than as lists, with the next node breathing.
-2. **A level-up banner at the levels that matter.** A toast is right for most levels; the level before an evolution, and the level of a graduation, deserve the banner with the icon pop (0.1, 1.48, 0.7, 1.09).
-3. **The egg as a capsule.** A hatch is in the Recap window today. It should be the egg on screen, cracking over its last day, and tapped open.
-4. **A spin for the Rare shop's chest.** Three quick spins with a visible chance to upgrade, as the study's mystery box does, instead of a fixed roll. This is a rules change as well as a screen.
-5. **Sound on the beats.** The kit has the beats labelled. A rising tone on a chain of collects, a thud on the slam, a click on a catch.
-6. **Life OS.** The same kit would give the checklist the tick a little stamp, the Sunday panel a claim button, and the month review a capsule for its Comet Shard. Life OS already has the fly-to-bar; the rest is small.
+1. **A road for the season and the feats: done.** `Road.tsx` draws the season as a road (the step in progress breathes, the next five dark, everything behind folded to a count), and the feats' "Closest" list is the same road.
+2. **A level banner: done.** Every fifth level except 25, 30 and 50 (which already have an evolution or a graduation) gets the study's banner: the title squashes in, the star pops 0.1, 1.48, 0.7, 1.09, a rising three-note sound.
+3. **The egg as a capsule: done.** A hatch is no longer a line in the news window: the egg comes up, waits for a tap and opens on the Pokemon. A card on Home shows the egg warming, with cracks that grow each day and a shake on the last one.
+4. **Sound on the beats: done.** A thud under every stamp and shard slam, a ball's click for each rock of a throw, a chain of collects that climbs a step higher for each chip, and the level sound. Still off until switched on.
+5. **Life OS: started.** The month review's shard flies to the "to collect" link in the partner strip, the review button breathes until it is done, and the Sunday panel pops "All clear". A tick stamp and the streak flame wait for the shared kit (see `UI-OVERHAUL.md`, phase 7).
+
+**Not built, on purpose: a spin for the Rare shop's chest.** The study's mystery box has three spins and a visible chance to upgrade. Ours opens to a fixed, seeded roll, so a spin with a chance would either be a lie (a show over a result already decided) or a rules change (a real roll with real odds, which is a decision about the economy, not about motion). It needs your call first.
+
+Still open from before: the card flip (nothing is face-down yet), and the trophy-road states for the Dex's region pages.
+
+The larger step, a whole new structure and look, is planned in `UI-OVERHAUL.md`.
 
 ## 5. Rules kept
 

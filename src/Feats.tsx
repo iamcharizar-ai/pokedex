@@ -4,7 +4,7 @@ import { FEATS, ITEMS, MARKS, MARK_TAGS, itemName, type Feat, type MarkTag } fro
 import type { Game } from '../core/fold.ts'
 import { TAG_NAME, Win, plural } from './App.tsx'
 import { Gem, ItemIcon, MarkIcon } from './Item.tsx'
-import { KBar } from './Kit.tsx'
+import { KBar, KMedal } from './Kit.tsx'
 import { fmtDay } from './lib/art.ts'
 
 const GROUP: Record<Feat['group'], string> = { run: 'Runs', total: 'For life', perfect: 'Perfect days', collect: 'Collection', raise: 'Raising', league: 'Leagues' }
@@ -89,8 +89,22 @@ export function FeatsWin({ game }: { game: Game }) {
         <p className="muted">Each one pays once. The big ones pay something no shop sells.</p>
         {next.length > 0 && (
           <>
-            <span className="k-label">Closest</span>
-            <ul className="feats">{next.map((f) => <FeatRow key={f.id} f={f} game={game} />)}</ul>
+            <span className="k-label">Closest: the next one breathes</span>
+            <div className="k-road">
+              {next.map((f, i) => {
+                const have = Math.min(f.n, game.counters[f.key] ?? 0)
+                const big = Object.keys(f.reward.items ?? {})[0]
+                return (
+                  <div key={f.id} className={`k-step ${i === 0 ? 'now' : 'ahead'}`} data-n={i + 1}>
+                    <KMedal on={i === 0} color="#f5b800">{big ? <ItemIcon id={big} size={30} /> : <Gem size={30} />}</KMedal>
+                    <div>
+                      <span className="name">{f.name}</span><small>{f.text}</small>
+                      <div style={{ marginTop: 6 }}><KBar value={have} max={f.n} kind="gold" label={`${have} / ${f.n}`} /></div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </>
         )}
         {ORDER.map((g) => {

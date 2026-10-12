@@ -3,6 +3,7 @@
 // self-cleaning flourish on an element that already exists: nothing here owns
 // state, and with reduced motion each one does nothing.
 import { EASE, K, config, confetti, flash, motion, run, setUnit } from './motion.js'
+import { play } from './sfx.ts'
 
 // one card in the study is 250 units wide; ours are about half that in pixels
 setUnit(0.5)
@@ -69,6 +70,7 @@ export function stamp(host: Element | null | undefined, text: string, tone: Stam
   el.textContent = text
   el.setAttribute('aria-hidden', 'true')
   host.appendChild(el)
+  play('thud')
   if (reduced()) { window.setTimeout(() => el.remove(), hold + 400); return }
   void motion.stampIn(el).then(() => new Promise((r) => window.setTimeout(r, hold)))
     .then(() => run(el, [{ opacity: 1 }, { opacity: 0 }], { dur: 100 }))
@@ -118,6 +120,7 @@ export async function forgeSlam(line: Element | null | undefined, shardSrc: stri
     host.appendChild(s)
     return s
   })
+  shards.forEach((_, i) => window.setTimeout(() => play('thud', i * 2), 400 + i * 120))
   await Promise.all(shards.map((s, i) => motion.slam(s, { delay: i * 120 })))
   shards.forEach((s) => s.remove())
   done()

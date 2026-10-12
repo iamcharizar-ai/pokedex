@@ -20,7 +20,7 @@ const SEEN_KEY = 'pokedex.seen.v1'
 /** How far back a moment can still be news. Older than this it is history, in the Adventure log. */
 const NEWS_DAYS = 30
 /** Not news by themselves: a level is one of many, a wild Pokemon is on the screen already, a choice was made by hand. */
-const QUIET = new Set<Moment['kind']>(['level', 'appear', 'use', 'quest', 'season', 'transfer', 'chest', 'slip', 'gear'])
+const QUIET = new Set<Moment['kind']>(['level', 'appear', 'use', 'quest', 'season', 'transfer', 'chest', 'slip', 'gear', 'hatch'])
 /** A feat is news only when it paid something no shop sells (the Key Stone has a moment of its own). */
 const prize = (m: Extract<Moment, { kind: 'feat' }>): string | undefined => m.items.find((id) => ITEMS[id]?.kind === 'unique')
 /** Bigger things first. */

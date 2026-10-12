@@ -18,6 +18,7 @@ import { KBar, KPill, KRibbon } from './Kit.tsx'
 import { Actions, Coin, Count, Gem, Pop, Quests, ShopTab, TeamTab } from './Play.tsx'
 import { Recap } from './Recap.tsx'
 import { BossCard, BossLog } from './Boss.tsx'
+import { EggCard, SeasonRoad } from './Road.tsx'
 import { BOSS_HEAL, KILL_CAP, THROWS, THROW_AT } from '../core/boss.ts'
 import { Claims } from './Claim.tsx'
 import { Toasts } from './Toasts.tsx'
@@ -25,7 +26,7 @@ import { aBall, badgeArt, badgeName, fmtDay, leagueName, still } from './lib/art
 import { play, setSoundOn, soundOn } from './lib/sfx.ts'
 import { LIFEOS_URL, start, useItem, useView } from './lib/store.ts'
 import { dropIn, floatNote, hit, party, ring, stamp, tapPop } from './lib/fx.ts'
-import { ChestOpener } from './Reveal.tsx'
+import { ChestOpener, HatchOpener } from './Reveal.tsx'
 import './skin.css'
 import './motion.css'
 import './economy.css'
@@ -414,6 +415,7 @@ function PartnerTab({ game, facts, nights, onShop }: { game: Game; facts: DayFac
       <Talk game={game} pillars={habits.filter((h) => h.pillar)} />
       <NextUp game={game} />
       <BossCard game={game} />
+      <EggCard game={game} />
       <Actions game={game} onShop={onShop} />
       <div className="cols">
         <LeaderCard game={game} />
@@ -802,6 +804,7 @@ function TrainerTab({ game, nights }: { game: Game; nights: Record<string, Sleep
   return (
     <>
       <BossLog game={game} />
+      <SeasonRoad game={game} />
       <section className="card" aria-label="Trainer card">
         <div>
           <h2>Trainer card</h2>
@@ -1037,6 +1040,7 @@ export default function App() {
       {!loading && <Claims game={game} today={view.today} />}
       {!loading && <Toasts game={game} today={view.today} />}
       {!loading && <ChestOpener game={game} />}
+      {!loading && <HatchOpener game={game} />}
       <main key={tab} className="tabin">
         {loading && (
           <Win title="Loading" tone="dark">

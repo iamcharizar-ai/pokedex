@@ -37,7 +37,8 @@ export function Claims({ game, today }: { game: Game; today: string }) {
       const parts = partsOf(h)
       if (el) parts.forEach((p, j) => flyReward(el, p.item ? `+${p.n} ${itemName(p.item)}` : `+${p.n}`, p.pocket, (i * parts.length + j) * 90))
     })
-    play('collect')
+    // a chain climbs: each chip a step higher than the last
+    list.forEach((_, i) => window.setTimeout(() => play('collect', i * 2), i * 110))
     setSaid(`Collected ${list.map((h) => h.title).join(', ')}`)
     for (const h of list) useItem('', '', 'claim', h.key)
   }
