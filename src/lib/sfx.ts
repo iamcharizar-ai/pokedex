@@ -10,7 +10,7 @@ export const setSoundOn = (on: boolean): void => {
   try { localStorage.setItem(KEY, on ? '1' : '0') } catch { /* no storage: it stays off */ }
 }
 
-type Sound = 'tap' | 'buy' | 'throw' | 'hit' | 'catch' | 'feed'
+type Sound = 'tap' | 'buy' | 'throw' | 'hit' | 'catch' | 'feed' | 'collect'
 /** each sound is a short run of notes: [frequency, seconds, wave] */
 const NOTES: Record<Sound, [number, number, OscillatorType][]> = {
   tap: [[520, 0.05, 'square']],
@@ -19,6 +19,7 @@ const NOTES: Record<Sound, [number, number, OscillatorType][]> = {
   hit: [[180, 0.09, 'square'], [120, 0.12, 'square']],
   catch: [[523, 0.1, 'triangle'], [659, 0.1, 'triangle'], [784, 0.1, 'triangle'], [1047, 0.22, 'triangle']],
   feed: [[440, 0.08, 'sine'], [587, 0.14, 'sine']],
+  collect: [[620, 0.05, 'triangle'], [780, 0.05, 'triangle'], [980, 0.12, 'triangle']],
 }
 
 export function play(sound: Sound): void {

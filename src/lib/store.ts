@@ -103,6 +103,7 @@ export function start(): void {
   ledger.start()
   // the day rolls over while the tab is open
   setInterval(() => {
+    if (document.hidden) return // nobody is looking: the next visible minute catches up
     if (dayISO() !== view.today) refresh()
     else void pullConfig()
   }, 60_000)

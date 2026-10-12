@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { isGym, leaderOf, nameOf, spritePath, type Game, type Mon, type Moment, type Stats } from '../core/fold.ts'
 import type { DayFacts, HabitFact } from '../core/facts.ts'
 import { LEAGUES, lineup } from '../core/gyms.ts'
 import {
   ADVANTAGE_MULT, GEMS, SEASON_STEP, BALL_MULT, BALL_NAME, GAME_START, GRADUATES_PER_REGION, LEADER_HP, MOMENTUM_WINDOW,
-  PILLARS_FOR_A_DAY, REGIONS, SLIP, STAKES_FROM, STAT_DAYS, WILD_STAY, TIER_XP, WEAK_MULT, evolveAt, graduateAt, momentumMult, xpForLevel,
+  CLAIM_AUTO, EGG_DAYS, bondLevel, HEART_LEVELS, LEGENDARY_EVERY_WILD, PAY_STREAK, PILLARS_FOR_A_DAY, REGIONS, REPEL_DAYS, SHINY_ODDS, SHINY_ODDS_WORN, SLEEP_AFTER, SLIP, STAKES_FROM, STAT_DAYS, STEPS_GOAL, TEAM_SIZE, WILD_STAY, TIER_XP, WEAK_MULT, evolveAt, graduateAt, momentumMult, xpForLevel,
 } from '../core/rules.ts'
-import { itemName as econName } from '../core/economy.ts'
+import { BOND_STEP, MASTERY_MAX, MASTERY_STEP, SELL, itemName as econName, masteryCost } from '../core/economy.ts'
 import { TEAM_BONUS, TEAM_NATURE, type Tag as TagKind } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
 import { Ball, KeyStone } from './Ball.tsx'
@@ -18,6 +18,7 @@ import { KBar, KPill, KRibbon } from './Kit.tsx'
 import { Actions, Coin, Count, Gem, Pop, Quests, ShopTab, TeamTab } from './Play.tsx'
 import { Recap } from './Recap.tsx'
 import { Claims } from './Claim.tsx'
+import { Toasts } from './Toasts.tsx'
 import { aBall, badgeArt, badgeName, fmtDay, leagueName, still } from './lib/art.ts'
 import { play, setSoundOn, soundOn } from './lib/sfx.ts'
 import { LIFEOS_URL, start, useItem, useView } from './lib/store.ts'
@@ -85,6 +86,18 @@ function timeOfDay(): 'morning' | 'day' | 'dusk' | 'night' {
 
 function Scene({ game }: { game: Game }) {
   const { partner, today, wild } = game
+  const xpBar = useRef<HTMLDivElement>(null)
+  const lastXp = useRef(game.into)
+  // the bar flashes when XP lands while you are looking at it
+  useEffect(() => {
+    if (game.into > lastXp.current && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      const el = xpBar.current
+      el?.classList.remove('reward-pulse')
+      void el?.offsetWidth
+      el?.classList.add('reward-pulse')
+    }
+    lastXp.current = game.into
+  }, [game.into])
   const pct = clamp01(game.into / game.need)
   const before = Math.min(pct, clamp01(game.intoBeforeToday / game.need))
   const hp = wild && wild.max ? wild.hp / wild.max : 0
@@ -128,7 +141,7 @@ function Scene({ game }: { game: Game }) {
         </div>
         <div className="hp-row">
           <b>EXP</b>
-          <div className="bar" role="progressbar" aria-valuemin={0} aria-valuemax={game.need} aria-valuenow={Math.round(game.into)} aria-valuetext={`${Math.round(game.into)} of ${game.need} XP, ${Math.round(game.into - game.intoBeforeToday)} of it earned today`} aria-label="Progress to the next level">
+          <div ref={xpBar} className="bar" role="progressbar" aria-valuemin={0} aria-valuemax={game.need} aria-valuenow={Math.round(game.into)} aria-valuetext={`${Math.round(game.into)} of ${game.need} XP, ${Math.round(game.into - game.intoBeforeToday)} of it earned today`} aria-label="Progress to the next level">
             <i className="base" style={{ width: `${before * 100}%` }} />
             <i className="today" style={{ width: `${(pct - before) * 100}%` }} />
           </div>
@@ -245,7 +258,13 @@ function Summary({ game }: { game: Game }) {
             <span key={f} className="path-step">{i > 0 && <span className="arrow">▸</span>}<img src={still(f, partner.shiny)} alt={nameOf(f)} title={nameOf(f)} width={44} height={44} className="sprite" /></span>
           ))}
         </dd>
-        <dt>Bond</dt><dd><span className={`ribbon ${partner.together ? 'on' : ''}`} title="Days it has been your partner on which you did at least one pillar. It only ever counts up.">{plural(partner.together ?? 0, 'day')} together</span></dd>
+        <dt>Bond</dt>
+        <dd>
+          <span className={`ribbon ${(partner.together ?? 0) + (partner.fed ?? 0) ? 'on' : ''}`} title={`A heart for each day it was your partner and you did a pillar, and one for each berry. At ${HEART_LEVELS.join(', ')} hearts the bond steps up: +${Math.round(BOND_STEP * 100)}% to every strike each. It only ever counts up.`}>
+            {(partner.together ?? 0) + (partner.fed ?? 0)} ♥ · bond {bondLevel((partner.together ?? 0) + (partner.fed ?? 0))}/{HEART_LEVELS.length}
+          </span>{' '}
+          <span className="muted">{plural(partner.together ?? 0, 'day')} together{(partner.fed ?? 0) > 0 ? `, ${plural(partner.fed ?? 0, 'berry heart')}` : ''}</span>
+        </dd>
       </dl>
       </div>
       {game.lean.length > 0 && <p className="muted">It evolves by itself at level {game.next.level}, into whichever your habits lean to most by then.</p>}
@@ -312,12 +331,56 @@ function LeaderCard({ game }: { game: Game }) {
   )
 }
 
+/** Nothing has been ticked yet: say where the game comes from, instead of showing a row of zeros. */
+function FirstRun({ game }: { game: Game }) {
+  if (game.days.some((d) => d.xp > 0 || d.ticked > 0)) return null
+  return (
+    <p className="notice good">
+      Nothing has been ticked yet. Every habit you tick in <a href={LIFEOS_URL} target="_blank" rel="noreferrer">Life OS</a> grows your partner and wears down the wild Pokemon. Come back after your first tick.
+    </p>
+  )
+}
+
+/** The morning after an empty day was settled: what it cost, and what can be done about it. */
+function SlipNote({ game }: { game: Game }) {
+  const s = game.slip
+  if (!s) return null
+  const cost = [s.leader ? `the leader won back ${s.leader} HP` : '', s.wild ? `the wild Pokemon ${s.wild}` : '', s.xp ? `${s.xp} XP faded` : ''].filter(Boolean).join(', ')
+  const revive = (game.inv['revive'] ?? 0) > 0
+  return (
+    <p className="notice warn">
+      Nothing was ticked on {fmtDay(s.empty)}: {cost}. Nothing finished is lost.{' '}
+      {revive ? 'A Revive in your Bag takes the leader\'s HP back.' : 'A Revive from the Mart takes the leader\'s HP back.'}
+    </p>
+  )
+}
+
+/** The next few goals on one line each, so what to do next is a glance. */
+function NextUp({ game }: { game: Game }) {
+  const { partner, wild, league } = game
+  const toLevel = Math.max(0, Math.ceil(xpForLevel(game.next.level) - partner.xp))
+  const foe = leaderOf(league.index, league.slot)
+  const rows: [string, ReactNode][] = [
+    [game.next.what === 'evolve' ? 'Evolves' : 'Fully trained', <>at level {game.next.level}, {toLevel.toLocaleString('en-IN')} XP to go</>],
+    ...(foe && !league.waiting ? [['Leader', <>{foe.name}: {Math.max(0, Math.round(league.hp)).toLocaleString('en-IN')} HP left</>] as [string, ReactNode]] : []),
+    ...(wild && !wild.caught ? [['Wild', <>{nameOf(wild.form)}: {Math.max(0, Math.round(wild.hp))} HP{wild.leavesIn !== undefined && wild.leavesIn <= 7 ? `, leaves in ${wild.leavesIn} days` : ''}</>] as [string, ReactNode]] : []),
+  ]
+  return (
+    <dl className="nextup" aria-label="What is next">
+      {rows.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}
+    </dl>
+  )
+}
+
 function PartnerTab({ game, facts, nights, onShop }: { game: Game; facts: DayFacts[]; nights: Record<string, SleepNight>; onShop: () => void }) {
   const habits = facts[facts.length - 1]?.habits ?? []
   return (
     <div className="home">
       <Scene game={game} />
+      <FirstRun game={game} />
+      <SlipNote game={game} />
       <Talk game={game} pillars={habits.filter((h) => h.pillar)} />
+      <NextUp game={game} />
       <Actions game={game} onShop={onShop} />
       <div className="cols">
         <LeaderCard game={game} />
@@ -792,7 +855,7 @@ function RulesTab() {
             Half the day's habits ticked: ×{BALL_MULT.great}. Four-fifths: ×{BALL_MULT.ultra}. Every habit ticked catches it on the spot.
           </Rule>
           <Rule title="Coins are not XP" tone="gold" pic={<><Coin size={30} /><Arrow /><ItemIcon id="great-ball" size={34} /></>}>
-            Showing up pays coins (more the more you tick), and so do the weekly quests, the season, chests and the Professor. The Mart sells three deals a day, and two guards always.
+            Showing up pays coins (more the more you tick, and {PAY_STREAK.coins} more on a second day running at {Math.round(PAY_STREAK.share * 100)}% or more), and so do the weekly quests, the season, chests and the Professor. The Mart sells three deals a day, and two guards always.
           </Rule>
           <Rule title="Each work, its mark" tone="blue" pic={<>{(['code', 'fitness', 'guitar', 'arbor', 'sleep'] as const).map((t) => <ItemIcon key={t} id={{ code: 'machine-part', fitness: 'iron', guitar: 'poke-flute', arbor: 'grn-apricorn', sleep: 'lunar-wing' }[t]} size={26} />)}</>}>
             A day of coding, gym, guitar, Arbor or good sleep pays one mark, spent only in that kind's own shop.
@@ -810,7 +873,7 @@ function RulesTab() {
             Runs of days and lifetime totals pay things no shop sells. One rest day inside a run is forgiven.
           </Rule>
           <Rule title="Mega, forged" tone="purple" pic={<><ItemIcon id="red-shard" size={26} /><ItemIcon id="blue-shard" size={26} /><Arrow /><KeyStone size={38} /></>}>
-            The Key Stone is a feat. Three shards forge a Mega Stone for one Pokemon: red for X, blue or yellow for Y.
+            The Key Stone is a feat. Three shards forge a Mega Stone for one Pokemon: red for X, blue or yellow for Y. A Comet Shard, one for each month-end review in Life OS, fits any.
           </Rule>
           <Rule title="Added, not stacked" tone="purple" pic={<><span className="rule-chip sm">+</span><span className="rule-chip sm">+</span><span className="rule-chip sm">+</span><Arrow /><span className="rule-chip">×1</span></>}>
             Team, bond, a Mega, the held item, mastery and natures are added together and applied once. The leader card shows the sum.
@@ -822,7 +885,7 @@ function RulesTab() {
             Each leader has {LEADER_HP.toLocaleString('en-IN')} HP and is weak to two kinds of work (×{WEAK_MULT}). Beat one, keep the badge.
           </Rule>
           <Rule title="Your team" tone="blue" pic={<><img src="/sprites/ui/party-on.png" alt="" width={30} height={30} className="pix" /><img src="/sprites/ui/party-on.png" alt="" width={30} height={30} className="pix" /><img src="/sprites/ui/party-empty.png" alt="" width={30} height={30} className="pix" /><span className="rule-chip sm">+10%</span></>}>
-            Six trained Pokemon stand behind you. Each adds {Math.round(TEAM_BONUS * 100)}% to every strike, and {Math.round(TEAM_NATURE * 100)}% more to the work its nature raised.
+            The partner and up to {TEAM_SIZE} fully trained Pokemon stand together, a party of six. Each of the {TEAM_SIZE} adds {Math.round(TEAM_BONUS * 100)}% to every strike, and {Math.round(TEAM_NATURE * 100)}% more to the work its nature raised.
           </Rule>
           <Rule title="Gems" tone="green" pic={<><Gem size={34} /><span className="rule-chip sm">{GEMS.catch}</span><span className="rule-chip sm">{GEMS.evolve}</span><span className="rule-chip sm">{GEMS.gym}</span></>}>
             A catch, an evolution, a badge, a feat. They buy eggs, incense, chests and scenes, never a ball.
@@ -830,8 +893,41 @@ function RulesTab() {
           <Rule title="The season" tone="gold" pic={<><span className="rule-chip sm">1</span><Arrow /><span className="rule-chip sm">2</span><Arrow /><span className="rule-chip sm">3</span></>}>
             Every {SEASON_STEP.toLocaleString('en-IN')} XP of the month's work is a step, and each step hands something over.
           </Rule>
+          <Rule title="Collect" tone="gold" pic={<><Coin size={28} /><Gem size={28} /><Arrow /><ItemIcon id="loot-sack" size={30} /></>}>
+            Showing-up pay, weekly quests, season steps, feats and a month reviewed wait in the Collect strip until you tap them. Left alone, each pays itself {CLAIM_AUTO} days later, so nothing is lost. A catch, a chest and selling a Pokemon pay at once.
+          </Rule>
+          <Rule title="Hearts and bond" tone="green" pic={<><ItemIcon id="heart-scale" size={28} /><ItemIcon id="oran-berry" size={28} /><ItemIcon id="sitrus-berry" size={28} /></>}>
+            A heart for every day this Pokemon is your partner and you finish a pillar, and one for each berry you feed it (Oran one, Sitrus three). At {HEART_LEVELS.join(', ')} hearts the bond steps up, and each step adds {Math.round(BOND_STEP * 100)}% to every strike. Hearts belong to the Pokemon and only count up, so a new partner starts again: feed berries to the one you are raising now.
+          </Rule>
+          <Rule title="Momentum" tone="blue" pic={<><span className="rule-chip sm">×1.2</span><span className="rule-chip sm">×1.35</span><span className="rule-chip">×1.5</span></>}>
+            Of the last seven days, three with two pillars make XP ×1.2, five ×1.35, seven ×1.5. It slides back one day at a time, never resets. {SLEEP_AFTER} days with no pillar at all and the partner dozes off until you finish one.
+          </Rule>
+          <Rule title="Quests and the week" tone="gold" pic={<><span className="rule-chip sm">5</span><Arrow /><Coin size={28} /><Gem size={28} /></>}>
+            Only the week has quests: five days with two pillars, and catch a Pokemon. The day itself pays its own coins, and a perfect day pays {GEMS.perfect} gems.
+          </Rule>
+          <Rule title="Eggs and chests" tone="blue" pic={<><ItemIcon id="rare-egg" size={32} /><ItemIcon id="loot-sack" size={32} /></>}>
+            Gems buy a Mystery Egg and Chests in the Rare shop. An egg hatches into a rare Pokemon after {EGG_DAYS} days with two pillars (four with an Old Charm), one kept warm at a time. A chest opens on the spot.
+          </Rule>
+          <Rule title="Regions, legendaries, shiny" tone="purple" pic={<><ItemIcon id="star-piece" size={30} /><span className="rule-chip sm">1/{SHINY_ODDS}</span></>}>
+            Every {GRADUATES_PER_REGION} fully trained Pokemon open the next region once the league before it is beaten. Every {LEGENDARY_EVERY_WILD}th wild Pokemon is a legendary. A catch on a perfect day is shiny one time in {SHINY_ODDS}; one worn down, one in {SHINY_ODDS_WORN}.
+          </Rule>
+          <Rule title="Natures" tone="purple" pic={<><span className="rule-chip sm">▲</span><span className="rule-chip sm">▼</span></>}>
+            When a partner is fully trained, the work it did most raises its nature and the work it did least lowers it. In your party it adds {Math.round(TEAM_NATURE * 100)}% on the work its nature raised.
+          </Rule>
+          <Rule title="Mastery" tone="blue" pic={<><ItemIcon id="machine-part" size={28} /><ItemIcon id="iron" size={28} /><Arrow /><span className="rule-chip sm">+{Math.round(MASTERY_STEP * 100)}%</span></>}>
+            Spend a kind of work's own marks to raise its mastery: each level makes that work strike {Math.round(MASTERY_STEP * 100)}% harder, up to level {MASTERY_MAX}. The next level costs {masteryCost(0)} marks, then {masteryCost(1)}, and so on.
+          </Rule>
+          <Rule title="The Box and the Professor" tone="gold" pic={<><Ball ball="poke" size={30} /><Arrow /><Coin size={28} /></>}>
+            A caught Pokemon waits in the Box until it is raised. Send one to the Professor instead and he pays coins: {SELL.C} for a common, {SELL.U} uncommon, {SELL.R} rare, {SELL.L} legendary.
+          </Rule>
+          <Rule title="Guards" tone="red" pic={<><ItemIcon id="max-repel" size={30} /><ItemIcon id="revive" size={30} /></>}>
+            Max Repel keeps the wild Pokemon {REPEL_DAYS} days longer, once. A Revive takes back the HP a leader regained on empty days. Both are always on the Mart's shelf.
+          </Rule>
+          <Rule title="Steps and the trainer card" tone="green" pic={<><span className="rule-chip sm">10k</span><Arrow /><ItemIcon id="iron" size={28} /></>}>
+            A day of {STEPS_GOAL.toLocaleString('en-IN')} steps pays an extra Iron mark and counts as a full Speed day. The Trainer tab shows you, not the partner, averaged over the last {STAT_DAYS} days.
+          </Rule>
           <Rule title="An empty day costs" tone="red" pic={<span className="rule-chip">0</span>}>
-            From {fmtDay(STAKES_FROM)}, a day with nothing ticked is settled two days later, so a late tick still saves it. The leader wins back {SLIP.leader} HP, the wild Pokemon {SLIP.wild}, and a tenth of the XP into your current level fades. A wild Pokemon that stays {WILD_STAY.C} days gets away. Levels, evolutions, trained and caught Pokemon, badges, feats and items are never taken back.
+            Since {fmtDay(STAKES_FROM)}, a day with nothing ticked is settled two days later, so a late tick still saves it. The leader wins back {SLIP.leader} HP, the wild Pokemon {SLIP.wild}, and a tenth of the XP into your current level fades. A wild Pokemon that stays {WILD_STAY.C} days gets away. Levels, evolutions, trained and caught Pokemon, badges, feats and items are never taken back.
           </Rule>
           <Rule title="A day's list" tone="red" pic={<><span className="rule-dot" /><span className="rule-dot" /><span className="rule-dot" style={{ opacity: 0.3 }} /></>}>
             Fixed when the day starts. You can add a habit today; taking one off starts tomorrow.
@@ -839,7 +935,7 @@ function RulesTab() {
         </div>
         <div className="kit-row" style={{ marginTop: 14 }}>
           <button type="button" className={`k-btn ${sound ? 'ok' : ''}`} aria-pressed={sound} onClick={() => { setSoundOn(!sound); setSound(!sound); if (!sound) play('buy') }}>Sound: {sound ? 'on' : 'off'}</button>
-          <span className="muted">Rules version 8. The game began {fmtDay(GAME_START)}.</span>
+          <span className="muted">Rules version 9. The game began {fmtDay(GAME_START)}.</span>
         </div>
       </div>
     </section>
@@ -898,6 +994,7 @@ export default function App() {
     <div className="shell">
       <TopBar game={game} status={status} loading={loading} onHelp={() => setHelp(true)} />
       {!loading && <Claims game={game} today={view.today} />}
+      {!loading && <Toasts game={game} today={view.today} />}
       <main key={tab} className="tabin">
         {loading && (
           <Win title="Loading" tone="dark">

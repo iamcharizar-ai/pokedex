@@ -48,6 +48,9 @@ export const REVIEW_HABIT = 'month-review'
 
 /** A tick counts if it was made by the end of the day after the one it belongs to. */
 export const GRACE_DAYS = 1
+/** A reward nobody collects pays itself into the wallet this many days after it was earned. The Collect strip shows them until then. */
+export const CLAIM_AUTO = 3
+
 
 // ── momentum ────────────────────────────────────────────────────────────────
 /** A day "counts" when this many pillars were done (or all of them, if there are fewer). */
@@ -144,6 +147,10 @@ export const HEART_LEVELS = [10, 30, 60] as const
 export const bondLevel = (hearts: number): number => HEART_LEVELS.filter((n) => hearts >= n).length
 
 /** Coins for showing up: by the share of the day's habits ticked, the best bar reached. (Version 9 folded the daily quests, which paid for the same days, into these.) */
+/** A second day running at or above `share` ticked adds this to the showing-up pay. */
+export const PAY_STREAK = { share: 0.75, coins: 20 } as const
+/** Gems with the Comet Shard for a month-end review. */
+export const REVIEW_GEMS = 10
 export const DAILY_PAY: { share: number; coins: number }[] = [{ share: 0.5, coins: 40 }, { share: 0.75, coins: 90 }, { share: 1, coins: 140 }]
 export const WEEK_DAYS = 5
 /** Every SEASON_STEP XP of the month's work is a step on the season ladder. */

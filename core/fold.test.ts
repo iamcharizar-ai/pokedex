@@ -9,7 +9,7 @@ import { foldGame, isGym, leaderOf, statsOf } from './fold.ts'
 import { LEAGUES, lineup } from './gyms.ts'
 import { beats, weakDomains } from './types.ts'
 import {
-  BALL_MULT, DAILY_PAY, EGG_DAYS, GAME_START, GEMS, LEADER_HP, MEGA_BONUS, REPEL_DAYS, SEASON_STEP, SLEEP_DEEP, SLIP, STAKES_FROM, TEAM_BONUS, TEAM_NATURE, TEAM_SIZE, WEAK_MULT, WILD_HP, WILD_STAY,
+  BALL_MULT, CLAIM_AUTO, DAILY_PAY, PAY_STREAK, REVIEW_GEMS, EGG_DAYS, GAME_START, GEMS, LEADER_HP, MEGA_BONUS, REPEL_DAYS, SEASON_STEP, SLEEP_DEEP, SLIP, STAKES_FROM, TEAM_BONUS, TEAM_NATURE, TEAM_SIZE, WEAK_MULT, WILD_HP, WILD_STAY,
   ballFor, bondLevel, evolveAt, graduateAt, levelOf, momentumMult, regionsOpen, wildHit, xpForLevel,
 } from './rules.ts'
 import { BALLS, CHEST, DOMAIN_SHOPS, FEATS, FORGE_COST, GEAR, GEAR_ITEMS, LURES, MART_POOL, SELL, STANDING, forgeShard, lureTypes, martDeals, throwHp } from './economy.ts'
@@ -34,7 +34,8 @@ function dayOn(date: string, o: { code?: number; gym?: number; guitar?: number; 
   }
 }
 const day = (n: number, o: Parameters<typeof dayOn>[1] = {}) => dayOn(addDays(GAME_START, n), o)
-const fold = foldGame
+/** the older tests judge what a day earns, not when it is collected: everything is paid at once */
+const fold = (f: DayFacts[]) => foldGame(f, { instant: true })
 const ALL = { code: 1, gym: 1, guitar: 1, arbor: 1, sleep: 1, chores: 1 }
 const run = (n: number, o: Parameters<typeof day>[1]) => Array.from({ length: n }, (_, i) => day(i, o))
 type G = ReturnType<typeof foldGame>
@@ -826,4 +827,37 @@ test('a month-end review pays a Comet Shard, found by the day it was ticked, and
   assert.equal(forgeShard(2, 0, undefined, { 'comet-shard': FORGE_COST }), 'comet-shard')
   assert.equal(forgeShard(2, 0, undefined, { 'red-shard': FORGE_COST, 'comet-shard': FORGE_COST }), 'red-shard')
   assert.equal(forgeShard(1, 0, undefined, { 'comet-shard': FORGE_COST - 1 }), null)
+})
+
+test('rewards wait to be collected: a claim pays them, and an unclaimed one pays itself after CLAIM_AUTO days', () => {
+  const facts = run(2, ALL)
+  const g = foldGame(facts)
+  const keys = g.held.map((h) => h.key)
+  assert.ok(keys.includes(`pay:${facts[1].day}`), 'the showing-up pay is held')
+  assert.equal(g.wallet.coins, 0, 'nothing is in the wallet until it is claimed')
+  assert.ok(g.wallet.coinsToday > 0, "today's tally still counts what was earned")
+  const claim = (day: string, key: string) => ({ day, item: '', uid: '', what: 'claim', to: key })
+  const first = facts[0].day
+  const claimed = foldGame(facts.map((f) => (f.day === facts[1].day ? { ...f, uses: [claim(f.day, `pay:${first}`)] } : f)))
+  assert.ok(claimed.wallet.coins > 0)
+  assert.ok(!claimed.held.some((h) => h.key === `pay:${first}`))
+  assert.ok(claimed.held.some((h) => h.key === `pay:${facts[1].day}`))
+  // a claim for something that is not waiting is ignored
+  const stale = foldGame(facts.map((f) => (f.day === facts[1].day ? { ...f, uses: [claim(f.day, 'pay:nope')] } : f)))
+  assert.equal(stale.wallet.coins, 0)
+  // left alone, it pays itself
+  const later = foldGame(run(2 + CLAIM_AUTO, ALL))
+  assert.ok(later.wallet.coins > 0)
+  assert.ok(!later.held.some((h) => h.key === `pay:${facts[0].day}`))
+})
+
+test('a second day running at the streak bar pays a little more, and a month review pays gems with its shard', () => {
+  const g = foldGame(run(2, ALL))
+  const pays = g.held.filter((h) => h.key.startsWith('pay:'))
+  assert.equal(pays.length, 2)
+  assert.equal(pays[1].coins, pays[0].coins + PAY_STREAK.coins)
+  const r = foldGame(buildFacts({ habits: [], ticks: { '2026-09-01': { 'month-review': '2026-10-05T09:00:00' } }, today: '2026-10-06' }))
+  const held = r.held.find((h) => h.key === 'review:1')
+  assert.equal(held?.gems, REVIEW_GEMS)
+  assert.deepEqual(held?.items, [['comet-shard', 1]])
 })

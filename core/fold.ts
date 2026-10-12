@@ -14,7 +14,7 @@ import { addDays } from './facts.ts'
 import { LEAGUES, lineup, type Leader } from './gyms.ts'
 import {
   ADVANTAGE_MULT, BALL_MULT, CATCH_WEIGHTS, DAILY_PAY, EGG_DAYS, GEMS, LEADER_HP, LEGENDARY_EVERY_WILD, MEGA_BONUS, MOMENTUM_WINDOW, NATURES, NATURE_DOMAIN, NATURE_STATS,
-  PILLARS_FOR_A_DAY, REPEL_DAYS, SEASON_STEP, SHINY_ODDS, SHINY_ODDS_WORN, SLEEP_AFTER, SLEEP_DEEP, SLEEP_HABIT, SLIP, STAKES_FROM, START_SPECIES, STAT_DAYS, STEPS_GOAL, TAGS,
+  CLAIM_AUTO, PAY_STREAK, PILLARS_FOR_A_DAY, REPEL_DAYS, SEASON_STEP, SHINY_ODDS, SHINY_ODDS_WORN, SLEEP_AFTER, SLEEP_DEEP, REVIEW_GEMS, SLEEP_HABIT, SLIP, STAKES_FROM, START_SPECIES, STAT_DAYS, STEPS_GOAL, TAGS,
   TEAM_BONUS, TEAM_NATURE, TEAM_SIZE, WEAK_MULT, WEEK_DAYS, WILD_HP, WILD_STAY, ballFor, bondLevel, evolveAt, graduateAt, levelOf, momentumMult, regionsOpen, wildHit, xpForLevel,
   type Ball, type NatureStat, type Rarity, type Tag,
 } from './rules.ts'
@@ -223,7 +223,12 @@ export interface Notes {
   stepDays: number
 }
 
+/** A reward earned and waiting to be collected. Counted in the wallet only once claimed (or after CLAIM_AUTO days). */
+export interface Held { key: string; day: string; title: string; coins: number; gems: number; items: [string, number][] }
+
 export interface Game {
+  /** rewards waiting to be collected, oldest first */
+  held: Held[]
   partner: Mon
   level: number
   /** XP into the current level, and what the level needs */
@@ -318,7 +323,7 @@ const emptyDay = (f: DayFacts): boolean => {
   return mine.length > 0 && mine.every((h) => !h.done && h.frac === 0)
 }
 
-export function foldGame(facts: DayFacts[]): Game {
+export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): Game {
   const moments: Moment[] = []
   const dex: Record<string, DexEntry> = {}
   const queue: Mon[] = []
@@ -362,6 +367,30 @@ export function foldGame(facts: DayFacts[]): Game {
   }
   const earn = (coins: number, gems: number) => {
     wallet.coins += coins; wallet.gems += gems; wallet.coinsToday += coins; wallet.gemsToday += gems
+  }
+  // ── rewards that wait to be collected ──
+  const held = new Map<string, Held>()
+  /** pay it into the wallet and the bag (not today's tally: that counted when it was earned) */
+  const credit = (h: Held, day: string) => {
+    wallet.coins += h.coins; wallet.gems += h.gems
+    for (const [id, n] of h.items) {
+      inv[id] = (inv[id] ?? 0) + n
+      if (id === 'key-stone' && !keyStone) { keyStone = day; moments.push({ kind: 'key', day }) }
+    }
+  }
+  const release = (key: string, day: string) => {
+    const h = held.get(key)
+    if (!h) return
+    held.delete(key)
+    credit(h, day)
+  }
+  /** earned now, collected later: today's tally rises at once, the wallet when it is claimed */
+  const hold = (key: string, day: string, title: string, coins: number, gems: number, items: [string, number][] = []) => {
+    if (coins <= 0 && gems <= 0 && !items.length) return
+    wallet.coinsToday += coins; wallet.gemsToday += gems
+    const h: Held = { key, day, title, coins, gems, items }
+    if (opts.instant) credit(h, day)
+    else held.set(key, h)
   }
   /** the three the wild Pokemon after this one can be chosen from: of any type, or of one domain's types for a domain incense */
   const wishOptions = (tag: Tag | null): string[] => [0, 1, 2].map((k) => roll(`wish:${spawns + 1}:${tag ?? 'any'}:${k}`, 'any', tag))
@@ -528,12 +557,8 @@ export function foldGame(facts: DayFacts[]): Game {
   }
 
   /** What a feat hands over. The Key Stone also starts the Mega road. */
-  const grant = (r: Reward, day: string) => {
-    earn(Math.round((r.coins ?? 0) * (r.coins && inv['amulet-coin'] ? AMULET_MULT : 1)), r.gems ?? 0)
-    for (const [id, n] of Object.entries(r.items ?? {})) {
-      inv[id] = (inv[id] ?? 0) + n
-      if (id === 'key-stone' && !keyStone) { keyStone = day; moments.push({ kind: 'key', day }) }
-    }
+  const grant = (r: Reward, day: string, key: string, title: string) => {
+    hold(key, day, title, Math.round((r.coins ?? 0) * (r.coins && inv['amulet-coin'] ? AMULET_MULT : 1)), r.gems ?? 0, Object.entries(r.items ?? {}))
   }
   const evalFeats = (day: string) => {
     cn.workouts = notes.workouts; cn.records = notes.records; cn.owned = notes.owned
@@ -545,7 +570,7 @@ export function foldGame(facts: DayFacts[]): Game {
       if (gotFeat.has(ft.id) || (cn[ft.key] ?? 0) < ft.n) continue
       gotFeat.add(ft.id)
       feats.push({ id: ft.id, day })
-      grant(ft.reward, day)
+      grant(ft.reward, day, `feat:${ft.id}`, ft.name)
       moments.push({ kind: 'feat', day, id: ft.id, name: ft.name, coins: ft.reward.coins ?? 0, gems: ft.reward.gems ?? 0, items: Object.keys(ft.reward.items ?? {}) })
     }
   }
@@ -678,6 +703,11 @@ export function foldGame(facts: DayFacts[]): Game {
         moments.push({ kind: 'transfer', day, form: gone.form, coins })
         return
       }
+      case 'claim': {
+        // a reward collected by hand; one that is not waiting (or was never earned) is ignored
+        if (u.to) release(u.to, day)
+        return
+      }
       case 'team': {
         const ids = (u.to ?? '').split(',').filter((id) => graduates.some((m) => m.uid === id))
         teamPick = [...new Set(ids)].slice(0, TEAM_SIZE)
@@ -747,10 +777,11 @@ export function foldGame(facts: DayFacts[]): Game {
     fledToday = null
     slipToday = null
     const stakes = f.day >= STAKES_FROM
+    for (const h of [...held.values()]) if (dayGap(h.day, f.day) >= CLAIM_AUTO) release(h.key, f.day)
     // a month-end review pays a Comet Shard, one for each made today
     for (let r = 0; r < (f.reviews ?? 0); r++) {
-      inv[COMET_SHARD] = (inv[COMET_SHARD] ?? 0) + 1
       bump('reviews')
+      hold(`review:${cn.reviews}`, f.day, 'Month reviewed', 0, REVIEW_GEMS, [[COMET_SHARD, 1]])
       moments.push({ kind: 'review', day: f.day, n: cn.reviews })
     }
 
@@ -859,7 +890,10 @@ export function foldGame(facts: DayFacts[]): Game {
     const amulet = inv['amulet-coin'] ? AMULET_MULT : 1
     // coins for showing up: the best bar the day's ticks reached
     const pay = [...DAILY_PAY].reverse().find((t) => ticked >= t.share)?.coins ?? 0
-    earn(Math.round(pay * amulet), 0)
+    // two days running at the streak bar adds a little on top
+    const prevDay = days[days.length - 1]
+    const streak = pay > 0 && ticked >= PAY_STREAK.share && prevDay && prevDay.ticked >= PAY_STREAK.share ? PAY_STREAK.coins : 0
+    hold(`pay:${f.day}`, f.day, streak ? 'Showing up, again' : 'Showing up', Math.round((pay + streak) * amulet), 0)
     const result: DayResult = { day: f.day, base: Math.round(base), mult, xp, pillars, pillarTotal, done, total, counts, perfect, share, ticked, ball, hit: 0, strike: 0, pay }
     days.push(result)
 
@@ -944,8 +978,7 @@ export function foldGame(facts: DayFacts[]): Game {
     while ((monthStep[ym] ?? 0) < Math.floor(monthXp[ym] / SEASON_STEP)) {
       const step = (monthStep[ym] = (monthStep[ym] ?? 0) + 1)
       const r = seasonReward(step)
-      earn(r.coins ?? 0, r.gems ?? 0)
-      if (r.item) inv[r.item] = (inv[r.item] ?? 0) + 1
+      hold(`season:${ym}:${step}`, f.day, `Season step ${step}`, r.coins ?? 0, r.gems ?? 0, r.item ? [[r.item, 1]] : [])
       moments.push({ kind: 'season', day: f.day, step, coins: r.coins ?? 0, gems: r.gems ?? 0, item: r.item ?? '' })
     }
 
@@ -967,7 +1000,7 @@ export function foldGame(facts: DayFacts[]): Game {
       if (!met[q.id] || paid.has(`${wk}:${q.id}`)) continue
       paid.add(`${wk}:${q.id}`)
       const coins = Math.round((q.coins ?? 0) * amulet)
-      earn(coins, q.gems ?? 0)
+      hold(`quest:${wk}:${q.id}`, f.day, q.name, coins, q.gems ?? 0)
       moments.push({ kind: 'quest', day: f.day, id: q.id, name: q.name, coins, gems: q.gems ?? 0 })
     }
     // feats last, so everything the day did is counted
@@ -1077,6 +1110,7 @@ export function foldGame(facts: DayFacts[]): Game {
     },
     hall,
     wallet,
+    held: [...held.values()].sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : 0)),
     inv,
     theme,
     team,

@@ -547,6 +547,7 @@ export function TeamTab({ game, partnerCard, choices }: { game: Game; partnerCar
           <div style={{ flex: 1, minWidth: 140 }}><KBar value={nextAt ? hearts : 1} max={nextAt ?? 1} kind="gold" label={nextAt ? `${hearts} / ${nextAt}` : 'Full'} /></div>
           {v5 && <button type="button" className="k-btn ok" disabled={!berry} onClick={() => { useItem(berry!, '', 'feed'); play('feed') }}><ItemIcon id={berry ?? 'oran-berry'} size={26} />Feed{berry ? ` ×${game.inv[berry]}` : ''}</button>}
         </div>
+        <p className="muted">A heart for each day this Pokemon is your partner and you finish a pillar, and one for each berry. At {HEART_LEVELS.join(', ')} hearts the bond steps up: +5% to every strike each. Hearts belong to the Pokemon, so a new partner starts again; feed the one you are raising now.</p>
       </Win>
       {v5 && (
         <Win title="Party" tone="gold" aside={game.team.length ? `+${Math.round(game.power.team * 100)}% to every strike` : `${1 + game.team.length} / ${cap + 1}`}>
