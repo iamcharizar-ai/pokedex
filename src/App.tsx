@@ -20,6 +20,7 @@ import { Recap } from './Recap.tsx'
 import { BossCard, BossLog } from './Boss.tsx'
 import { EggCard, SeasonRoad } from './Road.tsx'
 import { BOSS_HEAL, KILL_CAP, THROWS, THROW_AT } from '../core/boss.ts'
+import { KIT_SHARD_EVERY } from '../core/rules.ts'
 import { Claims } from './Claim.tsx'
 import { Toasts } from './Toasts.tsx'
 import { aBall, badgeArt, badgeName, fmtDay, leagueName, still } from './lib/art.ts'
@@ -668,7 +669,7 @@ function line(m: Moment): string {
     case 'slip': return `An empty day (${fmtDay(m.empty)}): ${[m.leader ? `the leader won back ${m.leader} HP` : '', m.wild ? `the wild Pokemon ${m.wild} HP` : '', m.xp ? `${m.xp} XP faded` : ''].filter(Boolean).join(', ')}`
     case 'chest': return `Chest ${m.n}: ${m.coins ? `${m.coins} coins` : `${itemName(m.item)}${m.count > 1 ? ` ×${m.count}` : ''}`}`
     case 'gear': return `${itemName(m.item)} dropped by a Strong workout`
-    case 'kit': return `All seven pieces of gear became a Red Shard (set ${m.n})`
+    case 'kit': return m.shard ? `A full set of gear (set ${m.n}) became a Red Shard` : `A full set of gear (set ${m.n}) paid gems and Iron`
     case 'feat': return `Feat: ${m.name}${[m.gems ? `+${m.gems} gems` : '', m.coins ? `+${m.coins} coins` : '', ...m.items.map(itemName)].filter(Boolean).map((x, i) => (i ? x : ` (${x}`)).join(', ')}${m.gems || m.coins || m.items.length ? ')' : ''}`
   }
 }
@@ -921,7 +922,7 @@ function RulesTab() {
             Team, bond, a Mega, the held item, mastery and natures are added together and applied once. The leader card shows the sum.
           </Rule>
           <Rule title="Strong's training kit" tone="red" pic={<><ItemIcon id="protector" size={28} /><ItemIcon id="power-band" size={28} /><Arrow /><ItemIcon id="red-shard" size={30} /></>}>
-            Each workout in Strong's split drops its own piece of gear. One of all seven forges a Red Shard.
+            Each workout in Strong's split drops its own piece of gear. A full set of seven pays gems and Iron, and every {KIT_SHARD_EVERY}rd set a Red Shard as well.
           </Rule>
           <Rule title="Leaders and badges" tone="purple" pic={<><span className="rule-chip">{(LEADER_HP / 1000).toFixed(0)}k</span><Arrow /><img src="/sprites/badges/1-1.png" alt="" width={32} height={32} className="gymbadge pix" /></>}>
             Each leader has {LEADER_HP.toLocaleString('en-IN')} HP and is weak to two kinds of work (×{WEAK_MULT}). Beat one, keep the badge.
@@ -980,7 +981,7 @@ function RulesTab() {
         </div>
         <div className="kit-row" style={{ marginTop: 14 }}>
           <button type="button" className={`k-btn ${sound ? 'ok' : ''}`} aria-pressed={sound} onClick={() => { setSoundOn(!sound); setSound(!sound); if (!sound) play('buy') }}>Sound: {sound ? 'on' : 'off'}</button>
-          <span className="muted">Rules version 10. The game began {fmtDay(GAME_START)}.</span>
+          <span className="muted">Rules version 11. The game began {fmtDay(GAME_START)}.</span>
         </div>
       </div>
     </section>

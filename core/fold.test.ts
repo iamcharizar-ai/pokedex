@@ -10,7 +10,7 @@ import { foldGame, isGym, leaderOf, statsOf } from './fold.ts'
 import { LEAGUES, lineup } from './gyms.ts'
 import { beats, weakDomains } from './types.ts'
 import {
-  BALL_MULT, CLAIM_AUTO, DAILY_PAY, PAY_STREAK, REVIEW_GEMS, EGG_DAYS, GAME_START, GEMS, LEADER_HP, MEGA_BONUS, REPEL_DAYS, SEASON_STEP, SLEEP_DEEP, SLIP, STAKES_FROM, TEAM_BONUS, TEAM_NATURE, TEAM_SIZE, WEAK_MULT, WILD_HP, WILD_STAY,
+  BALL_MULT, CLAIM_AUTO, DAILY_PAY, PAY_STREAK, REVIEW_GEMS, EGG_DAYS, GAME_START, GEMS, KIT_IRON, LEADER_HP, MEGA_BONUS, REPEL_DAYS, SEASON_STEP, SLEEP_DEEP, SLIP, STAKES_FROM, TEAM_BONUS, TEAM_NATURE, TEAM_SIZE, WEAK_MULT, WILD_HP, WILD_STAY,
   ballFor, bondLevel, evolveAt, graduateAt, levelOf, momentumMult, regionsOpen, wildHit, xpForLevel,
 } from './rules.ts'
 import { BALLS, BOND_PARTY, CHEST, rng, DOMAIN_SHOPS, FEATS, FORGE_COST, GEAR, GEAR_ITEMS, LURES, MART_POOL, SELL, STANDING, forgeShard, lureTypes, martDeals, throwHp } from './economy.ts'
@@ -604,7 +604,7 @@ test('Full Incense chooses the next wild Pokemon from three of any type', () => 
   assert.deepEqual([junk.inv['full-incense'], junk.wish.chosen], [1, null])
 })
 
-test('Strong\'s training gear: each routine drops its own piece, and one of all seven forges a Red Shard', () => {
+test('Strong\'s training gear: each routine drops its own piece, a full set pays gems and Iron, and every third set a Red Shard', () => {
   assert.equal(GEAR_ITEMS.length, 7)
   const routines = Object.keys(GEAR)
   const facts = run(10, {})
@@ -617,14 +617,24 @@ test('Strong\'s training gear: each routine drops its own piece, and one of all 
   // seven different ones, on seven days: a Red Shard, and the pieces are used up
   const cycle = routines.reduce((f, r, i) => withGear(f, i, r), facts)
   const g = fold(cycle)
-  assert.equal(g.inv['red-shard'], 1)
+  assert.equal(g.inv['red-shard'] ?? 0, 0, 'the first set is not a shard')
+  assert.ok(g.wallet.marks.fitness >= KIT_IRON, 'it pays Iron instead')
   assert.ok(GEAR_ITEMS.every((i) => (g.inv[i] ?? 0) === 0))
   assert.equal(g.counters.sets, 1)
-  assert.ok(g.moments.some((m) => m.kind === 'kit' && m.n === 1))
+  assert.ok(g.moments.some((m) => m.kind === 'kit' && m.n === 1 && m.shard === false))
   assert.equal(g.moments.filter((m) => m.kind === 'gear').length, 7)
   // an eighth piece carries over to the next set
   const more = fold(withGear(cycle, 8, 'd3-legs'))
-  assert.deepEqual([more.inv['red-shard'], more.inv['power-anklet']], [1, 1])
+  assert.deepEqual([more.inv['red-shard'] ?? 0, more.inv['power-anklet']], [0, 1])
+  // every third full set is a Red Shard
+  const sets = (n: number) => {
+    let f = run(30, {}) // a day for each of up to three sets of seven
+    for (let k = 0; k < n; k++) f = routines.reduce((acc, rt, i) => withGear(acc, k * 7 + i, rt), f)
+    return fold(f)
+  }
+  assert.equal(sets(2).inv['red-shard'] ?? 0, 0)
+  assert.equal(sets(3).inv['red-shard'], 1)
+  assert.ok(sets(3).moments.some((m) => m.kind === 'kit' && m.n === 3 && m.shard === true))
   // two workouts on one day count as two
   assert.equal(fold(withGear(facts, 0, 'd1-chest-delts', 'd2-lats-biceps')).inv['silver-wing'], 1)
 })
@@ -635,6 +645,8 @@ test('feats say each thing once: no 25 or 250 day totals, and the gym pays red s
   const hundred = FEATS.find((f) => f.id === 'days100-fitness')!
   assert.deepEqual(hundred.reward.items ?? {}, {})
   assert.ok(FEATS.find((f) => f.id === 'days100-code')!.reward.items?.['blue-shard'])
+  // a run of seven pays gems only: it comes in the first fortnight, months before anything can Mega
+  for (const t of ['code', 'fitness', 'guitar', 'arbor', 'sleep']) assert.deepEqual(FEATS.find((f) => f.id === `run7-${t}`)!.reward.items ?? {}, {})
 })
 
 test('the team backs the partner, and a theme is bought once', () => {
@@ -755,8 +767,9 @@ test('a feat pays once, and the Key Stone is one of them', () => {
   assert.equal(g.inv['key-stone'], 1)
   assert.equal(g.keyStone, g.feats.find((f) => f.id === 'work7')!.day)
   assert.equal(g.moments.filter((m) => m.kind === 'key').length, 1)
-  // a seven-day coding run also pays a blue shard, and nothing is paid twice
-  assert.equal(g.inv['blue-shard'], 1)
+  // a seven-day coding run pays gems and not a shard (version 11), and nothing is paid twice
+  assert.equal(g.inv['blue-shard'] ?? 0, 0)
+  assert.ok(g.feats.some((f) => f.id === 'run7-code'))
   const more = fold(run(12, HALF))
   assert.equal(more.feats.filter((f) => f.id === 'work7').length, 1)
   assert.equal(more.inv['key-stone'], 1)

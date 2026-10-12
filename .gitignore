@@ -9,3 +9,6 @@ tools/.cache
 
 .vercel
 .env*
+
+tests/diff/
+

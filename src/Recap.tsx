@@ -74,7 +74,9 @@ function tell(m: Moment, game: Game): Told {
     }
     case 'form': return { title: m.what === 'mega' ? 'Mega form' : 'Gigantamax', line: `${nameOf(m.form)} is registered in the Pokedex.`, art: 'mon', form: m.form }
     case 'mega': return { title: 'Mega Stone forged', line: `${nameOf(m.form)} is registered to this Pokemon and never runs out.`, art: 'mon', form: m.form }
-    case 'kit': return { title: 'Training kit complete', line: 'All seven pieces of Strong gear became a Red Shard.', art: 'item', item: 'red-shard' }
+    case 'kit': return m.shard
+      ? { title: 'Training kit complete', line: 'A full set of Strong gear became a Red Shard, and paid gems and Iron.', art: 'item', item: 'red-shard' }
+      : { title: 'Training kit complete', line: 'A full set of Strong gear paid gems and Iron. Every third set is a Red Shard too.', art: 'item', item: 'iron' }
     case 'feat': { const it = prize(m); return { title: m.name, line: `A feat reached${it ? `: ${itemName(it)} is yours, and no shop sells it` : ''}.`, art: 'item', item: it } }
     case 'boss':
       if (m.what === 'appear') return { title: 'A boss appeared', line: `Lv ${m.level} ${nameOf(m.form)} is here for the week. Its card is on Home.`, art: 'mon', form: m.form }

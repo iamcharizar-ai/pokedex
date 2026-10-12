@@ -14,7 +14,7 @@ import { addDays } from './facts.ts'
 import { LEAGUES, lineup, type Leader } from './gyms.ts'
 import {
   ADVANTAGE_MULT, BALL_MULT, CATCH_WEIGHTS, DAILY_PAY, EGG_DAYS, GEMS, LEADER_HP, LEGENDARY_EVERY_WILD, MEGA_BONUS, MOMENTUM_WINDOW, NATURES, NATURE_DOMAIN, NATURE_STATS,
-  CLAIM_AUTO, PAY_STREAK, PILLARS_FOR_A_DAY, REPEL_DAYS, SEASON_STEP, SHINY_ODDS, SHINY_ODDS_WORN, SLEEP_AFTER, SLEEP_DEEP, REVIEW_GEMS, SLEEP_HABIT, SLIP, STAKES_FROM, START_SPECIES, STAT_DAYS, STEPS_GOAL, TAGS,
+  CLAIM_AUTO, KIT_IRON, KIT_SHARD_EVERY, PAY_STREAK, PILLARS_FOR_A_DAY, REPEL_DAYS, SEASON_STEP, SHINY_ODDS, SHINY_ODDS_WORN, SLEEP_AFTER, SLEEP_DEEP, REVIEW_GEMS, SLEEP_HABIT, SLIP, STAKES_FROM, START_SPECIES, STAT_DAYS, STEPS_GOAL, TAGS,
   TEAM_BONUS, TEAM_NATURE, TEAM_SIZE, WEAK_MULT, WEEK_DAYS, WILD_HP, WILD_STAY, ballFor, bondLevel, evolveAt, graduateAt, levelOf, momentumMult, regionsOpen, wildHit, xpForLevel,
   type Ball, type NatureStat, type Rarity, type Tag,
 } from './rules.ts'
@@ -106,7 +106,7 @@ export type Moment =
   | { kind: 'review'; day: string; n: number }
   /** a Strong workout dropped a piece of training gear, and a full set of seven turned into a Red Shard (`n` counts sets for life) */
   | { kind: 'gear'; day: string; item: string }
-  | { kind: 'kit'; day: string; n: number }
+  | { kind: 'kit'; day: string; n: number; shard: boolean }
 
 export interface DayResult {
   day: string
@@ -939,10 +939,13 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
     }
     while (GEAR_ITEMS.every((g) => (inv[g] ?? 0) > 0)) {
       for (const g of GEAR_ITEMS) inv[g]--
-      inv['red-shard'] = (inv['red-shard'] ?? 0) + 1
       bump('sets')
       earn(0, GEMS.kit)
-      moments.push({ kind: 'kit', day: f.day, n: cn.sets })
+      // every third full set is a Red Shard; the others pay Iron, so a set is never nothing
+      const shard = cn.sets % KIT_SHARD_EVERY === 0
+      if (shard) inv['red-shard'] = (inv['red-shard'] ?? 0) + 1
+      else { wallet.marks.fitness += KIT_IRON; wallet.marksToday.fitness += KIT_IRON }
+      moments.push({ kind: 'kit', day: f.day, n: cn.sets, shard })
     }
     if (typeof f.body?.steps === 'number') {
       notes.steps += Math.max(0, Math.min(STEPS_GOAL, f.body.steps))

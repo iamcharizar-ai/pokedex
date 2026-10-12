@@ -140,6 +140,12 @@ export const NATURES: Record<NatureStat, Record<NatureStat, string>> = {
 
 // ── gems, bond, quests, season, eggs ────────────────────────────────────────
 /** Gems for the things that happen by themselves. */
+/**
+ * Strong's training kit: each full set of its seven pieces pays gems and Iron, and every KIT_SHARD_EVERY-th set a Red Shard on top.
+ * (Version 11: the kit used to pay a shard every set with no limit, which made Mega Stones far too easy to come by.)
+ */
+export const KIT_SHARD_EVERY = 3
+export const KIT_IRON = 3
 export const GEMS = { catch: 3, shiny: 20, evolve: 10, gym: 20, elite: 30, league: 50, graduate: 15, perfect: 5, kit: 10 } as const
 
 /** Hearts at which a partner's bond steps up a level. Hearts only ever count up. */

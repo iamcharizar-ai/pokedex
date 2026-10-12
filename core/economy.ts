@@ -181,7 +181,7 @@ for (const t of TYPES) ITEMS[tmId(t)] = { name: `TM ${t}`, kind: 'tm', text: tmT
 export const itemName = (id: string): string => ITEMS[id]?.name ?? id
 
 // ── Strong's training gear ──────────────────────────────────────────────────
-/** Each routine in Strong's split drops its own piece of gear (the names and pictures are Strong's). One of each of the seven is a Red Shard. */
+/** Each routine in Strong's split drops its own piece of gear (the names and pictures are Strong's). A full set pays gems and Iron, and every third set a Red Shard. */
 export const GEAR: Record<string, string> = {
   'd1-chest-delts': 'protector', 'd2-lats-biceps': 'silver-wing', 'd3-legs': 'power-anklet', 'd4-delts-triceps': 'power-lens',
   'd5-back-biceps': 'power-bracer', 'd6-chest-flys': 'power-band', 'd7-arms-delts': 'power-weight',
@@ -192,7 +192,7 @@ const GEAR_INFO: Record<string, [string, string]> = {
   protector: ['Protector', 'Upper chest and side delts'], 'silver-wing': ['Silver Wing', 'Lats, rear delts and biceps'], 'power-anklet': ['Power Anklet', 'Legs'],
   'power-lens': ['Power Lens', 'Side delts and triceps'], 'power-bracer': ['Power Bracer', 'Back and biceps'], 'power-band': ['Power Band', 'Chest and flys'], 'power-weight': ['Power Weight', 'Arms and delts'],
 }
-for (const [id, [name, what]] of Object.entries(GEAR_INFO)) ITEMS[id] = { name, kind: 'gear', text: `Dropped by the ${what} workout in Strong. One of all seven forges a Red Shard.` }
+for (const [id, [name, what]] of Object.entries(GEAR_INFO)) ITEMS[id] = { name, kind: 'gear', text: `Dropped by the ${what} workout in Strong. Every third full set of seven pays a Red Shard.` }
 
 // ── shops ───────────────────────────────────────────────────────────────────
 export interface Offer { item: string; coins?: number; gems?: number; marks?: number }
@@ -323,10 +323,11 @@ function domainFeats(): Feat[] {
   const out: Feat[] = []
   for (const tag of MARK_TAGS) {
     const w = DOMAIN_WORD[tag]
-    // the gym's red shards come from Strong's training kit as well, so its 100 days pay gems only
+    // the gym's red shards come from Strong's training kit as well, so its 100 days pay gems only.
+    // A run of seven pays gems, not a shard (version 11): it comes in the first fortnight, months before anything can Mega.
     const hundred = tag === 'fitness' ? {} : shardOf(tag)
     out.push(
-      { id: `run7-${tag}`, name: `${w.run}, seven running`, text: `${w.unit} on seven days running (one rest day is forgiven)`, group: 'run', key: `run:${tag}`, n: 7, reward: { gems: 10, items: shardOf(tag) }, tag },
+      { id: `run7-${tag}`, name: `${w.run}, seven running`, text: `${w.unit} on seven days running (one rest day is forgiven)`, group: 'run', key: `run:${tag}`, n: 7, reward: { gems: 15 }, tag },
       { id: `run30-${tag}`, name: `${w.run}, a month running`, text: `${w.unit} for thirty days running`, group: 'run', key: `run:${tag}`, n: 30, reward: { gems: 25, items: { ...shardOf(tag), [UNIQUE_HELD[tag]]: 1 } }, tag },
       { id: `days100-${tag}`, name: `${w.run}, 100 days`, text: `${w.unit}, 100 in all`, group: 'total', key: `days:${tag}`, n: 100, reward: { gems: 30, items: hundred }, tag },
     )

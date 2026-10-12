@@ -9,6 +9,7 @@ import {
   BALLS, DOMAIN_SHOPS, FORGE_COST, GEAR_ITEMS, HELD, ITEMS, LURES, MARKS, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, masteryCost, RARE_SHELF, SELL, TM_SLOTS, forgeShard, itemName, throwHp, tmType,
   type MarkTag, type Offer, type ShopId,
 } from '../core/economy.ts'
+import { KIT_SHARD_EVERY } from '../core/rules.ts'
 import { BALL_NAME, DAILY_PAY, HEART_LEVELS, REPEL_DAYS, TEAM_BONUS, TEAM_NATURE, TEAM_SIZE, bondLevel, levelOf } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
 import { MonCard, TAG_NAME, Win, plural } from './App.tsx'
@@ -246,7 +247,7 @@ function Shelf({ game, offers, shop }: { game: Game; offers: Offer[]; shop: Shop
   )
 }
 
-/** Strong's seven pieces of gear, and how close the next Red Shard is. */
+/** Strong's seven pieces of gear, and how close the next full set (and the next Red Shard) is. */
 function TrainingKit({ game }: { game: Game }) {
   const have = GEAR_ITEMS.filter((g) => (game.inv[g] ?? 0) > 0).length
   const sets = game.counters.sets ?? 0
@@ -263,7 +264,7 @@ function TrainingKit({ game }: { game: Game }) {
           )
         })}
       </div>
-      <p className="muted">Each workout in Strong's split drops its own piece. One of all seven, a full cycle of the split, forges a Red Shard by itself{sets > 0 ? `. ${sets} so far.` : '.'}</p>
+      <p className="muted">Each workout in Strong's split drops its own piece. A full set of seven pays gems and Iron, and every {KIT_SHARD_EVERY}rd set a Red Shard too{sets > 0 ? `. ${sets} so far, ${KIT_SHARD_EVERY - (sets % KIT_SHARD_EVERY)} to the next shard.` : '.'}</p>
     </div>
   )
 }
@@ -368,7 +369,7 @@ export function ShopTab({ game, only }: { game: Game; only?: ShopId }) {
             <li><Coin size={22} /> daily and weekly quests, the season, chests, and selling a Box Pokemon to the Professor</li>
             <li><Gem size={22} /> feats, a catch, an evolution, a badge, weekly quests</li>
             <li>{MARK_TAGS.map((t) => <MarkIcon key={t} tag={t} size={22} />)} one a day for each kind of work done: coding, gym, guitar, Arbor, sleep</li>
-            <li><ItemIcon id="red-shard" size={22} /><ItemIcon id="blue-shard" size={22} /><ItemIcon id="yellow-shard" size={22} /><ItemIcon id="green-shard" size={22} /> shards come from feats: streaks and lifetime totals</li>
+            <li><ItemIcon id="red-shard" size={22} /><ItemIcon id="blue-shard" size={22} /><ItemIcon id="yellow-shard" size={22} /><ItemIcon id="green-shard" size={22} /> shards come from feats (a month running, a hundred days), every third set of Strong gear and a boss</li>
             <li><ItemIcon id="comet-shard" size={22} /> a Comet Shard for every month-end review done in Life OS; it fits any Mega</li>
           </ul>
         </Win>
