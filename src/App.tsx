@@ -18,7 +18,12 @@ import { KBar, KPill, KRibbon } from './Kit.tsx'
 import { Actions, Coin, Count, Gem, Pop, Quests, ShopTab, TeamTab } from './Play.tsx'
 import { Recap } from './Recap.tsx'
 import { BossLog, BossTile } from './Boss.tsx'
+import { Calendar } from './screens/Calendar.tsx'
+import { HpBar } from './screens/HpBar.tsx'
+import { hpTone } from './screens/hp.ts'
 import { Sheet } from './screens/Sheet.tsx'
+import { Tour } from './screens/Tour.tsx'
+import { TOUR_KEY, shouldTour } from './screens/tour.ts'
 import { SeasonRoad } from './Road.tsx'
 import { BOSS_HEAL, KILL_CAP, THROWS, THROW_AT } from '../core/boss.ts'
 import { KIT_SHARD_EVERY } from '../core/rules.ts'
@@ -48,7 +53,7 @@ export function MonCard({ m, form = m.form, size, level, bar, note }: { m: Mon; 
   return (
     <span className={`mon ${m.megas?.length ? 'mega' : ''}`} style={{ width: size + 16 }}>
       <span className="mon-art" style={{ height: size + 6 }}>
-        <img src={still(form, m.shiny)} alt={nameOf(form)} width={size} height={size} className="sprite" />
+        <img src={still(form, m.shiny)} alt={nameOf(form)} width={size} height={size} className="sprite" loading="lazy" decoding="async" />
         {m.ball && <Ball ball={m.ball} size={Math.max(14, Math.round(size / 4.5))} className="mon-ball" />}
         {m.nature?.up && <span className="mon-gem" data-tag={m.nature.up} title={`${m.nature.name}: raised most on ${TAG_NAME[m.nature.up]}`} />}
       </span>
@@ -144,7 +149,6 @@ function Scene({ game }: { game: Game }) {
   const press = (who: 'me' | 'foe') => (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pat(who) } }
   const pct = clamp01(game.into / game.need)
   const before = Math.min(pct, clamp01(game.intoBeforeToday / game.need))
-  const hp = wild && wild.max ? wild.hp / wild.max : 0
   return (
     <section ref={stage} className={`scene ${game.theme} ${game.aura ? `aura-${game.aura}` : ''}`} style={skyVars(minutes, game.theme)} aria-label="Today, as a battle">
       <Sky minutes={minutes} theme={game.theme} score={score} />
@@ -155,12 +159,7 @@ function Scene({ game }: { game: Game }) {
               <span className="hp-name">{wild.caught ? nameOf(wild.form) : `Wild ${nameOf(wild.form)}`}{wild.shiny && <span className="chip">shiny</span>}{wild.rarity !== 'C' && <span className={`chip r-${wild.rarity}`}>{RARITY[wild.rarity]}</span>}</span>
               <span className="hp-lv ballname"><Ball ball={today.ball} size={18} />{wild.caught ? 'Caught' : BALL_NAME[today.ball]}</span>
             </div>
-            <div className="hp-row">
-              <b>HP</b>
-              <div className="bar" role="progressbar" aria-valuemin={0} aria-valuemax={wild.max} aria-valuenow={wild.hp} aria-label="The wild Pokemon's HP">
-                <i className={`hp ${hp <= 0.2 ? 'low' : hp <= 0.5 ? 'mid' : ''}`} style={{ width: `${hp * 100}%` }} />
-              </div>
-            </div>
+            <HpBar variant="game" value={wild.hp} max={wild.max} name="The wild Pokemon" />
             <div className="hp-sub"><span>{wild.caught ? 'In your Box' : today.hit > 0 ? `Today −${today.hit}` : ''}{!wild.caught && wild.leavesIn !== undefined && wild.leavesIn <= 3 && <b className="leaving"> {wild.leavesIn === 0 ? 'Gets away tomorrow' : `Gets away in ${wild.leavesIn + 1} days`}</b>}</span><b>{wild.hp} / {wild.max}</b></div>
           </div>
           <div className="pad foe-pad" role="button" tabIndex={0} aria-label={`Poke the wild ${nameOf(wild.form)}`} onClick={() => pat('foe')} onKeyDown={press('foe')}>
@@ -346,18 +345,12 @@ function LeaderBody({ game, t, l }: { game: Game; t: NonNullable<ReturnType<type
     lastStrike.current = today.strike
   }, [today.strike])
   const role = isGym(league.index, league.slot) ? `Gym ${league.slot + 1} of ${l.gyms.length}` : league.slot === lineup(l).length - 1 ? 'Champion' : 'Elite Four'
-  const hp = league.hp / league.max
   return (
     <Win title={`${l.name}: ${t.name}`} tone="gold" aside={role}>
       <div className="leadrow" ref={row}>
-        <span className={`foe ${hp <= 0.2 ? 'crit' : hp <= 0.5 ? 'hurt' : ''}`}>{t.sprite ? <img src={`/sprites/trainers/${t.sprite}.png`} alt="" width={72} height={72} className="sprite" /> : <span className="nopic" aria-hidden>?</span>}<Pop value={league.waiting ? 0 : today.strike} /></span>
+        <span className={`foe ${{ '': '', mid: 'hurt', low: 'crit' }[hpTone(league.hp / league.max)]}`}>{t.sprite ? <img src={`/sprites/trainers/${t.sprite}.png`} alt="" width={72} height={72} className="sprite" /> : <span className="nopic" aria-hidden>?</span>}<Pop value={league.waiting ? 0 : today.strike} /></span>
         <div className="leadinfo">
-          <div className="hp-row">
-            <b>HP</b>
-            <div className="bar" role="progressbar" aria-valuemin={0} aria-valuemax={league.max} aria-valuenow={league.hp} aria-label={`${t.name}'s HP`}>
-              <i className={`hp ${hp <= 0.2 ? 'low' : hp <= 0.5 ? 'mid' : ''}`} style={{ width: `${hp * 100}%` }} />
-            </div>
-          </div>
+          <HpBar variant="game" value={league.hp} max={league.max} name={t.name} />
           <div className="hp-sub"><span>{league.waiting ? 'Waiting' : today.strike > 0 ? <>Today <b className="dmg">−{today.strike}</b></> : ''}{league.slipped > 0 && <b className="leaving"> Won back {league.slipped} HP</b>}</span><b>{league.hp.toLocaleString('en-IN')} / {league.max.toLocaleString('en-IN')}</b></div>
           <div className="weak">
             <img src={`/sprites/types/${t.type}.png`} alt="" width={16} height={16} /><span>{t.type}</span>
@@ -418,7 +411,6 @@ function LeaderTile({ game }: { game: Game }) {
   const t = leaderOf(league.index, league.slot)
   if (!t) return <div className="tile static"><span className="k-label">League</span><b>Every league is beaten</b></div>
   const l = LEAGUES[league.index]
-  const hp = league.hp / league.max
   return (
     <>
       <button type="button" className="tile" onClick={() => setOpen(true)} aria-label={`${t.name}, ${Math.round(league.hp)} HP left. Open the leader card`}>
@@ -426,7 +418,7 @@ function LeaderTile({ game }: { game: Game }) {
           {t.sprite ? <img src={`/sprites/trainers/${t.sprite}.png`} alt="" width={44} height={44} className="sprite" /> : <span className="nopic" aria-hidden>?</span>}
           <span className="tile-name"><span className="k-label">{l.name}</span><b>{t.name}</b></span>
         </span>
-        <KBar value={Math.round(league.hp)} max={league.max} kind={hp <= 0.2 ? 'hp low' : hp <= 0.5 ? 'hp mid' : 'hp'} label={`${Math.round(league.hp).toLocaleString('en-IN')} HP`} />
+        <HpBar value={league.hp} max={league.max} />
         <small>{league.waiting ? 'Waiting for the region' : today.strike > 0 ? `Today −${today.strike}` : 'Weak to ' + (league.weak.map((w) => TAG_NAME[w] ?? w).join(' and ') || 'nothing')}</small>
       </button>
       {open && <Sheet title={`${l.name}: ${t.name}`} onClose={() => setOpen(false)}><LeaderCard game={game} /></Sheet>}
@@ -708,7 +700,6 @@ export function Road({ game }: { game: Game }) {
   const l = LEAGUES[index]
   const all = lineup(l)
   const at = done ? all.length : league.slot
-  const hp = league.hp / league.max
   return (
     <Win title={`${l.name} league`} tone="gold" aside={done ? 'All beaten' : `${Math.min(at, l.gyms.length)} / ${l.gyms.length} badges`}>
       <div className="road-win">
@@ -725,7 +716,7 @@ export function Road({ game }: { game: Game }) {
                 <div>
                   <span className="name">{t.name}</span>
                   <small>{gym ? badgeName(t) : i === all.length - 1 ? 'Champion' : 'Elite Four'} · {t.type}</small>
-                  {state === 'now' && <div style={{ marginTop: 6 }}><KBar value={league.hp} max={league.max} kind={hp <= 0.2 ? 'hp low' : hp <= 0.5 ? 'hp mid' : 'hp'} label={`${league.hp.toLocaleString('en-IN')} HP left`} /></div>}
+                  {state === 'now' && <div style={{ marginTop: 6 }}><HpBar value={league.hp} max={league.max} label={`${league.hp.toLocaleString('en-IN')} HP left`} /></div>}
                 </div>
                 {gym && <GymBadge art={art} on={state === 'done'} n={i + 1} size={40} title={`${badgeName(t)}: ${state === 'done' ? 'won' : 'not yet'}`} />}
               </div>
@@ -741,7 +732,13 @@ export function Road({ game }: { game: Game }) {
 }
 
 function HallOfFame({ game }: { game: Game }) {
-  if (game.hall.length === 0) return null
+  if (game.hall.length === 0) {
+    return (
+      <Win title="Hall of Fame" tone="gold" fold aside="Empty">
+        <p className="muted">Beat every leader of a league, up to its Champion, and your partner and team are kept here for good.</p>
+      </Win>
+    )
+  }
   return (
     <Win title="Hall of Fame" tone="gold" fold aside={plural(game.hall.length, 'league')}>
       <ul className="hall">
@@ -802,6 +799,7 @@ function TrainerTab({ game }: { game: Game }) {
       <Road game={game} />
       <SeasonRoad game={game} />
       <Quests game={game} />
+      <Calendar game={game} />
       <FeatsWin game={game} />
       <BossLog game={game} />
       {game.league.index > 0 && <BadgeCase game={game} />}
@@ -831,7 +829,7 @@ function Rule({ title, tone, pic, children }: { title: string; tone: string; pic
   )
 }
 const Arrow = () => <span className="rule-arrow" aria-hidden>▸</span>
-function RulesTab() {
+function RulesTab({ onTour }: { onTour: () => void }) {
   const [sound, setSound] = useState(soundOn())
   return (
     <section className="k-panel">
@@ -933,6 +931,7 @@ function RulesTab() {
           </Rule>
         </div>
         <div className="kit-row" style={{ marginTop: 14 }}>
+          <button type="button" className="k-btn" onClick={onTour}>Show the tour</button>
           <button type="button" className={`k-btn ${sound ? 'ok' : ''}`} aria-pressed={sound} onClick={() => { setSoundOn(!sound); setSound(!sound); if (!sound) play('buy') }}>Sound and buzz: {sound ? 'on' : 'off'}</button>
           <span className="muted">Rules version 11. The game began {fmtDay(GAME_START)}.</span>
         </div>
@@ -1008,6 +1007,7 @@ export default function App() {
   const view = useView()
   const [tab, setTab] = useState<Tab>('partner')
   const [help, setHelp] = useState(false)
+  const [tourOpen, setTourOpen] = useState<boolean | null>(null)
   useEffect(() => start(), [])
   // swipe sideways to change tab: a long, mostly horizontal, quick drag that did not start on something scrolling
   const touch = useRef<{ x: number; y: number; t: number } | null>(null)
@@ -1029,6 +1029,11 @@ export default function App() {
     go(dx < 0 ? 1 : -1)
   }
   const { game } = view
+  // the first-run tour: for a game that has not started, once on this device (or when asked for, from the help window)
+  const fresh = !game.days.some((d) => d.xp > 0 || d.ticked > 0)
+  const tourDone = (() => { try { return localStorage.getItem(TOUR_KEY) === '1' } catch { return false } })()
+  const tour = tourOpen ?? shouldTour(new URLSearchParams(location.search).get('tour'), tourDone, fresh)
+  const closeTour = () => { setTourOpen(false); try { localStorage.setItem(TOUR_KEY, '1') } catch { /* it would only show again */ } }
   // the first read has not landed yet: do not draw an empty day as if it were real
   const loading = view.status === 'connecting'
   const status = view.status === 'live' ? ['live', 'Synced'] : view.status === 'connecting' ? ['connecting', 'Loading'] : view.status === 'error' ? ['error', 'Offline'] : ['off', 'Local only']
@@ -1039,6 +1044,7 @@ export default function App() {
       {!loading && <Toasts game={game} today={view.today} />}
       {!loading && <ChestOpener game={game} />}
       {!loading && <HatchOpener game={game} />}
+      {!loading && tour && <Tour onClose={closeTour} />}
       <main key={tab} className="tabin" onTouchStart={swipeStart} onTouchEnd={swipeEnd}>
         {loading && (
           <Win title="Loading" tone="dark">
@@ -1055,7 +1061,7 @@ export default function App() {
         <div className="recap helpwin" role="dialog" aria-modal="true" aria-label="How it works" onClick={() => setHelp(false)}>
           <div className="helpbody" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="k-btn k-close" aria-label="Close" onClick={() => setHelp(false)}>✕</button>
-            <RulesTab />
+            <RulesTab onTour={() => { setHelp(false); setTourOpen(true) }} />
           </div>
         </div>
       )}

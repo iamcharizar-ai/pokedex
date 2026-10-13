@@ -68,7 +68,7 @@ try {
   if (!only.length || only.includes('sky')) {
     for (const [clock, sleep, label] of SKIES) {
       const page = await ctx.newPage()
-      await page.goto(`http://localhost:${PORT}/?fixture=week&clock=${clock}&sleep=${sleep}`)
+      await page.goto(`http://localhost:${PORT}/?fixture=week&clock=${clock}&sleep=${sleep}&tour=0`)
       await page.waitForSelector('.scene .sky')
       await page.waitForTimeout(500)
       const scene = page.locator('.scene')
@@ -86,7 +86,7 @@ try {
   }
   for (const name of only.length ? fixtures.filter((f) => f !== 'sky') : fixtures) {
     const page = await ctx.newPage()
-    await page.goto(`http://localhost:${PORT}/?fixture=${name}`)
+    await page.goto(`http://localhost:${PORT}/?fixture=${name}&tour=0`)
     await page.waitForSelector('.navbar button')
     await page.waitForTimeout(600)
     for (const tab of TABS) {

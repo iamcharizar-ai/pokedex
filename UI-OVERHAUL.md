@@ -1,6 +1,6 @@
 # A complete UI overhaul: the plan
 
-Written 13 Oct 2026, revised 14 Oct after your answers. **Phases 0 to 4 are built; the rest is a plan.** It comes from reading the Pokedex end to end (about 1,370 lines of CSS in five files, a 1,070-line `App.tsx`, five tabs) and from the motion study.
+Written 13 Oct 2026, revised 14 Oct after your answers. **Phases 0 to 6 are built, and phase 7 is the one left.** It comes from reading the Pokedex end to end (about 1,370 lines of CSS in five files, a 1,070-line `App.tsx`, five tabs) and from the motion study.
 
 ## 0. Where this stands
 
@@ -146,11 +146,23 @@ So feats alone gave two stones for the first Pokemon that can use one, and the f
 - **Checked in a real browser:** eight taps in a row leave nothing behind (the animation count returns to just the idle bob, and every floating mark is removed).
 - **Not done:** the partner does not turn to face the wild Pokemon. The sprites are animated GIFs facing front, so flipping them would look wrong; the lunge toward it carries that meaning instead.
 
-### Phase 5: readable data
-With the trainer card gone this is small: a 12-week calendar heat map on Journey in place of the XP chart (a cell a day, a ring for a perfect day, a dot for a boss week), and one HP-bar component for the wild Pokemon, the leader and the boss.
+### Phase 5: readable data (built)
+- **The last 12 weeks** (Journey) replaces the XP-per-day bar chart: a cell a day, a week a row, Monday first. Brighter is more work: nothing, something ticked, one pillar, two pillars (a counting day), three or more. A gold ring is a perfect day, a white outline is today, a dot beside a row is a week a boss came, and days before the game began or still to come are dashed. The header counts the counting and perfect days. Every cell has a label a screen reader reads ("Tue 13 Oct: 2 of 4 pillars, 310 XP, a counting day"). The logic is plain data (`screens/calendar.ts`) and tested.
+- **One HP bar** (`screens/HpBar.tsx`, thresholds in `screens/hp.ts`) now draws the wild Pokemon's, the leader's and the boss's, in the scene's boxed look or the kit's, with the boss's task marks as an option. Amber at half and red at a fifth are written in one place, tested, and the gym leader's flinch class reads the same threshold.
+- Momentum as seven dots was already done in phase 2.
 
-### Phase 6: for everyone
-A first-run tour of five cards and an empty state for every list; an accessibility pass (44-pixel targets, a non-motion equivalent for every motion, focus rings, live regions); performance (code split per tab, one sprite sheet for item icons, the fold cached by day, GIFs stopped off screen).
+### Phase 6: for everyone (built, with two things deliberately not done)
+- **First-run tour** (`screens/Tour.tsx`): five cards (your habits play this game; a tick grows your partner; rewards wait in Collect; five tabs, one job each; a boss once your party is six). It shows once, only on a game that has not started (no day with any XP), goes through the overlay queue first, can be skipped, and the help window has "Show the tour" to bring it back. `?tour=1` forces it, `?tour=0` forbids it (the test tools use that).
+- **Empty states:** the Bosses window says when a boss comes and how full the party is; the Hall of Fame says what puts a team in it; the calendar, the Box, the Bag, the Nursery, the Forge, Collect and the log already did. A new device shows no row of bare zeros.
+- **Accessibility, measured** (`npm run a11y`, which opens every tab under every fixture on a phone-sized screen): tap targets under 44 pixels fell from **17 kinds to 0** (the help button, the shop chips, the Pokedex filters, the folded-window headers, the forge folds); nothing a screen reader would announce as empty or unnamed (that was already 0); an inline link inside a sentence is exempt, as in WCAG. The audit does not judge colour contrast or reading order: those need eyes.
+- **Performance, measured, not guessed.** The audit reports files and bytes for each tab:
+  - **First load is 22 to 25 files and about 700 KB**, 579 KB of it one script and about 200 KB fonts.
+  - **Done: the Party tab under the heaviest fixture asked for 340 files for 27 KB**, because the folded Box still loaded all 286 sprites it was not showing. They are now lazy: **62 files, 3 KB**.
+  - **Not done, on purpose: splitting the script per tab.** The game's rules and the species table, which every tab needs, are most of it, so a split would save little and the app is cached after the first visit.
+  - **Not done, on purpose: one sprite sheet for the item icons.** Item pictures are small, cached for a year, and a tab asks for under 25 of them; a sheet would mean rewriting every place an icon is drawn for a gain nobody can feel.
+  - **Not done, on purpose: caching the fold by day.** The whole game folds in 22 ms for 1,700 events and 75 ms for 6,000, so it is not the slow part; a cache would be one more thing to keep right.
+  - The GIF sprites are only the two in the scene (the Box, Party and Pokedex use stills), so there is nothing to pause off screen.
+- **Not done:** a non-motion equivalent for every flourish was checked by reading, not measured: the moments that animate (a hit, a catch, a level) also have a line in the news, a toast or the adventure log, and the floating marks are hidden from screen readers while the claim has a live announcement.
 
 ### Phase 7: Life OS gets the same kit
 Share the tokens and motion kit the way the core is shared. This is where the on-hold Life OS items are done properly.
@@ -170,11 +182,11 @@ Share the tokens and motion kit the way the core is shared. This is where the on
 | 2 Five tabs and the Forge | 3 sessions | **done** |
 | 3 Sheets, queue, swipe, haptics, top bar | 1 session | **done** |
 | 4 The scene | 1 to 2 sessions | **done** |
-| 5 Data views | half a session | |
-| 6 Tour, accessibility, performance | 2 sessions | |
+| 5 Data views | half a session | **done** |
+| 6 Tour, accessibility, performance | 2 sessions | **done** |
 | 7 Shared kit with Life OS, and the on-hold Life OS items | 1 session | |
 
 ## 8. Decisions I still need
 
-1. **Vitals first, then the egg.** See `lifeos/docs/VITALS-ASSESSMENT.md`. The egg-on-steps change (rules version 12) only means something once a real sync has landed, and nothing in the repo shows one has. Can you check Today's "Last night" on a morning after the 07:00 job, or tell me where the Google Health data comes from today?
-2. **Phase 4, the scene** (parallax, a sky on the real clock, a partner that reacts), or the egg change, or the Vitals trim, next?
+1. **Journey is the one tab over my 2,500 pixel target** (about 3,200 to 3,600, calendar included). The big pieces are the feats (943), the season (461), the calendar (about 440) and the quests (389). Say if you want the feats folded behind their "closest" road.
+2. **Phase 7** (the same tokens and motion kit in Life OS, and the on-hold Life OS items), the egg change (rules version 12), or the Vitals trim, next? The Vitals sync check still comes before the egg.

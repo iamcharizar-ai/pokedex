@@ -15,6 +15,7 @@ import { Win } from './App.tsx'
 import { BallItem } from './Ball.tsx'
 import { ItemIcon } from './Item.tsx'
 import { KBar } from './Kit.tsx'
+import { HpBar } from './screens/HpBar.tsx'
 import { Sheet } from './screens/Sheet.tsx'
 import { fmtDay } from './lib/art.ts'
 import { EASE, K, dropIn, floatNote, hit, motionConfig, party, ring, run, stamp } from './lib/fx.ts'
@@ -93,7 +94,6 @@ function Fight({ boss, game }: { boss: BossView; game: Game }) {
     setBusy(null)
   }
 
-  const hpKind = boss.hpLeft <= 0.2 ? 'hp low' : boss.hpLeft <= 0.5 ? 'hp mid' : 'hp'
   const type = SPECIES[boss.form]?.t
   // where each task's share of the bar ends
   const edges = boss.tasks.slice(0, -1).map((_, i) => boss.tasks.slice(0, i + 1).reduce((n, t) => n + t.share, 0))
@@ -107,8 +107,7 @@ function Fight({ boss, game }: { boss: BossView; game: Game }) {
         </div>
         <div className="boss-info">
           <div className="boss-hp" title="Each segment is one task on the card">
-            <KBar value={boss.hp} max={boss.max} kind={hpKind} label={`${boss.hp.toLocaleString('en-IN')} / ${boss.max.toLocaleString('en-IN')} HP`} />
-            <span className="boss-segs" aria-hidden>{edges.map((e, i) => <i key={i} style={{ left: `${e * 100}%` }} />)}</span>
+            <HpBar value={boss.hp} max={boss.max} label={`${boss.hp.toLocaleString('en-IN')} / ${boss.max.toLocaleString('en-IN')} HP`} segments={edges} />
           </div>
           <p className="boss-line">
             {type && <><img src={`/sprites/types/${type}.png`} alt="" width={14} height={14} /> {type} · </>}
@@ -168,7 +167,7 @@ export function BossTile({ game }: { game: Game }) {
           <img src={spritePath(b.form)} alt="" width={44} height={44} className="sprite" />
           <span className="tile-name"><span className="k-label">Boss · Lv {b.level}</span><b>{nameOf(b.form)}</b></span>
         </span>
-        <KBar value={b.hp} max={b.max} kind={b.hpLeft <= 0.2 ? 'hp low' : b.hpLeft <= 0.5 ? 'hp mid' : 'hp'} label={`${b.hp.toLocaleString('en-IN')} HP`} />
+        <HpBar value={b.hp} max={b.max} />
         <small>{done} of {b.tasks.length} tasks · {state}</small>
       </button>
       {open && <Sheet title={`Boss: ${nameOf(b.form)}`} onClose={() => setOpen(false)}><Fight boss={b} game={game} /></Sheet>}
@@ -178,7 +177,13 @@ export function BossTile({ game }: { game: Game }) {
 
 /** Every boss so far, for the Journey tab. */
 export function BossLog({ game }: { game: Game }) {
-  if (!game.bossLog.length) return null
+  if (!game.bossLog.length) {
+    return (
+      <Win title="Bosses" tone="purple" fold aside="None yet">
+        <p className="muted">{game.bossParty >= 6 ? 'A boss comes on Monday. Each one you meet, beat or catch is listed here.' : `A boss comes each Monday once your party is six (${game.bossParty} of 6). Each one you meet, beat or catch is listed here.`}</p>
+      </Win>
+    )
+  }
   return (
     <Win title="Bosses" tone="purple" aside={`${game.bossLog.filter((b) => b.caught).length} caught`}>
       <ul className="boss-log">

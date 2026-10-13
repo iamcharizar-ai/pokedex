@@ -10,7 +10,7 @@
 // rank goes first, and equal ranks go in the order they asked.
 import { useEffect, useId, useSyncExternalStore } from 'react'
 
-export const RANK = { sheet: -1, news: 0, chest: 1, hatch: 2 } as const
+export const RANK = { sheet: -1, tour: -0.5, news: 0, chest: 1, hatch: 2 } as const
 
 interface Entry { id: string; rank: number; n: number }
 let line: Entry[] = []

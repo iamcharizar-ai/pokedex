@@ -7,10 +7,11 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "test": "node --test core/fold.test.ts tools/fixtures.test.mjs tools/styles.test.mjs tools/sky.test.mjs",
+    "test": "node --test core/fold.test.ts tools/fixtures.test.mjs tools/styles.test.mjs tools/sky.test.mjs tools/screens.test.mjs",
     "core": "node tools/build-core.mjs",
     "species": "node tools/build-species.mjs",
-    "shots": "node tools/shots.mjs"
+    "shots": "node tools/shots.mjs",
+    "a11y": "node tools/a11y.mjs --strict"
   },
   "dependencies": {
     "@fontsource/lilita-one": "^5.3.0",
