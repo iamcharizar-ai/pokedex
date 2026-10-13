@@ -69,13 +69,6 @@ h1, h2, h3 { font-family: var(--k-face); letter-spacing: 0.03em; text-transform:
 .mv-bar { height: 6px; }
 
 /* ── home: what is next, as three tiles ── */
-.nextup { gap: 10px; margin: 0 0 18px; background: none; border: 0; box-shadow: none; overflow: visible; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
-.nextup li, .nextup li:first-child { --c: var(--k-blue); grid-template-columns: 1fr; gap: 1px; align-items: start; color: #fff; padding: 10px 14px 13px; background: var(--k-tile); border: 3px solid var(--k-edge); border-top: 7px solid var(--c); border-radius: 12px; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.1), 0 4px 0 var(--k-edge); }
-.nextup li:nth-child(2) { --c: var(--k-gold); } .nextup li:nth-child(3) { --c: var(--k-purple); }
-.nextup small { font-family: var(--k-face); font-size: 12px; color: var(--k-dim); }
-.nextup b { font-family: var(--k-face); font-size: 19px; text-transform: none; white-space: normal; }
-.nextup span { color: var(--k-dim); }
-
 /* ── home: its windows get the dark quilted body, and everything in them is retuned for it ── */
 main .win { padding: 5px; background: linear-gradient(var(--k-frame), var(--k-frame-lo)); overflow: visible; }
 main .win-h { border: 3px solid var(--k-edge); border-radius: 10px 10px 0 0; }
@@ -161,12 +154,6 @@ main .win-b a { color: #fff; }
 .k-step .role { font-family: var(--k-face); font-size: 12px; color: var(--k-dim); }
 .k-step.ahead img.sprite { filter: brightness(0) opacity(0.4); }
 .k-step .nopic { width: 52px; height: 52px; }
-.statrow { border-bottom-color: rgba(255, 255, 255, 0.16); }
-.statrow dt { font-family: var(--k-face); font-size: 14px; color: #fff; text-transform: none; }
-.radar .ring { stroke: rgba(255, 255, 255, 0.2); }
-.radar .shape { fill: rgba(99, 198, 255, 0.4); stroke: #63c6ff; }
-.radar text { font-family: var(--k-face); font-size: 10px; fill: #fff; text-transform: none; }
-.radar text.off { fill: #7f89b5; }
 .chart .y { font-family: var(--k-face); } .chart .bars { border-bottom-color: var(--k-edge); background: repeating-linear-gradient(0deg, transparent 0 39px, rgba(255, 255, 255, 0.1) 39px 40px); }
 .col i { background: #6b7399; border-radius: 4px 4px 0 0; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.3); }
 .legend .k { border-color: var(--k-edge); border-radius: 3px; }
@@ -440,10 +427,6 @@ main .queue.pick button.on img { background: none; outline: 0; }
 .claim-chip[data-pocket='gems'] { background: #5ee0a0; }
 .claim-chip[data-pocket='bag'] { background: #8fc4ff; }
 .topbar .help { width: 40px; height: 40px; }
-.nextup { display: grid; gap: 4px; margin: 0 0 12px; padding: 8px 12px; background: rgba(8, 12, 30, 0.55); border: 2px solid var(--k-edge); border-radius: 10px; color: #fff; font-size: 14px; }
-.nextup > div { display: flex; gap: 10px; }
-.nextup dt { flex: none; min-width: 84px; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.06em; font-size: 11px; padding-top: 2px; }
-.nextup dd { margin: 0; }
 .toast-rail { position: fixed; z-index: 70; left: 50%; top: 64px; transform: translateX(-50%); display: grid; gap: 6px; width: min(92vw, 420px); pointer-events: none; }
 .toast { padding: 8px 12px; color: #fff; background: #1b2448; border: 3px solid var(--k-edge); border-radius: 10px; box-shadow: 0 3px 0 rgba(0, 0, 0, 0.4); }
 .toast b { color: #ffd800; }

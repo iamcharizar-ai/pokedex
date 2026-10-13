@@ -21,7 +21,7 @@ const ROOT = path.resolve(import.meta.dirname, '..')
 const BASE = path.join(ROOT, 'tests', 'baseline')
 const DIFF = path.join(ROOT, 'tests', 'diff')
 const PORT = 5199
-const TABS = ['Home', 'Team', 'Shop', 'Pokedex', 'Trainer']
+const TABS = ['Today', 'Party', 'Shop', 'Pokedex', 'Journey']
 const FIXTURES = ['empty', 'week', 'late', 'boss']
 const VIEW = { width: 390, height: 844 }
 /** Share of pixels allowed to differ (font smoothing and the like) before a screenshot counts as changed. */

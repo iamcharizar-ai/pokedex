@@ -14,7 +14,7 @@ const weekday = (day: string) => new Date(day + 'T12:00:00').toLocaleDateString(
 
 const STAGES: [keyof SleepNight, string, string][] = [['deepMin', 'Deep', '#6b5be0'], ['remMin', 'REM', '#63c6ff'], ['lightMin', 'Light', '#9aa6c2'], ['awakeMin', 'Awake', '#e0559a']]
 
-export function SleepWin({ game, nights, full }: { game: Game; nights: Record<string, SleepNight>; full?: boolean }) {
+export function SleepWin({ game, nights }: { game: Game; nights: Record<string, SleepNight> }) {
   const { sleep } = game
   const today = game.today.day
   const night = nights[today]
@@ -51,9 +51,9 @@ export function SleepWin({ game, nights, full }: { game: Game; nights: Record<st
       ) : (
         <p className="muted">No band yet. Sleep is a habit you tick by hand, worth {TIER_XP.core} XP. From the first night your band reports, it becomes a pillar of 100 XP paid by the night's score.</p>
       )}
-      {full && sleep.band && (
-        <>
-          <span className="k-label">Last 14 nights</span>
+      {sleep.band && (
+        <details className="nights">
+          <summary className="k-label">Last 14 nights</summary>
           <div className="nightbars" role="img" aria-label="Sleep score for each of the last 14 nights">
             {recent.map((d) => {
               const s = nights[d]?.score
@@ -65,15 +65,7 @@ export function SleepWin({ game, nights, full }: { game: Game; nights: Record<st
               )
             })}
           </div>
-        </>
-      )}
-      {full && (
-        <ul className="sleeprules">
-          <li>A measured night is a pillar: its score is the XP (100 at most), and {SLEEP_DONE} or more fills it. It counts toward the two pillars of a counting day, and it cannot spoil a perfect day.</li>
-          <li>One Bell for a night of {SLEEP_DONE} or more, two for {SLEEP_DEEP}. Bells are spent at the Dream House. A hand tick earns none.</li>
-          <li>No reading is never a zero: that morning can be ticked by hand for {TIER_XP.core} XP, and the reading replaces it.</li>
-          <li>HP on the Trainer profile is your average score over the last 28 measured nights.</li>
-        </ul>
+        </details>
       )}
     </Win>
   )

@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { isGym, leaderOf, nameOf, spritePath, type Game, type Mon, type Moment, type Stats } from '../core/fold.ts'
+import { isGym, leaderOf, nameOf, spritePath, type Game, type Mon, type Moment } from '../core/fold.ts'
 import type { DayFacts, HabitFact } from '../core/facts.ts'
 import { LEAGUES, lineup } from '../core/gyms.ts'
 import {
   ADVANTAGE_MULT, GEMS, SEASON_STEP, BALL_MULT, BALL_NAME, GAME_START, GRADUATES_PER_REGION, LEADER_HP, MOMENTUM_WINDOW,
-  CLAIM_AUTO, EGG_DAYS, bondLevel, HEART_LEVELS, LEGENDARY_EVERY_WILD, PAY_STREAK, PILLARS_FOR_A_DAY, REGIONS, REPEL_DAYS, SHINY_ODDS, SHINY_ODDS_WORN, SLEEP_AFTER, SLIP, STAKES_FROM, STAT_DAYS, STEPS_GOAL, TEAM_SIZE, WILD_STAY, TIER_XP, WEAK_MULT, evolveAt, graduateAt, momentumMult, xpForLevel,
+  CLAIM_AUTO, EGG_DAYS, bondLevel, HEART_LEVELS, LEGENDARY_EVERY_WILD, PAY_STREAK, REGIONS, REPEL_DAYS, SHINY_ODDS, SHINY_ODDS_WORN, SLEEP_AFTER, SLIP, STAKES_FROM, STEPS_GOAL, TEAM_SIZE, WILD_STAY, TIER_XP, WEAK_MULT, evolveAt, graduateAt, xpForLevel,
 } from '../core/rules.ts'
 import { BOND_PARTY, BOND_STEP, MASTERY_MAX, MASTERY_STEP, SELL, itemName as econName, masteryCost } from '../core/economy.ts'
 import { TEAM_BONUS, TEAM_NATURE, type Tag as TagKind } from '../core/rules.ts'
@@ -17,8 +17,9 @@ import { ItemIcon } from './Item.tsx'
 import { KBar, KPill, KRibbon } from './Kit.tsx'
 import { Actions, Coin, Count, Gem, Pop, Quests, ShopTab, TeamTab } from './Play.tsx'
 import { Recap } from './Recap.tsx'
-import { BossCard, BossLog } from './Boss.tsx'
-import { EggCard, SeasonRoad } from './Road.tsx'
+import { BossLog, BossTile } from './Boss.tsx'
+import { Sheet } from './screens/Sheet.tsx'
+import { SeasonRoad } from './Road.tsx'
 import { BOSS_HEAL, KILL_CAP, THROWS, THROW_AT } from '../core/boss.ts'
 import { KIT_SHARD_EVERY } from '../core/rules.ts'
 import { Claims } from './Claim.tsx'
@@ -31,7 +32,7 @@ import { dropIn, floatNote, hit, party, ring, stamp, tapPop } from './lib/fx.ts'
 import { ChestOpener, HatchOpener } from './Reveal.tsx'
 
 type Tab = 'partner' | 'team' | 'shop' | 'dex' | 'trainer'
-const TABS: [Tab, string][] = [['partner', 'Home'], ['team', 'Team'], ['shop', 'Shop'], ['dex', 'Pokedex'], ['trainer', 'Trainer']]
+const TABS: [Tab, string][] = [['partner', 'Today'], ['team', 'Party'], ['shop', 'Shop'], ['dex', 'Pokedex'], ['trainer', 'Journey']]
 export const TAG_NAME: Record<string, string> = { code: 'Code', fitness: 'Gym', guitar: 'Guitar', arbor: 'Arbor', sleep: 'Sleep', routine: 'Routine', balanced: 'Balance', health: 'Health tracker' }
 const weekday = (day: string, len: 1 | 3 = 1) => new Date(day + 'T12:00:00').toLocaleDateString('en-US', { weekday: len === 1 ? 'narrow' : 'short' })
 const clamp01 = (n: number) => Math.max(0, Math.min(1, n))
@@ -67,7 +68,16 @@ function Sprite({ form, shiny, size, className = '' }: { form: string; shiny?: b
 }
 
 /** A game window: coloured title strip over a cream body. */
-export function Win({ title, aside, tone = '', children }: { title: string; aside?: ReactNode; tone?: '' | 'blue' | 'green' | 'gold' | 'dark' | 'red' | 'purple'; children: ReactNode }) {
+export function Win({ title, aside, tone = '', fold, children }: { title: string; aside?: ReactNode; tone?: '' | 'blue' | 'green' | 'gold' | 'dark' | 'red' | 'purple'; fold?: boolean; children: ReactNode }) {
+  // `fold`: shut until tapped, for a store that grows (the Bag, the Box) so the tab around it stays short
+  if (fold) {
+    return (
+      <details className={`win folded ${tone ? `t-${tone}` : ''}`}>
+        <summary className="win-h"><h2>{title}</h2>{aside !== undefined && <span className="aside">{aside}</span>}<i className="chev" aria-hidden>▾</i></summary>
+        <div className="win-b">{children}</div>
+      </details>
+    )
+  }
   return (
     <section className={`win ${tone ? `t-${tone}` : ''}`}>
       <header className="win-h"><h2>{title}</h2>{aside !== undefined && <span className="aside">{aside}</span>}</header>
@@ -213,14 +223,15 @@ function Talk({ game, pillars }: { game: Game; pillars: HabitFact[] }) {
   )
 }
 
-function Momentum({ game }: { game: Game }) {
+/** The week's momentum as seven dots and the bonus they make: three days with two pillars is x1.2, five x1.35, seven x1.5. */
+function MomentumStrip({ game }: { game: Game }) {
   const { momentum } = game
   const prev = game.days.slice(-(MOMENTUM_WINDOW + 1), -1)
   const missing = MOMENTUM_WINDOW - prev.length
-  const steps = [0, 3, 5, 7]
   return (
-    <Win title="Momentum" tone="gold" aside={`×${momentum.mult}`}>
-      <div className="week" aria-label={`${momentum.days} of the last 7 days counted`}>
+    <div className="momentum" title="Days with two pillars in the last seven: 3 make XP x1.2, 5 x1.35, 7 x1.5. It slides back a day at a time, never resets.">
+      <span className="k-label">Momentum</span>
+      <span className="week" aria-label={`${momentum.days} of the last 7 days counted`}>
         {Array.from({ length: MOMENTUM_WINDOW }, (_, i) => {
           const d = prev[i - missing]
           return (
@@ -230,21 +241,10 @@ function Momentum({ game }: { game: Game }) {
             </span>
           )
         })}
-        <span className="gap" aria-hidden />
-        <span className="d today" title="Today">
-          <span className={`dot ${game.today.counts ? 'on' : ''}`} />
-          Today
-        </span>
-      </div>
-      <div className="ladder">
-        {steps.map((s) => (
-          <div key={s} className={momentumMult(momentum.days) === momentumMult(s) ? 'on' : ''}>
-            <b>×{momentumMult(s)}</b>
-            {s === 0 ? 'start' : `${s}+ days`}
-          </div>
-        ))}
-      </div>
-    </Win>
+        <span className="d today" title="Today"><span className={`dot ${game.today.counts ? 'on' : ''}`} />Today</span>
+      </span>
+      <b className="mult">×{momentum.mult}</b>
+    </div>
   )
 }
 
@@ -387,41 +387,57 @@ function SlipNote({ game }: { game: Game }) {
   )
 }
 
-/** The next few goals on one line each, so what to do next is a glance. */
-function NextUp({ game }: { game: Game }) {
-  const { partner, wild, league } = game
-  const toLevel = Math.max(0, Math.ceil(xpForLevel(game.next.level) - partner.xp))
-  const foe = leaderOf(league.index, league.slot)
-  const rows: [string, ReactNode][] = [
-    [game.next.what === 'evolve' ? 'Evolves' : 'Fully trained', <>at level {game.next.level}, {toLevel.toLocaleString('en-IN')} XP to go</>],
-    ...(foe && !league.waiting ? [['Leader', <>{foe.name}: {Math.max(0, Math.round(league.hp)).toLocaleString('en-IN')} HP left</>] as [string, ReactNode]] : []),
-    ...(wild && !wild.caught ? [['Wild', <>{nameOf(wild.form)}: {Math.max(0, Math.round(wild.hp))} HP{wild.leavesIn !== undefined && wild.leavesIn <= 7 ? `, leaves in ${wild.leavesIn} days` : ''}</>] as [string, ReactNode]] : []),
-  ]
+/** How far the partner is from its next change. The leader and the wild Pokemon have a tile and the scene. */
+function EvolveLine({ game }: { game: Game }) {
+  const toLevel = Math.max(0, Math.ceil(xpForLevel(game.next.level) - game.partner.xp))
   return (
-    <dl className="nextup" aria-label="What is next">
-      {rows.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}
-    </dl>
+    <p className="evolveline">
+      <b>{game.next.what === 'evolve' ? 'Evolves' : 'Fully trained'}</b> at level {game.next.level}: <span className="num">{toLevel.toLocaleString('en-IN')}</span> XP to go
+    </p>
   )
 }
 
+/** The leader as a tile: who is up and how much HP they have left. Tap for the whole card. */
+function LeaderTile({ game }: { game: Game }) {
+  const [open, setOpen] = useState(false)
+  const { league, today } = game
+  const t = leaderOf(league.index, league.slot)
+  if (!t) return <div className="tile static"><span className="k-label">League</span><b>Every league is beaten</b></div>
+  const l = LEAGUES[league.index]
+  const hp = league.hp / league.max
+  return (
+    <>
+      <button type="button" className="tile" onClick={() => setOpen(true)} aria-label={`${t.name}, ${Math.round(league.hp)} HP left. Open the leader card`}>
+        <span className="tile-top">
+          {t.sprite ? <img src={`/sprites/trainers/${t.sprite}.png`} alt="" width={44} height={44} className="sprite" /> : <span className="nopic" aria-hidden>?</span>}
+          <span className="tile-name"><span className="k-label">{l.name}</span><b>{t.name}</b></span>
+        </span>
+        <KBar value={Math.round(league.hp)} max={league.max} kind={hp <= 0.2 ? 'hp low' : hp <= 0.5 ? 'hp mid' : 'hp'} label={`${Math.round(league.hp).toLocaleString('en-IN')} HP`} />
+        <small>{league.waiting ? 'Waiting for the region' : today.strike > 0 ? `Today −${today.strike}` : 'Weak to ' + (league.weak.map((w) => TAG_NAME[w] ?? w).join(' and ') || 'nothing')}</small>
+      </button>
+      {open && <Sheet title={`${l.name}: ${t.name}`} onClose={() => setOpen(false)}><LeaderCard game={game} /></Sheet>}
+    </>
+  )
+}
+
+/** Today: what is happening now, and nothing that belongs to another tab. */
 function PartnerTab({ game, facts, nights, onShop }: { game: Game; facts: DayFacts[]; nights: Record<string, SleepNight>; onShop: () => void }) {
   const habits = facts[facts.length - 1]?.habits ?? []
   return (
-    <div className="home">
+    <div className="home daypage">
       <Scene game={game} />
       <FirstRun game={game} />
       <SlipNote game={game} />
+      {game.warnings.map((w) => <p key={w} className="notice warn">{w}</p>)}
       <Talk game={game} pillars={habits.filter((h) => h.pillar)} />
-      <NextUp game={game} />
-      <BossCard game={game} />
-      <EggCard game={game} />
+      <MomentumStrip game={game} />
+      <EvolveLine game={game} />
       <Actions game={game} onShop={onShop} />
-      <div className="cols">
-        <LeaderCard game={game} />
-        <Momentum game={game} />
+      <div className="tiles">
+        <LeaderTile game={game} />
+        <BossTile game={game} />
       </div>
       {game.sleep.state !== 'off' && <SleepWin game={game} nights={nights} />}
-      <Quests game={game} />
     </div>
   )
 }
@@ -462,7 +478,7 @@ function Choices({ game }: { game: Game }) {
   const sentence = !what || !mon ? '' : what === 'show' ? `${nameOf(mon.form)} is drawn as ${nameOf(formOf(chosen ?? ''))} from today.`
     : `${nameOf(mon.form)} will evolve into ${nameOf(chosen ?? '')} when its level comes.`
   return (
-    <Win title="Choices" tone="blue" aside="Free">
+    <Win title="Choices" tone="blue" aside="Free" fold>
       <div className="uses">
         {uses.map(([id, name, text]) => (
           <button key={id} className={`use ${what === id ? 'on' : ''}`} aria-pressed={what === id} disabled={can[id].length === 0} onClick={() => pick(id)}>
@@ -632,7 +648,7 @@ function DexTab({ game }: { game: Game }) {
   )
 }
 
-// ── Trainer card ────────────────────────────────────────────────────────────
+// ── Journey (the Trainer tab's old name in the code) ───────────────────────
 const KIND: Record<Moment['kind'], string> = { level: 'Level', evolve: 'Evolved', graduate: 'Trained', partner: 'Partner', catch: 'Caught', appear: 'Wild', form: 'Form', region: 'Region', gym: 'Gym', league: 'League', use: 'Choice', key: 'Key Stone', review: 'Review', boss: 'Boss', mega: 'Mega', transfer: 'Professor', quest: 'Quest', season: 'Season', hatch: 'Hatched', chest: 'Chest', feat: 'Feat', gear: 'Gear', kit: 'Kit', flee: 'Fled', slip: 'Slipped' }
 function line(m: Moment): string {
   switch (m.kind) {
@@ -683,7 +699,9 @@ export function Road({ game }: { game: Game }) {
     <Win title={`${l.name} league`} tone="gold" aside={done ? 'All beaten' : `${Math.min(at, l.gyms.length)} / ${l.gyms.length} badges`}>
       <div className="road-win">
         <div className="k-road">
+          {at > 0 && <div className="k-road-done"><span className="k-rung past">{at} {at === 1 ? 'leader' : 'leaders'} beaten</span></div>}
           {all.flatMap((t, i) => {
+            if (i < at || i > at + 4) return []
             const state = i < at ? 'done' : i === at && !league.waiting ? 'now' : 'ahead'
             const gym = i < l.gyms.length
             const art = gym ? badgeArt(index, i) : null
@@ -700,6 +718,7 @@ export function Road({ game }: { game: Game }) {
             )
             return [step]
           })}
+          {all.length - (at + 5) > 0 && <div className="k-road-done"><span className="k-rung past">and {all.length - (at + 5)} more after that</span></div>}
         </div>
       </div>
       {league.waiting && <p className="muted">{l.name} is not open yet.</p>}
@@ -710,7 +729,7 @@ export function Road({ game }: { game: Game }) {
 function HallOfFame({ game }: { game: Game }) {
   if (game.hall.length === 0) return null
   return (
-    <Win title="Hall of Fame" tone="gold" aside={plural(game.hall.length, 'league')}>
+    <Win title="Hall of Fame" tone="gold" fold aside={plural(game.hall.length, 'league')}>
       <ul className="hall">
         {game.hall.map((h) => (
           <li key={h.league}>
@@ -726,42 +745,11 @@ function HallOfFame({ game }: { game: Game }) {
   )
 }
 
-const STAT_ROWS: [keyof Stats, string, string][] = [
-  ['hp', 'HP', 'Sleep'], ['atk', 'Attack', 'Gym'], ['def', 'Defense', 'Recovery'], ['spe', 'Speed', 'Steps'], ['spd', 'Sp. Def', 'Guitar'], ['spa', 'Sp. Atk', 'Code'],
-]
-function StatsRadar({ stats }: { stats: Stats }) {
-  const R = 84, C = 120
-  const at = (i: number, v: number): [number, number] => {
-    const a = (Math.PI * 2 * i) / STAT_ROWS.length - Math.PI / 2
-    return [C + Math.cos(a) * R * v, C + Math.sin(a) * R * v]
-  }
-  const ring = (v: number) => STAT_ROWS.map((_, i) => at(i, v).map((n) => n.toFixed(1)).join(',')).join(' ')
-  const shape = STAT_ROWS.map(([k], i) => at(i, Math.max(0.04, (stats[k] ?? 0) / 100)).map((n) => n.toFixed(1)).join(',')).join(' ')
-  return (
-    <Win title="Trainer profile" tone="blue" aside={`last ${STAT_DAYS} days`}>
-      <div className="statwrap">
-        <svg className="radar" viewBox="0 0 240 240" role="img" aria-label={STAT_ROWS.map(([k, n]) => `${n} ${stats[k] ?? 'not measured'}`).join(', ')}>
-          {[0.25, 0.5, 0.75, 1].map((v) => <polygon key={v} points={ring(v)} className="ring" />)}
-          {STAT_ROWS.map((_, i) => { const [x, y] = at(i, 1); return <line key={i} x1={C} y1={C} x2={x} y2={y} className="ring" /> })}
-          <polygon points={shape} className="shape" />
-          {STAT_ROWS.map(([k, n], i) => { const [x, y] = at(i, 1.24); return <text key={k} x={x} y={y} textAnchor="middle" dominantBaseline="middle" className={stats[k] === null ? 'off' : ''}>{n}</text> })}
-        </svg>
-        <dl className="facts stats">
-          {STAT_ROWS.map(([k, n, from]) => (
-            <div key={k} className="statrow"><dt>{n}</dt><dd>{stats[k] === null ? <span className="muted">needs the band</span> : <><b className="num">{stats[k]}</b><span className="muted"> {k === 'def' && stats.spe === null ? 'Arbor' : from}</span></>}</dd></div>
-          ))}
-        </dl>
-      </div>
-      <p className="muted">You over the last {STAT_DAYS} days, not the partner.</p>
-    </Win>
-  )
-}
-
 /** Every badge won, league by league, with the open league's empty places. */
 function BadgeCase({ game }: { game: Game }) {
   const upTo = Math.min(game.league.index, LEAGUES.length - 1)
   return (
-    <Win title="Badge case" tone="dark" aside={plural(badgesWon(game), 'badge')}>
+    <Win title="Badge case" tone="dark" fold aside={plural(badgesWon(game), 'badge')}>
       {LEAGUES.slice(0, upTo).map((l, index) => (
         <div key={l.name} className="caserow">
           <KRibbon metal={index < game.league.index ? 'gold' : 'silver'}>{l.name}</KRibbon>
@@ -779,20 +767,15 @@ function BadgeCase({ game }: { game: Game }) {
       <div className="keyrow">
         <KeyStone size={32} held={Boolean(game.keyStone)} />
         <p className="muted">
-          {game.keyStone ? `Key Stone, held since ${fmtDay(game.keyStone)}. A Mega Stone is forged from three shards, on the Pokemon's own page.` : 'The Key Stone is a feat: any one kind of work, seven days running. Then shards forge Mega Stones.'}
+          {game.keyStone ? `Key Stone, held since ${fmtDay(game.keyStone)}. A Mega Stone is forged from three shards, in the Forge on the Party tab.` : 'The Key Stone is a feat: any one kind of work, seven days running. Then shards forge Mega Stones.'}
         </p>
       </div>
     </Win>
   )
 }
 
-const DAYS_SHOWN = 30
-function TrainerTab({ game, nights }: { game: Game; nights: Record<string, SleepNight> }) {
-  const days = game.days.slice(-DAYS_SHOWN)
-  const max = Math.max(100, ...days.map((d) => d.xp))
-  const total = game.days.reduce((s, d) => s + d.xp, 0)
-  const best = game.days.reduce((b, d) => (d.xp > b.xp ? d : b), game.days[0] ?? { day: '', xp: 0 })
-  const seen = Object.keys(game.dex).filter((id) => !SPECIES[id]?.f).length
+/** Journey: where you are going, and what is next to earn. Roads first; the log is folded away at the bottom. */
+function TrainerTab({ game }: { game: Game }) {
   const events = [...game.moments].reverse().filter((m) => m.kind !== 'quest').filter((m, i, all) => m.kind !== 'level' || all.findIndex((x) => x.kind === 'level' && x.day === m.day) === i).slice(0, 80)
   const grouped = events.reduce<[string, Moment[]][]>((acc, m) => {
     const last = acc[acc.length - 1]
@@ -802,55 +785,15 @@ function TrainerTab({ game, nights }: { game: Game; nights: Record<string, Sleep
   }, [])
   return (
     <>
-      <BossLog game={game} />
+      <Road game={game} />
       <SeasonRoad game={game} />
-      <section className="card" aria-label="Trainer card">
-        <div>
-          <h2>Trainer card</h2>
-          <dl className="facts">
-            <dt>Started</dt><dd>{fmtDay(GAME_START)} · day {game.days.length}</dd>
-            <dt>Total XP</dt><dd>{total.toLocaleString('en-IN')}</dd>
-            <dt>Pokedex</dt><dd>{seen} seen · {game.graduates.length} fully trained</dd>
-            <dt>Perfect days</dt><dd>{game.perfectDays}</dd>
-            <dt>Best day</dt><dd>{best?.xp ? `${best.xp} XP, ${fmtDay(best.day)}` : 'none yet'}</dd>
-            <dt>Region</dt><dd>{REGIONS[game.regions - 1]}</dd>
-            <dt>League</dt><dd>{game.league.index < LEAGUES.length ? leagueName(game.league.index) : 'All beaten'} · {plural(game.hall.length, 'league')} won</dd>
-            <dt>Caught</dt><dd>{game.moments.filter((m) => m.kind === 'catch').length} · {game.queue.length} in the Box</dd>
-            <dt>Badges</dt><dd>{badgesWon(game)}{game.keyStone ? ' · Key Stone' : ''}</dd>
-          </dl>
-        </div>
-        <div className="who"><Sprite form={game.partner.form} shiny={game.partner.shiny} size={96} /></div>
-      </section>
-
-      {game.warnings.map((w) => <p key={w} className="notice warn">{w}</p>)}
-      <div className="cols">
-        <Road game={game} />
-        <StatsRadar stats={game.stats} />
-      </div>
-      <SleepWin game={game} nights={nights} full />
+      <Quests game={game} />
       <FeatsWin game={game} />
+      <BossLog game={game} />
       {game.league.index > 0 && <BadgeCase game={game} />}
       <HallOfFame game={game} />
-
-      <Win title="XP per day" tone="blue" aside={`last ${plural(days.length, 'day')}`}>
-        <div className="chart" role="img" aria-label={`XP earned on each of the last ${days.length} days; best was ${best?.xp ?? 0}`}>
-          <div className="y" aria-hidden><span>{max}</span><span>{Math.round(max / 2)}</span><span>0</span></div>
-          <div className="bars">
-            {Array.from({ length: Math.max(0, DAYS_SHOWN - days.length) }, (_, i) => <span key={`pad${i}`} className="col empty" />)}
-            {days.map((d, i) => (
-              <span key={d.day} className={`col ${i === days.length - 1 ? 'today' : d.perfect ? 'perfect' : d.counts ? 'counts' : ''}`} title={`${fmtDay(d.day)}: ${d.xp} XP · ${d.pillars}/${d.pillarTotal} pillars · ${d.done}/${d.total} habits${d.mult > 1 ? ` · ×${d.mult}` : ''}`}>
-                <i style={{ height: `${(d.xp / max) * 100}%` }} />
-              </span>
-            ))}
-          </div>
-          <div className="x" aria-hidden><span>{days.length < DAYS_SHOWN ? `Game began ${fmtDay(GAME_START)}` : `${DAYS_SHOWN} days ago`}</span><span>Today</span></div>
-        </div>
-        <div className="legend">
-          <span><i className="k today" />today</span><span><i className="k perfect" />perfect day</span><span><i className="k counts" />{PILLARS_FOR_A_DAY} or more pillars</span><span><i className="k" />other</span>
-        </div>
-      </Win>
-
-      <Win title="Adventure log" tone="dark">
+      <details className="logfold">
+        <summary><b>Adventure log</b><span>{plural(events.length, 'thing')}</span></summary>
         {grouped.length === 0 ? <p className="muted">Nothing yet. Tick a pillar in Life OS and it shows up here.</p> : (
           <ul className="log">
             {grouped.flatMap(([day, ms]) => [
@@ -859,12 +802,11 @@ function TrainerTab({ game, nights }: { game: Game; nights: Record<string, Sleep
             ])}
           </ul>
         )}
-      </Win>
+      </details>
     </>
   )
 }
 
-// ── Rules: a picture and one line each ──────────────────────────────────────
 function Rule({ title, tone, pic, children }: { title: string; tone: string; pic: ReactNode; children: ReactNode }) {
   return (
     <div className="rule" data-tone={tone}>
@@ -963,8 +905,8 @@ function RulesTab() {
           <Rule title="Guards" tone="red" pic={<><ItemIcon id="max-repel" size={30} /><ItemIcon id="revive" size={30} /></>}>
             Max Repel keeps the wild Pokemon {REPEL_DAYS} days longer, once. A Revive takes back the HP a leader regained on empty days. Both are always on the Mart's shelf.
           </Rule>
-          <Rule title="Steps and the trainer card" tone="green" pic={<><span className="rule-chip sm">10k</span><Arrow /><ItemIcon id="iron" size={28} /></>}>
-            A day of {STEPS_GOAL.toLocaleString('en-IN')} steps pays an extra Iron mark and counts as a full Speed day. The Trainer tab shows you, not the partner, averaged over the last {STAT_DAYS} days.
+          <Rule title="Ten thousand steps" tone="green" pic={<><span className="rule-chip sm">10k</span><Arrow /><ItemIcon id="iron" size={28} /></>}>
+            A day of {STEPS_GOAL.toLocaleString('en-IN')} steps from Vitals pays an extra Iron mark.
           </Rule>
           <Rule title="The weekly boss" tone="purple" pic={<><ItemIcon id="master-ball" size={30} /><span className="rule-chip sm">6</span><Arrow /><span className="rule-chip">5</span></>}>
             Once your party is six, a boss comes each Monday for the week. Its card has five tasks, from Strong, Arbor, Woodshed, your sleep and your days, each a share of its HP. It is levelled to your party, and how hard you hit depends on how strong the six are: their levels, how rare their lines are, their Megas, the bond, and whose type beats its type. Without every task done its last {Math.round((1 - KILL_CAP) * 100)}% never falls, and a day the card does not move heals it {Math.round(BOSS_HEAL * 100)}%. At {Math.round(THROW_AT * 100)}% HP or less you get {THROWS} throws: a chance, never a sure thing, and better the weaker it is.
@@ -1048,10 +990,10 @@ export default function App() {
           </Win>
         )}
         {!loading && tab === 'partner' && <PartnerTab game={game} facts={view.facts} nights={view.nights} onShop={() => setTab('shop')} />}
-        {!loading && tab === 'team' && <TeamTab game={game} partnerCard={<Summary game={game} />} choices={<Choices game={game} />} />}
+        {!loading && tab === 'team' && <TeamTab game={game} partnerCard={<Summary game={game} />} choices={<Choices game={game} />} onShop={() => setTab('shop')} />}
         {!loading && tab === 'shop' && <ShopTab game={game} />}
         {!loading && tab === 'dex' && <DexTab game={game} />}
-        {!loading && tab === 'trainer' && <TrainerTab game={game} nights={view.nights} />}
+        {!loading && tab === 'trainer' && <TrainerTab game={game} />}
       </main>
       {help && (
         <div className="recap helpwin" role="dialog" aria-modal="true" aria-label="How it works" onClick={() => setHelp(false)}>

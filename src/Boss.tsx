@@ -1,4 +1,4 @@
-// The weekly boss on the Home tab: who it is, its HP cut into the card's five
+// The weekly boss on the Today tab: who it is, its HP cut into the card's five
 // tasks, how far each task is, and the throw once it is weak enough.
 //
 // Nothing here decides anything: the card and the week's progress come from the
@@ -15,6 +15,7 @@ import { Win } from './App.tsx'
 import { BallItem } from './Ball.tsx'
 import { ItemIcon } from './Item.tsx'
 import { KBar } from './Kit.tsx'
+import { Sheet } from './screens/Sheet.tsx'
 import { fmtDay } from './lib/art.ts'
 import { EASE, K, dropIn, floatNote, hit, motionConfig, party, ring, run, stamp } from './lib/fx.ts'
 import { play } from './lib/sfx.ts'
@@ -153,12 +154,29 @@ function Fight({ boss, game }: { boss: BossView; game: Game }) {
   )
 }
 
-/** The boss, or what it will take to bring one out. */
-export function BossCard({ game }: { game: Game }) {
-  return game.boss ? <Fight boss={game.boss} game={game} /> : <Locked game={game} />
+/** The boss as a tile on Today: who it is, what is left of it, how the card is going. Tap for the whole fight. With none, what it takes to bring one out. */
+export function BossTile({ game }: { game: Game }) {
+  const [open, setOpen] = useState(false)
+  const b = game.boss
+  if (!b) return <Locked game={game} />
+  const done = b.tasks.filter((t) => t.p >= 1).length
+  const state = b.caught ? 'Caught' : b.fled ? 'It left' : b.canThrow ? 'Throw now' : b.daysLeft === 0 ? 'Last day' : `${b.daysLeft} ${b.daysLeft === 1 ? 'day' : 'days'} left`
+  return (
+    <>
+      <button type="button" className={`tile boss-tile ${b.canThrow ? 'hot' : ''}`} onClick={() => setOpen(true)} aria-label={`Boss ${nameOf(b.form)}, level ${b.level}, ${b.hp} HP left. Open the fight`}>
+        <span className="tile-top">
+          <img src={spritePath(b.form)} alt="" width={44} height={44} className="sprite" />
+          <span className="tile-name"><span className="k-label">Boss · Lv {b.level}</span><b>{nameOf(b.form)}</b></span>
+        </span>
+        <KBar value={b.hp} max={b.max} kind={b.hpLeft <= 0.2 ? 'hp low' : b.hpLeft <= 0.5 ? 'hp mid' : 'hp'} label={`${b.hp.toLocaleString('en-IN')} HP`} />
+        <small>{done} of {b.tasks.length} tasks · {state}</small>
+      </button>
+      {open && <Sheet title={`Boss: ${nameOf(b.form)}`} onClose={() => setOpen(false)}><Fight boss={b} game={game} /></Sheet>}
+    </>
+  )
 }
 
-/** Every boss so far, for the Trainer tab. */
+/** Every boss so far, for the Journey tab. */
 export function BossLog({ game }: { game: Game }) {
   if (!game.bossLog.length) return null
   return (

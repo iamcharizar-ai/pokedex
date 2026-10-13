@@ -14,6 +14,7 @@ import { ItemIcon } from './Item.tsx'
 import { KReveal, type Tier } from './Kit.tsx'
 import { EvoReveal } from './Reveal.tsx'
 import { party } from './lib/fx.ts'
+import { told } from './lib/told.ts'
 import { aBall, badgeArt, badgeName, fmtDay, leagueName, still } from './lib/art.ts'
 
 const SEEN_KEY = 'pokedex.seen.v1'
@@ -45,8 +46,10 @@ export function freshMoments(game: Game, today: string): Moment[] {
   const floor = from.toISOString().slice(0, 10)
   const recent = game.moments.filter((m) => m.day >= floor && !QUIET.has(m.kind) && !(m.kind === 'feat' && !prize(m)))
   const seen = loadSeen()
-  const fresh = seen ? recent.filter((m) => !seen.has(keyOf(m))) : []
-  if (!seen || fresh.length) {
+  // one the screen that did it has already played (a forged Mega) is marked told below but not shown again
+  const unseen = seen ? recent.filter((m) => !seen.has(keyOf(m))) : []
+  const fresh = unseen.filter((m) => !(m.kind === 'mega' && told.has(`mega:${m.form}`)))
+  if (!seen || unseen.length) {
     try {
       localStorage.setItem(SEEN_KEY, JSON.stringify(recent.map(keyOf)))
     } catch {
@@ -160,7 +163,7 @@ export function Recap({ game, today }: { game: Game; today: string }) {
         {rest.length > 0 && (
           <ul className="rc-list">
             {rest.slice(0, 8).map(({ m, t }, i) => <li key={i}><b>{t.title}</b><span>{t.line}</span><small>{fmtDay(m.day)}</small></li>)}
-            {rest.length > 8 && <li className="more">and {rest.length - 8} more, in the Adventure log on the Trainer tab.</li>}
+            {rest.length > 8 && <li className="more">and {rest.length - 8} more, in the Adventure log on the Journey tab.</li>}
           </ul>
         )}
         <button className={`go ${opened || evolving ? '' : 'breathe'}`} autoFocus>{opened || evolving ? 'Continue' : 'Tap to open'}</button>

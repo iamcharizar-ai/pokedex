@@ -1,6 +1,6 @@
 # A complete UI overhaul: the plan
 
-Written 13 Oct 2026, revised 14 Oct after your answers. **Phases 0 and 1 are built; the rest is a plan.** It comes from reading the Pokedex end to end (about 1,370 lines of CSS in five files, a 1,070-line `App.tsx`, five tabs) and from the motion study.
+Written 13 Oct 2026, revised 14 Oct after your answers. **Phases 0, 1 and 2 are built; the rest is a plan.** It comes from reading the Pokedex end to end (about 1,370 lines of CSS in five files, a 1,070-line `App.tsx`, five tabs) and from the motion study.
 
 ## 0. Where this stands
 
@@ -18,7 +18,7 @@ Written 13 Oct 2026, revised 14 Oct after your answers. **Phases 0 and 1 are bui
 4. Life OS: the XP chip should push out, hang for about a second, then be pulled in more slowly.
 5. Life OS: the breathing month-review button looks shabby, and so does the square behind the Comet Shard.
 
-**Built so far:** phase 0 (section 3), the Mega rebalance (section 4, rules version 11), screenshot comparison, and phase 1 (section 5).
+**Built so far:** phase 0 (section 3), the Mega rebalance (section 4, rules version 11), screenshot comparison, phase 1 (section 5) and phase 2 (section 5, with the result in section 2).
 
 **Your answers to the last round:** the Mega proposal, yes; Playwright, yes; the boss on Today as a tile that opens its full view.
 
@@ -32,7 +32,9 @@ Written 13 Oct 2026, revised 14 Oct after your answers. **Phases 0 and 1 are bui
 6. **Several overlays can open at once.** Seen in the `late` fixture: a chest capsule over the news window over a toast. They need one queue.
 7. **The Pokedex grid draws a whole region at once** (up to about 150 animated GIFs).
 
-## 2. Five tabs, one job each
+## 2. Five tabs, one job each (built, phase 2)
+
+**Measured result** (pixels tall on a phone, before and after, from `tests/heights.txt`): Today 3,814 to 1,624; Journey 14,517 to 2,796; Party 4,457 to 3,201 (with 16 trained Pokemon and a Box of 286, the heaviest fixture); Shop 2,500 and Pokedex 4,463 unchanged. Section 4 of the file `tests/heights.txt` has every fixture.
 
 Each tab answers one question. Nothing appears in two places.
 
@@ -114,8 +116,14 @@ So feats alone gave two stones for the first Pokemon that can use one, and the f
 - **All five old files are one layer, `legacy`, in the order they always cascaded in.** I first tried one layer per file and the screenshots caught it: a layer beats specificity, and the skin retints the cream screens by out-ranking them on specificity (a plain `.kind` over `.kind.k-catch`), so splitting them turned the adventure log's coloured tags grey, bars from blue/green/gold to grey, and a road's gap from 8 to 10 pixels. One `legacy` layer gives zero differences across all 20 screenshots.
 - **A screen is rebuilt by moving it into `screens`** (one small file) and deleting its rules from `legacy` in the same change. When the last has moved, `legacy` is empty and goes. That is how the two skins stop fighting without a risky big-bang rewrite.
 
-### Phase 2: the five tabs of section 2
-Built on the kit, with every Pokemon a `KCard` and `MonCard` deleted. The Forge is part of this phase. Order: Journey first (it is mostly deleting), then Today, then Party and the Forge.
+### Phase 2: the five tabs of section 2 (built)
+- **Today** (was Home): the scene, one strip (the day's pillars, the seven momentum dots, how far from evolving), the throw and feed buttons, then two tiles: **the leader** and **the boss**. Each tile shows who it is, the HP left and one line of state, and opens the full view as a **bottom sheet** (backdrop, close button and Escape all close it; `screens/Sheet.tsx`). Last night sits at the bottom, with the last 14 nights folded under it. The momentum window, the quests and the egg card are gone from here.
+- **Party** (was Team): **the Nursery** (the egg's own space, drawn large with cracks that grow; empty, it says where one comes from), the partner, the party of six, the bond, then **the Forge**, then the Choices, Bag and Box folded shut. Each Pokemon's own page no longer has a forge block.
+- **The Forge** (`screens/Forge.tsx`): the Key Stone, every shard you hold (the Comet too), and every Mega form of every Pokemon that has one. The ones ready to forge show first (four, the rest folded), then those that are not ready, then those forged. Forging plays the shard slam into the stone, then the evolution popup with the Mega slamming in. It tells the news window it has already told it, so there is no second window after.
+- **Journey** (was Trainer): the league road, the season, pay and quests, feats, bosses beaten, then the Badge case and the Hall of Fame folded shut, and the Adventure log folded at the bottom. The road shows what is behind as a count, this leader, and the next four. **Deleted:** the trainer card, the trainer profile (the radar), "Your work", the XP chart and the full sleep page.
+- The window frame (`Win`) can now fold shut (`fold`), which keeps a store that grows from making a tab long.
+- 58 CSS rules for the deleted and replaced screens were removed with `tools/css-unused.mjs` (a permanent tool: it lists, or with `--fix` removes, rules for classes no code uses). The screenshots were identical before and after.
+- **Not done in phase 2:** `MonCard` is still in use (every Pokemon a `KCard` is a visual change that belongs with phase 3's cards), and the Collect strip is still a block at the top of every tab rather than a badge that opens a sheet (phase 3).
 
 ### Phase 3: how it is held
 - **Bottom sheets** instead of centred modals (item pages, the Box, the boss, the leader, Collect), dragged down to close.
@@ -147,7 +155,7 @@ Share the tokens and motion kit the way the core is shared. This is where the on
 |---|---|---|
 | 0 Fixtures and screenshots | half a day | **done** |
 | 1 Tokens and layers | 1 session | **done** |
-| 2 Five tabs and the Forge | 3 sessions | |
+| 2 Five tabs and the Forge | 3 sessions | **done** |
 | 3 Sheets, queue, swipe, haptics, top bar | 1 session | |
 | 4 The scene | 1 to 2 sessions | |
 | 5 Data views | half a session | |
@@ -156,5 +164,5 @@ Share the tokens and motion kit the way the core is shared. This is where the on
 
 ## 8. Decisions I still need
 
-1. **Phase 2 order.** I would do Journey first (mostly deleting: trainer card, profile, work, XP chart), then Today, then Party and the Forge. Say if you want the Forge first instead, since Megas are what you asked about.
-2. **Where the egg goes.** On hold, but it shapes Party's layout: it needs "its dedicated space". My suggestion is a card at the top of the Party tab, as the first thing under the partner, with its steps count and hatch capsule; say if you want a different home.
+1. **The egg's mechanics (on hold, now the next thing).** The Nursery is built, but it only shows today's rules. You asked for three changes: **steps from Vitals hatch the egg**, **no second egg appears while one is warming**, and **eggs can be rewards**. They are a rules change (version 12). Say go and I will design the step count (my first thought: an egg needs a number of steps, and each day's steps from Vitals go into it, with the two-pillar days as a bonus) and check the fold for where a second egg comes from.
+2. **Phase 3 next?** Sheets for everything (item pages, the Box, Collect), one overlay queue (a chest, news and a toast no longer stack), swipe between tabs, haptics, and a top bar with a level ring and a Collect badge.

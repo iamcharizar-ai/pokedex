@@ -47,9 +47,6 @@ p { margin: 6px 0; }
 .win.t-gold .win-h { background: var(--gold); color: var(--ink); }
 .win.t-dark .win-h { background: #3a456f; }
 .win-b { padding: 14px; }
-.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
-.cols .win { margin-bottom: 0; }
-.cols + .cols, .cols + .win { margin-top: 18px; }
 
 /* ── battle scene ──────────────────────────────────────────────────────── */
 .scene { --sky-1: #7cc8ff; --sky-2: #c9ecff; --far: #8fd18a; --ground: #b6e08a; --ground-2: #9fd177; --pad: #7cc66a; --pad-2: #5aa850;
@@ -315,15 +312,7 @@ details.fold .list { padding-left: 14px; }
 .leader.ahead img.sprite { filter: brightness(0) opacity(0.4); }
 .leader.next { background: #fff3c4; box-shadow: 0 0 0 2px var(--gold); }
 .leader.beaten { background: #d9f2e2; }
-.statwrap { display: grid; grid-template-columns: minmax(0, 220px) 1fr; gap: 10px; align-items: center; }
-.radar { width: 100%; height: auto; overflow: visible; }
-.radar .ring { fill: none; stroke: var(--win-3); stroke-width: 1.5; }
-.radar .shape { fill: rgba(47, 127, 208, 0.35); stroke: var(--blue); stroke-width: 3; stroke-linejoin: round; }
-.radar text { font-family: var(--lbl); font-size: 9.5px; fill: var(--ink); text-transform: uppercase; }
-.radar text.off { fill: #a39f8f; }
 .facts.stats { display: grid; grid-template-columns: 1fr; gap: 2px; margin: 0; }
-.statrow { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 3px 0; border-bottom: 2px dotted var(--win-3); white-space: nowrap; }
-.statrow dt, .statrow dd { margin: 0; }
 .kind.k-gym, .kind.k-league { background: var(--gold); }
 .kind.k-item, .kind.k-hold { background: var(--sky); }
 
@@ -333,12 +322,6 @@ details.fold .list { padding-left: 14px; }
 .ballname { display: inline-flex; align-items: center; gap: 6px; }
 .foe-pad .caughtball { position: absolute; z-index: 2; right: -6px; bottom: 4px; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.35)); }
 .item.off { background: var(--win-2); box-shadow: none; }
-.nextup { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 0; margin: 12px 0 0; padding: 0; list-style: none; background: var(--win); border: 3px solid var(--edge); border-radius: 8px; box-shadow: 0 4px 0 var(--edge); overflow: hidden; }
-.nextup li { display: grid; gap: 1px; padding: 8px 12px 9px; min-width: 0; border-left: 3px solid var(--edge); }
-.nextup li:first-child { border-left: 0; }
-.nextup small { font-family: var(--lbl); font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
-.nextup b { font-family: var(--lbl); font-weight: 400; font-size: 14px; text-transform: uppercase; letter-spacing: 0.03em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.nextup span { font-size: 14px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .caserow { display: grid; grid-template-columns: 84px 1fr; align-items: center; gap: 10px; margin-bottom: 8px; }
 .caserow .badges { justify-content: start; padding: 8px 10px; }
 .keyrow { display: flex; align-items: center; gap: 12px; margin-top: 10px; padding-top: 10px; border-top: 2px dashed rgba(35, 40, 58, 0.3); }
@@ -371,9 +354,7 @@ details.fold .list { padding-left: 14px; }
 
 @media (max-width: 760px) {
   .uses { grid-template-columns: 1fr; }
-  .statwrap { grid-template-columns: 1fr; }
-  .radar { max-width: 240px; margin: 0 auto; }
-  .leader img.sprite { width: 44px; height: 44px; }
+      .leader img.sprite { width: 44px; height: 44px; }
   body { font-size: 16px; }
   .shell { padding: 0 12px 100px; }
   .device { margin: 0 -12px; padding: 12px 14px; gap: 10px; }
@@ -394,8 +375,7 @@ details.fold .list { padding-left: 14px; }
   .talk { grid-template-columns: 1fr; }
   .say { font-size: 18px; padding: 12px 14px; }
   .moves { border-left: 0; border-top: 3px solid var(--edge); border-radius: 0 0 7px 7px; }
-  .cols { grid-template-columns: 1fr; }
-  .list li, details.fold > summary { grid-template-columns: 20px 1fr 54px 50px; gap: 8px; }
+    .list li, details.fold > summary { grid-template-columns: 20px 1fr 54px 50px; gap: 8px; }
   .dexwrap { grid-template-columns: 1fr; }
   .dex { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); }
   .detail { position: fixed; left: 10px; right: 10px; bottom: 70px; top: auto; z-index: 9; display: grid; grid-template-columns: 92px 1fr; gap: 12px; align-items: center; text-align: left; background: var(--win); box-shadow: 0 0 0 100vmax rgba(10, 14, 30, 0.55), 0 5px 0 var(--edge); }
@@ -407,10 +387,7 @@ details.fold .list { padding-left: 14px; }
   .card .who { width: 96px; height: 96px; position: absolute; right: 14px; top: 14px; }
   .chart .y, .chart .bars { height: 130px; }
   .tiers { grid-template-columns: repeat(2, 1fr); }
-  .nextup { grid-template-columns: 1fr; }
-  .nextup li { border-left: 0; border-top: 3px solid var(--edge); grid-template-columns: 64px 1fr auto; align-items: baseline; gap: 8px; }
-  .nextup li:first-child { border-top: 0; }
-  .caserow { grid-template-columns: 1fr; gap: 4px; }
+        .caserow { grid-template-columns: 1fr; gap: 4px; }
   .recap { place-items: end center; padding-bottom: 76px; }
 }
 @media (prefers-reduced-motion: reduce) {

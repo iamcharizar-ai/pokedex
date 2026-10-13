@@ -6,7 +6,7 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import { createPortal } from 'react-dom'
 import { nameOf, spritePath, type Game, type Mon, type Quest } from '../core/fold.ts'
 import {
-  BALLS, DOMAIN_SHOPS, FORGE_COST, GEAR_ITEMS, HELD, ITEMS, LURES, MARKS, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, masteryCost, RARE_SHELF, SELL, TM_SLOTS, forgeShard, itemName, throwHp, tmType,
+  BALLS, DOMAIN_SHOPS, FORGE_COST, GEAR_ITEMS, HELD, ITEMS, LURES, MARKS, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, masteryCost, RARE_SHELF, SELL, TM_SLOTS, itemName, throwHp, tmType,
   type MarkTag, type Offer, type ShopId,
 } from '../core/economy.ts'
 import { KIT_SHARD_EVERY } from '../core/rules.ts'
@@ -14,10 +14,12 @@ import { BALL_NAME, DAILY_PAY, HEART_LEVELS, REPEL_DAYS, TEAM_BONUS, TEAM_NATURE
 import { SPECIES } from '../core/species.ts'
 import { MonCard, TAG_NAME, Win, plural } from './App.tsx'
 import { Ball, BallItem } from './Ball.tsx'
+import { Forge } from './screens/Forge.tsx'
+import { Nursery } from './screens/Nursery.tsx'
 import { Coin, EggIcon, Gem, ItemIcon, MarkIcon } from './Item.tsx'
 import { KBar, KButton, KClose, KReveal } from './Kit.tsx'
 import { aBall, fmtDay, still } from './lib/art.ts'
-import { buyPop, forgeSlam } from './lib/fx.ts'
+import { buyPop } from './lib/fx.ts'
 import { play } from './lib/sfx.ts'
 import { useItem } from './lib/store.ts'
 
@@ -393,7 +395,7 @@ export function Bag({ game }: { game: Game }) {
   const stuff = Object.keys(game.inv).filter((id) => have(id) > 0 && ['ball', 'berry'].includes(ITEMS[id]?.kind))
   const empty = !held.length && !tms.length && !rest.length && !stuff.length
   return (
-    <Win title="Bag" tone="purple" aside={game.keyStone ? <><ItemIcon id="key-stone" size={22} /> Key Stone</> : undefined}>
+    <Win title="Bag" tone="purple" fold aside={game.keyStone ? <><ItemIcon id="key-stone" size={22} /> Key Stone</> : undefined}>
       <span className="k-label">Money and marks</span>
       <div className="baggrid wallet">
         <div className="bagtile" title="Coins: for showing up, quests, the season, chests and the Professor"><Coin size={40} /><b>Coins</b><small>{game.wallet.coins.toLocaleString('en-IN')}{game.wallet.coinsToday > 0 ? ` · +${game.wallet.coinsToday} today` : ''}</small></div>
@@ -462,7 +464,6 @@ export function MonPage({ m, game, onClose }: { m: Mon; game: Game; onClose: () 
   const inTeam = game.team.some((x) => x.uid === m.uid)
   const hearts = (m.together ?? 0) + (m.fed ?? 0)
   const v5 = true
-  const v6 = true
   const cap = TEAM_SIZE
   const setTeam = () => {
     const ids = inTeam ? game.team.filter((x) => x.uid !== m.uid).map((x) => x.uid) : [...game.team.map((x) => x.uid), m.uid].slice(-cap)
@@ -499,22 +500,7 @@ export function MonPage({ m, game, onClose }: { m: Mon; game: Game; onClose: () 
             {(rec.e ?? []).length > 0 && <span className="path-step"><span className="arrow">▸</span>{rec.e!.slice(0, 3).map((f) => <img key={f} src={still(f)} alt="" width={48} height={48} className={`sprite ${game.dex[f] ? '' : 'unseen'}`} />)}</span>}
             {(m.megas ?? []).map((f) => <span key={f} className="path-step"><span className="arrow">★</span><img src={still(f, m.shiny)} alt={nameOf(f)} title={`${nameOf(f)}, for good`} width={48} height={48} className="sprite" /></span>)}
           </div>
-          {v6 && megas.length > 0 && (
-            <div className="forge">
-              <span className="k-label">Mega Stones</span>
-              {megas.map((f, i) => {
-                const done = m.megas?.includes(f)
-                const shard = forgeShard(megas.length, i, m.nature?.up, game.inv)
-                return (
-                  <div key={f} className="forgeline">
-                    <ItemIcon id="key-stone" size={30} className={done ? '' : 'unheld'} />
-                    <span><b>{nameOf(f)}</b><small>{done ? 'Forged: this Pokemon keeps it for good' : !game.keyStone ? 'Needs the Key Stone (a week of running on any one kind of work)' : shard ? `${FORGE_COST} ${itemName(shard)}` : `needs ${FORGE_COST} ${megas.length > 1 ? (i === 0 ? 'Red' : 'Blue or Yellow') : 'matching'} Shards (a Comet Shard fits any)`}</small></span>
-                    {!done && <button type="button" className="k-btn main" disabled={!game.keyStone || !shard} onClick={(e) => { const line = e.currentTarget.closest('.forgeline'); e.currentTarget.disabled = true; void forgeSlam(line, `/sprites/items/${shard}.png`, () => { useItem('', m.uid, 'forge', f); play('catch') }) }}>Forge</button>}
-                  </div>
-                )
-              })}
-            </div>
-          )}
+          {megas.length > 0 && <p className="muted">{(m.megas ?? []).length ? 'Its Mega is forged and kept for good.' : 'It has a Mega form. Stones are forged in the Forge, on the Party tab.'}</p>}
           <div className="kit-row">
             {inBox && <KButton tone="main" disabled={m.uid === game.nextUp} onClick={() => act('next')}>{m.uid === game.nextUp ? 'Next up' : 'Make next'}</KButton>}
             {inBox && <KButton onClick={() => act('lead')}>Partner now</KButton>}
@@ -530,7 +516,8 @@ export function MonPage({ m, game, onClose }: { m: Mon; game: Game; onClose: () 
 
 // ── team ────────────────────────────────────────────────────────────────────
 /** The partner's hearts, the team behind it, the bag, and the Box with what can be done to each one in it. */
-export function TeamTab({ game, partnerCard, choices }: { game: Game; partnerCard: ReactNode; choices: ReactNode }) {
+/** Party: what you have, and what you can do with it. */
+export function TeamTab({ game, partnerCard, choices, onShop }: { game: Game; partnerCard: ReactNode; choices: ReactNode; onShop: () => void }) {
   const [page, setPage] = useState<string | null>(null)
   const hearts = (game.partner.together ?? 0) + (game.partner.fed ?? 0)
   const level = bondLevel(hearts)
@@ -542,15 +529,8 @@ export function TeamTab({ game, partnerCard, choices }: { game: Game; partnerCar
   const berry = ['oran-berry', 'sitrus-berry'].find((b) => (game.inv[b] ?? 0) > 0)
   return (
     <>
+      <Nursery game={game} onShop={onShop} />
       <div className="tappable" onClick={() => setPage(game.partner.uid)} title="Open its page">{partnerCard}</div>
-      <Win title="Bond" tone="green" aside={`${hearts} ♥`}>
-        <div className="hearts">
-          <span className="heartrow" aria-label={`Bond level ${level} of ${HEART_LEVELS.length}`}>{HEART_LEVELS.map((_, i) => <Heart key={i} on={i < level} />)}</span>
-          <div style={{ flex: 1, minWidth: 140 }}><KBar value={nextAt ? hearts : 1} max={nextAt ?? 1} kind="gold" label={nextAt ? `${hearts} / ${nextAt}` : 'Full'} /></div>
-          {v5 && <button type="button" className="k-btn ok" disabled={!berry} onClick={() => { useItem(berry!, '', 'feed'); play('feed') }}><ItemIcon id={berry ?? 'oran-berry'} size={26} />Feed{berry ? ` ×${game.inv[berry]}` : ''}</button>}
-        </div>
-        <p className="muted">A heart for each day this Pokemon is your partner and you finish a pillar, and one for each berry. At {HEART_LEVELS.join(', ')} hearts the bond steps up: +5% to every strike each. Hearts belong to the Pokemon and are kept when it is fully trained: in your party each of its bond levels adds 1% to every strike.</p>
-      </Win>
       {v5 && (
         <Win title="Party" tone="gold" aside={game.team.length ? `+${Math.round(game.power.team * 100)}% to every strike` : `${1 + game.team.length} / ${cap + 1}`}>
           <div className="teamrow">
@@ -575,9 +555,19 @@ export function TeamTab({ game, partnerCard, choices }: { game: Game; partnerCar
             : <p className="muted">Fully trained Pokemon stand here. Each adds {Math.round(TEAM_BONUS * 100)}% to every strike, and {Math.round(TEAM_NATURE * 100)}% more to the work its nature raised.</p>}
         </Win>
       )}
+      <Win title="Bond" tone="green" aside={`${hearts} ♥`}>
+        <div className="hearts">
+          <span className="heartrow" aria-label={`Bond level ${level} of ${HEART_LEVELS.length}`}>{HEART_LEVELS.map((_, i) => <Heart key={i} on={i < level} />)}</span>
+          <div style={{ flex: 1, minWidth: 140 }}><KBar value={nextAt ? hearts : 1} max={nextAt ?? 1} kind="gold" label={nextAt ? `${hearts} / ${nextAt}` : 'Full'} /></div>
+          {v5 && <button type="button" className="k-btn ok" disabled={!berry} onClick={() => { useItem(berry!, '', 'feed'); play('feed') }}><ItemIcon id={berry ?? 'oran-berry'} size={26} />Feed{berry ? ` ×${game.inv[berry]}` : ''}</button>}
+        </div>
+        <p className="muted">A heart for each day this Pokemon is your partner and you finish a pillar, and one for each berry. At {HEART_LEVELS.join(', ')} hearts the bond steps up: +5% to every strike each. Hearts belong to the Pokemon and are kept when it is fully trained: in your party each of its bond levels adds 1% to every strike.</p>
+      </Win>
+      {choices}
+      <Forge game={game} />
       <Bag game={game} />
       <IncenseWin game={game} />
-      <Win title="Box" tone="dark" aside={plural(game.queue.length, 'Pokemon', 'Pokemon')}>
+      <Win title="Box" tone="dark" fold aside={plural(game.queue.length, 'Pokemon', 'Pokemon')}>
         {game.queue.length === 0 ? <p className="muted">Empty. Catch the wild Pokemon and it comes here.</p> : (
           <>
             <div className="queue pick">
@@ -591,7 +581,6 @@ export function TeamTab({ game, partnerCard, choices }: { game: Game; partnerCar
           </>
         )}
       </Win>
-      {choices}
       {shown && <MonPage m={shown} game={game} onClose={() => setPage(null)} />}
     </>
   )
