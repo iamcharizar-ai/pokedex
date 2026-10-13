@@ -47,3 +47,19 @@ foreach ($t in @(@('LifeOS Health Sync Morning','10:00'), @('LifeOS Health Sync 
 - **recovery** (`recovery`), shown on Today
 
 `model.ts`, `map.ts` and their tests were moved here from the Vitals repo (which still holds the viewer and the older web sync). `plan.ts` is new: the old PC script wrote the readings but not the scores, which only the web sync did.
+
+## Without the PC: the webhook
+
+Google can tell us when a day changes instead of us asking. `server/health-webhook.ts` (built to `api/health-webhook.js`, served at `https://pokedex-theta-swart.vercel.app/api/health-webhook`) receives the notification, checks the shared secret and Google's signature, answers 204, then reads the touched days from the API and writes what is new, the same way `npm run health` does. The PC tasks above do the same job on a timer; they are safe to keep as a fallback because a day that matches the ledger writes nothing.
+
+It runs on six Vercel production variables: `WEBHOOK_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`. If the refresh token is ever replaced (`ghealth auth login`), update `GOOGLE_REFRESH_TOKEN` and redeploy. The function's log says what each notification did.
+
+The subscriber `lifeos-health` (steps, sleep, weight, distance; automatic subscriptions) was created with a separate config folder, because webhook admin needs the `cloud-platform` scope and a token carrying it is refused by the data endpoints:
+
+```
+GHEALTH_CONFIG_DIR=~/.config/ghealth-webhooks
+ghealth setup --project-id <PROJECT NUMBER> --scopes cloud-platform ...
+ghealth webhooks subscribers create --id lifeos-health --endpoint-uri <url> --secret <WEBHOOK_SECRET> --types steps,sleep,weight,distance
+```
+
+**Use the project number (815901456800), not the project ID**, in that config: with the ID the API answers 403 "caller does not have permission". The `cloud-platform` grant is only needed for this; revoke it at myaccount.google.com/permissions afterwards.
