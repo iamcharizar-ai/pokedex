@@ -1,0 +1,14 @@
+node_modules
+dist
+*.local
+.vercel
+.env*
+!.env.example
+tools/.cache
+.claude
+
+.vercel
+.env*
+
+tests/diff/
+

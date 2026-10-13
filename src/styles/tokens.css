@@ -1,0 +1,73 @@
+/* TOKENS: every colour, face and size the app draws with, in one place.
+   The files that follow only use them (var(--...)); none of them defines a
+   :root value of its own. The next phase retires the old cream palette (the
+   first block) once every screen is on the kit's (the second). */
+
+/* ── the old window palette: screens not yet rebuilt still read these ── */
+:root {
+  --bg: #1a2240;
+  --bg-2: #222c52;
+  --win: #f8f5ea;
+  --win-2: #ebe6d5;
+  --win-3: #dcd6c1;
+  --edge: #23283a;
+  --ink: #23283a;
+  --muted: #5b6278;
+  --red: #dc3b45;
+  --red-dk: #a8242f;
+  --blue: #2f7fd0;
+  --sky: #63c6ff;
+  --green: #2fae66;
+  --gold: #f5b800;
+  --pink: #e0559a;
+  --orange: #ee7b2f;
+  --hp-ok: #3fd07a;
+  --hp-mid: #f5c400;
+  --hp-low: #ee4b3e;
+  --stripe: repeating-linear-gradient(135deg, transparent 0 4px, rgba(0, 0, 0, 0.3) 4px 6px);
+  --px: 'Space Grotesk', system-ui, sans-serif; /* body text: in the pixel face a 5 read as an S */
+  --lbl: 'Silkscreen', monospace;
+  color-scheme: light;
+}
+
+/* ── the kit's palette: the dark game look every rebuilt screen reads ── */
+:root {
+  --k-edge: #141a33;
+  --k-night: #1a2240;
+  --k-body: #26315e;
+  --k-tile: #33417a;
+  --k-tile-hi: #42539a;
+  --k-frame: #f8f5ea;
+  --k-frame-lo: #d9d2b8;
+  --k-text: #ffffff;
+  --k-dim: #aab6e6;
+  --k-gold: #f5b800;
+  --k-gold-hi: #ffd84a;
+  --k-blue: #2f7fd0;
+  --k-green: #2fae66;
+  --k-red: #dc3b45;
+  --k-grey: #8089a8;
+  --k-purple: #7b5cf0;
+  --k-pink: #e0559a;
+  --k-bronze: #c47a3c;
+  --k-silver: #b9c4d8;
+  --k-face: 'Lilita One', 'Pixelify Sans', system-ui, sans-serif;
+}
+
+/* ── scales for the rebuilt screens (the `screens` layer, from phase 2 on) ──
+   The old CSS above uses raw pixel values; nothing reads these until a screen
+   is rebuilt, and then it reads only these. One 4px grid, three radii, three
+   lifts, one type scale, and the motion kit's timings (motion.js) as numbers. */
+:root {
+  --s-1: 4px;  --s-2: 8px;  --s-3: 12px;  --s-4: 16px;  --s-5: 24px;  --s-6: 32px;
+  --r-1: 7px;  --r-2: 12px; --r-3: 18px;
+  --lift-1: 0 3px 0 rgba(0, 0, 0, 0.35);
+  --lift-2: 0 5px 0 rgba(0, 0, 0, 0.35);
+  --lift-3: 0 8px 0 rgba(0, 0, 0, 0.4);
+  --t-label: 12px;  --t-body: 16px;  --t-title: 22px;  --t-display: 30px;  --t-number: 18px;
+  /* timings from the animation study: fades are linear and short, pops are 250ms, a claim button breathes in 1.134s */
+  --t-fade: 133ms;  --t-slide: 183ms;  --t-pop: 250ms;  --t-breathe: 1134ms;
+  --ease-out: cubic-bezier(0.16, 0.84, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0.3);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+}

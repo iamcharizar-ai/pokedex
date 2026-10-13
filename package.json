@@ -1,0 +1,37 @@
+{
+  "name": "pokedex",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "node --test core/fold.test.ts tools/fixtures.test.mjs tools/styles.test.mjs tools/sky.test.mjs tools/screens.test.mjs bridge/model.test.ts bridge/map.test.ts bridge/plan.test.ts",
+    "core": "node tools/build-core.mjs",
+    "species": "node tools/build-species.mjs",
+    "shots": "node tools/shots.mjs",
+    "a11y": "node tools/a11y.mjs --strict",
+    "kit": "node tools/build-ui-kit.mjs",
+    "health": "node bridge/sync.mjs"
+  },
+  "dependencies": {
+    "@fontsource/lilita-one": "^5.3.0",
+    "@fontsource/pixelify-sans": "^5.3.0",
+    "@fontsource/silkscreen": "^5.3.0",
+    "@fontsource/space-grotesk": "^5.2.10",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.2",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
+    "pixelmatch": "^8.0.0",
+    "playwright": "^1.64.0",
+    "pngjs": "^7.0.0",
+    "typescript": "~6.0.2",
+    "vite": "^8.1.1"
+  }
+}

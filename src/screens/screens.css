@@ -1,0 +1,208 @@
+/* The rebuilt screens (UI-OVERHAUL.md, phase 2). This is the `screens` layer: it
+   beats everything in `legacy` without needing a long selector, and it reads only
+   the scales in styles/tokens.css. A screen's old rules are deleted from legacy
+   in the change that moves it here. */
+
+/* ── Today ── */
+.daypage > * + * { margin-top: var(--s-3); }
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-3); }
+.tiles > .bosslock { grid-column: 1 / -1; margin: 0; }
+.tile { display: grid; align-content: start; gap: var(--s-2); padding: var(--s-3); text-align: left; color: #fff; font: inherit; cursor: pointer; background: linear-gradient(var(--k-body), #1f2850); border: 3px solid var(--k-edge); border-radius: var(--r-2); box-shadow: var(--lift-1); }
+.tile:active { transform: translateY(2px); box-shadow: none; }
+.tile.static { cursor: default; }
+.tile.hot { box-shadow: 0 0 0 3px var(--k-gold), var(--lift-1); }
+.tile-top { display: flex; align-items: center; gap: var(--s-2); min-width: 0; }
+.tile-top .sprite { flex: none; image-rendering: pixelated; }
+.tile-name { display: grid; min-width: 0; line-height: 1.15; }
+.tile-name b { font-family: var(--k-face); font-weight: 400; font-size: var(--t-body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile small { color: var(--k-dim); font-size: 12px; }
+.momentum { display: flex; align-items: center; gap: var(--s-3); padding: var(--s-2) var(--s-3); color: #fff; background: rgba(8, 12, 30, 0.55); border: 2px solid var(--k-edge); border-radius: var(--r-1); }
+.momentum .week { flex: 1; display: flex; justify-content: space-between; gap: 2px; }
+.momentum .d { display: grid; justify-items: center; gap: 2px; font-size: 10px; color: var(--k-dim); }
+.momentum .d.today { color: #fff; }
+.momentum .dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--k-edge); background: rgba(8, 12, 30, 0.6); }
+.momentum .dot.on { background: var(--k-gold); box-shadow: 0 0 6px var(--k-gold); }
+.momentum .dot.off { background: var(--k-grey); opacity: 0.5; }
+.momentum .dot.none { opacity: 0.25; }
+.momentum .mult { font-family: var(--k-face); font-weight: 400; font-size: var(--t-title); color: var(--k-gold-hi); }
+.evolveline { margin: 0; padding: 0 var(--s-1); color: var(--k-dim); font-size: 14px; }
+.evolveline b { color: #fff; }
+.logfold { color: #fff; background: linear-gradient(var(--k-body), #1f2850); border: 3px solid var(--k-edge); border-radius: var(--r-2); }
+.logfold > summary { display: flex; justify-content: space-between; align-items: center; padding: var(--s-3) var(--s-4); cursor: pointer; font-family: var(--k-face); font-size: var(--t-body); list-style: none; }
+.logfold > summary::-webkit-details-marker { display: none; }
+.logfold > summary span { color: var(--k-dim); font-size: 13px; font-family: inherit; }
+.logfold[open] > summary { border-bottom: 2px solid var(--k-edge); }
+.logfold > .log, .logfold > .muted { margin: var(--s-3) var(--s-4); }
+
+/* ── a sheet: rises from the bottom, where a thumb is ── */
+.sheet-back { position: fixed; inset: 0; z-index: 50; display: grid; align-items: end; background: rgba(10, 14, 30, 0.72); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); animation: rc-fade 0.2s linear; }
+.sheet { position: relative; width: min(640px, 100%); max-height: 88vh; margin: 0 auto; overflow-y: auto; padding: var(--s-4) var(--s-3) calc(var(--s-5) + env(safe-area-inset-bottom, 0px)); background: linear-gradient(var(--k-frame), var(--k-frame-lo)); border: 3px solid var(--k-edge); border-bottom: 0; border-radius: var(--r-3) var(--r-3) 0 0; box-shadow: 0 -6px 0 rgba(0, 0, 0, 0.3); animation: sheet-up 0.25s var(--ease-out); outline: none; }
+.sheet-grip { display: block; width: 44px; height: 5px; margin: 0 auto var(--s-3); border-radius: 3px; background: var(--k-edge); opacity: 0.35; }
+.sheet > .k-close { position: absolute; top: var(--s-3); right: var(--s-3); z-index: 2; }
+.sheet-body > .win { margin-top: 0; }
+@keyframes sheet-up { from { transform: translateY(40px); opacity: 0; } }
+
+/* ── Party: the Nursery ── */
+.nursery { display: flex; align-items: center; gap: var(--s-4); color: #fff; }
+.nursery-egg { position: relative; flex: none; width: 96px; height: 96px; display: grid; place-items: center; }
+.nursery-egg.dim { opacity: 0.35; filter: grayscale(1); }
+.nursery.tomorrow .nursery-egg { animation: eggshake 1.6s ease-in-out infinite; }
+.nursery-egg .crack { position: absolute; background: var(--k-edge); width: 4px; height: 20px; border-radius: 2px; transform: rotate(18deg); opacity: 0; }
+.nursery-egg .c1 { left: 44px; top: 22px; opacity: calc(var(--warm, 0) * 2 - 0.3); }
+.nursery-egg .c2 { left: 54px; top: 42px; height: 16px; transform: rotate(-30deg); opacity: calc(var(--warm, 0) * 2 - 0.9); }
+.nursery-egg .c3 { left: 34px; top: 54px; height: 14px; transform: rotate(40deg); opacity: calc(var(--warm, 0) * 2 - 1.4); }
+.nursery-txt { flex: 1; min-width: 0; display: grid; gap: var(--s-2); line-height: 1.2; }
+.nursery-txt b { font-family: var(--k-face); font-weight: 400; font-size: var(--t-title); }
+.nursery-txt small { color: var(--k-dim); }
+.nursery-txt .k-btn { justify-self: start; min-height: 40px; }
+
+/* ── Party: the Forge ── */
+.forge-head { display: flex; align-items: center; gap: var(--s-4); flex-wrap: wrap; }
+.forge-shards { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.forge-shards span { display: inline-flex; align-items: center; gap: 2px; padding: 2px var(--s-2) 2px 2px; font-family: var(--k-face); color: #fff; background: rgba(8, 12, 30, 0.55); border: 2px solid var(--k-edge); border-radius: 999px; }
+.forge-shards span.none { opacity: 0.4; }
+.forge-list { list-style: none; margin: var(--s-3) 0 0; padding: 0; display: grid; gap: var(--s-2); }
+.forge-row { position: relative; display: flex; align-items: center; gap: var(--s-3); padding: var(--s-2) var(--s-3); color: #fff; background: var(--k-tile); border: 2px solid var(--k-edge); border-radius: var(--r-2); }
+.forge-row.ready { box-shadow: 0 0 0 3px var(--k-gold); animation: breathe-sm 1.134s infinite; }
+.forge-row.locked, .forge-row.waiting { opacity: 0.7; }
+.forge-row.done { background: #2c4a55; }
+.forge-pic { flex: none; display: flex; align-items: center; gap: 2px; }
+.forge-pic i { color: var(--k-dim); font-style: normal; }
+.forge-pic .sprite { image-rendering: pixelated; }
+.forge-pic .sprite.dim { filter: brightness(0) opacity(0.45); }
+.forge-txt { flex: 1; min-width: 0; display: grid; line-height: 1.2; }
+.forge-txt b { font-family: var(--k-face); font-weight: 400; }
+.forge-txt small { color: var(--k-dim); }
+.forge-tick { color: var(--k-gold-hi); font-size: 22px; }
+@media (prefers-reduced-motion: reduce) { .sheet, .sheet-back, .nursery.tomorrow .nursery-egg, .forge-row.ready { animation: none; } }
+
+/* ── a window that folds shut: the Bag, the Box, the Choices ── */
+details.win.folded > summary.win-h { cursor: pointer; list-style: none; display: flex; align-items: center; gap: var(--s-2); }
+details.win.folded > summary.win-h::-webkit-details-marker { display: none; }
+details.win.folded > summary.win-h .aside { margin-left: auto; }
+details.win.folded .chev { font-style: normal; transition: transform var(--t-slide) linear; }
+details.win.folded[open] .chev { transform: rotate(180deg); }
+details.win.folded:not([open]) > summary.win-h { border-bottom-width: 0; border-radius: inherit; }
+.forge-more { margin-top: var(--s-3); color: #fff; background: rgba(8, 12, 30, 0.35); border: 2px solid var(--k-edge); border-radius: var(--r-2); }
+.forge-more > summary { display: flex; justify-content: space-between; padding: var(--s-2) var(--s-3); cursor: pointer; font-family: var(--k-face); list-style: none; }
+.forge-more > summary::-webkit-details-marker { display: none; }
+.forge-more > summary span { color: var(--k-dim); }
+.forge-more > .forge-list { margin: 0; padding: 0 var(--s-2) var(--s-2); }
+
+.nights { margin-top: var(--s-3); }
+.nights > summary { cursor: pointer; list-style: none; }
+.nights > summary::-webkit-details-marker { display: none; }
+.nights > summary::after { content: ' ▾'; }
+
+/* ── the top bar: the partner in a level ring, what you spend, Collect, the season ── */
+.tb { display: flex; align-items: center; gap: var(--s-3); flex-wrap: nowrap; }
+.tb-ring { position: relative; flex: none; width: 64px; height: 64px; display: grid; place-items: center; }
+.tb-ring svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.tb-ring .track { fill: rgba(8, 12, 30, 0.6); stroke: var(--k-edge); stroke-width: 7; }
+.tb-ring .fill { fill: none; stroke: var(--k-gold); stroke-width: 5; stroke-linecap: round; transition: stroke-dasharray var(--t-pop) linear; }
+.tb-ring .sprite { position: relative; image-rendering: pixelated; }
+.tb-lv { position: absolute; left: 50%; bottom: -4px; translate: -50% 0; padding: 0 var(--s-2); font-family: var(--k-face); font-weight: 400; font-size: 12px; color: var(--k-edge); background: var(--k-gold); border: 2px solid var(--k-edge); border-radius: 999px; white-space: nowrap; }
+.tb-main { flex: 1; min-width: 0; display: grid; gap: var(--s-2); }
+.tb-row { display: flex; align-items: center; gap: var(--s-2); min-width: 0; }
+.tb-row .k-pill { margin-left: 10px; min-width: 0; padding-right: var(--s-2); }
+.tb-gap { flex: 1; }
+.tb-season { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: var(--s-2); }
+.tb-season .k-bar { height: 18px; }
+.tb-collect { position: relative; flex: none; width: 44px; height: 44px; display: grid; place-items: center; padding: 0; background: rgba(8, 12, 30, 0.55); border: 2px solid var(--k-edge); border-radius: 12px; cursor: pointer; }
+.tb-collect.has { background: var(--k-gold); box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35); }
+.tb-collect:not(.has) img { opacity: 0.45; filter: grayscale(1); }
+.tb-count { position: absolute; top: -8px; right: -8px; min-width: 22px; height: 22px; padding: 0 5px; display: grid; place-items: center; font: normal 12px var(--k-face); color: #fff; background: var(--k-red); border: 2px solid var(--k-edge); border-radius: 999px; }
+
+/* ── the Collect sheet ── */
+.collect { display: grid; gap: var(--s-3); }
+.collect-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding-right: 48px; }
+.collect-head h2 { margin: 0; font-size: var(--t-display); }
+.collect-list { display: grid; gap: var(--s-2); }
+.collect-list .claim-chip { width: 100%; min-height: 56px; justify-content: flex-start; }
+
+/* ── a sheet's handle: the strip you drag down ── */
+.sheet-handle { display: grid; place-items: center; height: 28px; margin: calc(var(--s-4) * -1) 0 var(--s-1); touch-action: none; cursor: grab; }
+.sheet-handle .sheet-grip { margin: 0; }
+.sheet { touch-action: pan-y; overscroll-behavior: contain; }
+
+/* a Pokemon's page inside a sheet: the sheet is the frame, so the page's own frame goes */
+.sheet .monpage { width: auto; max-height: none; padding: 0; overflow: visible; background: none; border: 0; box-shadow: none; border-radius: 0; animation: none; }
+.sheet .monpage > .k-close { display: none; }
+@media (max-width: 560px) { .tb-season .k-label { display: none; } .tb-season { grid-template-columns: 1fr; } .tb .help { width: 40px; height: 40px; flex: none; } }
+
+/* ── the Home scene: a sky that follows the clock, behind the two Pokemon ── */
+.sky { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; container-type: inline-size; }
+.sky::after { content: ''; position: absolute; inset: 0; background: rgba(40, 50, 80, calc(var(--gloom, 0) * 0.34)); }
+.sky .stars { position: absolute; inset: 0 0 48% 0; opacity: calc(var(--dark, 0) * 0.95); background-image: radial-gradient(#fff 1px, transparent 1.6px), radial-gradient(#fff 1px, transparent 1.6px), radial-gradient(#cfe0ff 1.4px, transparent 2px); background-size: 90px 70px, 130px 110px, 170px 140px; background-position: 12px 18px, 60px 44px, 30px 80px; animation: twinkle 3.4s steps(2, end) infinite; }
+.sky .body { position: absolute; width: 34px; height: 34px; translate: -50% -50%; border-radius: 50%; }
+.sky .body.sun { background: radial-gradient(circle at 40% 38%, #fffbe0, #ffd84a 62%, #ffb52e); box-shadow: 0 0 0 4px rgba(255, 216, 74, 0.25), 0 0 26px 10px rgba(255, 216, 74, 0.5); opacity: calc(1 - var(--dim, 0) * 0.85); }
+.sky .body.moon { background: #f2efd2; box-shadow: inset -10px 3px 0 0 #cdd1e8, 0 0 20px 6px rgba(200, 210, 255, 0.4); opacity: calc(0.5 + var(--dark, 0) * 0.5 - var(--dim, 0) * 0.4); }
+.sky .clouds { position: absolute; inset: 0; }
+.sky .cloud { position: absolute; left: 0; height: auto; fill: color-mix(in srgb, color-mix(in srgb, #ffffff calc((1 - var(--gloom, 0)) * 100%), #6b7390), #2c3566 calc(var(--dark, 0) * 55%)); animation: drift linear infinite; }
+.sky .hills { position: absolute; left: -6%; right: -6%; }
+.sky .hills.far { bottom: 40%; height: 74px; background: radial-gradient(70px 46px at 10% 100%, var(--hill) 98%, transparent), radial-gradient(110px 70px at 36% 100%, var(--hill) 98%, transparent), radial-gradient(80px 52px at 64% 100%, var(--hill) 98%, transparent), radial-gradient(120px 62px at 92% 100%, var(--hill) 98%, transparent); --hill: color-mix(in srgb, var(--far) 82%, var(--sky-2)); animation: sway-far 26s ease-in-out infinite alternate; }
+.sky .hills.near { bottom: 36%; height: 56px; background: radial-gradient(90px 40px at 22% 100%, var(--hill) 98%, transparent), radial-gradient(130px 52px at 54% 100%, var(--hill) 98%, transparent), radial-gradient(100px 44px at 88% 100%, var(--hill) 98%, transparent); --hill: color-mix(in srgb, var(--far) 70%, var(--ground-2)); animation: sway-near 19s ease-in-out infinite alternate; }
+.sky .trees { position: absolute; left: -4%; right: -4%; bottom: 36%; height: 28px; background: color-mix(in srgb, var(--far) 45%, #08241a); -webkit-mask: var(--pine) repeat-x 0 100% / 26px 28px; mask: var(--pine) repeat-x 0 100% / 26px 28px; --pine: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 13 14' shape-rendering='crispEdges'><path d='M6 0h1v2h1v2h1v2h1v2h1v2h1v2H1v-2h1V8h1V6h1V4h1V2h1z M6 12h1v2H6z'/></svg>"); animation: sway-trees 14s ease-in-out infinite alternate; }
+.sky .grass { position: absolute; left: -4%; right: -4%; bottom: 0; height: 22px; background: color-mix(in srgb, var(--ground) 60%, #12361f); -webkit-mask: var(--tuft) repeat-x 0 100% / 18px 22px; mask: var(--tuft) repeat-x 0 100% / 18px 22px; --tuft: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 11' shape-rendering='crispEdges'><path d='M0 11V8h1v1h1V5h1v3h1V3h1v5h1V6h1v2h1V7h1v4z'/></svg>"); animation: sway-grass 6s ease-in-out infinite alternate; }
+.sky .rain { position: absolute; inset: 0; background: repeating-linear-gradient(103deg, transparent 0 13px, rgba(196, 214, 255, 0.6) 13px 14px); background-size: 58px 58px; opacity: 0.7; animation: rain 0.45s linear infinite; }
+.sky.cave .cave-drip { position: absolute; left: 36%; top: 0; width: 4px; height: 8px; border-radius: 2px; background: #bcd2f0; animation: drip 3.2s ease-in infinite; }
+.sky.cave::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 38px; background: #1b1830; -webkit-mask: linear-gradient(#000, #000) top / 100% 14px no-repeat, var(--stalac) top / 34px 38px repeat-x; mask: linear-gradient(#000, #000) top / 100% 14px no-repeat, var(--stalac) top / 34px 38px repeat-x; --stalac: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 17 19' shape-rendering='crispEdges'><path d='M0 0h17v4h-3v4h-2v5h-2V8H9V5H6v3H4v4H2V8H1z'/></svg>"); }
+
+/* the Pokemon answer a tap, and are easy to find with a keyboard */
+.pad[role='button'] { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.pad[role='button']:focus-visible { outline: 3px solid #fff; outline-offset: 4px; border-radius: 12px; }
+
+@keyframes drift { from { transform: translateX(-130px); } to { transform: translateX(calc(100cqw + 130px)); } }
+@keyframes twinkle { 50% { opacity: calc(var(--dark, 0) * 0.55); } }
+@keyframes sway-far { from { transform: translateX(-9px); } to { transform: translateX(9px); } }
+@keyframes sway-near { from { transform: translateX(7px); } to { transform: translateX(-7px); } }
+@keyframes sway-trees { from { transform: translateX(-4px); } to { transform: translateX(4px); } }
+@keyframes sway-grass { from { transform: translateX(-3px); } to { transform: translateX(3px); } }
+@keyframes rain { to { background-position: -22px 58px; } }
+@keyframes drip { 0%, 60% { transform: translateY(0); opacity: 0; } 65% { opacity: 1; } 100% { transform: translateY(240px); opacity: 0.8; } }
+@media (prefers-reduced-motion: reduce) { .sky *, .sky::after { animation: none !important; } }
+
+/* ── the calendar: twelve weeks, a cell a day ── */
+.cal { display: grid; gap: 3px; color: #fff; }
+.cal-head, .cal-week { display: grid; grid-template-columns: 52px repeat(7, 1fr) 14px; align-items: center; gap: 3px; }
+.cal-head b { text-align: center; font-family: var(--k-face); font-weight: 400; font-size: 12px; color: var(--k-dim); }
+.cal-when { font-size: 11px; color: var(--k-dim); }
+.cal-cell { display: block; aspect-ratio: 1.55; min-height: 18px; max-height: 26px; border-radius: 5px; border: 2px solid var(--k-edge); background: rgba(8, 12, 30, 0.55); }
+.cal-cell.l1 { background: #3d5a8f; }
+.cal-cell.l2 { background: #4f86c9; }
+.cal-cell.l3 { background: #6fc24a; }
+.cal-cell.l4 { background: #2fae66; box-shadow: inset 0 0 0 2px #b8ffd0; }
+.cal-cell.off { background: transparent; border-style: dashed; border-color: rgba(255, 255, 255, 0.14); }
+.cal-cell.perfect { border-color: var(--k-gold); box-shadow: 0 0 0 2px var(--k-gold), inset 0 0 0 2px rgba(255, 255, 255, 0.35); }
+.cal-cell.today { outline: 3px solid #fff; outline-offset: 1px; }
+.cal-boss { color: var(--k-purple-hi, #c9a8ff); text-align: center; font-size: 12px; line-height: 1; }
+.cal-key { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: var(--s-2); font-size: 11px; color: var(--k-dim); }
+.cal-key span { display: inline-flex; align-items: center; gap: 5px; }
+.cal-key .cal-cell { width: 18px; min-height: 12px; max-height: 12px; aspect-ratio: auto; border-radius: 3px; }
+
+/* ── the first-run tour ── */
+.tour-back { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: var(--s-4); background: rgba(10, 14, 30, 0.82); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.tour { width: min(380px, 100%); display: grid; gap: var(--s-3); padding: var(--s-5) var(--s-4) var(--s-4); color: #fff; background: linear-gradient(var(--k-body), #1c2550); border: 4px solid var(--k-edge); border-radius: var(--r-3); box-shadow: 0 8px 0 rgba(0, 0, 0, 0.4); }
+.tour-step { justify-self: end; }
+.tour-card { display: grid; justify-items: center; gap: var(--s-3); text-align: center; min-height: 250px; align-content: start; animation: tour-in var(--t-pop) var(--ease-out); }
+.tour-art { display: grid; place-items: center; width: 110px; height: 110px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 216, 0, 0.35), transparent 70%); }
+.tour-art img { image-rendering: pixelated; filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.4)); }
+.tour h2 { margin: 0; font-size: var(--t-title); }
+.tour p { margin: 0; color: #dfe6ff; line-height: 1.45; }
+.tour a { color: var(--k-gold-hi); }
+.tour-dots { display: flex; justify-content: center; gap: var(--s-2); }
+.tour-dots i { width: 10px; height: 10px; border-radius: 50%; background: rgba(255, 255, 255, 0.25); border: 2px solid var(--k-edge); }
+.tour-dots i.on { background: var(--k-gold); }
+.tour-actions { display: flex; justify-content: space-between; gap: var(--s-3); }
+.tour-actions .k-btn { flex: 1; }
+@keyframes tour-in { from { opacity: 0; transform: translateX(18px); } }
+
+/* ── the HP bar's segment marks, wherever it is drawn ── */
+.hpbar-kit { position: relative; }
+.hpbar-kit .boss-segs { position: absolute; inset: 0; pointer-events: none; }
+
+/* ── things you tap are at least 44 pixels each way ── */
+.k-btn, .tb .help, .seg button, .shopchips .k-btn, details.win.folded > summary.win-h, .forge-more > summary { min-height: 44px; }
+.tb .help { min-width: 44px; }
+.seg button { min-width: 44px; }
+@media (prefers-reduced-motion: reduce) { .tour-card { animation: none; } }

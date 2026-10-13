@@ -1,0 +1,426 @@
+/* THE SKIN — the kit's look laid over the live screens. Loaded after index.css
+   and kit.css. Step 1 of the rebuild: the frame every tab shares (top bar,
+   bottom bar, window chrome, buttons, bars) and the home screen, which gets
+   the dark quilted body. The other tabs keep their cream bodies until each is
+   rebuilt; only their chrome changes here. */
+
+/* ── frame: type ── */
+/* body text in a plain face: in the pixel face a 5 read as an S */
+body { -webkit-font-smoothing: auto; font-size: 16px; }
+.num { font-family: var(--k-face); }
+h1, h2, h3 { font-family: var(--k-face); letter-spacing: 0.03em; text-transform: none; }
+.shell { padding-bottom: 104px; }
+
+/* ── frame: top bar. The three things that matter, always in view ── */
+.topbar { position: sticky; top: 0; z-index: 12; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 0 -16px 16px; padding: 10px 18px 12px; color: #fff; background: linear-gradient(#2c3970, #1b2448); border-bottom: 4px solid var(--k-edge); box-shadow: 0 4px 0 rgba(0, 0, 0, 0.25); }
+.topbar .k-pill { min-width: 0; }
+.topbar .sync { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--k-edge); background: #8a90a6; flex: none; }
+.topbar .sync.s-live { background: var(--hp-ok); } .topbar .sync.s-connecting { background: var(--hp-mid); } .topbar .sync.s-error { background: var(--hp-low); }
+/* the level bar keeps the split it always had: what was banked, and what today added */
+.k-bar > i.banked { background: var(--k-blue); border-radius: 5px 0 0 5px; }
+.k-bar > i.today { background: var(--k-gold) var(--stripe); border-radius: 0 5px 5px 0; box-shadow: inset 0 5px 0 rgba(255, 255, 255, 0.38), inset 0 -4px 0 rgba(0, 0, 0, 0.2); }
+
+/* ── frame: bottom bar. Five tabs; only the open one is lifted, lit and named ── */
+.navbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: grid; grid-template-columns: repeat(5, 1fr); max-width: 1000px; margin: 0 auto; padding-bottom: env(safe-area-inset-bottom); background: linear-gradient(#3a4680, #232c58); border: 4px solid var(--k-edge); border-bottom: 0; border-radius: 16px 16px 0 0; }
+.navbar button { position: relative; display: grid; justify-items: center; align-content: center; gap: 1px; min-height: 72px; padding: 6px 2px 4px; font-family: var(--k-face); font-size: 14px; color: transparent; border-left: 2px solid rgba(0, 0, 0, 0.28); transition: transform 0.12s; }
+.navbar button:first-child { border-left: 0; border-radius: 12px 0 0 0; } .navbar button:last-child { border-radius: 0 12px 0 0; }
+.navbar button .tabicon { width: 48px; height: 48px; image-rendering: pixelated; filter: drop-shadow(0 2px 0 var(--k-edge)); opacity: 0.85; transition: transform 0.12s; }
+.navbar button:hover .tabicon { opacity: 1; }
+.navbar button:active { transform: translateY(2px); }
+.navbar button.on { color: #fff; -webkit-text-stroke: 3px var(--k-edge); paint-order: stroke fill; background: linear-gradient(#6176c8, #3b4c94); box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.28); transform: translateY(-6px); border-radius: 10px 10px 0 0; }
+.navbar button.on .tabicon { opacity: 1; transform: scale(1.08); }
+.navbar button:focus-visible { outline-offset: -4px; }
+
+/* ── frame: windows. A thick frame and a header that is an object ── */
+.win { border-radius: 16px; box-shadow: 0 6px 0 var(--k-edge); border-color: var(--k-edge); }
+.win-h { padding: 8px 14px 11px; border-bottom: 3px solid var(--k-edge); box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.36), inset 0 -5px 0 rgba(0, 0, 0, 0.2); }
+.win-h h2 { font-size: 19px; color: #fff; -webkit-text-stroke: 4px var(--k-edge); paint-order: stroke fill; text-shadow: 0 2px 0 var(--k-edge); }
+.win-h .aside { font-family: var(--k-face); font-size: 16px; color: #fff; -webkit-text-stroke: 3px var(--k-edge); paint-order: stroke fill; }
+.win.t-gold .win-h { color: #fff; }
+
+/* ── frame: buttons and bars ── */
+.go, .plain { font-family: var(--k-face); font-size: 17px; letter-spacing: 0.02em; text-transform: none; color: #fff; -webkit-text-stroke: 3px var(--k-edge); paint-order: stroke fill; padding: 9px 16px 13px; border: 3px solid var(--k-edge); border-radius: 12px; box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.42), inset 0 -6px 0 rgba(0, 0, 0, 0.26), 0 4px 0 var(--k-edge); transition: transform 0.07s, box-shadow 0.07s; }
+.go { background: var(--k-gold); } .plain { background: var(--k-blue); }
+.go:active, .plain:active { transform: translateY(3px); box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.42), inset 0 -3px 0 rgba(0, 0, 0, 0.26), 0 1px 0 var(--k-edge); }
+.bar, .leadinfo .bar { height: 18px; background: #0c1126; border: 2px solid var(--k-edge); border-radius: 7px; box-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.5); }
+.bar i, .leadinfo .bar i { box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.38), inset 0 -3px 0 rgba(0, 0, 0, 0.2); }
+.hp-row { background: none; padding: 0; }
+.hp-row b { font-family: var(--k-face); font-size: 13px; color: var(--k-edge); }
+.chip { font-family: var(--k-face); font-size: 12px; border-radius: 6px; padding: 1px 7px 2px; }
+
+/* ── home: the scene's two boxes ── */
+.scene { border-radius: 16px 16px 0 0; border-color: var(--k-edge); }
+.hpbox { border-radius: 14px; border-color: var(--k-edge); box-shadow: 0 5px 0 rgba(0, 0, 0, 0.35), inset 0 3px 0 #fff; }
+.hp-name, .hp-lv { font-family: var(--k-face); font-size: 18px; text-transform: none; letter-spacing: 0.02em; }
+.hp-sub b { font-family: var(--k-face); }
+
+/* ── home: the talk box, and the pillars as buttons you can read at a glance ── */
+.talk { border-color: var(--k-edge); border-radius: 0 0 16px 16px; box-shadow: 0 6px 0 var(--k-edge); background-color: var(--k-body); background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.035) 25%, transparent 25%, transparent 75%, rgba(255, 255, 255, 0.035) 75%), linear-gradient(-45deg, rgba(0, 0, 0, 0.07) 25%, transparent 25%, transparent 75%, rgba(0, 0, 0, 0.07) 75%); background-size: 44px 44px; }
+.say { border: 0; margin: 0; padding: 18px 20px; font-family: var(--k-face); font-size: 24px; -webkit-text-stroke: 4px var(--k-edge); paint-order: stroke fill; text-shadow: 0 2px 0 var(--k-edge); }
+.say small { font-family: var(--px); font-size: 15px; -webkit-text-stroke: 0; text-shadow: none; color: var(--k-dim); }
+.moves { background: none; border-left: 0; padding: 10px 10px 12px 0; }
+.move { color: #fff; background: var(--k-tile); border: 3px solid var(--k-edge); border-left: 10px solid var(--c); border-radius: 12px; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.12), inset 0 -4px 0 rgba(0, 0, 0, 0.2), 0 3px 0 var(--k-edge); padding: 9px 10px 13px; }
+.move.done { background: #2a6a52; }
+.mv-name { font-family: var(--k-face); font-size: 17px; text-transform: none; }
+.mv-meta { color: var(--k-dim); } .mv-meta b { font-family: var(--k-face); color: #fff; }
+.move.done .mv-name::after { color: #9dffc4; }
+.mv-bar { height: 6px; }
+
+/* ── home: what is next, as three tiles ── */
+/* ── home: its windows get the dark quilted body, and everything in them is retuned for it ── */
+main .win { padding: 5px; background: linear-gradient(var(--k-frame), var(--k-frame-lo)); overflow: visible; }
+main .win-h { border: 3px solid var(--k-edge); border-radius: 10px 10px 0 0; }
+main .win-b { --ink: #fff; --muted: var(--k-dim); --win-2: var(--k-tile); --win-3: rgba(255, 255, 255, 0.18); color: #fff; border: 3px solid var(--k-edge); border-top: 0; border-radius: 0 0 10px 10px; background-color: var(--k-body); background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.035) 25%, transparent 25%, transparent 75%, rgba(255, 255, 255, 0.035) 75%), linear-gradient(-45deg, rgba(0, 0, 0, 0.07) 25%, transparent 25%, transparent 75%, rgba(0, 0, 0, 0.07) 75%); background-size: 44px 44px; }
+main .win-b .hp-row b { color: var(--k-gold); }
+main .facts dt, main .week .d, main .pts { font-family: var(--k-face); font-size: 13px; text-transform: none; letter-spacing: 0.03em; }
+main .box { background: #0c1126; border-color: var(--k-edge); }
+main .done > .box { background: var(--k-green); box-shadow: inset 0 0 0 2px #0c1126; } main .part > .box { background: var(--k-gold); box-shadow: inset 0 0 0 2px #0c1126; }
+main .meter { background: #0c1126; border-color: var(--k-edge); }
+main .dot { background: #0c1126; border-color: var(--k-edge); border-radius: 8px; box-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.5); }
+main .dot.on { background: var(--k-green); box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.35); } main .dot.off { background: #5a2f3d; }
+main .ladder div { color: var(--k-dim); border-color: var(--k-edge); border-radius: 8px; }
+main .ladder b { font-family: var(--k-face); font-size: 18px; }
+main .ladder .on, main .ladder .on b { color: var(--k-edge); }
+main .ribbon { font-family: var(--k-face); font-size: 14px; text-transform: none; border-radius: 8px; padding: 3px 10px 5px; }
+main .ribbon.on { background: #1d8a4e; }
+main .notice { color: #fff; border-color: var(--k-edge); border-radius: 10px; }
+main .notice.warn { background: #6a2f3a; } main .notice.good { background: #24507e; } main .notice.gmax { background: #6a2f58; }
+main .queue img { background: var(--k-tile); border-color: var(--k-edge); border-radius: 10px; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.12); }
+main .queue.pick button.on img { background: var(--k-tile-hi); outline: 3px solid var(--k-gold); }
+main .nexttag { font-family: var(--k-face); color: var(--k-edge); font-size: 11px; }
+main .nopic { background: var(--k-tile); color: var(--k-dim); border-color: var(--k-edge); }
+main .lean b, main .arrow { font-family: var(--k-face); }
+main .path img, main .lean img { background: var(--k-tile); border: 2px solid var(--k-edge); border-radius: 8px; }
+main .chip { color: var(--k-edge); } main .chip.gmax, main .chip.r-R { color: #fff; }
+main details.fold, main .list li { border-top-color: rgba(255, 255, 255, 0.16); }
+
+/* ══ step 2: every tab on the dark body ══════════════════════════════════ */
+main .muted, .lead { color: var(--k-dim); }
+main .win-b a { color: #fff; }
+
+/* ── Pokedex: region tabs, filter, and each Pokemon as a small card ── */
+.regions button { font-family: var(--k-face); background: var(--k-body); color: var(--k-dim); border-color: var(--k-edge); border-radius: 12px; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.08), 0 4px 0 var(--k-edge); }
+.regions .n { font-family: var(--k-face); font-size: 16px; text-transform: none; }
+.regions .c { font-family: var(--k-face); font-size: 13px; }
+.regions button.on { background: linear-gradient(#6176c8, #3b4c94); color: #fff; box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.28), 0 4px 0 var(--k-edge); }
+.regions button.on .meter, .regions .meter { background: #0c1126; border-color: var(--k-edge); }
+.seg button { font-family: var(--k-face); font-size: 14px; text-transform: none; color: #fff; background: var(--k-tile); border-color: var(--k-edge); border-radius: 10px; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.14), inset 0 -4px 0 rgba(0, 0, 0, 0.22); padding: 6px 12px 9px; }
+.seg button.on { background: var(--k-gold); color: var(--k-edge); }
+.dex { gap: 8px; }
+.cell { --m: #5d647c; --m-hi: #8d93a8; padding: 4px; background: linear-gradient(160deg, var(--m-hi), var(--m) 55%, var(--m-hi)); border: 3px solid var(--k-edge); border-radius: 12px; box-shadow: 0 3px 0 var(--k-edge); }
+.cell:hover { border-color: var(--k-edge); transform: translateY(-3px); }
+.cell::before { content: ''; position: absolute; inset: 4px; border: 2px solid var(--k-edge); border-radius: 7px; background: #2a3050; }
+.cell > * { position: relative; }
+.cell.seen { background: linear-gradient(160deg, var(--m-hi), var(--m) 55%, var(--m-hi)); }
+.cell.seen::before { background: radial-gradient(circle at 50% 40%, #6f86d6 0 30%, #3a4a8e 72%); }
+.cell.met::before { background: radial-gradient(circle at 50% 40%, #56608a 0 30%, #343c60 72%); }
+.cell.own.st1 { --m: var(--k-bronze); --m-hi: #e6a366; }
+.cell.own.st2 { --m: var(--k-silver); --m-hi: #eef2fa; }
+.cell.own.st3 { --m: var(--k-gold); --m-hi: var(--k-gold-hi); }
+.cell.mg { background: linear-gradient(135deg, #7fe3ff, var(--k-purple), var(--k-pink), var(--k-gold-hi), #7fe3ff); background-size: 300% 300%; animation: k-shimmer 5s linear infinite; }
+.cell.sel { box-shadow: 0 0 0 3px #fff, 0 3px 0 var(--k-edge); border-color: var(--k-edge); }
+.cell .no { left: 8px; bottom: 5px; font-family: var(--k-face); font-size: 11px; color: #dfe6ff; text-shadow: 0 1px 0 var(--k-edge); }
+.cell:not(.seen) .no { color: #8d93a8; }
+.cell .star { right: 6px; top: 3px; } .cell .shine { left: 7px; top: 3px; color: #7fe3ff; }
+.cell img { width: 100%; height: 100%; }
+.found { margin-left: auto; font-family: var(--k-face); font-size: 17px; color: #ffb3d9; }
+.detail { color: #fff; background: var(--k-tile); border-color: var(--k-edge); border-radius: 14px; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.1); overflow: visible; margin-top: 26px; }
+.detail .art { height: 150px; margin-top: -40px; border: 0; background: none; overflow: visible; filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.3)); }
+.detail h3 { font-size: 26px; color: #fff; -webkit-text-stroke: 4px var(--k-edge); paint-order: stroke fill; text-shadow: 0 2px 0 var(--k-edge); }
+.detail .eyebrow { font-family: var(--k-face); font-size: 13px; text-transform: none; color: var(--k-dim); }
+.close { font-family: var(--k-face); color: #fff; background: var(--k-red); border: 3px solid var(--k-edge); border-radius: 10px; padding: 4px 10px 7px; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.4), inset 0 -4px 0 rgba(0, 0, 0, 0.25); }
+
+/* ── Trainer: the card, the road, the badge case, the notes ── */
+.card { color: #fff; border-color: var(--k-edge); border-radius: 18px; box-shadow: 0 6px 0 var(--k-edge), inset 0 0 0 5px var(--k-frame); padding: 22px; background: linear-gradient(135deg, #34427a, #26315e 60%, #4a2f9e); }
+.card::before { background: repeating-linear-gradient(90deg, transparent 0 38px, rgba(255, 255, 255, 0.04) 38px 40px); }
+.card h2 { font-size: 26px; letter-spacing: 0.03em; -webkit-text-stroke: 4px var(--k-edge); paint-order: stroke fill; text-shadow: 0 2px 0 var(--k-edge); }
+.card .facts dt { color: var(--k-dim); font-family: var(--k-face); font-size: 13px; text-transform: none; }
+.card .facts dd { font-family: var(--k-face); font-size: 17px; }
+.card .who { background: radial-gradient(circle at 50% 40%, #6f86d6 0 30%, #3a4a8e 72%); border-color: var(--k-edge); border-radius: 14px; box-shadow: 0 0 0 5px var(--k-gold), 0 0 0 8px var(--k-edge); }
+.badges { background: rgba(8, 12, 30, 0.55); border: 2px solid var(--k-edge); border-radius: 12px; }
+.caserow { grid-template-columns: 1fr; gap: 6px; margin-bottom: 14px; }
+.caserow .k-ribbon { font-size: 17px; min-height: 36px; }
+.casemedals { display: flex; flex-wrap: wrap; gap: 8px 6px; padding: 4px 4px 0; }
+.gymbadge { image-rendering: pixelated; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.45)); }
+.gymbadge.off { filter: brightness(0) opacity(0.35); }
+.badgeslot { display: inline-grid; place-items: center; box-sizing: border-box; border: 2px dashed rgba(255, 255, 255, 0.3); border-radius: 8px; color: rgba(255, 255, 255, 0.45); font-family: var(--k-face); font-size: 16px; }
+.badgeslot.on { border-style: solid; border-color: var(--k-gold); color: var(--k-gold); }
+.keyrow { border-top-color: rgba(255, 255, 255, 0.2); }
+.road-win .k-road { gap: 8px; }
+.k-step img.sprite { width: 52px; height: 52px; }
+.k-step .gymbadge, .k-step .badgeslot { flex: none; }
+.k-step .role { font-family: var(--k-face); font-size: 12px; color: var(--k-dim); }
+.k-step.ahead img.sprite { filter: brightness(0) opacity(0.4); }
+.k-step .nopic { width: 52px; height: 52px; }
+.chart .y { font-family: var(--k-face); } .chart .bars { border-bottom-color: var(--k-edge); background: repeating-linear-gradient(0deg, transparent 0 39px, rgba(255, 255, 255, 0.1) 39px 40px); }
+.col i { background: #6b7399; border-radius: 4px 4px 0 0; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.3); }
+.legend .k { border-color: var(--k-edge); border-radius: 3px; }
+.log .dayhead { font-family: var(--k-face); font-size: 14px; text-transform: none; color: var(--k-gold); }
+.log .ev { border-top-color: rgba(255, 255, 255, 0.14); }
+.kind { font-family: var(--k-face); font-size: 12px; text-transform: none; color: var(--k-edge); background: #c9d2f2; border-color: var(--k-edge); border-radius: 7px; padding: 1px 0 3px; }
+.kind.k-key, .kind.k-mega { background: var(--k-purple); color: #fff; }
+.kind.k-appear { background: #8d97c2; }
+.hall li { color: #fff; background: var(--k-tile); border-color: var(--k-edge); border-radius: 12px; }
+.hall b { font-family: var(--k-face); font-size: 18px; text-transform: none; }
+.hall .team img { background: rgba(8, 12, 30, 0.35); border-radius: 8px; }
+
+/* ── Bag ── */
+.item { color: #fff; background: var(--k-tile); border-color: var(--k-edge); border-radius: 12px; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.12), 0 3px 0 var(--k-edge); }
+.item.off { background: #2a3050; }
+.use { color: #fff; background: var(--k-blue); border-color: var(--k-edge); border-radius: 12px; box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.36), inset 0 -6px 0 rgba(0, 0, 0, 0.24), 0 4px 0 var(--k-edge); padding: 10px 12px 14px; transition: transform 0.07s; }
+.use b { font-family: var(--k-face); font-size: 18px; text-transform: none; -webkit-text-stroke: 3px var(--k-edge); paint-order: stroke fill; }
+.use span { color: #e6efff; }
+.use.on { background: var(--k-gold); transform: translateY(3px); box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.36), inset 0 -3px 0 rgba(0, 0, 0, 0.24), 0 1px 0 var(--k-edge); }
+.use.on span { color: var(--k-edge); }
+.use:disabled { background: #4a5170; opacity: 1; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.1); } .use:disabled span { color: var(--k-dim); }
+.usebox { color: #fff; background: rgba(8, 12, 30, 0.4); border-color: var(--k-edge); border-radius: 12px; }
+.confirm .go { background: var(--k-green); }
+
+/* ── Rules ── */
+.tiers div { color: var(--k-dim); border-color: var(--k-edge); border-radius: 10px; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.1); }
+.tiers b { font-family: var(--k-face); font-size: 26px; color: var(--k-gold); }
+
+/* ── the recap, as a kit window around a reveal ── */
+.rc-win { color: #fff; padding: 6px; background: linear-gradient(var(--k-frame), var(--k-frame-lo)); border-color: var(--k-edge); border-radius: 18px; box-shadow: 0 8px 0 var(--k-edge); gap: 0; overflow: visible; }
+.rc-body { width: 100%; display: grid; justify-items: center; gap: 8px; padding: 16px 14px 14px; border: 3px solid var(--k-edge); border-radius: 12px; background-color: var(--k-body); background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.035) 25%, transparent 25%, transparent 75%, rgba(255, 255, 255, 0.035) 75%), linear-gradient(-45deg, rgba(0, 0, 0, 0.07) 25%, transparent 25%, transparent 75%, rgba(0, 0, 0, 0.07) 75%); background-size: 44px 44px; max-height: calc(100vh - 60px); overflow-y: auto; }
+.rc-eyebrow { font-family: var(--k-face); font-size: 14px; text-transform: none; color: var(--k-gold); }
+.rc-body .k-reveal { width: 100%; height: 230px; }
+.rc-body .k-reveal .obj img { width: 128px; height: 128px; image-rendering: pixelated; }
+.rc-body .k-reveal .obj .was { position: absolute; filter: brightness(0) opacity(0.6); }
+.rc-body .k-reveal.open .obj .was { display: none; }
+.rc-body .k-reveal:not(.open) .obj .now { visibility: hidden; }
+.rc-body .k-reveal:not(.open) .obj .hideuntil { visibility: hidden; }
+.rc-body .k-reveal .obj .ballover { position: absolute; }
+.rc-body .k-reveal.open .obj .ballover { transform: translate(64px, 44px) scale(0.5); transition: transform 0.4s; }
+.rc-body > p { color: #e6ecff; }
+.rc-list li { color: #fff; background: var(--k-tile); border-color: var(--k-edge); border-radius: 10px; }
+.rc-list b { font-family: var(--k-face); font-size: 15px; text-transform: none; }
+.rc-list span, .rc-list small, .rc-note, .rc-list .more { color: var(--k-dim); }
+.rc-list small { font-family: var(--k-face); }
+.rc-win .go { background: var(--k-gold); font-size: 20px; padding: 9px 30px 13px; }
+
+/* ── the partner as a card, in its summary ── */
+.sumrow { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: start; }
+.sumrow .k-card { width: 128px; }
+.sumrow .k-card-art { height: 120px; }
+.sumrow .k-card-art img { width: 104px; height: 104px; }
+.queue.pick .k-card { width: 86px; }
+.queue.pick .k-card-art { height: 76px; }
+.queue.pick .k-card-art img { width: 64px; height: 64px; background: none; border: 0; box-shadow: none; }
+.queue.pick button.on .k-card-f { box-shadow: 0 0 0 3px var(--k-gold), 0 4px 0 var(--k-edge); }
+main .queue.pick button.on img { background: none; outline: 0; }
+
+/* ══ step 3: version 5, the things you do ════════════════════════════════ */
+.price { display: inline-flex; align-items: center; gap: 4px; font-family: var(--k-face); }
+.topbar .help { min-height: 0; width: 34px; height: 34px; padding: 0 0 4px; font-size: 20px; border-radius: 50%; }
+.swatch { display: inline-block; border: 3px solid var(--k-edge); border-radius: 10px; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.4); }
+
+/* a tab arrives rather than cuts in */
+.tabin { animation: tab-in 0.22s cubic-bezier(0.2, 0.9, 0.3, 1); }
+@keyframes tab-in { from { opacity: 0; transform: translateY(10px); } }
+
+/* ── the scene: places, things that breathe, numbers that pop ── */
+.scene.theme-beach { --sky-1: #58c8e8; --sky-2: #d8f6ff; --far: #3aa6d0; --ground: #f1dc9a; --ground-2: #e6cc80; --pad: #e9d08a; --pad-2: #cdb066; }
+.scene.theme-cave { --sky-1: #2f2a44; --sky-2: #4a4466; --far: #5c5470; --ground: #8a7a6a; --ground-2: #74675a; --pad: #9a8a78; --pad-2: #6e6254; }
+.scene.theme-night { --sky-1: #121a3d; --sky-2: #2c3d7a; --far: #2f5b56; --ground: #3d7a5c; --ground-2: #336a50; --pad: #2e6a4c; --pad-2: #24553d; }
+.foe-pad > img { animation: sway 3.2s ease-in-out infinite; transform-origin: 50% 100%; }
+@keyframes sway { 50% { transform: translateY(-3px) rotate(-2deg); } }
+.pop { position: absolute; left: 50%; top: -6px; z-index: 5; font-family: var(--k-face); font-size: 30px; color: #fff; -webkit-text-stroke: 5px var(--k-red); paint-order: stroke fill; text-shadow: 0 3px 0 var(--k-edge); pointer-events: none; animation: pop-up 1.6s cubic-bezier(0.2, 0.9, 0.3, 1) both; white-space: nowrap; }
+@keyframes pop-up { 0% { opacity: 0; transform: translate(-50%, 20px) scale(0.5); } 18% { opacity: 1; transform: translate(-50%, -8px) scale(1.25); } 30% { transform: translate(-50%, -4px) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -44px) scale(0.9); } }
+.dmg { font-family: var(--k-face); color: #ff9aa2; }
+
+/* ── the talk box's second line: one pip for each habit of the day ── */
+.pips { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.pips i { width: 12px; height: 12px; border-radius: 3px; background: #0c1126; border: 2px solid var(--k-edge); }
+.pips i.on { background: var(--k-gold); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.5); }
+.pips b { margin-left: 8px; font-family: var(--k-face); font-weight: 400; font-size: 14px; color: var(--k-dim); -webkit-text-stroke: 0; text-shadow: none; }
+
+/* ── what you can do right now ── */
+.actions { position: relative; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 0 0 18px; }
+.k-btn.act { justify-content: flex-start; gap: 10px; min-height: 60px; padding: 8px 14px 12px; text-align: left; }
+.k-btn.act span { display: grid; line-height: 1.05; font-size: 21px; }
+.k-btn.act small { font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 12px; font-weight: 600; -webkit-text-stroke: 0; text-shadow: none; color: rgba(20, 26, 51, 0.8); letter-spacing: 0; }
+.k-btn.act:not(.main):not(.ok) small, .k-btn.act:disabled small { color: #e6ecff; }
+.k-btn.main.act:not(:disabled) { animation: ready 1.8s ease-in-out infinite; }
+@keyframes ready { 50% { filter: brightness(1.14); transform: translateY(-2px); } }
+/* a thrown ball: up from the buttons to the wild Pokemon */
+.thrown { position: absolute; left: 12%; bottom: 100%; z-index: 6; pointer-events: none; animation: throw 0.65s cubic-bezier(0.3, 0, 0.7, 1) both; }
+@keyframes throw { 0% { transform: translate(0, 0) rotate(0) scale(0.8); } 55% { transform: translate(34vw, -330px) rotate(540deg) scale(1.1); } 100% { transform: translate(min(56vw, 560px), -250px) rotate(900deg) scale(0.7); opacity: 0.9; } }
+
+/* ── quests ── */
+.questcols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.quests { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 6px; }
+.quest { display: grid; grid-template-columns: 1fr 110px auto; align-items: center; gap: 10px; padding: 7px 10px; background: var(--k-tile); border: 2px solid var(--k-edge); border-radius: 10px; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.1); }
+.quest.done { background: #2a6a52; }
+.quest .q-name { font-family: var(--k-face); font-size: 15px; }
+.quest .k-bar { height: 20px; } .quest .k-bar > span { font-size: 12px; }
+.quest .price { min-width: 58px; justify-content: flex-end; }
+.quest.done .price { opacity: 0.55; }
+
+/* ── the leader: hurt at half, critical at a fifth, and who stands behind you ── */
+.foe { position: relative; display: grid; place-items: center; }
+.foe img { animation: sway 3.6s ease-in-out infinite; transform-origin: 50% 100%; }
+.foe.hurt img { animation: hurt 1.6s ease-in-out infinite; }
+.foe.crit img { animation: hurt 0.5s linear infinite; filter: drop-shadow(0 0 6px var(--k-red)); }
+@keyframes hurt { 25% { transform: translateX(-2px) rotate(-3deg); } 75% { transform: translateX(2px) rotate(3deg); } }
+.backing { display: flex; align-items: center; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 2px dashed rgba(255, 255, 255, 0.18); }
+.backing img { background: var(--k-tile); border: 2px solid var(--k-edge); border-radius: 8px; opacity: 0.6; }
+.backing img.edge { opacity: 1; box-shadow: 0 0 0 2px var(--k-gold); }
+
+/* ── shop ── */
+.shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.good { position: relative; display: grid; justify-items: center; align-content: start; gap: 4px; padding: 14px 10px 12px; text-align: center; background: var(--k-tile); border: 3px solid var(--k-edge); border-radius: 14px; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.12), 0 4px 0 var(--k-edge); }
+.good b { font-family: var(--k-face); font-weight: 400; font-size: 19px; }
+.good small { color: var(--k-dim); font-size: 13px; line-height: 1.25; min-height: 2.5em; }
+.good .k-btn { width: 100%; min-height: 42px; margin-top: 6px; font-size: 18px; padding: 6px 10px 10px; }
+.good .held { position: absolute; top: 6px; right: 8px; font-family: var(--k-face); font-size: 16px; color: var(--k-gold); }
+.good.bump { animation: bump 0.35s cubic-bezier(0.3, 1.6, 0.5, 1); }
+@keyframes bump { 40% { transform: scale(1.08); } }
+.earn { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.earn li { display: flex; align-items: center; gap: 8px; } .earn b { font-family: var(--k-face); font-weight: 400; font-size: 18px; color: var(--k-gold); }
+
+/* ── team ── */
+.hearts { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.heartrow { display: inline-flex; gap: 3px; }
+.teamrow { display: flex; gap: 12px; flex-wrap: wrap; }
+.slot { position: relative; width: 92px; padding: 0; line-height: 0; border-radius: 12px; }
+.slot .k-card, main .queue.pick .k-card { width: 86px; }
+.slot .k-card-art { height: 76px; } .slot .k-card-art img { width: 64px; height: 64px; }
+.slot.empty { display: grid; place-items: center; height: 96px; font-family: var(--k-face); font-size: 34px; color: var(--k-dim); background: rgba(8, 12, 30, 0.4); border: 3px dashed rgba(255, 255, 255, 0.3); }
+
+/* ── "?" : how it works, in a window ── */
+.helpwin { place-items: start center; overflow-y: auto; padding: 20px 12px 100px; }
+.helpbody { position: relative; width: min(900px, 100%); }
+.helpbody > .k-close { position: sticky; top: 0; float: right; z-index: 3; }
+
+/* ══ step 4: Pokemon stand bare ══════════════════════════════════════════
+   No frame around a sprite anywhere. It stands on a soft shadow; its stage is
+   three small pips under it, its ball and nature are small marks beside it. */
+.mon { position: relative; display: inline-grid; justify-items: center; gap: 2px; line-height: 1; vertical-align: top; }
+.mon-art { position: relative; display: grid; place-items: end center; width: 100%; }
+.mon-art::after { content: ''; position: absolute; left: 18%; right: 18%; bottom: 0; height: 10px; border-radius: 50%; background: rgba(0, 0, 0, 0.32); }
+.mon-art img { position: relative; z-index: 1; background: none !important; border: 0 !important; box-shadow: none !important; outline: 0 !important; }
+.mon.mega .mon-art img { filter: drop-shadow(0 0 5px #7fe3ff) drop-shadow(0 0 2px var(--k-purple)); }
+.mon-ball { position: absolute; right: 0; bottom: 0; z-index: 2; filter: drop-shadow(0 1px 0 var(--k-edge)); }
+.mon-gem { position: absolute; left: 2px; top: 2px; z-index: 2; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--k-edge); background: var(--k-dim); }
+.mon-gem[data-tag='code'] { background: var(--k-blue); } .mon-gem[data-tag='fitness'] { background: var(--k-red); } .mon-gem[data-tag='guitar'] { background: #ee7b2f; } .mon-gem[data-tag='arbor'] { background: var(--k-green); }
+.mon-pips { display: inline-flex; gap: 3px; margin-top: 2px; }
+.mon-pips i { width: 7px; height: 7px; border-radius: 50%; background: rgba(255, 255, 255, 0.18); }
+.mon-pips i.on { background: var(--k-gold); }
+.mon-lv { font-family: var(--k-face); font-weight: 400; font-size: 17px; margin-top: 2px; }
+.mon .k-bar { width: 100%; min-width: 110px; margin-top: 2px; }
+.mon-note { font-size: 12px; color: var(--k-dim); }
+
+/* where Pokemon are listed: a tap target with no box until it is chosen */
+main .queue.pick button, .slot { padding: 6px 2px 4px; border-radius: 12px; line-height: 1; background: transparent; transition: background 0.12s, transform 0.12s; }
+main .queue.pick button:hover, .slot:hover { background: rgba(255, 255, 255, 0.06); transform: translateY(-2px); }
+main .queue.pick button.on { background: rgba(245, 184, 0, 0.18); box-shadow: inset 0 0 0 2px var(--k-gold); }
+main .queue img, main .path img, main .lean img, .backing img, .hall .team img { background: none; border: 0; box-shadow: none; border-radius: 0; }
+main .queue.pick button.on img { background: none; outline: 0; }
+.backing img.edge { box-shadow: none; filter: drop-shadow(0 0 4px var(--k-gold)); }
+.slot { width: auto; min-width: 84px; }
+.slot.empty { width: 84px; height: 92px; }
+.nexttag { position: static; margin-top: 2px; padding: 1px 8px 2px; border-radius: 6px; }
+.sumrow .mon { min-width: 140px; }
+
+/* the Pokedex grid: plain tiles. Found ones are lit, not framed */
+.cell, .cell.seen { padding: 0; background: rgba(8, 12, 30, 0.32); border: 0; border-radius: 12px; box-shadow: none; animation: none; }
+.cell::before { display: none; }
+.cell.seen { background: rgba(255, 255, 255, 0.07); }
+.cell.own { background: rgba(99, 198, 255, 0.16); }
+.cell.mg { background: linear-gradient(135deg, rgba(127, 227, 255, 0.28), rgba(123, 92, 240, 0.28), rgba(224, 85, 154, 0.22)); }
+.cell:hover { background: rgba(255, 255, 255, 0.14); }
+.cell.sel { box-shadow: inset 0 0 0 3px var(--k-gold); }
+.cell img { width: 86%; height: 86%; }
+.card .who { background: none; border: 0; box-shadow: none; }
+.card .who img { filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.3)); }
+
+/* ── top bar: the season ── */
+.topbar .nextprize { display: inline-flex; align-items: center; justify-content: center; gap: 4px; font-size: 13px; }
+
+/* ── the egg, being kept warm ── */
+.eggrow { display: flex; align-items: center; gap: 12px; margin-top: 14px; padding: 10px 12px; background: rgba(8, 12, 30, 0.4); border: 2px solid var(--k-edge); border-radius: 12px; }
+.warm { display: inline-block; animation: wobble 3s steps(3, end) infinite; transform-origin: 50% 90%; }
+
+/* ── the rules, as pictures ── */
+.rules { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+.rule { --c: var(--k-blue); display: grid; align-content: start; gap: 4px; padding: 10px 12px 12px; background: var(--k-tile); border: 2px solid var(--k-edge); border-top: 6px solid var(--c); border-radius: 12px; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.08); }
+.rule[data-tone='gold'] { --c: var(--k-gold); } .rule[data-tone='green'] { --c: var(--k-green); } .rule[data-tone='red'] { --c: var(--k-red); } .rule[data-tone='purple'] { --c: var(--k-purple); }
+.rule-pic { display: flex; align-items: center; justify-content: center; gap: 6px; height: 56px; }
+.rule b { font-family: var(--k-face); font-weight: 400; font-size: 18px; }
+.rule p { margin: 0; font-size: 13.5px; line-height: 1.3; color: var(--k-dim); }
+.rule-chip { display: grid; place-items: center; min-width: 46px; height: 46px; padding: 0 6px; font-family: var(--k-face); font-size: 20px; color: #fff; -webkit-text-stroke: 3px var(--k-edge); paint-order: stroke fill; background: var(--c); border: 3px solid var(--k-edge); border-radius: 12px; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.4), inset 0 -4px 0 rgba(0, 0, 0, 0.22); }
+.rule-chip.sm { min-width: 36px; height: 36px; font-size: 16px; border-radius: 10px; } .rule-chip.xs { min-width: 26px; height: 26px; font-size: 12px; border-radius: 8px; }
+.rule-dot { width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--k-edge); background: var(--c); box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.4); }
+.rule-arrow { color: var(--k-dim); font-size: 14px; }
+.helpbody .k-panel { margin-top: 6px; }
+
+/* ── one Pokemon's own page ── */
+.monpage { position: relative; width: min(460px, 100%); max-height: calc(100vh - 40px); overflow-y: auto; color: #fff; padding: 6px; background: linear-gradient(var(--k-frame), var(--k-frame-lo)); border: 4px solid var(--k-edge); border-radius: 18px; box-shadow: 0 8px 0 var(--k-edge); animation: rc-rise 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.2); }
+.monpage > .k-close { position: absolute; top: 10px; right: 10px; z-index: 3; }
+.mp-art { display: grid; place-items: center; height: 170px; border: 3px solid var(--k-edge); border-bottom: 0; border-radius: 12px 12px 0 0; background: radial-gradient(circle at 50% 78%, rgba(0, 0, 0, 0.28) 0 16%, transparent 17%), radial-gradient(circle at 50% 45%, #6f86d6 0 28%, #33417a 70%); }
+.mp-art.mega { background: radial-gradient(circle at 50% 78%, rgba(0, 0, 0, 0.28) 0 16%, transparent 17%), radial-gradient(circle at 50% 45%, #b9a6ff 0 28%, #4a2f9e 70%); }
+.mp-art img { width: 136px; height: 136px; animation: bob 2.4s steps(2, end) infinite; }
+.mp-body { display: grid; gap: 10px; padding: 14px; border: 3px solid var(--k-edge); border-radius: 0 0 12px 12px; background-color: var(--k-body); }
+.mp-body h2 { font-size: 30px; }
+.mp-types { display: flex; flex-wrap: wrap; gap: 6px; }
+.mp-types .chip { margin: 0; display: inline-flex; align-items: center; gap: 4px; color: var(--k-edge); background: #c9d2f2; }
+.mp-types .chip.where { background: var(--k-gold); }
+.mp-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; }
+.mp-tiles .k-tile b { font-size: 20px; }
+.mp-line { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; padding: 6px 8px; background: rgba(8, 12, 30, 0.4); border-radius: 10px; }
+.mp-body p { margin: 0; }
+.mp-body .k-btn { min-height: 44px; font-size: 18px; padding: 6px 14px 10px; }
+.tappable { cursor: pointer; }
+
+@media (max-width: 760px) {
+  .sumrow { grid-template-columns: 1fr; justify-items: center; }
+  .sumrow .facts { width: 100%; }
+  .detail { margin-top: 0; }
+  .detail .art { margin-top: 0; height: 92px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cell.mg { animation: none; }
+}
+
+@media (max-width: 760px) {
+  .topbar { margin: 0 -12px 14px; padding: 8px 12px 10px; gap: 6px 10px; }
+    .navbar { border-left: 0; border-right: 0; border-radius: 0; }
+  .navbar button { min-height: 64px; font-size: 12px; } .navbar button .tabicon { width: 48px; height: 48px; } .navbar button:first-child, .navbar button:last-child { border-radius: 0; }
+  .moves { padding: 0 10px 12px; border-top: 0; }
+  .say { font-size: 20px; padding: 14px 16px 10px; }
+  .detail { bottom: 78px; }
+  .recap { padding-bottom: 86px; }
+}
+@media (max-width: 760px) {
+  .questcols { grid-template-columns: 1fr; }
+  .monpage { max-height: calc(100vh - 150px); }
+  .mp-art { height: 130px; } .mp-art img { width: 104px; height: 104px; }
+  .quest { grid-template-columns: 1fr 90px auto; }
+  .thrown { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .monpage, .mp-art img, .tabin, .foe-pad > img, .foe img, .pop, .k-btn.main.act, .thrown, .good.bump { animation: none !important; }
+  .pop { display: none; }
+  .navbar button, .navbar button .tabicon, .go, .plain { transition: none; }
+}
+
+/* ── rewards to collect, and the fly into the pocket (Claim.tsx, lib/fly.ts) ── */
+.claim-chip { flex: none; display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 12px 6px 8px; color: #1a1200; text-align: left; background: #ffd800; border: 3px solid var(--k-edge); border-radius: 10px; box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35); cursor: pointer; }
+.claim-chip:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35); }
+.claim-ico { display: flex; gap: 2px; }
+.claim-txt { display: grid; line-height: 1.15; }
+.claim-txt small { font-size: 11px; opacity: 0.75; }
+.fly-reward { position: fixed; left: 0; top: 0; z-index: 80; pointer-events: none; padding: 2px 8px; font: 800 14px/1 var(--k-face, inherit); color: #1a1200; background: #ffd800; border: 2px solid #000; border-radius: 999px; box-shadow: 2px 2px 0 #000; white-space: nowrap; will-change: transform, opacity; }
+.reward-pulse { animation: reward-pulse 0.4s ease-out; }
+@keyframes reward-pulse { 0% { filter: brightness(1); transform: scale(1); } 35% { filter: brightness(1.7); transform: scale(1.25); } 100% { filter: brightness(1); transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .claim-chip { animation: none; } .reward-pulse { animation: none; } }
+
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.claim-chip[data-pocket='gems'] { background: #5ee0a0; }
+.claim-chip[data-pocket='bag'] { background: #8fc4ff; }
+.topbar .help { width: 40px; height: 40px; }
+.toast-rail { position: fixed; z-index: 70; left: 50%; top: 64px; transform: translateX(-50%); display: grid; gap: 6px; width: min(92vw, 420px); pointer-events: none; }
+.toast { padding: 8px 12px; color: #fff; background: #1b2448; border: 3px solid var(--k-edge); border-radius: 10px; box-shadow: 0 3px 0 rgba(0, 0, 0, 0.4); }
+.toast b { color: #ffd800; }
+@media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
