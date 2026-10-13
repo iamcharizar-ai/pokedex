@@ -22,11 +22,11 @@ It is safe to run twice: a day whose numbers match the ledger writes nothing.
 
 ## Every day
 
-`bridgeun-health.cmd` runs the sync and appends to `bridge\last-run.log`. Two daily tasks call it: 07:30 (last night's sleep and yesterday's final steps) and 21:30 (today's steps, for the egg). Create them once, in PowerShell:
+`bridge\run-health.cmd` runs the sync and appends to `bridge\last-run.log`. Two daily tasks call it: 10:00 (last night's sleep and yesterday's final steps) and 23:50 (today's steps, for the egg). Create them once, in PowerShell:
 
 ```powershell
-$s = 'D:\Ai Projects\Claude Code\pokedexridgeun-health.cmd'
-foreach ($t in @(@('LifeOS Health Sync Morning','07:30'), @('LifeOS Health Sync Evening','21:30'))) {
+$s = 'D:\Ai Projects\Claude Code\pokedex\bridge\run-health.cmd'
+foreach ($t in @(@('LifeOS Health Sync Morning','10:00'), @('LifeOS Health Sync Evening','23:50'))) {
   Register-ScheduledTask -TaskName $t[0] -Force `
     -Action (New-ScheduledTaskAction -Execute 'cmd.exe' -Argument "/c `"$s`"") `
     -Trigger (New-ScheduledTaskTrigger -Daily -At $t[1]) `
@@ -38,7 +38,7 @@ foreach ($t in @(@('LifeOS Health Sync Morning','07:30'), @('LifeOS Health Sync 
 
 ## Setup on a new machine
 
-`ghealth` (built from github.com/Google-Health-API/google-health-cli with Go) needs a Google Cloud project with the Health API enabled and a Desktop OAuth client, then `ghealth setup --scopes activity_and_fitness.readonly,health_metrics_and_measurements.readonly,sleep.readonly`. Only those three read scopes are used. The tokens live in `~/.config/ghealth/`. While the consent screen is in Testing, the Google account must be listed as a test user, and Google expires a Testing app's refresh token after 7 days: if the log says the sign-in expired, run `ghealth auth login` again (or publish the consent screen to production, which is allowed for personal use).
+`ghealth` (built from github.com/Google-Health-API/google-health-cli with Go) needs a Google Cloud project with the Health API enabled and a Desktop OAuth client, then `ghealth setup --scopes activity_and_fitness.readonly,health_metrics_and_measurements.readonly,sleep.readonly`. Only those three read scopes are used. The tokens live in `~/.config/ghealth/`. The consent screen is published to production (so the sign-in does not expire after 7 days as it does in Testing); its homepage and privacy page are on the Life OS site (`public/privacy.html`). Google shows an "unverified app" warning at sign-in, which is expected for a personal app. If the log ever says the sign-in expired, run `ghealth auth login` again.
 
 ## What the game takes from it
 
