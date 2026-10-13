@@ -13,7 +13,7 @@ import type { DayFacts } from './facts.ts'
 import { addDays } from './facts.ts'
 import { LEAGUES, lineup, type Leader } from './gyms.ts'
 import {
-  ADVANTAGE_MULT, BALL_MULT, CATCH_WEIGHTS, DAILY_PAY, EGG_DAYS, GEMS, LEADER_HP, LEGENDARY_EVERY_WILD, MEGA_BONUS, MOMENTUM_WINDOW, NATURES, NATURE_DOMAIN, NATURE_STATS,
+  ADVANTAGE_MULT, BALL_MULT, CATCH_WEIGHTS, DAILY_PAY, EGG_STEPS, GEMS, LEADER_HP, LEGENDARY_EVERY_WILD, MEGA_BONUS, MOMENTUM_WINDOW, NATURES, NATURE_DOMAIN, NATURE_STATS,
   CLAIM_AUTO, KIT_IRON, KIT_SHARD_EVERY, PAY_STREAK, PILLARS_FOR_A_DAY, REPEL_DAYS, SEASON_STEP, SHINY_ODDS, SHINY_ODDS_WORN, SLEEP_AFTER, SLEEP_DEEP, REVIEW_GEMS, SLEEP_HABIT, SLIP, STAKES_FROM, START_SPECIES, STAT_DAYS, STEPS_GOAL, TAGS,
   TEAM_BONUS, TEAM_NATURE, TEAM_SIZE, WEAK_MULT, WEEK_DAYS, WILD_HP, WILD_STAY, ballFor, bondLevel, evolveAt, graduateAt, levelOf, momentumMult, regionsOpen, wildHit, xpForLevel,
   type Ball, type NatureStat, type Rarity, type Tag,
@@ -25,7 +25,7 @@ import {
 } from './boss.ts'
 import { SPECIES, type SpeciesRec } from './species.ts'
 import {
-  AMULET_MULT, BALLS, BERRY_HEARTS, MARKS, BOND_PARTY, BOND_STEP, CHEST, EGG_DAYS_OLD_CHARM, FEATS, FORGE_COST, GEAR, GEAR_ITEMS, HELD, LURES, MARK_OWNED, MARK_RECORD, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, SELL,
+  AMULET_MULT, BALLS, BERRY_HEARTS, MARKS, BOND_PARTY, BOND_STEP, CHEST, EGG_STEPS_OLD_CHARM, FEATS, FORGE_COST, GEAR, GEAR_ITEMS, HELD, LURES, MARK_OWNED, MARK_RECORD, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, SELL,
   STANDING, TM_SLOTS, WEEKLY_QUESTS, ballClass, dayGap, dealsFor, forgeShard, heldBonus, heldCommon, isMarkTag, lureTypes, martDeals, masteryCost, offerFor, rng, seasonReward, throwHp, tmType,
   type MarkTag, type Offer, type Reward, type ShopId,
 } from './economy.ts'
@@ -312,7 +312,7 @@ export interface Game {
   quests: { weekly: Quest[] }
   /** this month's ladder: steps reached, XP into the next one, and what the next one hands over */
   season: { month: string; step: number; into: number; need: number; next: { coins?: number; gems?: number; item?: string } }
-  /** the egg being kept warm, if there is one */
+  /** the egg being kept warm, if there is one: its steps so far and the steps it needs */
   egg: { have: number; need: number } | null
   /** for each incense (Full Incense and the domain ones), the three the next wild Pokemon can be chosen from, and the one chosen */
   wish: { options: Record<string, string[]>; chosen: string | null }
@@ -570,7 +570,7 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
         reopen(day)
         // the one chosen, else the oldest in the Box, else an egg so the loop never stalls
         const at = chosenNext ? queue.findIndex((m) => m.uid === chosenNext) : -1
-        partner = (at >= 0 ? queue.splice(at, 1)[0] : queue.shift()) ?? make(roll(`egg:${day}:${graduates.length}`, 'any'), 'egg', day)
+        partner = (at >= 0 ? queue.splice(at, 1)[0] : queue.shift()) ?? make(roll(`egg:${day}:${graduates.length}`, 'any'), 'starter', day)
         chosenNext = null
         partner.started = day
         partner.xp += over
@@ -1115,7 +1115,7 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
       if (b.taken >= 1 - 1e-9 && !b.killed) {
         b.killed = true
         const shard = isMarkTag(BOSS_TAG[hardest(b.card).kind]) ? MARKS[BOSS_TAG[hardest(b.card).kind] as MarkTag].shard : undefined
-        hold(`boss:${b.card.week}:kill`, f.day, 'Boss beaten', 0, BOSS_KILL_GEMS, shard ? [[shard, 1]] : [])
+        hold(`boss:${b.card.week}:kill`, f.day, 'Boss beaten', 0, BOSS_KILL_GEMS, [...(shard ? [[shard, 1] as [string, number]] : []), ['rare-egg', 1] as [string, number]])
         bump('bosskills')
         moments.push({ kind: 'boss', day: f.day, week: b.card.week, form: b.card.form, level: b.card.level, what: 'kill' })
       }
@@ -1125,7 +1125,8 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
 
     // an egg: one kept warm at a time, a day nearer on each day with two pillars
     if (!egg && inv['rare-egg']) { inv['rare-egg']--; egg = { have: 0 } }
-    else if (egg && counts && ++egg.have >= (inv['old-charm'] ? EGG_DAYS_OLD_CHARM : EGG_DAYS)) {
+    else if (egg) egg.have += Math.max(0, Math.min(STEPS_GOAL, f.body?.steps ?? 0))
+    if (egg && egg.have >= (inv['old-charm'] ? EGG_STEPS_OLD_CHARM : EGG_STEPS)) {
       bump('hatched')
       const mon = make(roll(`rare-egg:${f.day}`, 'R'), 'egg', f.day)
       queue.push(mon)
@@ -1276,7 +1277,7 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
       const xp = monthXp[ym] ?? 0, step = monthStep[ym] ?? 0
       return { month: ym, step, into: xp - step * SEASON_STEP, need: SEASON_STEP, next: seasonReward(step + 1) }
     })(),
-    egg: egg ? { have: (egg as { have: number }).have, need: inv['old-charm'] ? EGG_DAYS_OLD_CHARM : EGG_DAYS } : null,
+    egg: egg ? { have: Math.min((egg as { have: number }).have, inv['old-charm'] ? EGG_STEPS_OLD_CHARM : EGG_STEPS), need: inv['old-charm'] ? EGG_STEPS_OLD_CHARM : EGG_STEPS } : null,
     wish: { options: Object.fromEntries(['full-incense', ...Object.keys(LURES)].map((id) => [id, wishOptions(id === 'full-incense' ? null : LURES[id])])), chosen: wishFor },
     sleep: (() => {
       const h = lastFacts?.habits.find((x) => x.id === SLEEP_HABIT && x.tag === 'sleep')

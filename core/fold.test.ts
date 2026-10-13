@@ -10,7 +10,7 @@ import { foldGame, isGym, leaderOf, statsOf } from './fold.ts'
 import { LEAGUES, lineup } from './gyms.ts'
 import { beats, weakDomains } from './types.ts'
 import {
-  BALL_MULT, CLAIM_AUTO, DAILY_PAY, PAY_STREAK, REVIEW_GEMS, EGG_DAYS, GAME_START, GEMS, KIT_IRON, LEADER_HP, MEGA_BONUS, REPEL_DAYS, SEASON_STEP, SLEEP_DEEP, SLIP, STAKES_FROM, TEAM_BONUS, TEAM_NATURE, TEAM_SIZE, WEAK_MULT, WILD_HP, WILD_STAY,
+  BALL_MULT, CLAIM_AUTO, DAILY_PAY, PAY_STREAK, REVIEW_GEMS, EGG_STEPS, STEPS_GOAL, GAME_START, GEMS, KIT_IRON, LEADER_HP, MEGA_BONUS, REPEL_DAYS, SEASON_STEP, SLEEP_DEEP, SLIP, STAKES_FROM, TEAM_BONUS, TEAM_NATURE, TEAM_SIZE, WEAK_MULT, WILD_HP, WILD_STAY,
   ballFor, bondLevel, evolveAt, graduateAt, levelOf, momentumMult, regionsOpen, wildHit, xpForLevel,
 } from './rules.ts'
 import { BALLS, BOND_PARTY, CHEST, rng, DOMAIN_SHOPS, FEATS, FORGE_COST, GEAR, GEAR_ITEMS, LURES, MART_POOL, SELL, STANDING, forgeShard, lureTypes, martDeals, throwHp } from './economy.ts'
@@ -682,18 +682,21 @@ test('the season is a ladder climbed by the work of the month', () => {
   assert.ok(long.moments.filter((m) => m.kind === 'season').length > long.season.step)
 })
 
-test('a Rare Egg is kept warm by days with two pillars, and hatches into the Box', () => {
-  const facts = run(40, ALL) // gems from a catch a day
-  const base = fold(facts.slice(0, 30))
-  assert.ok(base.wallet.gems >= 150)
-  assert.equal(base.egg, null)
-  const bought = (n: number) => fold(use(facts.slice(0, n), 29, { what: 'buy', item: 'rare-egg' }))
-  assert.deepEqual(bought(30).egg, { have: 0, need: EGG_DAYS })
-  assert.deepEqual(bought(33).egg, { have: 3, need: EGG_DAYS })
-  const hatched = bought(36)
+/** a day with the band's step count when there was one */
+const walk = (i: number, steps?: number): DayFacts => ({ ...day(i, ALL), ...(steps === undefined ? {} : { body: { steps } }) })
+
+test('a Rare Egg is warmed by steps: at most a goal a day, nothing on a day without a reading, and it hatches into the Box', () => {
+  const base = run(30, ALL).map((f, i) => (i < 20 ? f : walk(i)))
+  assert.ok(fold(base).wallet.gems >= 150)
+  assert.equal(fold(base).egg, null)
+  const at = (days: (number | undefined)[]) => fold(use([...base.slice(0, 29), ...days.map((s, i) => walk(29 + i, s))], 29, { what: 'buy', item: 'rare-egg' }))
+  assert.deepEqual(at([undefined]).egg, { have: 0, need: EGG_STEPS })
+  assert.deepEqual(at([undefined, 99999, undefined, 4000]).egg, { have: STEPS_GOAL + 4000, need: EGG_STEPS }, 'a day counts for at most a goal; a day without a reading adds nothing')
+  assert.equal(at([undefined, ...Array(4).fill(STEPS_GOAL)]).egg?.have, 4 * STEPS_GOAL)
+  const hatched = at([undefined, ...Array(5).fill(STEPS_GOAL)])
   assert.equal(hatched.egg, null)
   const h = hatched.moments.find((m) => m.kind === 'hatch')!
-  assert.ok(h.kind === 'hatch' && h.day === far(34))
+  assert.ok(h.kind === 'hatch' && h.day === far(34), 'five full days is the fastest')
   const mon = hatched.queue.find((m) => m.uid === h.uid)!
   assert.deepEqual([mon.origin, SPECIES[mon.form].r], ['egg', 'R'])
 })
@@ -929,6 +932,7 @@ test('a boss week: progress takes HP, the last of it needs every task, an idle d
   assert.ok(dead.moments.some((x) => x.kind === 'boss' && x.what === 'appear'))
   assert.ok(dead.moments.some((x) => x.kind === 'boss' && x.what === 'kill'))
   assert.ok(dead.held.some((h) => h.key.endsWith(':kill') && h.gems === BOSS_KILL_GEMS), 'the kill waits in the Collect strip')
+  assert.ok(dead.held.find((h) => h.key.endsWith(':kill'))!.items.some(([id]) => id === 'rare-egg'), 'a beaten boss drops a Mystery Egg')
   assert.equal(dead.held.filter((h) => /:(25|50|75)$/.test(h.key)).length, 3)
   // a day with no progress gives some back
   const low = foldGame(bossWeek(lead, 400, [0.5]))

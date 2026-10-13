@@ -36,7 +36,7 @@ function FeatRow({ f, game }: { f: Feat; game: Game }) {
 export function FeatsWin({ game }: { game: Game }) {
   const earned = new Set(game.feats.map((f) => f.id))
   const ratio = (f: Feat) => Math.min(1, (game.counters[f.key] ?? 0) / f.n)
-  const next = FEATS.filter((f) => !earned.has(f.id)).sort((a, b) => ratio(b) - ratio(a)).slice(0, 3)
+  const next = FEATS.filter((f) => !earned.has(f.id)).sort((a, b) => ratio(b) - ratio(a)).slice(0, 2)
   return (
     <>
       <Win title="Feats" tone="gold" aside={`${earned.size} / ${FEATS.length}`}>
@@ -61,16 +61,19 @@ export function FeatsWin({ game }: { game: Game }) {
             </div>
           </>
         )}
-        {ORDER.map((g) => {
-          const list = FEATS.filter((f) => f.group === g)
-          const n = list.filter((f) => earned.has(f.id)).length
-          return (
-            <details key={g} className="featgroup">
-              <summary><b>{GROUP[g]}</b><span>{n} / {list.length}</span></summary>
-              <ul className="feats">{list.map((f) => <FeatRow key={f.id} f={f} game={game} />)}</ul>
-            </details>
-          )
-        })}
+        <details className="featgroup">
+          <summary><b>All feats</b><span>{earned.size} / {FEATS.length}</span></summary>
+          {ORDER.map((g) => {
+            const list = FEATS.filter((f) => f.group === g)
+            const n = list.filter((f) => earned.has(f.id)).length
+            return (
+              <details key={g} className="featgroup">
+                <summary><b>{GROUP[g]}</b><span>{n} / {list.length}</span></summary>
+                <ul className="feats">{list.map((f) => <FeatRow key={f.id} f={f} game={game} />)}</ul>
+              </details>
+            )
+          })}
+        </details>
         <p className="muted">{plural(game.feats.length, 'feat')} reached. The Key Stone, the Master Ball and the held items that strike ×1.3 are all here and nowhere else.</p>
       </Win>
     </>

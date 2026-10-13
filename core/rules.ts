@@ -161,8 +161,11 @@ export const DAILY_PAY: { share: number; coins: number }[] = [{ share: 0.5, coin
 export const WEEK_DAYS = 5
 /** Every SEASON_STEP XP of the month's work is a step on the season ladder. */
 export const SEASON_STEP = 1500
-/** A Rare Egg hatches after this many days with two pillars. One is kept warm at a time. */
+/** A Rare Egg is five days' walking: its steps count, at most STEPS_GOAL a day, and a day with no band reading adds nothing. One is kept warm at a time. */
 export const EGG_DAYS = 5
+export const EGG_STEPS = EGG_DAYS * STEPS_GOAL
+// (Version 12: an egg used to be warmed by days with two pillars, and the Box was refilled with a made-up "egg" when it ran empty;
+// now it is warmed by steps, a beaten boss can drop one, and a new partner from an empty Box is simply a new starter.)
 
 // ── stakes (from STAKES_FROM) ───────────────────────────────────────────────
 // A day with nothing ticked at all costs something, but only what is still in

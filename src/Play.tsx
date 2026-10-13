@@ -340,7 +340,7 @@ export function ShopTab({ game, only }: { game: Game; only?: ShopId }) {
       {show('rare') && (
         <Win title="Rare things" tone="blue" aside={<><Gem size={22} /> <Count value={game.wallet.gems} /></>}>
           <Shelf game={game} offers={RARE_SHELF} shop="rare" />
-          {game.egg && <div className="eggrow"><span className="warm"><EggIcon size={44} /></span><div style={{ flex: 1 }}><span className="k-label">An egg is being kept warm</span><KBar value={game.egg.have} max={game.egg.need} kind="gold" label={`${game.egg.have} / ${game.egg.need} days with two pillars`} /></div></div>}
+          {game.egg && <div className="eggrow"><span className="warm"><EggIcon size={44} /></span><div style={{ flex: 1 }}><span className="k-label">An egg is being kept warm</span><KBar value={game.egg.have} max={game.egg.need} kind="gold" label={`${game.egg.have.toLocaleString()} / ${game.egg.need.toLocaleString()} steps`} /></div></div>}
         </Win>
       )}
       {show('rare') && <IncenseWin game={game} />}

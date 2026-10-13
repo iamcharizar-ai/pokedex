@@ -194,5 +194,5 @@ Share the tokens and motion kit the way the core is shared. This is where the on
 
 ## 8. Decisions I still need
 
-1. **Journey is the one tab over my 2,500 pixel target** (about 3,200 to 3,600, calendar included). The big pieces are the feats (943), the season (461), the calendar (about 440) and the quests (389). Say if you want the feats folded behind their "closest" road.
-2. **The egg change (rules version 12) or the Vitals trim, next?** The Vitals sync check still comes before the egg.
+1. **Journey is still over my 2,500 pixel target** (now about 2,800 to 3,200): the feats are folded behind one "All feats" line with the two closest showing (it was 3,200 to 3,600). What is left is the league ladder (635), the season (467), the calendar (497) and pay and quests (394). Say if you want the league or the season folded too.
+2. **Done after phase 7:** eggs are warmed by steps and dropped by bosses (rules version 12), and the health bridge lives in `bridge/` (see its README), so the Vitals viewer is no longer part of the game's path.

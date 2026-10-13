@@ -3,7 +3,7 @@
 //
 // An item's id is the name of its sprite file (public/sprites/items/<id>.png),
 // so a new item is one line here and one picture.
-import { REPEL_DAYS, type Tag } from './rules.ts'
+import { REPEL_DAYS, STEPS_GOAL, type Tag } from './rules.ts'
 import { TYPE_DOMAIN } from './types.ts'
 
 /** seeded randomness: the same seed always gives the same run of numbers */
@@ -154,7 +154,7 @@ export const ITEMS: Record<string, ItemDef> = {
   'life-orb': { name: 'Life Orb', kind: 'unique', text: 'Hold: every kind of work strikes leaders ×1.1.' },
   'amulet-coin': { name: 'Amulet Coin', kind: 'unique', text: 'Quest coins ×1.25.' },
   'coin-case': { name: 'Coin Case', kind: 'unique', text: 'The Mart shows four deals a day.' },
-  'old-charm': { name: 'Old Charm', kind: 'unique', text: 'A Mystery Egg hatches in four days, not five.' },
+  'old-charm': { name: 'Old Charm', kind: 'unique', text: 'A Mystery Egg hatches after 40,000 steps, not 50,000.' },
   'key-stone': { name: 'Key Stone', kind: 'key', text: 'Without it, no Mega Evolution. Forge Mega Stones with shards.' },
   'red-shard': { name: 'Red Shard', kind: 'shard', text: 'Gym. Three forge a Mega X.' },
   'blue-shard': { name: 'Blue Shard', kind: 'shard', text: 'Code. Three forge a Mega Y.' },
@@ -167,7 +167,7 @@ export const ITEMS: Record<string, ItemDef> = {
   'rose-incense': { name: 'Rose Incense', kind: 'lure', text: 'Pick the next wild Pokemon from three Grass types.' },
   'lax-incense': { name: 'Lax Incense', kind: 'lure', text: 'Pick the next wild Pokemon from three Dark types.' },
   'full-incense': { name: 'Full Incense', kind: 'incense', text: 'Pick the next wild Pokemon from three of any type.' },
-  'rare-egg': { name: 'Mystery Egg', kind: 'egg', text: 'Hatches into a rare Pokemon after five days with two pillars.' },
+  'rare-egg': { name: 'Mystery Egg', kind: 'egg', text: 'Hatches into a rare Pokemon once the steps the band counts add up to 50,000 (five full days of walking).' },
   chest: { name: 'Chest', kind: 'chest', text: 'Open it for coins, balls, berries or, now and then, incense.' },
   'theme-beach': { name: 'Beach', kind: 'theme', text: 'A new place for the battle scene.' },
   'theme-cave': { name: 'Cave', kind: 'theme', text: 'A new place for the battle scene.' },
@@ -307,6 +307,7 @@ export const CHEST: { odds: number; coins?: number; item?: string; n?: number }[
   { odds: 40, coins: 250 }, { odds: 25, item: 'great-ball', n: 2 }, { odds: 15, item: 'ultra-ball', n: 1 }, { odds: 12, item: 'sitrus-berry', n: 2 }, { odds: 8, item: 'full-incense', n: 1 },
 ]
 export const EGG_DAYS_OLD_CHARM = 4
+export const EGG_STEPS_OLD_CHARM = EGG_DAYS_OLD_CHARM * STEPS_GOAL
 
 // ── feats ──────────────────────────────────────────────────────────────────
 export interface Reward { coins?: number; gems?: number; items?: Record<string, number> }
