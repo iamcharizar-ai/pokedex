@@ -20,13 +20,25 @@ Needs `ghealth` on PATH (or `GHEALTH_BIN`), already set up with `ghealth setup`,
 
 It is safe to run twice: a day whose numbers match the ledger writes nothing.
 
-## Every morning
+## Every day
 
-A scheduled task on the PC (Windows Task Scheduler; tick "Run task as soon as possible after a scheduled start is missed", so a PC that was off at 07:30 catches up when it wakes):
+`bridgeun-health.cmd` runs the sync and appends to `bridge\last-run.log`. Two daily tasks call it: 07:30 (last night's sleep and yesterday's final steps) and 21:30 (today's steps, for the egg). Create them once, in PowerShell:
 
-- Program: `cmd.exe`
-- Arguments: `/c cd /d "D:\Ai Projects\Claude Code\pokedex" && npm run health >> bridge\last-run.log 2>&1`
-- Trigger: daily, 07:30 (the band has synced to the phone by then)
+```powershell
+$s = 'D:\Ai Projects\Claude Code\pokedexridgeun-health.cmd'
+foreach ($t in @(@('LifeOS Health Sync Morning','07:30'), @('LifeOS Health Sync Evening','21:30'))) {
+  Register-ScheduledTask -TaskName $t[0] -Force `
+    -Action (New-ScheduledTaskAction -Execute 'cmd.exe' -Argument "/c `"$s`"") `
+    -Trigger (New-ScheduledTaskTrigger -Daily -At $t[1]) `
+    -Settings (New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries)
+}
+```
+
+`-StartWhenAvailable` makes a PC that was off at the time catch up when it wakes. A run reads the last 3 days, so a missed day or two is filled in.
+
+## Setup on a new machine
+
+`ghealth` (built from github.com/Google-Health-API/google-health-cli with Go) needs a Google Cloud project with the Health API enabled and a Desktop OAuth client, then `ghealth setup --scopes activity_and_fitness.readonly,health_metrics_and_measurements.readonly,sleep.readonly`. Only those three read scopes are used. The tokens live in `~/.config/ghealth/`. While the consent screen is in Testing, the Google account must be listed as a test user, and Google expires a Testing app's refresh token after 7 days: if the log says the sign-in expired, run `ghealth auth login` again (or publish the consent screen to production, which is allowed for personal use).
 
 ## What the game takes from it
 

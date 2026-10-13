@@ -10,3 +10,5 @@ tools/.cache
 
 tests/diff/
 
+
+bridge/last-run.log
