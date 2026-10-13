@@ -35,7 +35,7 @@ Smaller differences:
 - **A kind with no history is left off the card** and its share goes to the Life task.
 - **The Trainer tab's boss history, the Home card, the locked line, the throw sequence, the Recap news and the Life OS strip line are built.** The dev preview shows a boss with `?boss` whatever the party is.
 
-**Not verified:** the throw sequence on screen (it needs a boss at 40% HP, which the empty preview cannot reach; the outcome logic is covered by tests), and a real week against your ledger, since your party is not six yet.
+**Verified since:** the throw animation plays in the boss fixture (`?fixture=boss`), which has a boss at 40% HP; the outcome logic (kill, catch, miss, flee) is covered by tests. **Not verified:** a real week against your ledger, since your party is not six yet, and the first real boss throw by hand.
 
 ## 0. Decisions made
 
@@ -116,8 +116,8 @@ Five tasks, one per kind of work, a fixed share of the boss's HP each. Every tas
 | Kind | Share | Where it comes from | Templates (one is drawn) |
 |---|---|---|---|
 | **Gym** | 30% | `workout` events from Strong | **Volume:** `totalSets` for the week reaches `max(24, 1.25 × your average of the last three weeks)`. **Sessions:** four workouts of at least 40 minutes. **Record:** two lifts that beat every earlier session, plus 16 sets. |
-| **Arbor** | 25% | `skill` events: the coach's `workingSet` | The coach picks three skills from your working set by the seed. **Spread:** practise each on four different days. **Push:** practise all three on three days and log a new best on one. |
-| **Woodshed** | 20% | `guitar` logs: the coach's `rotation` and `reviewDue` | The coach picks two items: your weakest unfinished one and one review due. **Clean:** log each "Clean" on three different days. **Tempo:** hit the target tempo plus 5% on one, Clean on the other. |
+| **Arbor** | 25% | `skill` events (built: the skills you logged most in the last three weeks, since the Pokedex does not carry the coach; the original design used the coach's `workingSet`) | Three skills, chosen by the seed. **Spread:** practise each on four different days. **Push:** practise all three on three days and log a new best on one. |
+| **Woodshed** | 20% | `guitar` logs (built: the pieces logged most in the last three weeks, with the **Clean** template only; the original design used the coach's `rotation` and `reviewDue` and also had **Tempo**) | Two pieces. **Clean:** log each "Clean" on three different days. **Tempo:** hit the target tempo plus 5% on one, Clean on the other. |
 | **Sleep** | 15% | Vitals `sleepScore` (or the 22:30 bedtime tick if there is no band) | **Four nights at 80 or more**, or **five nights in bed by 22:30**; one drawn. |
 | **Life** | 10% | Life OS ticks | **Four days at 75% or more of the habits ticked**, or **one perfect day plus two days at 75%**. |
 
@@ -191,4 +191,4 @@ Everything pays through the Collect strip (it arrives as held rewards), and noth
 
 ## 11. Open points
 
-Nothing blocks the build. Two things I would like your eye on once the simulator exists, because they are tuning rather than design: the 95% cap (whether the last 5% feels like a fair gate), and whether a *kill* should pay noticeably more than a high catch-attempt week, since the kill is rare by design.
+Nothing blocks the build. The simulator now exists (`node tools/boss-sim.mjs`, results in the As-built section). Two things still want your eye, because they are tuning rather than design: the 95% cap (whether the last 5% feels like a fair gate), and whether a *kill* should pay noticeably more than a high catch-attempt week, since the kill is rare by design.

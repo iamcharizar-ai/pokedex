@@ -1,5 +1,5 @@
 How tall each screen is, in pixels at 390 wide (a phone). A tab past about 2,500 has stuff merged in it.
-empty-today	1658
+empty-today	1559
 empty-party	2605
 empty-shop	2297
 empty-pokedex	4307

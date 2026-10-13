@@ -7,8 +7,6 @@ dist
 tools/.cache
 .claude
 
-.vercel
-.env*
 
 tests/diff/
 

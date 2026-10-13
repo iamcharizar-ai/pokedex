@@ -11,14 +11,14 @@ Written 13 Oct 2026, revised 14 Oct after your answers. **All eight phases (0 to
 - **Team needs a forge:** a place for Mega Stones, using the evolution choreography from the motion kit.
 - **Mega Stones come too often** against how many Pokemon can use one.
 
-**On hold until the rest is settled** (yours, recorded so they are not lost):
+**Held items, all done since** (yours, recorded so they are not lost; 1 is the Nursery in phase 2, 2 and 3 are rules version 12, 4 and 5 are phase 7):
 1. The egg gets a dedicated space, not a card on Home.
 2. Steps from Vitals hatch the egg.
 3. No second egg appears while one is warming; eggs themselves can be rewards.
 4. Life OS: the XP chip should push out, hang for about a second, then be pulled in more slowly.
 5. Life OS: the breathing month-review button looks shabby, and so does the square behind the Comet Shard.
 
-**Built so far:** phase 0 (section 3), the Mega rebalance (section 4, rules version 11), screenshot comparison, phase 1 (section 5), phase 2 (section 5, with the result in section 2) and phase 3 (section 5).
+**Built:** all eight phases (0 to 7), the Mega rebalance (rules version 11) and the egg change (rules version 12). This top section is the state of the plan when it was written and is kept as history; sections 5 to 8 carry the current state.
 
 **Your answers to the last round:** the Mega proposal, yes; Playwright, yes; the boss on Today as a tile that opens its full view.
 

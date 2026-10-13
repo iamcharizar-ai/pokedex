@@ -182,8 +182,24 @@ test('a wild Pokemon that is not caught in time flees, and the next one takes it
   assert.ok(fled.day >= STAKES_FROM)
   assert.equal(fled.day, addDays(GAME_START, stay))
   assert.ok(there.dex[first.form] && !there.dex[first.form].own)
-  // before the stakes begin nothing flees
-  assert.equal(fold(idle(18)).moments.filter((m) => m.kind === 'flee').length, 0)
+})
+
+test('an empty day from before the stakes began costs nothing, even when it is settled after they began', () => {
+  const slips = (empty: number) => fold(Array.from({ length: 12 }, (_, i) => day(i, i === empty ? {} : ALL))).moments.filter((m) => m.kind === 'slip')
+  assert.equal(STAKES_FROM, far(9), 'the day numbers below are built on this')
+  // day 7 is 10 Oct: settled on day 9 (12 Oct), but it was never under stakes
+  assert.equal(slips(7).length, 0)
+  // day 9 is 12 Oct, the first day under stakes: settled two days later
+  const s = slips(9)
+  assert.equal(s.length, 1)
+  assert.ok(s[0].kind === 'slip' && s[0].day === far(11) && s[0].empty === far(9))
+})
+
+test('a boss that is caught counts as a catch: the weekly quest, and the legendary feat for a legendary', () => {
+  const src = fs.readFileSync(new URL('./fold.ts', import.meta.url), 'utf8')
+  const block = src.slice(src.indexOf("b.caught = true"), src.indexOf("what: 'catch', shiny, uid: mon.uid"))
+  assert.match(block, /weekCatch\[weekOf\(day\)\]/)
+  assert.match(block, /bump\('legend'\)/)
 })
 
 test('Max Repel keeps a wild Pokemon longer, once; both guards are always on the Mart shelf', () => {

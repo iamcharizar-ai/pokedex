@@ -773,6 +773,9 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
           b.caught = true
           earn(0, BOSS_CATCH_GEMS)
           bump('bosses')
+          // a catch is a catch: it counts for the week's quest and for the legendary feat like a wild one does
+          weekCatch[weekOf(day)] = (weekCatch[weekOf(day)] ?? 0) + 1
+          if (rec(mon.form).r === 'L') bump('legend')
           if (shiny) bump('shiny')
           moments.push({ kind: 'boss', day, week: b.card.week, form: b.card.form, level: b.card.level, what: 'catch', shiny, uid: mon.uid })
         } else {
@@ -805,7 +808,7 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
         const m = [partner, ...queue].find((x) => x.uid === u.uid)
         if (m && u.to && (rec(m.form).e?.length ?? 0) > 1 && rec(m.form).e!.includes(u.to)) {
           m.pick = u.to
-          moments.push({ kind: 'use', day, uid: partner.uid, form: partner.form, what: 'branch', to: u.to })
+          moments.push({ kind: 'use', day, uid: m.uid, form: m.form, what: 'branch', to: u.to })
         }
         return
       }
@@ -874,7 +877,7 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
     // A day can still be ticked until the end of the next day, so an empty day is only
     // settled once that grace is over, and only the work still in progress pays for it.
     const gone = facts[i - 2]
-    if (stakes && gone && dayGap(gone.day, f.day) === 2 && emptyDay(gone)) {
+    if (stakes && gone && gone.day >= STAKES_FROM && dayGap(gone.day, f.day) === 2 && emptyDay(gone)) {
       let leader = 0, wildBack = 0
       const lead = leaderOf(lg.index, lg.slot)
       if (lead && leagueOpen()) { leader = Math.min(SLIP.leader, LEADER_HP - lg.hp); lg.hp += leader; lg.slipped += leader }

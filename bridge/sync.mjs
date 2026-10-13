@@ -65,12 +65,27 @@ const { VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY: key } = env()
 const url = VITE_SUPABASE_URL?.replace(/\/$/, '')
 const headers = { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }
 
-// the nights already in the ledger, for the scores that compare a night with the ones before it
+// A ledger that does not answer must not hang the daily task or crash it with a stack trace.
+const PAGE = 1000
+const TIMEOUT_MS = 30_000
+const call = (path, init = {}) => fetch(`${url}/rest/v1/${path}`, { ...init, signal: AbortSignal.timeout(TIMEOUT_MS) })
+
+// the nights already in the ledger, for the scores that compare a night with the ones before it (read in pages, so a long history is never cut short)
 let known = []
 if (url && key) {
-  const r = await fetch(`${url}/rest/v1/events?select=device,at,day,type,payload&type=eq.vitals&day=gte.${addDays(from, -LOOK_BACK)}&order=at.asc&limit=5000`, { headers })
-  if (r.ok) known = await r.json()
-  else console.error(`could not read the ledger (${r.status}); scores will use only what this run read`)
+  try {
+    for (let offset = 0; ; offset += PAGE) {
+      const r = await call(`events?select=device,at,day,type,payload&type=eq.vitals&day=gte.${addDays(from, -LOOK_BACK)}&order=at.asc&offset=${offset}&limit=${PAGE}`, { headers })
+      if (!r.ok) throw new Error(`ledger read ${r.status}`)
+      const page = await r.json()
+      known.push(...page)
+      if (page.length < PAGE) break
+    }
+  } catch (err) {
+    // scores would be worked out from this run's days alone, and a day could be written twice: better to stop than to guess
+    console.error(`could not read the ledger (${err.message}); nothing written.`)
+    process.exit(1)
+  }
 } else if (!DRY) {
   console.error('No ledger configured (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY in .env.local). Nothing written.')
   process.exit(1)
@@ -91,7 +106,13 @@ if (DRY) {
   process.exit(0)
 }
 
-const r = await fetch(`${url}/rest/v1/events`, { method: 'POST', headers: { ...headers, Prefer: 'return=minimal' }, body: JSON.stringify(events) })
+let r
+try {
+  r = await call('events', { method: 'POST', headers: { ...headers, Prefer: 'return=minimal' }, body: JSON.stringify(events) })
+} catch (err) {
+  console.error(`could not reach the ledger (${err.message}). Nothing was confirmed written; run it again (days already in the ledger are skipped).`)
+  process.exit(1)
+}
 if (!r.ok) {
   console.error(`ledger refused the write: ${r.status}`)
   process.exit(1)
