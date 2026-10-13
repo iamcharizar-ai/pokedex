@@ -121,9 +121,12 @@ ghealth  →  bridge/sync.mjs  →  ledger (`vitals` events)  →  Pokedex, Life
 - **Why the bridge computes the scores:** the old PC script `vitals/tools/sync.mjs` wrote the readings but **not the sleep score or recovery**; only the Vitals web sync did. The game pays the Sleep pillar, the second Bell, the boss's sleep task and the sky's weather on the score, so a CLI-only feed would have left the Sleep pillar unmeasured. `plan.ts` closes that gap.
 - **Idempotent:** a day whose numbers match the ledger writes nothing. Running it twice is safe.
 - **The Vitals app** (viewer plus Vercel web sync) is no longer in the game's path. It is untouched; archive it when the bridge is proven.
-- **Not tested against a real band.** `ghealth` is not installed on this machine. First check: `npm run health -- --dry-run` on a machine with `ghealth`.
 - **Schedule:** `bridge/README.md` has a Windows Task Scheduler recipe for 07:30 daily, with catch-up if the PC was off.
 - **Assessment:** `lifeos/docs/VITALS-ASSESSMENT.md` records the options and the follow-up.
+- **Now proven on a real band (13 Oct 2026):** `npm run health` wrote real days (steps, sleep, weight, scores), and the read-only sign-in is published to production so it does not expire after 7 days.
+- **No scheduler: a webhook.** Google pushes a notification when steps, sleep, weight or distance change; `server/health-webhook.ts` (built to `api/health-webhook.js`, served at `https://pokedex-theta-swart.vercel.app/api/health-webhook`) checks the shared secret and Google's ECDSA signature, answers 204, reads the touched days from the Health API and writes what is new, using the same `plan.ts`. Logic is in `bridge/webhook.ts` and `bridge/receiver.ts`, with tests (secret, signature with a generated key, handshake, bursts). A live notification was seen on 13 Oct (steps 3,383 to 5,894). The two Task Scheduler tasks were deleted.
+- **Settings:** six Vercel production variables (`WEBHOOK_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`). If `ghealth auth login` is ever redone, update `GOOGLE_REFRESH_TOKEN` and redeploy.
+- **Found on the way:** the live API sends sleep as UTC instants plus an offset, not the documented local times; `bridge/health.ts` reads both. And the webhook admin API needs the project *number*, not the ID, or it answers 403.
 
 ## 6. Tests and tools
 
@@ -139,7 +142,7 @@ ghealth  →  bridge/sync.mjs  →  ledger (`vitals` events)  →  Pokedex, Life
 
 ## 7. Known gaps and what is still open
 
-- **Not yet proven on a real band.** The bridge, and therefore steps and measured sleep, are untested against Google Health. Eggs will not move until steps arrive.
+- **Proven on a real band**, with caveats: Google returned no sleep stages, heart rate or HRV for this band, so the sleep score rests on length and bedtime steadiness. Steps now reach the game, so eggs can move.
 - **Journey is still over the 2,500px target** (about 2,800 to 3,200px). The feats are folded behind one "All feats" line with the two closest shown. The league ladder (about 635px) and the season (about 467px) are the largest sections left.
 - **Not built, on purpose:** per-tab code splitting, a sprite sheet for item icons, caching the fold. Measured, and not worth it yet.
 - **Egg as a reward beyond the boss.** Left for later.

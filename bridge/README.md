@@ -20,21 +20,17 @@ Needs `ghealth` on PATH (or `GHEALTH_BIN`), already set up with `ghealth setup`,
 
 It is safe to run twice: a day whose numbers match the ledger writes nothing.
 
-## Every day
+## How it runs
 
-`bridge\run-health.cmd` runs the sync and appends to `bridge\last-run.log`. Two daily tasks call it: 10:00 (last night's sleep and yesterday's final steps) and 23:50 (today's steps, for the egg). Create them once, in PowerShell:
+**Automatically, from Google:** the webhook (last section). Nothing on this PC has to be on. There are no scheduled tasks any more.
 
-```powershell
-$s = 'D:\Ai Projects\Claude Code\pokedex\bridge\run-health.cmd'
-foreach ($t in @(@('LifeOS Health Sync Morning','10:00'), @('LifeOS Health Sync Evening','23:50'))) {
-  Register-ScheduledTask -TaskName $t[0] -Force `
-    -Action (New-ScheduledTaskAction -Execute 'cmd.exe' -Argument "/c `"$s`"") `
-    -Trigger (New-ScheduledTaskTrigger -Daily -At $t[1]) `
-    -Settings (New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries)
-}
+**By hand, when you want a catch-up** (a missed day, a long gap, or if the webhook is ever down):
+
+```
+npm run health -- --days 14
 ```
 
-`-StartWhenAvailable` makes a PC that was off at the time catch up when it wakes. A run reads the last 3 days, so a missed day or two is filled in.
+`bridge\run-health.cmd` wraps that for a scheduler if you ever want one again (it appends to `bridge\last-run.log`). Running the sync twice is safe: a day that matches the ledger writes nothing.
 
 ## Setup on a new machine
 
@@ -50,7 +46,7 @@ foreach ($t in @(@('LifeOS Health Sync Morning','10:00'), @('LifeOS Health Sync 
 
 ## Without the PC: the webhook
 
-Google can tell us when a day changes instead of us asking. `server/health-webhook.ts` (built to `api/health-webhook.js`, served at `https://pokedex-theta-swart.vercel.app/api/health-webhook`) receives the notification, checks the shared secret and Google's signature, answers 204, then reads the touched days from the API and writes what is new, the same way `npm run health` does. The PC tasks above do the same job on a timer; they are safe to keep as a fallback because a day that matches the ledger writes nothing.
+Google can tell us when a day changes instead of us asking. `server/health-webhook.ts` (built to `api/health-webhook.js`, served at `https://pokedex-theta-swart.vercel.app/api/health-webhook`) receives the notification, checks the shared secret and Google's signature, answers 204, then reads the touched days from the API and writes what is new, the same way `npm run health` does. `npm run health` does the same job by hand; both can run on the same day because a day that matches the ledger writes nothing. Notifications can arrive in bursts, so a burst may write the same row a few times; the game keeps the newest value per field, so nothing is counted twice.
 
 It runs on six Vercel production variables: `WEBHOOK_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`. If the refresh token is ever replaced (`ghealth auth login`), update `GOOGLE_REFRESH_TOKEN` and redeploy. The function's log says what each notification did.
 
