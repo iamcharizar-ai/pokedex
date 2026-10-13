@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode, type TouchEvent } from 'react'
 import { isGym, leaderOf, nameOf, spritePath, type Game, type Mon, type Moment } from '../core/fold.ts'
 import type { DayFacts, HabitFact } from '../core/facts.ts'
 import { LEAGUES, lineup } from '../core/gyms.ts'
@@ -22,7 +22,7 @@ import { Sheet } from './screens/Sheet.tsx'
 import { SeasonRoad } from './Road.tsx'
 import { BOSS_HEAL, KILL_CAP, THROWS, THROW_AT } from '../core/boss.ts'
 import { KIT_SHARD_EVERY } from '../core/rules.ts'
-import { Claims } from './Claim.tsx'
+import { CollectButton } from './Claim.tsx'
 import { Toasts } from './Toasts.tsx'
 import { aBall, badgeArt, badgeName, fmtDay, leagueName, still } from './lib/art.ts'
 import { play, setSoundOn, soundOn } from './lib/sfx.ts'
@@ -919,7 +919,7 @@ function RulesTab() {
           </Rule>
         </div>
         <div className="kit-row" style={{ marginTop: 14 }}>
-          <button type="button" className={`k-btn ${sound ? 'ok' : ''}`} aria-pressed={sound} onClick={() => { setSoundOn(!sound); setSound(!sound); if (!sound) play('buy') }}>Sound: {sound ? 'on' : 'off'}</button>
+          <button type="button" className={`k-btn ${sound ? 'ok' : ''}`} aria-pressed={sound} onClick={() => { setSoundOn(!sound); setSound(!sound); if (!sound) play('buy') }}>Sound and buzz: {sound ? 'on' : 'off'}</button>
           <span className="muted">Rules version 11. The game began {fmtDay(GAME_START)}.</span>
         </div>
       </div>
@@ -941,29 +941,53 @@ const ICON: Record<Tab, ReactNode> = Object.fromEntries(
   (Object.keys(TAB_SPRITE) as Tab[]).map((t) => [t, <img key={t} src={`/sprites/items/${TAB_SPRITE[t]}.png`} width={48} height={48} alt="" className="tabicon pix" draggable={false} />]),
 ) as Record<Tab, ReactNode>
 
-/** Always in view: the partner's level and bar, badges won, Pokemon seen, and the Key Stone once it is held. */
-function TopBar({ game, status, loading, onHelp }: { game: Game; status: string[]; loading: boolean; onHelp: () => void }) {
+/** Always in view: the partner's face in a ring that fills with its level, the two things you spend, Collect, and the season. */
+function TopBar({ game, today, status, loading, onHelp }: { game: Game; today: string; status: string[]; loading: boolean; onHelp: () => void }) {
   const seen = Object.keys(game.dex).filter((id) => !SPECIES[id]?.f).length
   const v5 = !loading
   const nx = game.season.next
+  const into = clamp01(game.into / game.need)
+  const R = 27, C = 2 * Math.PI * R
   return (
-    <header className="topbar">
-      <div className="lv" title={v5 ? `Season step ${game.season.step}. Every ${game.season.need.toLocaleString('en-IN')} XP of the month's work is a step.` : undefined}>
-        <span className="k-type">{v5 ? `Season ${game.season.step}` : 'Pokedex'}</span>
+    <header className="topbar tb">
+      <span className="tb-ring" title={`${nameOf(game.display)}, level ${game.level}: ${Math.round(game.into).toLocaleString('en-IN')} of ${game.need.toLocaleString('en-IN')} XP to the next`} role="img" aria-label={`Level ${game.level}, ${Math.round(into * 100)} percent to the next`}>
+        <svg viewBox="0 0 64 64" aria-hidden>
+          <circle cx="32" cy="32" r={R} className="track" />
+          <circle cx="32" cy="32" r={R} className="fill" strokeDasharray={`${C * into} ${C}`} transform="rotate(-90 32 32)" />
+        </svg>
+        {v5 ? <img src={still(game.display, game.partner.shiny)} alt="" width={40} height={40} className="sprite" /> : <Ball ball="poke" size={32} />}
+        {v5 && <b className="tb-lv">Lv {game.level}</b>}
+      </span>
+      <div className="tb-main">
+        <div className="tb-row">
+          {v5
+            ? <><KPill icon={<Coin size={28} />}><span data-reward-target="coins" title="Coins: for showing up, quests, the season, chests and the Professor"><Count value={game.wallet.coins} /></span></KPill><KPill icon={<Gem size={28} />}><span data-reward-target="gems" title="Gems: from feats, milestones and weekly quests"><Count value={game.wallet.gems} /></span></KPill><CollectButton game={game} today={today} /></>
+            : <KPill icon={<Ball ball="poke" size={28} />}><span title="Pokemon seen">{seen}</span></KPill>}
+          <span className="tb-gap" />
+          <button type="button" className="k-btn help" aria-label="How it works" onClick={onHelp}>?</button>
+          <span className={`sync s-${status[0]}`} role="status" aria-label={status[1]} title={status[1]} />
+        </div>
         {v5 && (
-          <div className="k-bar gold" role="progressbar" aria-valuemin={0} aria-valuemax={game.season.need} aria-valuenow={game.season.into} aria-label="Progress to the next season step">
-            <i style={{ width: `${clamp01(game.season.into / game.season.need) * 100}%` }} />
-            <span className="nextprize">{game.season.into.toLocaleString('en-IN')} / {game.season.need.toLocaleString('en-IN')} · next {nx.coins ? <><Coin size={16} />{nx.coins}</> : nx.gems ? <><Gem size={16} />{nx.gems}</> : (nx.item ? itemName(nx.item) : '')}</span>
+          <div className="tb-season" title={`Season step ${game.season.step}. Every ${game.season.need.toLocaleString('en-IN')} XP of the month's work is a step.`}>
+            <span className="k-label">Season {game.season.step}</span>
+            <div className="k-bar gold" role="progressbar" aria-valuemin={0} aria-valuemax={game.season.need} aria-valuenow={game.season.into} aria-label="Progress to the next season step">
+              <i style={{ width: `${clamp01(game.season.into / game.season.need) * 100}%` }} />
+              <span className="nextprize">{game.season.into.toLocaleString('en-IN')} / {game.season.need.toLocaleString('en-IN')} · next {nx.coins ? <><Coin size={14} />{nx.coins}</> : nx.gems ? <><Gem size={14} />{nx.gems}</> : (nx.item ? itemName(nx.item) : '')}</span>
+            </div>
           </div>
         )}
       </div>
-      {v5
-        ? <><KPill icon={<Coin size={28} />}><span data-reward-target="coins" title="Coins: for showing up, quests, the season, chests and the Professor"><Count value={game.wallet.coins} /></span></KPill><KPill icon={<Gem size={28} />}><span data-reward-target="gems" title="Gems: from feats, milestones and weekly quests"><Count value={game.wallet.gems} /></span></KPill></>
-        : <KPill icon={<Ball ball="poke" size={28} />}><span title="Pokemon seen">{seen}</span></KPill>}
-      <button type="button" className="k-btn help" aria-label="How it works" onClick={onHelp}>?</button>
-      <span className={`sync s-${status[0]}`} role="status" aria-label={status[1]} title={status[1]} />
     </header>
   )
+}
+
+/** A swipe started on something that scrolls sideways, or in a field, is that thing's, not the tab bar's. */
+function swipeable(el: EventTarget | null): boolean {
+  for (let n = el as HTMLElement | null; n && n !== document.body; n = n.parentElement) {
+    if (n.matches('input, textarea, select, [data-noswipe]')) return false
+    if (n.scrollWidth > n.clientWidth + 2 && /(auto|scroll)/.test(getComputedStyle(n).overflowX)) return false
+  }
+  return true
 }
 
 export default function App() {
@@ -971,6 +995,25 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('partner')
   const [help, setHelp] = useState(false)
   useEffect(() => start(), [])
+  // swipe sideways to change tab: a long, mostly horizontal, quick drag that did not start on something scrolling
+  const touch = useRef<{ x: number; y: number; t: number } | null>(null)
+  const go = (dir: -1 | 1) => {
+    const i = TABS.findIndex(([id]) => id === tab) + dir
+    if (i < 0 || i >= TABS.length) return
+    setTab(TABS[i][0]); play('tap'); window.scrollTo({ top: 0 })
+  }
+  const swipeStart = (e: TouchEvent<HTMLElement>) => {
+    const t = e.touches[0]
+    touch.current = e.touches.length === 1 && swipeable(e.target) && !document.querySelector('.sheet, .capsule, .recap') ? { x: t.clientX, y: t.clientY, t: Date.now() } : null
+  }
+  const swipeEnd = (e: TouchEvent<HTMLElement>) => {
+    const s0 = touch.current
+    touch.current = null
+    if (!s0) return
+    const t = e.changedTouches[0], dx = t.clientX - s0.x, dy = t.clientY - s0.y
+    if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 2 || Date.now() - s0.t > 600) return
+    go(dx < 0 ? 1 : -1)
+  }
   const { game } = view
   // the first read has not landed yet: do not draw an empty day as if it were real
   const loading = view.status === 'connecting'
@@ -978,12 +1021,11 @@ export default function App() {
   return (
     <div className="shell">
       {FIXTURE && <a className="fixturetag" href={location.pathname} title={`${FIXTURE.note} Nothing here is your game, and nothing is saved. Tap to leave.`}>Fixture: {FIXTURE.name} · {fmtDay(FIXTURE.today)} · not your game ✕</a>}
-      <TopBar game={game} status={status} loading={loading} onHelp={() => setHelp(true)} />
-      {!loading && <Claims game={game} today={view.today} />}
+      <TopBar game={game} today={view.today} status={status} loading={loading} onHelp={() => setHelp(true)} />
       {!loading && <Toasts game={game} today={view.today} />}
       {!loading && <ChestOpener game={game} />}
       {!loading && <HatchOpener game={game} />}
-      <main key={tab} className="tabin">
+      <main key={tab} className="tabin" onTouchStart={swipeStart} onTouchEnd={swipeEnd}>
         {loading && (
           <Win title="Loading" tone="dark">
             <div className="care"><Egg /><p>Reading your Life OS ledger...<span className="muted" style={{ display: 'block' }}>Your partner appears as soon as it arrives.</span></p></div>

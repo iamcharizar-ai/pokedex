@@ -3,7 +3,6 @@
 // team, the Professor, quests. Every one is written to the ledger as one small
 // event (store.useItem), so the game is still recomputed from the ledger alone.
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { createPortal } from 'react-dom'
 import { nameOf, spritePath, type Game, type Mon, type Quest } from '../core/fold.ts'
 import {
   BALLS, DOMAIN_SHOPS, FORGE_COST, GEAR_ITEMS, HELD, ITEMS, LURES, MARKS, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, masteryCost, RARE_SHELF, SELL, TM_SLOTS, itemName, throwHp, tmType,
@@ -15,9 +14,10 @@ import { SPECIES } from '../core/species.ts'
 import { MonCard, TAG_NAME, Win, plural } from './App.tsx'
 import { Ball, BallItem } from './Ball.tsx'
 import { Forge } from './screens/Forge.tsx'
+import { Sheet } from './screens/Sheet.tsx'
 import { Nursery } from './screens/Nursery.tsx'
 import { Coin, EggIcon, Gem, ItemIcon, MarkIcon } from './Item.tsx'
-import { KBar, KButton, KClose, KReveal } from './Kit.tsx'
+import { KBar, KButton } from './Kit.tsx'
 import { aBall, fmtDay, still } from './lib/art.ts'
 import { buyPop } from './lib/fx.ts'
 import { play } from './lib/sfx.ts'
@@ -315,14 +315,6 @@ export function DomainShop({ game, tag }: { game: Game; tag: MarkTag }) {
 }
 
 export function ShopTab({ game, only }: { game: Game; only?: ShopId }) {
-  // a chest opens the moment it is bought: show what was in the newest one, once
-  const opened = game.moments.flatMap((m) => (m.kind === 'chest' ? [m] : []))
-  const told = useRef(opened.length)
-  const [loot, setLoot] = useState<(typeof opened)[number] | null>(null)
-  useEffect(() => {
-    if (opened.length > told.current) { setLoot(opened[opened.length - 1]); play('catch') }
-    told.current = opened.length
-  }, [opened.length]) // eslint-disable-line react-hooks/exhaustive-deps
   const [which, setWhich] = useState<ShopId>('mart')
   const show = (s: ShopId) => (only ?? which) === s
   const chips: [ShopId, string, ReactNode][] = [['mart', 'Mart', <Coin key="m" size={18} />], ['rare', 'Rare', <Gem key="r" size={18} />], ...MARK_TAGS.map((t): [ShopId, string, ReactNode] => [t, DOMAIN_SHOPS[t].name, <MarkIcon key={t} tag={t} size={18} />])]
@@ -353,18 +345,6 @@ export function ShopTab({ game, only }: { game: Game; only?: ShopId }) {
       )}
       {show('rare') && <IncenseWin game={game} />}
       {MARK_TAGS.filter((t) => show(t)).map((t) => <DomainShop key={t} game={game} tag={t} />)}
-      {loot && createPortal(
-        <div className="recap" role="dialog" aria-modal="true" aria-label="What was in the chest" onClick={() => setLoot(null)}>
-          <div className="rc-win"><div className="rc-body">
-            <div className="rc-eyebrow">Chest {loot.n}</div>
-            <KReveal tier={loot.item === 'full-incense' ? 'rare' : loot.item === 'ultra-ball' ? 'big' : 'ordinary'} title={loot.coins ? `${loot.coins} coins` : `${itemName(loot.item)}${loot.count > 1 ? ` ×${loot.count}` : ''}`} replay={loot.n}>
-              {loot.coins ? <Coin size={96} /> : <ItemIcon id={loot.item} size={96} />}
-            </KReveal>
-            <button type="button" className="go" autoFocus>Continue</button>
-          </div></div>
-        </div>,
-        document.body,
-      )}
       {!only && (
         <Win title="How you earn" tone="dark">
           <ul className="earn">
@@ -473,10 +453,9 @@ export function MonPage({ m, game, onClose }: { m: Mon; game: Game; onClose: () 
   const megas = rec.m ?? []
   const sell = SELL[rec.r ?? 'C'] ?? SELL.C
   // drawn on the page itself, not inside the tab: the tab slides in and would carry the window off with it
-  return createPortal(
-    <div className="recap" role="dialog" aria-modal="true" aria-label={nameOf(m.form)} onClick={onClose}>
-      <div className="monpage" onClick={(e) => e.stopPropagation()}>
-        <KClose onClick={onClose} />
+  return (
+    <Sheet title={nameOf(m.form)} onClose={onClose}>
+      <div className="monpage">
         <div className={`mp-art ${m.megas?.length ? 'mega' : ''}`}><img src={spritePath(m.megas?.length && m.show !== 'base' ? (m.show && m.megas.includes(m.show) ? m.show : m.megas[0]) : m.form, m.shiny)} alt="" className="sprite" /></div>
         <div className="mp-body">
           <h2 className="k-type">{nameOf(m.form)}{m.shiny && <span className="chip">shiny</span>}</h2>
@@ -509,8 +488,7 @@ export function MonPage({ m, game, onClose }: { m: Mon; game: Game; onClose: () 
           </div>
         </div>
       </div>
-    </div>,
-    document.body,
+    </Sheet>
   )
 }
 

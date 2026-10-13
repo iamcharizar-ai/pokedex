@@ -60,7 +60,6 @@
 .fx-shard { position: absolute; z-index: 5; width: 28px; height: 28px; background-size: contain; background-repeat: no-repeat; image-rendering: pixelated; pointer-events: none; overflow: hidden; }
 
 /* chips breathe with the claim button's timing but a smaller swing, and the row leaves them room */
-.claims-row { padding: 6px 4px 8px; }
 .claim-chip.breathe { animation-name: breathe-sm; }
 .claim-chip.breathe:nth-child(2n) { animation-delay: 0.1s; }
 .claim-chip.breathe:nth-child(3n) { animation-delay: 0.2s; }

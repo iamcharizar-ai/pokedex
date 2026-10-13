@@ -93,3 +93,39 @@ details.win.folded:not([open]) > summary.win-h { border-bottom-width: 0; border-
 .nights > summary { cursor: pointer; list-style: none; }
 .nights > summary::-webkit-details-marker { display: none; }
 .nights > summary::after { content: ' ▾'; }
+
+/* ── the top bar: the partner in a level ring, what you spend, Collect, the season ── */
+.tb { display: flex; align-items: center; gap: var(--s-3); flex-wrap: nowrap; }
+.tb-ring { position: relative; flex: none; width: 64px; height: 64px; display: grid; place-items: center; }
+.tb-ring svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.tb-ring .track { fill: rgba(8, 12, 30, 0.6); stroke: var(--k-edge); stroke-width: 7; }
+.tb-ring .fill { fill: none; stroke: var(--k-gold); stroke-width: 5; stroke-linecap: round; transition: stroke-dasharray var(--t-pop) linear; }
+.tb-ring .sprite { position: relative; image-rendering: pixelated; }
+.tb-lv { position: absolute; left: 50%; bottom: -4px; translate: -50% 0; padding: 0 var(--s-2); font-family: var(--k-face); font-weight: 400; font-size: 12px; color: var(--k-edge); background: var(--k-gold); border: 2px solid var(--k-edge); border-radius: 999px; white-space: nowrap; }
+.tb-main { flex: 1; min-width: 0; display: grid; gap: var(--s-2); }
+.tb-row { display: flex; align-items: center; gap: var(--s-2); min-width: 0; }
+.tb-row .k-pill { margin-left: 10px; min-width: 0; padding-right: var(--s-2); }
+.tb-gap { flex: 1; }
+.tb-season { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: var(--s-2); }
+.tb-season .k-bar { height: 18px; }
+.tb-collect { position: relative; flex: none; width: 44px; height: 44px; display: grid; place-items: center; padding: 0; background: rgba(8, 12, 30, 0.55); border: 2px solid var(--k-edge); border-radius: 12px; cursor: pointer; }
+.tb-collect.has { background: var(--k-gold); box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35); }
+.tb-collect:not(.has) img { opacity: 0.45; filter: grayscale(1); }
+.tb-count { position: absolute; top: -8px; right: -8px; min-width: 22px; height: 22px; padding: 0 5px; display: grid; place-items: center; font: normal 12px var(--k-face); color: #fff; background: var(--k-red); border: 2px solid var(--k-edge); border-radius: 999px; }
+
+/* ── the Collect sheet ── */
+.collect { display: grid; gap: var(--s-3); }
+.collect-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding-right: 48px; }
+.collect-head h2 { margin: 0; font-size: var(--t-display); }
+.collect-list { display: grid; gap: var(--s-2); }
+.collect-list .claim-chip { width: 100%; min-height: 56px; justify-content: flex-start; }
+
+/* ── a sheet's handle: the strip you drag down ── */
+.sheet-handle { display: grid; place-items: center; height: 28px; margin: calc(var(--s-4) * -1) 0 var(--s-1); touch-action: none; cursor: grab; }
+.sheet-handle .sheet-grip { margin: 0; }
+.sheet { touch-action: pan-y; overscroll-behavior: contain; }
+
+/* a Pokemon's page inside a sheet: the sheet is the frame, so the page's own frame goes */
+.sheet .monpage { width: auto; max-height: none; padding: 0; overflow: visible; background: none; border: 0; box-shadow: none; border-radius: 0; animation: none; }
+.sheet .monpage > .k-close { display: none; }
+@media (max-width: 560px) { .tb-season .k-label { display: none; } .tb-season { grid-template-columns: 1fr; } .tb .help { width: 40px; height: 40px; flex: none; } }

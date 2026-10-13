@@ -16,6 +16,7 @@ import { flyReward } from './lib/fly.ts'
 import { K, motion, motionConfig, run } from './lib/fx.ts'
 import { capsuleBurst, capsulePopup, confetti, evoUnlocked, type RarityName } from './lib/motion.js'
 import { play } from './lib/sfx.ts'
+import { RANK, useOverlay } from './screens/overlay.ts'
 
 // ── an evolution ────────────────────────────────────────────────────────────
 export function EvoReveal({ from, to, title, replay = 0 }: { from: string; to: string; title: string; replay?: number }) {
@@ -142,7 +143,8 @@ export function ChestOpener({ game }: { game: Game }) {
     if (fresh.length) setQueue((q) => [...q, ...fresh])
   }, [count])
   const c = queue[0]
-  if (!c) return null
+  const turn = useOverlay(Boolean(c), RANK.chest)
+  if (!c || !turn) return null
   const rare = c.item === 'full-incense' ? 'epic' : c.item === 'ultra-ball' ? 'rare' : 'common'
   const done = (from: Element | null) => {
     if (from) flyReward(from, c.coins ? `+${c.coins}` : `+${c.count} ${itemName(c.item)}`, c.coins ? 'coins' : 'bag')
@@ -177,7 +179,8 @@ export function HatchOpener({ game }: { game: Game }) {
     if (fresh.length) setQueue((q) => [...q, ...fresh])
   }, [count])
   const h = queue[0]
-  if (!h) return null
+  const turn = useOverlay(Boolean(h), RANK.hatch)
+  if (!h || !turn) return null
   return (
     <Capsule key={h.uid} box={<ItemIcon id="rare-egg" size={130} />} rarity="epic" title={`${nameOf(h.form)}!`} line="The egg hatched. It is in your Box." onDone={() => setQueue((q) => q.slice(1))}>
       <img src={spritePath(h.form)} alt="" width={128} height={128} className="sprite" />

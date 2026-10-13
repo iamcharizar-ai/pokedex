@@ -29,8 +29,14 @@ const NOTES: Record<Sound, [number, number, OscillatorType][]> = {
 }
 
 /** `rise` is in semitones: a chain of collects climbs, one step each, and wraps after an octave. */
+/** What the phone does under each sound (milliseconds on, off, on...). Off with the sound. */
+const BUZZ: Partial<Record<Sound, number | number[]>> = {
+  tap: 6, buy: 12, throw: 10, hit: 18, catch: [30, 40, 30, 40, 70], feed: 12, collect: 14, thud: 25, click: 8, level: [20, 30, 60],
+}
+
 export function play(sound: Sound, rise = 0): void {
   if (!soundOn()) return
+  try { navigator.vibrate?.(BUZZ[sound] ?? 0) } catch { /* no vibration here: carry on */ }
   try {
     ctx ??= new AudioContext()
     let t = ctx.currentTime

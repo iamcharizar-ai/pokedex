@@ -7,6 +7,7 @@
 // Pokemon becoming its Mega. What is forged is one `forge` event in the
 // ledger; this screen only tells it.
 import { useMemo, useRef, useState } from 'react'
+import { useHold } from './overlay.ts'
 import { COMET_SHARD, FORGE_COST, SHARDS, forgeShard, itemName } from '../../core/economy.ts'
 import { nameOf, spritePath, type Game, type Mon } from '../../core/fold.ts'
 import { SPECIES } from '../../core/species.ts'
@@ -24,6 +25,9 @@ import { told } from '../lib/told.ts'
 const SHOWN = 4
 
 interface Slot { m: Mon; mega: string; index: number; count: number }
+
+/** The reveal is something the player started: nothing automatic opens over it. */
+function Hold() { useHold(); return null }
 
 export function Forge({ game }: { game: Game }) {
   const [reveal, setReveal] = useState<{ from: string; to: string } | null>(null)
@@ -123,6 +127,7 @@ export function Forge({ game }: { game: Game }) {
       )}
       {reveal && (
         <div className="capsule" role="dialog" aria-modal="true" aria-label="Mega forged" onClick={() => setReveal(null)}>
+          <Hold />
           <div className="capsule-stage" style={{ width: 'min(360px, 92vw)', height: 'auto' }}>
             <EvoReveal from={still(reveal.from)} to={spritePath(reveal.to)} title={`${nameOf(reveal.to)}!`} />
           </div>

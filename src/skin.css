@@ -13,8 +13,6 @@ h1, h2, h3 { font-family: var(--k-face); letter-spacing: 0.03em; text-transform:
 
 /* ── frame: top bar. The three things that matter, always in view ── */
 .topbar { position: sticky; top: 0; z-index: 12; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 0 -16px 16px; padding: 10px 18px 12px; color: #fff; background: linear-gradient(#2c3970, #1b2448); border-bottom: 4px solid var(--k-edge); box-shadow: 0 4px 0 rgba(0, 0, 0, 0.25); }
-.topbar .lv { display: grid; grid-template-columns: auto minmax(110px, 1fr); align-items: center; gap: 10px; flex: 1 1 240px; min-width: 0; }
-.topbar .lv .k-type { font-size: 20px; white-space: nowrap; }
 .topbar .k-pill { min-width: 0; }
 .topbar .sync { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--k-edge); background: #8a90a6; flex: none; }
 .topbar .sync.s-live { background: var(--hp-ok); } .topbar .sync.s-connecting { background: var(--hp-mid); } .topbar .sync.s-error { background: var(--hp-low); }
@@ -339,7 +337,6 @@ main .queue.pick button.on img { background: none; outline: 0; }
 
 /* ── top bar: the season ── */
 .topbar .nextprize { display: inline-flex; align-items: center; justify-content: center; gap: 4px; font-size: 13px; }
-.topbar .lv .k-bar { height: 22px; }
 
 /* ── the egg, being kept warm ── */
 .eggrow { display: flex; align-items: center; gap: 12px; margin-top: 14px; padding: 10px 12px; background: rgba(8, 12, 30, 0.4); border: 2px solid var(--k-edge); border-radius: 12px; }
@@ -388,8 +385,7 @@ main .queue.pick button.on img { background: none; outline: 0; }
 
 @media (max-width: 760px) {
   .topbar { margin: 0 -12px 14px; padding: 8px 12px 10px; gap: 6px 10px; }
-  .topbar .lv { flex-basis: 100%; }
-  .navbar { border-left: 0; border-right: 0; border-radius: 0; }
+    .navbar { border-left: 0; border-right: 0; border-radius: 0; }
   .navbar button { min-height: 64px; font-size: 12px; } .navbar button .tabicon { width: 48px; height: 48px; } .navbar button:first-child, .navbar button:last-child { border-radius: 0; }
   .moves { padding: 0 10px 12px; border-top: 0; }
   .say { font-size: 20px; padding: 14px 16px 10px; }
@@ -410,9 +406,6 @@ main .queue.pick button.on img { background: none; outline: 0; }
 }
 
 /* ── rewards to collect, and the fly into the pocket (Claim.tsx, lib/fly.ts) ── */
-.claims { margin: 0 0 14px; padding: 8px 10px 10px; background: linear-gradient(#2c3970, #1b2448); border: 3px solid var(--k-edge); border-radius: 10px; color: #fff; }
-.claims-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; }
-.claims-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
 .claim-chip { flex: none; display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 12px 6px 8px; color: #1a1200; text-align: left; background: #ffd800; border: 3px solid var(--k-edge); border-radius: 10px; box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35); cursor: pointer; }
 .claim-chip:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35); }
 .claim-ico { display: flex; gap: 2px; }

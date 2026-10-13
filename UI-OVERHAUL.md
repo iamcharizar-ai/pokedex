@@ -1,6 +1,6 @@
 # A complete UI overhaul: the plan
 
-Written 13 Oct 2026, revised 14 Oct after your answers. **Phases 0, 1 and 2 are built; the rest is a plan.** It comes from reading the Pokedex end to end (about 1,370 lines of CSS in five files, a 1,070-line `App.tsx`, five tabs) and from the motion study.
+Written 13 Oct 2026, revised 14 Oct after your answers. **Phases 0 to 3 are built; the rest is a plan.** It comes from reading the Pokedex end to end (about 1,370 lines of CSS in five files, a 1,070-line `App.tsx`, five tabs) and from the motion study.
 
 ## 0. Where this stands
 
@@ -18,7 +18,7 @@ Written 13 Oct 2026, revised 14 Oct after your answers. **Phases 0, 1 and 2 are 
 4. Life OS: the XP chip should push out, hang for about a second, then be pulled in more slowly.
 5. Life OS: the breathing month-review button looks shabby, and so does the square behind the Comet Shard.
 
-**Built so far:** phase 0 (section 3), the Mega rebalance (section 4, rules version 11), screenshot comparison, phase 1 (section 5) and phase 2 (section 5, with the result in section 2).
+**Built so far:** phase 0 (section 3), the Mega rebalance (section 4, rules version 11), screenshot comparison, phase 1 (section 5), phase 2 (section 5, with the result in section 2) and phase 3 (section 5).
 
 **Your answers to the last round:** the Mega proposal, yes; Playwright, yes; the boss on Today as a tile that opens its full view.
 
@@ -125,11 +125,16 @@ So feats alone gave two stones for the first Pokemon that can use one, and the f
 - 58 CSS rules for the deleted and replaced screens were removed with `tools/css-unused.mjs` (a permanent tool: it lists, or with `--fix` removes, rules for classes no code uses). The screenshots were identical before and after.
 - **Not done in phase 2:** `MonCard` is still in use (every Pokemon a `KCard` is a visual change that belongs with phase 3's cards), and the Collect strip is still a block at the top of every tab rather than a badge that opens a sheet (phase 3).
 
-### Phase 3: how it is held
-- **Bottom sheets** instead of centred modals (item pages, the Box, the boss, the leader, Collect), dragged down to close.
-- **One overlay queue**, so a chest, the news and a toast take turns.
-- **Swipe between tabs. Haptics** on a collect, a hit, a catch and a level banner, off with sound.
-- **A top bar with a level ring** round the partner's face, pills that show the change as it lands, and a Collect badge with a count.
+### Phase 3: how it is held (built)
+- **A top bar with the partner in a level ring.** One compact row (about 90 pixels): the partner's face inside a ring that fills with its level progress and wears its level, then coins, gems, and a **Collect badge**, then help and sync. The season is a thin bar under it. The old Collect strip, which sat as a block on top of every tab, is gone.
+- **Collect is a sheet.** The badge is gold with a count when rewards wait (and breathes), grey when not. Tapping opens a thumb-reachable list with "Collect all"; claiming flies each reward to the pill or tab that keeps it, and the sheet puts itself away once the last is taken.
+- **One overlay queue** (`screens/overlay.ts`). The news window, a chest, a hatch and a sheet you opened now take turns: a sheet you opened goes first and everything automatic waits behind it; otherwise news, then chests, then hatches, in the order they asked. Checked on the `late` fixture, which used to stack three at once: news first, then each chest alone, never two together.
+- **A Pokemon's page is a sheet**, like the boss and the leader. The Shop's old chest window is deleted (it opened a second window over the new capsule: a bug from the motion work).
+- **Sheets close four ways:** the backdrop, the close button, Escape, or **dragging the handle down** past about a hundred pixels (a shorter drag snaps back).
+- **Swipe between tabs:** a long, mostly sideways, quick drag changes tab. It ignores a drag that starts on something that scrolls sideways or in a field, does nothing while a sheet or overlay is open, and stops at the first and last tab.
+- **Haptics** (`navigator.vibrate`) on the beats that have a sound: a tap, a buy, a hit, a collect, a catch, a level banner. They follow the sound switch, now labelled "Sound and buzz". Nothing happens on a device that cannot vibrate.
+- **Not done:** the cards. Every Pokemon is still a `MonCard`; moving them to the kit's `KCard` is a visual change that fits with phase 4.
+- Heights fell again, about 160 pixels on every tab (Today 1,465 under `boss`; Journey 2,637).
 
 ### Phase 4: the scene
 Layered parallax (sky, far hills, near ground), a sky on the real clock with the weather last night's sleep implies, the partner idling and turning toward what the wild Pokemon does, and reacting when tapped. No reward for tapping: it is life, not a mechanic.
@@ -156,7 +161,7 @@ Share the tokens and motion kit the way the core is shared. This is where the on
 | 0 Fixtures and screenshots | half a day | **done** |
 | 1 Tokens and layers | 1 session | **done** |
 | 2 Five tabs and the Forge | 3 sessions | **done** |
-| 3 Sheets, queue, swipe, haptics, top bar | 1 session | |
+| 3 Sheets, queue, swipe, haptics, top bar | 1 session | **done** |
 | 4 The scene | 1 to 2 sessions | |
 | 5 Data views | half a session | |
 | 6 Tour, accessibility, performance | 2 sessions | |
@@ -164,5 +169,5 @@ Share the tokens and motion kit the way the core is shared. This is where the on
 
 ## 8. Decisions I still need
 
-1. **The egg's mechanics (on hold, now the next thing).** The Nursery is built, but it only shows today's rules. You asked for three changes: **steps from Vitals hatch the egg**, **no second egg appears while one is warming**, and **eggs can be rewards**. They are a rules change (version 12). Say go and I will design the step count (my first thought: an egg needs a number of steps, and each day's steps from Vitals go into it, with the two-pillar days as a bonus) and check the fold for where a second egg comes from.
-2. **Phase 3 next?** Sheets for everything (item pages, the Box, Collect), one overlay queue (a chest, news and a toast no longer stack), swipe between tabs, haptics, and a top bar with a level ring and a Collect badge.
+1. **Vitals first, then the egg.** See `lifeos/docs/VITALS-ASSESSMENT.md`. The egg-on-steps change (rules version 12) only means something once a real sync has landed, and nothing in the repo shows one has. Can you check Today's "Last night" on a morning after the 07:00 job, or tell me where the Google Health data comes from today?
+2. **Phase 4, the scene** (parallax, a sky on the real clock, a partner that reacts), or the egg change, or the Vitals trim, next?

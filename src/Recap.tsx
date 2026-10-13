@@ -15,6 +15,7 @@ import { KReveal, type Tier } from './Kit.tsx'
 import { EvoReveal } from './Reveal.tsx'
 import { party } from './lib/fx.ts'
 import { told } from './lib/told.ts'
+import { RANK, useOverlay } from './screens/overlay.ts'
 import { aBall, badgeArt, badgeName, fmtDay, leagueName, still } from './lib/art.ts'
 
 const SEEN_KEY = 'pokedex.seen.v1'
@@ -143,7 +144,8 @@ export function Recap({ game, today }: { game: Game; today: string }) {
   const win = useRef<HTMLDivElement>(null)
   const head = told[0]?.m
   useEffect(() => { setOpened(false); setForce(false) }, [head])
-  if (!told.length) return null
+  const turn = useOverlay(told.length > 0, RANK.news)
+  if (!told.length || !turn) return null
   const [top, ...rest] = told
   const days = new Set(told.map((x) => x.m.day))
   const tier = tierOf(top.m)
