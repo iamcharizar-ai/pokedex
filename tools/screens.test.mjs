@@ -57,3 +57,14 @@ test('one place decides where an HP bar turns amber and red', () => {
   assert.equal(hpTone(0.2), 'low')
   assert.equal(hpTone(0), 'low')
 })
+
+test('Life OS runs the same motion kit as the Pokedex', async () => {
+  const fs = await import('node:fs')
+  const life = new URL('../../lifeos/src/ui-kit/', import.meta.url)
+  if (!fs.existsSync(life)) return
+  const read = (u) => fs.readFileSync(u, 'utf8').replace(/\r\n/g, '\n')
+  for (const [mine, theirs] of [['../src/lib/motion.js', 'motion.js'], ['../src/lib/motion.d.ts', 'motion.d.ts']])
+    assert.equal(read(new URL(mine, import.meta.url)), read(new URL(theirs, life)), `${theirs} differs: run npm run kit`)
+  const css = read(new URL('motion-tokens.css', life))
+  for (const t of ['--t-fade', '--t-slide', '--t-pop', '--t-breathe', '--ease-out', '--ease-in', '--ease-in-out']) assert.ok(css.includes(t + ':'), `${t} is not in Life OS's motion-tokens.css: run npm run kit`)
+})

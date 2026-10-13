@@ -1,6 +1,6 @@
 # A complete UI overhaul: the plan
 
-Written 13 Oct 2026, revised 14 Oct after your answers. **Phases 0 to 6 are built, and phase 7 is the one left.** It comes from reading the Pokedex end to end (about 1,370 lines of CSS in five files, a 1,070-line `App.tsx`, five tabs) and from the motion study.
+Written 13 Oct 2026, revised 14 Oct after your answers. **All eight phases (0 to 7) are built.** It comes from reading the Pokedex end to end (about 1,370 lines of CSS in five files, a 1,070-line `App.tsx`, five tabs) and from the motion study.
 
 ## 0. Where this stands
 
@@ -165,7 +165,13 @@ So feats alone gave two stones for the first Pokemon that can use one, and the f
 - **Not done:** a non-motion equivalent for every flourish was checked by reading, not measured: the moments that animate (a hit, a catch, a level) also have a line in the news, a toast or the adventure log, and the floating marks are hidden from screen readers while the claim has a live announcement.
 
 ### Phase 7: Life OS gets the same kit
-Share the tokens and motion kit the way the core is shared. This is where the on-hold Life OS items are done properly.
+Share the tokens and motion kit the way the core is shared. This is where the on-hold Life OS items are done properly. **Built.**
+
+- **Shared:** `npm run kit` (here) copies `src/lib/motion.js`, `motion.d.ts` and a generated `motion-tokens.css` (the seven timing and easing tokens) into `lifeos/src/ui-kit`, the same way `npm run core` copies the game. A test fails if the two copies drift. **Only motion is shared.** Life OS keeps its neo-brutalist look; it does not get the Pokedex's colours or layers.
+- **XP chip when a habit expires:** pushed out away from the bar (320 ms), hangs about a second with a small bob, then is pulled to the bar over about a second, slow at first and quick at the end, and the bar pulses when it lands. Several chips leave 180 ms apart. Measured in a real browser: 2.6 s end to end.
+- **Month review:** a calm card with the shard floating on its own (no box behind it), one yellow "Close <Month>" button and a "Graph" link. The breathing is gone from the card; the shard still flies to the "to collect" chip when you close it.
+- **Smaller pieces:** a tick flashes the row and stamps its XP in; the momentum on the partner strip is a flame that grows with the multiplier. All of it is off under reduced motion.
+- A gotcha worth keeping: Life OS's `.neo-button` and `.neo-card` backgrounds are unlayered, so a Tailwind `bg-*` utility cannot override them; use `neo-card-yellow` and the like.
 
 ## 6. What I would not do
 
@@ -184,9 +190,9 @@ Share the tokens and motion kit the way the core is shared. This is where the on
 | 4 The scene | 1 to 2 sessions | **done** |
 | 5 Data views | half a session | **done** |
 | 6 Tour, accessibility, performance | 2 sessions | **done** |
-| 7 Shared kit with Life OS, and the on-hold Life OS items | 1 session | |
+| 7 Shared kit with Life OS, and the on-hold Life OS items | 1 session | **done** |
 
 ## 8. Decisions I still need
 
 1. **Journey is the one tab over my 2,500 pixel target** (about 3,200 to 3,600, calendar included). The big pieces are the feats (943), the season (461), the calendar (about 440) and the quests (389). Say if you want the feats folded behind their "closest" road.
-2. **Phase 7** (the same tokens and motion kit in Life OS, and the on-hold Life OS items), the egg change (rules version 12), or the Vitals trim, next? The Vitals sync check still comes before the egg.
+2. **The egg change (rules version 12) or the Vitals trim, next?** The Vitals sync check still comes before the egg.
