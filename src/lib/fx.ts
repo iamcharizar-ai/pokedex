@@ -31,6 +31,29 @@ export function hit(el: Element | null | undefined, dir: 'left' | 'right' = 'rig
   ]))
 }
 
+/** Your work landed a hit: the partner leans in at the wild Pokemon and back, 320 ms. */
+export function lunge(el: Element | null | undefined): void {
+  if (!el || reduced()) return
+  void transient(el, (e) => run(e, K(320, [
+    [0, { t: { x: 0, y: 0, s: 1 } }, EASE.in], [110, { t: { x: 30, y: -10, s: 1.07 } }, EASE.out], [320, { t: { x: 0, y: 0, s: 1 } }],
+  ]), { dur: 320 }))
+}
+
+/**
+ * A tap on a Pokemon: it answers, and nothing is earned. Four small replies in turn
+ * (a hop, a wiggle, a spin of the head, a cheer), each with its own little mark, so
+ * tapping again is never the same twice. `n` is how many times it has been tapped.
+ */
+export function react(el: Element | null | undefined, host: Element | null | undefined, n: number, o: { shiny?: boolean; asleep?: boolean } = {}): void {
+  if (!el || reduced()) return
+  const v = o.asleep ? 1 : n % 4
+  if (v === 0) { void transient(el, (e) => run(e, K(420, [[0, { t: { y: 0, sx: 1, sy: 1 } }, EASE.out], [150, { t: { y: -26, sx: 0.94, sy: 1.1 } }, EASE.in], [300, { t: { y: 0, sx: 1.12, sy: 0.88 } }, EASE.out], [420, { t: { y: 0, sx: 1, sy: 1 } }]]), { dur: 420 })); floatNote(host, '♥', 'red') }
+  else if (v === 1) { void transient(el, (e) => run(e, K(480, [[0, { t: { r: 0 } }], [90, { t: { r: -9 } }], [210, { t: { r: 9 } }], [330, { t: { r: -5 } }], [480, { t: { r: 0 } }]]), { dur: 480, ease: EASE.inOut })); floatNote(host, o.asleep ? 'z' : '♪', o.asleep ? 'green' : 'gold') }
+  else if (v === 2) { void transient(el, (e) => run(e, K(520, [[0, { t: { sx: 1, sy: 1 } }], [130, { t: { sx: 0.05, sy: 1 } }], [260, { t: { sx: -1, sy: 1 } }], [390, { t: { sx: 0.05, sy: 1 } }], [520, { t: { sx: 1, sy: 1 } }]]), { dur: 520, ease: EASE.inOut })) }
+  else { void transient(el, (e) => run(e, K(380, [[0, { t: { s: 1 } }, EASE.out], [120, { t: { s: 1.16, y: -12 } }, EASE.in], [380, { t: { s: 1, y: 0 } }]]), { dur: 380 })); floatNote(host, '!', 'gold') }
+  if (o.shiny && host) ring(host, '#fff3a8', 40)
+}
+
 /** Sent out: falls tall and narrow, lands flattened, rebounds, settles by 567 ms. */
 export function dropIn(el: Element | null | undefined, big = false): void {
   if (!el || reduced()) return

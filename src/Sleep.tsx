@@ -51,6 +51,7 @@ export function SleepWin({ game, nights }: { game: Game; nights: Record<string, 
       ) : (
         <p className="muted">No band yet. Sleep is a habit you tick by hand, worth {TIER_XP.core} XP. From the first night your band reports, it becomes a pillar of 100 XP paid by the night's score.</p>
       )}
+      {sleep.state === 'measured' && <p className="muted">The sky behind your partner follows it: clear after {SLEEP_DEEP} or more, fair from {SLEEP_DONE}, then cloudy, overcast and rain.</p>}
       {sleep.band && (
         <details className="nights">
           <summary className="k-label">Last 14 nights</summary>

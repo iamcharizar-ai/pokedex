@@ -55,10 +55,6 @@ p { margin: 6px 0; }
     radial-gradient(120% 60% at 50% 118%, var(--ground) 0 55%, transparent 56%),
     linear-gradient(transparent 0 52%, var(--far) 52% 58%, var(--ground-2) 58% 100%),
     repeating-linear-gradient(var(--sky-1) 0 26px, color-mix(in srgb, var(--sky-1) 78%, var(--sky-2)) 26px 52px, color-mix(in srgb, var(--sky-1) 50%, var(--sky-2)) 52px 78px, var(--sky-2) 78px 200px); }
-.scene.tod-morning { --sky-1: #ffb88a; --sky-2: #ffe9c4; --far: #9ccf8e; }
-.scene.tod-dusk { --sky-1: #6a5acd; --sky-2: #ff9d6c; --far: #6aa07a; --ground: #9fca7c; --ground-2: #86b96c; --pad: #6fb060; --pad-2: #4f9148; }
-.scene.tod-night { --sky-1: #121a3d; --sky-2: #2c3d7a; --far: #2f5b56; --ground: #3d7a5c; --ground-2: #336a50; --pad: #2e6a4c; --pad-2: #24553d; }
-.scene.tod-night::before { content: ''; position: absolute; inset: 0 0 50% 0; background-image: radial-gradient(#fff 1px, transparent 1.6px), radial-gradient(#fff 1px, transparent 1.6px); background-size: 90px 70px, 130px 110px; background-position: 12px 18px, 60px 44px; opacity: 0.8; }
 .scene.aura-mega { box-shadow: inset 0 0 0 4px var(--sky); }
 .scene.aura-gmax { box-shadow: inset 0 0 0 4px var(--pink); }
 

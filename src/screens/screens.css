@@ -129,3 +129,35 @@ details.win.folded:not([open]) > summary.win-h { border-bottom-width: 0; border-
 .sheet .monpage { width: auto; max-height: none; padding: 0; overflow: visible; background: none; border: 0; box-shadow: none; border-radius: 0; animation: none; }
 .sheet .monpage > .k-close { display: none; }
 @media (max-width: 560px) { .tb-season .k-label { display: none; } .tb-season { grid-template-columns: 1fr; } .tb .help { width: 40px; height: 40px; flex: none; } }
+
+/* ── the Home scene: a sky that follows the clock, behind the two Pokemon ── */
+.sky { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; container-type: inline-size; }
+.sky::after { content: ''; position: absolute; inset: 0; background: rgba(40, 50, 80, calc(var(--gloom, 0) * 0.34)); }
+.sky .stars { position: absolute; inset: 0 0 48% 0; opacity: calc(var(--dark, 0) * 0.95); background-image: radial-gradient(#fff 1px, transparent 1.6px), radial-gradient(#fff 1px, transparent 1.6px), radial-gradient(#cfe0ff 1.4px, transparent 2px); background-size: 90px 70px, 130px 110px, 170px 140px; background-position: 12px 18px, 60px 44px, 30px 80px; animation: twinkle 3.4s steps(2, end) infinite; }
+.sky .body { position: absolute; width: 34px; height: 34px; translate: -50% -50%; border-radius: 50%; }
+.sky .body.sun { background: radial-gradient(circle at 40% 38%, #fffbe0, #ffd84a 62%, #ffb52e); box-shadow: 0 0 0 4px rgba(255, 216, 74, 0.25), 0 0 26px 10px rgba(255, 216, 74, 0.5); opacity: calc(1 - var(--dim, 0) * 0.85); }
+.sky .body.moon { background: #f2efd2; box-shadow: inset -10px 3px 0 0 #cdd1e8, 0 0 20px 6px rgba(200, 210, 255, 0.4); opacity: calc(0.5 + var(--dark, 0) * 0.5 - var(--dim, 0) * 0.4); }
+.sky .clouds { position: absolute; inset: 0; }
+.sky .cloud { position: absolute; left: 0; height: auto; fill: color-mix(in srgb, color-mix(in srgb, #ffffff calc((1 - var(--gloom, 0)) * 100%), #6b7390), #2c3566 calc(var(--dark, 0) * 55%)); animation: drift linear infinite; }
+.sky .hills { position: absolute; left: -6%; right: -6%; }
+.sky .hills.far { bottom: 40%; height: 74px; background: radial-gradient(70px 46px at 10% 100%, var(--hill) 98%, transparent), radial-gradient(110px 70px at 36% 100%, var(--hill) 98%, transparent), radial-gradient(80px 52px at 64% 100%, var(--hill) 98%, transparent), radial-gradient(120px 62px at 92% 100%, var(--hill) 98%, transparent); --hill: color-mix(in srgb, var(--far) 82%, var(--sky-2)); animation: sway-far 26s ease-in-out infinite alternate; }
+.sky .hills.near { bottom: 36%; height: 56px; background: radial-gradient(90px 40px at 22% 100%, var(--hill) 98%, transparent), radial-gradient(130px 52px at 54% 100%, var(--hill) 98%, transparent), radial-gradient(100px 44px at 88% 100%, var(--hill) 98%, transparent); --hill: color-mix(in srgb, var(--far) 70%, var(--ground-2)); animation: sway-near 19s ease-in-out infinite alternate; }
+.sky .trees { position: absolute; left: -4%; right: -4%; bottom: 36%; height: 28px; background: color-mix(in srgb, var(--far) 45%, #08241a); -webkit-mask: var(--pine) repeat-x 0 100% / 26px 28px; mask: var(--pine) repeat-x 0 100% / 26px 28px; --pine: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 13 14' shape-rendering='crispEdges'><path d='M6 0h1v2h1v2h1v2h1v2h1v2h1v2H1v-2h1V8h1V6h1V4h1V2h1z M6 12h1v2H6z'/></svg>"); animation: sway-trees 14s ease-in-out infinite alternate; }
+.sky .grass { position: absolute; left: -4%; right: -4%; bottom: 0; height: 22px; background: color-mix(in srgb, var(--ground) 60%, #12361f); -webkit-mask: var(--tuft) repeat-x 0 100% / 18px 22px; mask: var(--tuft) repeat-x 0 100% / 18px 22px; --tuft: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 11' shape-rendering='crispEdges'><path d='M0 11V8h1v1h1V5h1v3h1V3h1v5h1V6h1v2h1V7h1v4z'/></svg>"); animation: sway-grass 6s ease-in-out infinite alternate; }
+.sky .rain { position: absolute; inset: 0; background: repeating-linear-gradient(103deg, transparent 0 13px, rgba(196, 214, 255, 0.6) 13px 14px); background-size: 58px 58px; opacity: 0.7; animation: rain 0.45s linear infinite; }
+.sky.cave .cave-drip { position: absolute; left: 36%; top: 0; width: 4px; height: 8px; border-radius: 2px; background: #bcd2f0; animation: drip 3.2s ease-in infinite; }
+.sky.cave::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 38px; background: #1b1830; -webkit-mask: linear-gradient(#000, #000) top / 100% 14px no-repeat, var(--stalac) top / 34px 38px repeat-x; mask: linear-gradient(#000, #000) top / 100% 14px no-repeat, var(--stalac) top / 34px 38px repeat-x; --stalac: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 17 19' shape-rendering='crispEdges'><path d='M0 0h17v4h-3v4h-2v5h-2V8H9V5H6v3H4v4H2V8H1z'/></svg>"); }
+
+/* the Pokemon answer a tap, and are easy to find with a keyboard */
+.pad[role='button'] { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.pad[role='button']:focus-visible { outline: 3px solid #fff; outline-offset: 4px; border-radius: 12px; }
+
+@keyframes drift { from { transform: translateX(-130px); } to { transform: translateX(calc(100cqw + 130px)); } }
+@keyframes twinkle { 50% { opacity: calc(var(--dark, 0) * 0.55); } }
+@keyframes sway-far { from { transform: translateX(-9px); } to { transform: translateX(9px); } }
+@keyframes sway-near { from { transform: translateX(7px); } to { transform: translateX(-7px); } }
+@keyframes sway-trees { from { transform: translateX(-4px); } to { transform: translateX(4px); } }
+@keyframes sway-grass { from { transform: translateX(-3px); } to { transform: translateX(3px); } }
+@keyframes rain { to { background-position: -22px 58px; } }
+@keyframes drip { 0%, 60% { transform: translateY(0); opacity: 0; } 65% { opacity: 1; } 100% { transform: translateY(240px); opacity: 0.8; } }
+@media (prefers-reduced-motion: reduce) { .sky *, .sky::after { animation: none !important; } }

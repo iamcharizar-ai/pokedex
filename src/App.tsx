@@ -28,7 +28,8 @@ import { aBall, badgeArt, badgeName, fmtDay, leagueName, still } from './lib/art
 import { play, setSoundOn, soundOn } from './lib/sfx.ts'
 import { LIFEOS_URL, start, useItem, useView } from './lib/store.ts'
 import { FIXTURE } from './lib/fixture-boot.ts'
-import { dropIn, floatNote, hit, party, ring, stamp, tapPop } from './lib/fx.ts'
+import { dropIn, floatNote, hit, lunge, party, react, ring, stamp, tapPop } from './lib/fx.ts'
+import { Sky, skyVars, sleepFor, useClock } from './screens/Sky.tsx'
 import { ChestOpener, HatchOpener } from './Reveal.tsx'
 
 type Tab = 'partner' | 'team' | 'shop' | 'dex' | 'trainer'
@@ -94,10 +95,6 @@ function Egg() {
 // ── Partner: the battle screen ──────────────────────────────────────────────
 const stateOf = (h: HabitFact): 'done' | 'part' | 'none' => (h.frac >= 1 ? 'done' : h.frac > 0 ? 'part' : 'none')
 const label = (h: HabitFact): string => h.name?.trim() || TAG_NAME[h.tag] || h.id
-function timeOfDay(): 'morning' | 'day' | 'dusk' | 'night' {
-  const h = new Date().getHours()
-  return h < 5 ? 'night' : h < 10 ? 'morning' : h < 17 ? 'day' : h < 20 ? 'dusk' : 'night'
-}
 
 function Scene({ game }: { game: Game }) {
   const { partner, today, wild } = game
@@ -125,15 +122,32 @@ function Scene({ game }: { game: Game }) {
     was.current = now
     if (!prev) { dropIn(el.querySelector('.me-pad img.sprite')); return } // sent out as the screen opens
     if (now.wild && now.wild !== prev.wild && !now.caught) dropIn(foe, wild?.rarity === 'L')
-    else if (now.hit > prev.hit && !now.caught) hit(foe)
+    else if (now.hit > prev.hit && !now.caught) { lunge(el.querySelector('.me-pad img.sprite')); window.setTimeout(() => hit(foe), 110) }
     if (now.caught && !prev.caught) { stamp(el, 'GOTCHA!', 'gold'); ring(el.querySelector('.foe-pad')); if (wild?.shiny) party(el) }
     if (now.perfect && !prev.perfect) { stamp(el, 'PERFECT DAY', 'green'); party(el, 36) }
   }, [wild?.form, wild?.caught, today.hit, today.perfect])
+  // the sky follows the clock, and the weather follows last night's sleep
+  const minutes = useClock()
+  const score = sleepFor(game.sleep.state === 'measured' ? game.sleep.score : null)
+  // tapping a Pokemon: it answers, nothing is earned
+  const taps = useRef({ me: 0, foe: 0, at: 0 })
+  const pat = (who: 'me' | 'foe') => {
+    const t = taps.current
+    if (Date.now() - t.at < 450) return
+    t.at = Date.now()
+    const pad = stage.current?.querySelector(who === 'me' ? '.me-pad' : '.foe-pad')
+    const img = pad?.querySelector('img.sprite')
+    play('tap')
+    if (who === 'me') react(img, pad, t.me++, { shiny: partner.shiny, asleep: game.asleep })
+    else { void img?.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-12px)' }, { transform: 'translateX(6px)' }, { transform: 'translateX(0)' }], { duration: 260, easing: 'ease-out' }) }
+  }
+  const press = (who: 'me' | 'foe') => (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pat(who) } }
   const pct = clamp01(game.into / game.need)
   const before = Math.min(pct, clamp01(game.intoBeforeToday / game.need))
   const hp = wild && wild.max ? wild.hp / wild.max : 0
   return (
-    <section ref={stage} className={`scene ${game.theme || `tod-${timeOfDay()}`} ${game.aura ? `aura-${game.aura}` : ''}`} aria-label="Today, as a battle">
+    <section ref={stage} className={`scene ${game.theme} ${game.aura ? `aura-${game.aura}` : ''}`} style={skyVars(minutes, game.theme)} aria-label="Today, as a battle">
+      <Sky minutes={minutes} theme={game.theme} score={score} />
       {wild && (
         <>
           <div className="hpbox foe-box">
@@ -149,14 +163,14 @@ function Scene({ game }: { game: Game }) {
             </div>
             <div className="hp-sub"><span>{wild.caught ? 'In your Box' : today.hit > 0 ? `Today −${today.hit}` : ''}{!wild.caught && wild.leavesIn !== undefined && wild.leavesIn <= 3 && <b className="leaving"> {wild.leavesIn === 0 ? 'Gets away tomorrow' : `Gets away in ${wild.leavesIn + 1} days`}</b>}</span><b>{wild.hp} / {wild.max}</b></div>
           </div>
-          <div className="pad foe-pad">
+          <div className="pad foe-pad" role="button" tabIndex={0} aria-label={`Poke the wild ${nameOf(wild.form)}`} onClick={() => pat('foe')} onKeyDown={press('foe')}>
             <img src={still(wild.form, wild.shiny)} alt="" width={104} height={104} className={`sprite ${wild.caught ? 'got' : ''}`} />
             {wild.caught && <Ball ball={today.ball} size={34} className="caughtball" />}
             {!wild.caught && <Pop value={today.hit} />}
           </div>
         </>
       )}
-      <div className="pad me-pad">
+      <div className="pad me-pad" role="button" tabIndex={0} aria-label={`Pat ${nameOf(game.display)}`} onClick={() => pat('me')} onKeyDown={press('me')}>
         <Sprite form={game.display} shiny={partner.shiny} size={184} className={game.asleep ? 'asleep' : ''} />
         {game.asleep && <span className="zzz" aria-hidden>Zzz</span>}
       </div>

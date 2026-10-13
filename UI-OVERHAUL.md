@@ -1,6 +1,6 @@
 # A complete UI overhaul: the plan
 
-Written 13 Oct 2026, revised 14 Oct after your answers. **Phases 0 to 3 are built; the rest is a plan.** It comes from reading the Pokedex end to end (about 1,370 lines of CSS in five files, a 1,070-line `App.tsx`, five tabs) and from the motion study.
+Written 13 Oct 2026, revised 14 Oct after your answers. **Phases 0 to 4 are built; the rest is a plan.** It comes from reading the Pokedex end to end (about 1,370 lines of CSS in five files, a 1,070-line `App.tsx`, five tabs) and from the motion study.
 
 ## 0. Where this stands
 
@@ -136,8 +136,15 @@ So feats alone gave two stones for the first Pokemon that can use one, and the f
 - **Not done:** the cards. Every Pokemon is still a `MonCard`; moving them to the kit's `KCard` is a visual change that fits with phase 4.
 - Heights fell again, about 160 pixels on every tab (Today 1,465 under `boss`; Journey 2,637).
 
-### Phase 4: the scene
-Layered parallax (sky, far hills, near ground), a sky on the real clock with the weather last night's sleep implies, the partner idling and turning toward what the wild Pokemon does, and reacting when tapped. No reward for tapping: it is life, not a mechanic.
+### Phase 4: the scene (built)
+- **A sky that follows the real clock, continuously.** The four fixed skies (morning, day, dusk, night) with a hard jump between them are gone. The palette is blended between keyframes by the minute (the old colours are the keyframes), the sun crosses from 06:00 to 18:30 and the moon from 18:30 to 06:00 on an arc, and the stars fade in as it darkens. A test (`tools/sky.test.mjs`) checks that no single minute of the day makes the colour jump. The sun and moon keep to the free sky at the top right, because the rest is under the HP boxes and the two Pokemon.
+- **The weather is last night's sleep.** 90 or more is clear, 80 to 89 fair (one cloud), 60 to 79 cloudy, 40 to 59 overcast and greyer, below 40 rain. Hover (or read) the sky for its label, and the Last night window says the link exists. With no band reading the sky is plain and says nothing: a missing night is never a bad one.
+- **Layers, drawn and never loaded:** stars, sun or moon, drifting pixel clouds, two ranges of hills and a line of pines that sway at different speeds (so the scene has depth), rain streaks, and grass in front. All of it holds still with reduced motion.
+- **A bought scene still wins:** a beach is always noon, a starry night always night (with the moon), and a cave has no sky, with stalactites and a dripping drop.
+- **The partner acts.** When your work lands a hit on the wild Pokemon, the partner now **lunges** at it and the wild one flinches a moment later. **Tapping** either Pokemon makes it answer, and nothing is earned: the partner has four replies in turn (a hop with a heart, a wiggle with a note, a spin, a cheer), a shiny one throws a ring, a sleeping one only wiggles with a z, and the wild one shakes. The Pokemon are real buttons (keyboard Enter or Space works), with a 450 ms rest between taps.
+- **Fixtures hold the clock still** at 10:30 so a picture is always the same. `?clock=22:15` and `?sleep=35` show any sky for any night. The screenshot set now has six sky pictures (dawn, noon, dusk, night, an overcast noon and a rainy afternoon), and only the four Today pictures changed from phase 3.
+- **Checked in a real browser:** eight taps in a row leave nothing behind (the animation count returns to just the idle bob, and every floating mark is removed).
+- **Not done:** the partner does not turn to face the wild Pokemon. The sprites are animated GIFs facing front, so flipping them would look wrong; the lunge toward it carries that meaning instead.
 
 ### Phase 5: readable data
 With the trainer card gone this is small: a 12-week calendar heat map on Journey in place of the XP chart (a cell a day, a ring for a perfect day, a dot for a boss week), and one HP-bar component for the wild Pokemon, the leader and the boss.
@@ -162,7 +169,7 @@ Share the tokens and motion kit the way the core is shared. This is where the on
 | 1 Tokens and layers | 1 session | **done** |
 | 2 Five tabs and the Forge | 3 sessions | **done** |
 | 3 Sheets, queue, swipe, haptics, top bar | 1 session | **done** |
-| 4 The scene | 1 to 2 sessions | |
+| 4 The scene | 1 to 2 sessions | **done** |
 | 5 Data views | half a session | |
 | 6 Tour, accessibility, performance | 2 sessions | |
 | 7 Shared kit with Life OS, and the on-hold Life OS items | 1 session | |

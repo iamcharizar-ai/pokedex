@@ -23,6 +23,8 @@ const DIFF = path.join(ROOT, 'tests', 'diff')
 const PORT = 5199
 const TABS = ['Today', 'Party', 'Shop', 'Pokedex', 'Journey']
 const FIXTURES = ['empty', 'week', 'late', 'boss']
+/** [clock, last night's sleep, name]: dawn after a great night, noon, dusk and midnight, then a poor night and a very bad one. */
+const SKIES = [['07:00', 95, 'dawn-clear'], ['12:15', 95, 'noon-clear'], ['19:30', 70, 'dusk-cloudy'], ['23:30', 88, 'night-fair'], ['12:15', 50, 'noon-overcast'], ['15:00', 30, 'afternoon-rain']]
 const VIEW = { width: 390, height: 844 }
 /** Share of pixels allowed to differ (font smoothing and the like) before a screenshot counts as changed. */
 const TOLERANCE = 0.002
@@ -33,6 +35,7 @@ const args = process.argv.slice(2)
 const update = args.includes('--update')
 const only = args.filter((a) => !a.startsWith('--'))
 const fixtures = only.length ? FIXTURES.filter((f) => only.includes(f)) : FIXTURES
+if (only.length && only.every((o) => o === 'sky')) fixtures.length = 0
 
 // serve the built app, so the run does not depend on a dev server being open
 async function serve() {
@@ -61,7 +64,27 @@ try {
     style.textContent = '*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}'
     document.addEventListener('DOMContentLoaded', () => document.head.appendChild(style))
   })
-  for (const name of fixtures) {
+  // the Home scene at different times and after different nights (`?clock=` and `?sleep=` are for fixtures)
+  if (!only.length || only.includes('sky')) {
+    for (const [clock, sleep, label] of SKIES) {
+      const page = await ctx.newPage()
+      await page.goto(`http://localhost:${PORT}/?fixture=week&clock=${clock}&sleep=${sleep}`)
+      await page.waitForSelector('.scene .sky')
+      await page.waitForTimeout(500)
+      const scene = page.locator('.scene')
+      const file = `sky-${label}.png`
+      const shot = await scene.screenshot({ mask: await page.locator('.scene img.sprite').all(), maskColor: '#ff00ff' })
+      const baseline = path.join(BASE, file)
+      if (update || !fs.existsSync(baseline)) { fs.writeFileSync(baseline, shot); made++ }
+      else {
+        const a = PNG.sync.read(fs.readFileSync(baseline)), b = PNG.sync.read(shot)
+        const n = a.width === b.width && a.height === b.height ? pixelmatch(a.data, b.data, new PNG({ width: a.width, height: a.height }).data, a.width, a.height, { threshold: 0.1 }) : Infinity
+        if (n / (a.width * a.height) > TOLERANCE) { failed++; fs.mkdirSync(DIFF, { recursive: true }); fs.writeFileSync(path.join(DIFF, file), shot); console.log(`CHANGED  ${file}`) } else same++
+      }
+      await page.close()
+    }
+  }
+  for (const name of only.length ? fixtures.filter((f) => f !== 'sky') : fixtures) {
     const page = await ctx.newPage()
     await page.goto(`http://localhost:${PORT}/?fixture=${name}`)
     await page.waitForSelector('.navbar button')
