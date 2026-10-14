@@ -511,6 +511,21 @@ test('sleep: a morning with no reading is a hand tick worth a core habit, and a 
   assert.equal(sleep(input(false, {}), d2).selfReported, undefined)
 })
 
+test('sleep: a band that reports is the Sleep pillar even when the hand-ticked habit has been retired from the list', () => {
+  const d1 = GAME_START, d2 = addDays(GAME_START, 1)
+  const facts = buildFacts({ today: d2, habits: [{ id: 'leetcode-coding', tier: 'pillar', spans: [{ from: '1970-01-01', to: null }] }], ticks: {}, body: { [d1]: { sleepScore: 92 }, [d2]: { sleepScore: 70 } } })
+  const read = facts.find((f) => f.day === d1)!.habits.find((h) => h.id === 'sleep-before-10')!
+  assert.deepEqual([read.worth, read.pillar, read.frac, read.done, read.measured], [100, true, 0.92, true, true])
+  const g = fold(facts)
+  assert.equal(g.sleep.state, 'measured')
+  assert.equal(g.sleep.score, 70)
+  assert.equal(g.wallet.marks.sleep, 2, 'the 92 paid two Bells, the 70 none')
+  // no reading yet this morning: nothing is invented, and the band is still known
+  const waiting = fold(buildFacts({ today: addDays(d2, 1), habits: [{ id: 'leetcode-coding', tier: 'pillar', spans: [{ from: '1970-01-01', to: null }] }], ticks: {}, body: { [d1]: { sleepScore: 92 } } }))
+  assert.equal(waiting.sleep.band, true)
+  assert.equal(waiting.sleep.state, 'off')
+})
+
 test('sleep: Bells come from measured nights only, two for a deep night', () => {
   const marks = (facts: DayFacts[]) => fold(facts).wallet.marks.sleep
   assert.equal(marks([night(0, 70)]), 0)

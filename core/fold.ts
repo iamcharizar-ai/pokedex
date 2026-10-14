@@ -1306,7 +1306,7 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
     wish: { options: Object.fromEntries(['full-incense', ...Object.keys(LURES)].map((id) => [id, wishOptions(id === 'full-incense' ? null : LURES[id])])), chosen: wishFor },
     sleep: (() => {
       const h = lastFacts?.habits.find((x) => x.id === SLEEP_HABIT && x.tag === 'sleep')
-      return { band: facts.some((f) => f.habits.some((x) => x.measured)), state: h?.measured ? 'measured' as const : h?.selfReported ? 'self' as const : 'off' as const, score: typeof lastFacts?.body?.sleepScore === 'number' ? lastFacts.body.sleepScore : null, xp: h ? Math.round(h.worth * h.frac) : 0 }
+      return { band: facts.some((f) => f.habits.some((x) => x.measured) || typeof f.body?.sleepScore === 'number'), state: h?.measured ? 'measured' as const : h?.selfReported ? 'self' as const : 'off' as const, score: typeof lastFacts?.body?.sleepScore === 'number' ? lastFacts.body.sleepScore : null, xp: h ? Math.round(h.worth * h.frac) : 0 }
     })(),
     mart: { deals: last ? martDeals(last.day, dealsFor(inv)) : [], bought: last ? [...sold].filter((k) => k.startsWith(last.day + ':')).map((k) => k.slice(11)) : [], standing: STANDING },
     mastery: { ...mastery },

@@ -201,6 +201,11 @@ export function factsFor(input: FactsInput, day: string, band: string | null = b
     }
     habits.push({ id: h.id, name: h.name, emoji: h.emoji, tag: isTag(h.domain) ? h.domain : tagOf(h.id), worth: unread ? TIER_XP.core : tierXp(h.tier), pillar: unread ? false : h.tier === 'pillar', frac, done, ...(unread ? { selfReported: true as const } : {}) })
   }
+  // a band's reading is the Sleep pillar whether or not the hand-ticked habit is on the list (it can be retired once a band reports): sleep must never depend on a habit that is no longer there
+  if (band !== null && day >= band && typeof body?.sleepScore === 'number' && !habits.some((x) => x.id === SLEEP_HABIT)) {
+    const score = Math.max(0, Math.min(100, body.sleepScore))
+    habits.push({ id: SLEEP_HABIT, name: 'Sleep', tag: 'sleep', worth: TIER_XP.pillar, pillar: true, frac: score / 100, done: score >= SLEEP_DONE, measured: true })
+  }
   const marks = input.marks?.[day]
   const reviews = reviewsOn(input.ticks, day)
   // the boss: this week's card, with the newest progress written for this day or an earlier one of the week
