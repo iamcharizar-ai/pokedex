@@ -68,3 +68,10 @@ test('a band turns Sleep into a measured pillar and gives the Last night section
     assert.equal(g.wallet.marksToday.sleep, bells, `${score} pays ${bells} Bell(s)`)
   }
 })
+
+test('a band whose reading for this morning has not arrived is a band, but not a measured night', () => {
+  const f = fixture('week', 'wait')
+  const g = foldGame(buildFacts(ingest(f.events, f.config, f.today)))
+  assert.equal(g.sleep.band, true)
+  assert.notEqual(g.sleep.state, 'measured')
+})

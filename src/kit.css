@@ -111,7 +111,7 @@
 .k-reveal.big { --t: var(--k-gold); --t-hi: #fff3a8; }
 .k-reveal.rare { --t: var(--k-purple); --t-hi: #7fe3ff; }
 /* 1 background: rays that turn */
-.k-reveal .rays { position: absolute; width: 520px; height: 520px; background: repeating-conic-gradient(color-mix(in srgb, var(--t-hi) 26%, transparent) 0 10deg, transparent 10deg 20deg); border-radius: 50%; opacity: 0; mask-image: radial-gradient(circle, #000 0 30%, transparent 68%); }
+.k-reveal .rays { position: absolute; width: 520px; height: 520px; background: repeating-conic-gradient(color-mix(in srgb, var(--t-hi) 26%, transparent) 0deg, transparent 10deg, color-mix(in srgb, var(--t-hi) 26%, transparent) 20deg); filter: blur(4px); border-radius: 50%; opacity: 0; mask-image: radial-gradient(circle, #000 0 20%, transparent 66%); }
 /* 2 back effect: a ring that swells behind the object */
 .k-reveal .ring { position: absolute; width: 120px; height: 120px; border: 10px solid var(--t-hi); border-radius: 50%; opacity: 0; }
 /* 3 the object */
@@ -135,7 +135,7 @@
 /* the bigger the tier, the more of everything */
 .k-reveal.big.open .sparks i { width: 12px; height: 12px; }
 .k-reveal.rare.open .sparks i { width: 14px; height: 14px; border-radius: 50%; animation-duration: 1.1s; }
-.k-reveal.rare .rays { background: repeating-conic-gradient(color-mix(in srgb, var(--t-hi) 34%, transparent) 0 6deg, color-mix(in srgb, var(--k-pink) 26%, transparent) 6deg 12deg, transparent 12deg 20deg); }
+.k-reveal.rare .rays { background: repeating-conic-gradient(color-mix(in srgb, var(--t-hi) 34%, transparent) 0deg, color-mix(in srgb, var(--k-pink) 26%, transparent) 8deg, transparent 14deg, color-mix(in srgb, var(--t-hi) 34%, transparent) 20deg); }
 @keyframes k-drop { from { transform: translateY(-160px) scale(0.5); opacity: 0; } }
 @keyframes k-fade { to { opacity: 1; } }
 @keyframes k-spin { to { transform: rotate(360deg); } }

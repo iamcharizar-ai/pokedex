@@ -40,7 +40,7 @@
 .dx { position: relative; display: grid; justify-items: center; align-content: end; height: 84px; padding: 0 0 4px; background: none; border: 0; border-radius: var(--r-2); cursor: pointer; transition: background var(--t-fade) linear, transform var(--t-fade) var(--ease-out); }
 .dx:hover { background: var(--surface-1); transform: translateY(-2px); }
 .dx:focus-visible { outline: 3px solid #fff; outline-offset: -2px; }
-.dx img { width: 56px; height: 56px; image-rendering: pixelated; }
+.dx img { width: 56px; height: 56px; image-rendering: pixelated; transition: transform var(--t-fade) linear; }
 .dx img.unseen { filter: brightness(0) opacity(0.22); }
 .dx-no { font-family: var(--k-face); font-size: 11px; color: var(--text-3); }
 .dx.seen .dx-no { color: var(--text-2); }

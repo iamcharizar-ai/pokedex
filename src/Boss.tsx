@@ -132,7 +132,7 @@ function Fight({ boss, game }: { boss: BossView; game: Game }) {
       </ul>
 
       {!boss.caught && !boss.fled && boss.taken >= KILL_CAP - 1e-9 && !boss.allDone && <p className="notice warn">The last of its HP only falls when every task on the card is done.</p>}
-      {boss.caught && <p className="notice good">Caught. It is in your Box.</p>}
+      {boss.caught && <p className="notice good">Caught. It is in My Pokemon.</p>}
       {boss.fled && <p className="notice warn">It broke free three times and left. Another comes on Monday.</p>}
       {!boss.caught && !boss.fled && (boss.canThrow
         ? (

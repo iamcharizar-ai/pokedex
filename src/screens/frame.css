@@ -98,3 +98,6 @@ main .notice.gmax, .sheet .notice.gmax { --nc: var(--k-pink); }
   .navbar button .tabicon, details.drawer .chev { transition: none; }
 }
 
+
+/* a strip that scrolls sideways fades at its right edge, so it is clear there is more */
+.shopchips, .regions2 { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); }

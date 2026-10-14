@@ -167,3 +167,8 @@
 .bellnote { margin: 0; font-size: 13.5px; color: var(--text-2); }
 .bellnote b { color: var(--tone-gold); font-family: var(--k-face); font-weight: 400; }
 @media (prefers-reduced-motion: reduce) { .bellbar-track i { transition: none; } }
+
+/* Sleep with a band whose reading has not come yet: a dashed ring, waiting */
+.pillar.waiting .pillar-ring { background: radial-gradient(circle, var(--ground) 0 25px, transparent 26px), repeating-conic-gradient(var(--c) 0 6deg, transparent 6deg 14deg); opacity: 0.8; }
+.pillar.waiting .pillar-ring > img { opacity: 0.5; }
+.pillar.waiting small { color: var(--text-3); white-space: normal; }

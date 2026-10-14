@@ -49,3 +49,23 @@ Written 14 Oct 2026. The first overhaul (UI-OVERHAUL.md) fixed the structure: fi
 ## A note on the Pokedex fold
 
 The screenshot with "001 to 036 · 2 seen · 2 yours" bands is not in this repository: no commit on any branch has it, and the shop text in the other screenshot ("Three deals a day, and a few things always on the shelf") is also newer than anything here. That work is on your machine and was never pushed. This rebuild started from `master`, where the Pokedex was already one flat grid, and keeps it that way. If you push the local work later, the bands will come back in a merge: drop them then.
+
+## Addendum, 14 Oct: what was missing, and fixed
+
+A list of changes from another machine (commits `eb8216d` and `acc1845`, never pushed) was checked against this build. What was not here, and is now:
+
+**Rules (`core/`)**
+- **Same-day claims.** A claim for a reward that did not exist yet (a quest or feat won that evening) was silently dropped. It is remembered (`claimedEarly`) and pays the moment the reward appears, and the week's quests and feats are settled before the day's own actions as well as after. A test fails without the fix.
+- **The party is open to My Pokemon** from `TEAM_OPEN_FROM` (14 Oct 2026). Any Pokemon you own can stand on it; a place nobody chose fills itself with the oldest in My Pokemon; only fully trained members count for the boss's party of six, though every member adds to every strike. Earlier days fold as before. Tests cover both sides of the date.
+- *Life OS keeps its own copy of `core/` (`src/game-core`). Run `npm run core` next to the Life OS repo and deploy it: this session could not write to it.*
+
+**What you see**
+- **Add to the party** is a button under the six platforms (and the empty platforms are buttons): a sheet lists everyone free to join, trained or in My Pokemon, and a Pokemon's own page says "Add to the party" or "Take out of the party". The newest choice goes first and the last place is given up when it is full.
+- **My Pokemon** replaces "Box" in every text. It sits under the party, open while it holds eight or fewer.
+- **Party tab order:** the partner, your party, My Pokemon, the Forge, then an "Items and extras" heading over the Nursery, Bag, Incense and Choices.
+- **The Bag** is groups of tiles (Money and marks, Balls, Berries, Held items, TMs, Keepsakes, Everything else, which holds gear, guards, incense, an egg, a chest and scenes). Tapping one opens a card with what it does, where it is used, and the button for it (Feed it now, Give / Take off, Equip, Use). The folded header shows the ball and berry counts.
+- **Sleep** waits on Today as a dashed ring ("Waiting for the band") when there is a band and this morning's reading has not come; `?fixture=week&band=wait` shows it.
+- **The Pokedex grid** draws each sprite by what is in it (`tools/build-sprite-bbox.mjs` measures them into `public/sprites/bbox.json`, fetched once): small and large Pokemon look alike, and all stand on one baseline. It stays one flat grid. The folded blocks of 36 from the other machine's list were **not** brought over: you asked for the bands to go.
+- Reveals use soft, blurred rays instead of hard wedges; a quest's name has its own line; the shop and region strips fade at the edge.
+
+Not brought over, because this build is a different design: the old Forge rows, season medals, top-bar pill and calendar-header fixes (those screens were rebuilt), and the ball-sprite halo fix (these sprites have clean edges).

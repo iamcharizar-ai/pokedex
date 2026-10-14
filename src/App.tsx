@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode, type TouchEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode, type TouchEvent } from 'react'
 import { isGym, leaderOf, nameOf, spritePath, type Game, type Mon, type Moment } from '../core/fold.ts'
 import type { DayFacts, HabitFact } from '../core/facts.ts'
 import { LEAGUES, lineup } from '../core/gyms.ts'
@@ -18,6 +18,7 @@ import { KBar, KPill, KRibbon } from './Kit.tsx'
 import { Actions, Coin, Count, Gem, Pop, Quests, ShopTab, TeamTab } from './Play.tsx'
 import { Recap } from './Recap.tsx'
 import { BossLog, BossTile } from './Boss.tsx'
+import { fitOf, useBoxes } from './Fit.tsx'
 import { Calendar } from './screens/Calendar.tsx'
 import { HpBar } from './screens/HpBar.tsx'
 import { hpTone } from './screens/hp.ts'
@@ -59,7 +60,7 @@ export type Tone = '' | 'blue' | 'green' | 'gold' | 'dark' | 'red' | 'purple'
 /** A section of a tab: a heading on the page (a coloured mark, the title, a note on the right) and its content under it.
     No frame: the content stands on the page, and only the things you press look like objects. */
 export function Win({ title, aside, tone = '', fold, children }: { title: string; aside?: ReactNode; tone?: Tone; fold?: boolean; children: ReactNode }) {
-  // `fold`: shut until tapped, for a store that grows (the Bag, the Box) so the tab around it stays short
+  // `fold`: shut until tapped, for a store that grows (the Bag, My Pokemon) so the tab around it stays short
   if (fold) {
     return (
       <details className="sec drawer" data-tone={tone || 'dark'}>
@@ -144,7 +145,7 @@ function Scene({ game }: { game: Game }) {
               <span className="hp-lv ballname"><Ball ball={today.ball} size={18} />{wild.caught ? 'Caught' : BALL_NAME[today.ball]}</span>
             </div>
             <HpBar variant="game" value={wild.hp} max={wild.max} name="The wild Pokemon" />
-            <div className="hp-sub"><span>{wild.caught ? 'In your Box' : today.hit > 0 ? `Today −${today.hit}` : ''}{!wild.caught && wild.leavesIn !== undefined && wild.leavesIn <= 3 && <b className="leaving"> {wild.leavesIn === 0 ? 'Gets away tomorrow' : `Gets away in ${wild.leavesIn + 1} days`}</b>}</span><b>{wild.hp} / {wild.max}</b></div>
+            <div className="hp-sub"><span>{wild.caught ? 'In My Pokemon' : today.hit > 0 ? `Today −${today.hit}` : ''}{!wild.caught && wild.leavesIn !== undefined && wild.leavesIn <= 3 && <b className="leaving"> {wild.leavesIn === 0 ? 'Gets away tomorrow' : `Gets away in ${wild.leavesIn + 1} days`}</b>}</span><b>{wild.hp} / {wild.max}</b></div>
           </div>
           <div className="pad foe-pad" role="button" tabIndex={0} aria-label={`Poke the wild ${nameOf(wild.form)}`} onClick={() => pat('foe')} onKeyDown={press('foe')}>
             <img src={still(wild.form, wild.shiny)} alt="" width={104} height={104} className={`sprite ${wild.caught ? 'got' : ''}`} />
@@ -219,7 +220,15 @@ function Talk({ game, pillars }: { game: Game; pillars: HabitFact[] }) {
             </li>
           )
         })}
-        {pillars.length === 0 && <li className="muted">No pillar habits are on today's list.</li>}
+        {/* with a band, Sleep is a pillar paid by last night's score: until the reading arrives it waits here, so it is never taken for a miss */}
+        {game.sleep.band && game.sleep.state !== 'measured' && (
+          <li className="pillar waiting" data-tag="sleep" title="Last night's reading has not arrived. The band syncs about 07:00; a night with no reading is never a zero.">
+            <span className="pillar-ring"><ItemIcon id={pillarIcon('sleep')} size={30} /></span>
+            <b>Sleep</b>
+            <small>Waiting for the band</small>
+          </li>
+        )}
+        {pillars.length === 0 && !(game.sleep.band && game.sleep.state !== 'measured') && <li className="muted">No pillar habits are on today's list.</li>}
       </ul>
       <a className="lifeos-link" href={LIFEOS_URL} target="_blank" rel="noreferrer">Tick habits in Life OS <span aria-hidden>↗</span></a>
     </section>
@@ -628,6 +637,9 @@ function DexTab({ game }: { game: Game }) {
   const raisedIn = entries.filter(([id]) => owned.get(id)?.graduated).length
   const seenTotal = Object.keys(game.dex).filter((id) => !SPECIES[id]?.f).length
   const here = perRegion[region - 1]
+  // each sprite is sized by what is drawn in it, so a small Pokemon and a large one look alike in the grid
+  const boxes = useBoxes()
+  const fit = (id: string): CSSProperties | undefined => { const t = boxes ? fitOf(boxes[id], 56, 42) : undefined; return t ? { transform: t } : undefined }
   return (
     <div className="dexpage">
       <div className="regions2" role="tablist" aria-label="Region" data-noswipe>
@@ -666,7 +678,7 @@ function DexTab({ game }: { game: Game }) {
           const mon = owned.get(id)
           return (
             <button key={id} type="button" className={`dx ${e ? 'seen' : ''} ${e?.own ? 'own' : ''} ${(r.m ?? []).some((f) => game.dex[f]?.own) ? 'mg' : ''}`} onClick={() => setOpen(id)} title={e ? r.n : `#${r.d}`} aria-label={e ? `${r.n}, number ${r.d}${e.own ? ', caught' : ', seen'}` : `Not seen, number ${r.d}`}>
-              <img src={still(id, e?.shiny)} alt="" loading="lazy" decoding="async" width={56} height={56} className={`sprite ${e ? '' : 'unseen'}`} />
+              <img src={still(id, e?.shiny)} alt="" loading="lazy" decoding="async" width={56} height={56} className={`sprite ${e ? '' : 'unseen'}`} style={fit(id)} />
               <span className="dx-no">{dexNo(r.d)}</span>
               {e?.own && <i className="dx-ball" aria-hidden />}
               {mon?.graduated && <i className="dx-star" title="Fully trained" aria-hidden>★</i>}
@@ -946,8 +958,8 @@ function RulesTab({ onTour }: { onTour: () => void }) {
           <Rule title="Mastery" tone="blue" pic={<><ItemIcon id="machine-part" size={28} /><ItemIcon id="iron" size={28} /><Arrow /><span className="rule-chip sm">+{Math.round(MASTERY_STEP * 100)}%</span></>}>
             Spend a kind of work's own marks to raise its mastery: each level makes that work strike {Math.round(MASTERY_STEP * 100)}% harder, up to level {MASTERY_MAX}. The next level costs {masteryCost(0)} marks, then {masteryCost(1)}, and so on.
           </Rule>
-          <Rule title="The Box and the Professor" tone="gold" pic={<><Ball ball="poke" size={30} /><Arrow /><Coin size={28} /></>}>
-            A caught Pokemon waits in the Box until it is raised. Send one to the Professor instead and he pays coins: {SELL.C} for a common, {SELL.U} uncommon, {SELL.R} rare, {SELL.L} legendary.
+          <Rule title="My Pokemon and the Professor" tone="gold" pic={<><Ball ball="poke" size={30} /><Arrow /><Coin size={28} /></>}>
+            A caught Pokemon waits in My Pokemon until it is raised. Send one to the Professor instead and he pays coins: {SELL.C} for a common, {SELL.U} uncommon, {SELL.R} rare, {SELL.L} legendary.
           </Rule>
           <Rule title="Guards" tone="red" pic={<><ItemIcon id="max-repel" size={30} /><ItemIcon id="revive" size={30} /></>}>
             Max Repel keeps the wild Pokemon {REPEL_DAYS} days longer, once. A Revive takes back the HP a leader regained on empty days. Both are always on the Mart's shelf.

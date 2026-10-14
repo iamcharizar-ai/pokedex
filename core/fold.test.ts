@@ -10,7 +10,7 @@ import { foldGame, isGym, leaderOf, statsOf } from './fold.ts'
 import { LEAGUES, lineup } from './gyms.ts'
 import { beats, weakDomains } from './types.ts'
 import {
-  BALL_MULT, CLAIM_AUTO, DAILY_PAY, PAY_STREAK, REVIEW_GEMS, EGG_STEPS, STEPS_GOAL, GAME_START, GEMS, KIT_IRON, LEADER_HP, MEGA_BONUS, REPEL_DAYS, SEASON_STEP, SLEEP_DEEP, SLIP, STAKES_FROM, TEAM_BONUS, TEAM_NATURE, TEAM_SIZE, WEAK_MULT, WILD_HP, WILD_STAY,
+  BALL_MULT, CLAIM_AUTO, DAILY_PAY, PAY_STREAK, REVIEW_GEMS, EGG_STEPS, STEPS_GOAL, GAME_START, GEMS, KIT_IRON, LEADER_HP, MEGA_BONUS, REPEL_DAYS, SEASON_STEP, SLEEP_DEEP, SLIP, STAKES_FROM, TEAM_BONUS, TEAM_NATURE, TEAM_OPEN_FROM, TEAM_SIZE, WEAK_MULT, WILD_HP, WILD_STAY,
   ballFor, bondLevel, evolveAt, graduateAt, levelOf, momentumMult, regionsOpen, wildHit, xpForLevel,
 } from './rules.ts'
 import { BALLS, BOND_PARTY, CHEST, rng, DOMAIN_SHOPS, FEATS, FORGE_COST, GEAR, GEAR_ITEMS, LURES, MART_POOL, SELL, STANDING, forgeShard, lureTypes, martDeals, throwHp } from './economy.ts'
@@ -681,6 +681,54 @@ test('the team backs the partner, and a theme is bought once', () => {
   const themed = fold(use(facts, 259, { what: 'buy', item: 'theme-cave' }, { what: 'buy', item: 'theme-cave' }, { what: 'theme', to: 'theme-cave' }))
   assert.deepEqual([themed.inv['theme-cave'], themed.theme, themed.wallet.gems], [1, 'theme-cave', g.wallet.gems - 60])
   assert.equal(fold(use(facts, 259, { what: 'theme', to: 'theme-beach' })).theme, '')
+})
+
+/** a game that reaches the open-team day with Pokemon waiting in My Pokemon */
+const openDays = (): DayFacts[] => run(Math.round((Date.parse(TEAM_OPEN_FROM) - Date.parse(GAME_START)) / 86400000) + 6, ALL)
+
+test('the team is open to My Pokemon from TEAM_OPEN_FROM: any Pokemon you own can stand on it, empty places fill themselves, and only trained ones count for the boss', () => {
+  const facts = openDays()
+  const g = fold(facts)
+  assert.ok(g.queue.length >= 2, 'the fixture holds Pokemon in My Pokemon')
+  assert.equal(g.graduates.length, 0, 'nobody is fully trained yet, so every place is filled from My Pokemon')
+  // nobody chosen: the places fill with the oldest in My Pokemon, oldest first
+  assert.deepEqual(g.team.map((m) => m.uid), g.queue.slice(0, TEAM_SIZE).map((m) => m.uid))
+  // none of them is trained, so none counts for the boss's party of six, though each still adds to every strike
+  assert.equal(g.bossParty, 1)
+  assert.ok(g.power.team > 0)
+  // choosing one from My Pokemon puts it first; the empty places still fill with the oldest
+  const pick = g.queue[g.queue.length - 1]
+  const chosen = fold(use(facts, facts.length - 1, { what: 'team', to: pick.uid }))
+  assert.deepEqual(chosen.team.map((m) => m.uid), [pick.uid, ...g.queue.slice(0, TEAM_SIZE - 1).map((m) => m.uid)])
+  // a Pokemon that is not yours is ignored: the places fill as if nobody was chosen
+  assert.deepEqual(fold(use(facts, facts.length - 1, { what: 'team', to: 'nobody' })).team.map((m) => m.uid), g.team.map((m) => m.uid))
+  // choosing nobody leaves the places to fill themselves (a team place nobody chose is never left empty)
+  assert.equal(fold(use(facts, facts.length - 1, { what: 'team', to: '' })).team.length, TEAM_SIZE)
+})
+
+test('before TEAM_OPEN_FROM the team is what it always was: fully trained Pokemon only, and an untrained one cannot be chosen', () => {
+  const early = run(Math.round((Date.parse(TEAM_OPEN_FROM) - Date.parse(GAME_START)) / 86400000) - 2, ALL)
+  const g = fold(early)
+  assert.ok(g.queue.length >= 1)
+  assert.ok(g.team.every((m) => m.graduated), 'only trained Pokemon stand on the team')
+  const chosen = fold(use(early, early.length - 1, { what: 'team', to: g.queue[0].uid }))
+  assert.equal(chosen.team.length, 0, 'an untrained Pokemon cannot be chosen before the day it opens')
+})
+
+test('a reward claimed on the day it was earned still pays: a quest or feat won in the evening can be collected that evening', () => {
+  const facts = run(6, ALL)
+  const wk = facts.find((f) => f.day)!.day
+  const base = foldGame(facts)
+  const key = base.held.find((h) => h.key.startsWith('quest:') || h.key.startsWith('feat:'))?.key
+  assert.ok(key, 'the game holds a quest or feat reward')
+  const earned = base.moments.find((m) => (m.kind === 'quest' || m.kind === 'feat'))!.day
+  void wk
+  // the same fold with the claim made on the day it was earned, at the end of that day
+  const claimed = foldGame(facts.map((f) => (f.day === earned ? { ...f, uses: [{ day: f.day, item: '', uid: '', what: 'claim', to: key! }] } : f)))
+  assert.ok(!claimed.held.some((h) => h.key === key), 'a same-day claim is not dropped: the reward is paid, not held')
+  // a claim for a reward that never exists is still ignored
+  const stale = foldGame(facts.map((f) => (f.day === earned ? { ...f, uses: [{ day: f.day, item: '', uid: '', what: 'claim', to: 'quest:never' }] } : f)))
+  assert.equal(stale.held.length, base.held.length)
 })
 
 test('the season is a ladder climbed by the work of the month', () => {

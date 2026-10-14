@@ -5,11 +5,11 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { nameOf, spritePath, type Game, type Mon, type Quest } from '../core/fold.ts'
 import {
-  BALLS, DOMAIN_SHOPS, FORGE_COST, GEAR_ITEMS, HELD, ITEMS, LURES, MARKS, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, masteryCost, RARE_SHELF, SELL, TM_SLOTS, itemName, throwHp, tmType,
+  BALLS, DOMAIN_SHOPS, GEAR_ITEMS, HELD, ITEMS, LURES, MARKS, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, masteryCost, RARE_SHELF, SELL, TM_SLOTS, itemName, throwHp, tmType,
   type MarkTag, type Offer, type ShopId,
 } from '../core/economy.ts'
 import { KIT_SHARD_EVERY } from '../core/rules.ts'
-import { BALL_NAME, DAILY_PAY, REPEL_DAYS, TEAM_BONUS, TEAM_NATURE, TEAM_SIZE, levelOf } from '../core/rules.ts'
+import { BALL_NAME, DAILY_PAY, REPEL_DAYS, TEAM_BONUS, TEAM_NATURE, TEAM_OPEN_FROM, TEAM_SIZE, levelOf } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
 import { TAG_NAME, Win, plural } from './App.tsx'
 import { Ball, BallItem } from './Ball.tsx'
@@ -25,7 +25,6 @@ import { useItem } from './lib/store.ts'
 
 export { Coin, EggIcon, Gem }
 
-const isBall = (id: string): boolean => id in BALLS
 /** What a thrown ball would take off the wild Pokemon in front of you today. */
 const hitOf = (game: Game, id: string): number => {
   const w = game.wild
@@ -353,7 +352,7 @@ export function ShopTab({ game, only }: { game: Game; only?: ShopId }) {
       {!only && (
         <Win title="Where it all comes from" tone="dark" fold>
           <ul className="earn">
-            <li><Coin size={22} /> daily and weekly quests, the season, chests, and selling a Box Pokemon to the Professor</li>
+            <li><Coin size={22} /> daily and weekly quests, the season, chests, and selling a Pokemon from My Pokemon to the Professor</li>
             <li><Gem size={22} /> feats, a catch, an evolution, a badge, weekly quests</li>
             <li>{MARK_TAGS.map((t) => <MarkIcon key={t} tag={t} size={22} />)} one a day for each kind of work done: coding, gym, guitar, Arbor, sleep</li>
             <li><ItemIcon id="red-shard" size={22} /><ItemIcon id="blue-shard" size={22} /><ItemIcon id="yellow-shard" size={22} /><ItemIcon id="green-shard" size={22} /> shards come from feats (a month running, a hundred days), every third set of Strong gear and a boss</li>
@@ -366,21 +365,67 @@ export function ShopTab({ game, only }: { game: Game; only?: ShopId }) {
 }
 
 // ── the bag: what is held, carried and burning ──────────────────────────────
+/** Where each kind of thing is used, in a line: shown on its card. */
+const USED: Record<string, string> = {
+  ball: 'Thrown at the wild Pokemon, or at the weekly boss once it is weak, from Today.',
+  berry: 'Fed to your partner for a bond heart, from Today or here.',
+  held: 'Held by your partner, one at a time: it adds to its kind of work.',
+  tm: 'Carried by your partner: each counts as one of its types against a leader.',
+  shard: 'Three of one colour forge a Mega Stone in the Forge on this tab.',
+  key: 'Needed before the Forge can make a Mega Stone.',
+  unique: 'Kept for good: no shop sells it.',
+  gear: "A piece of Strong's training kit: a full set of seven pays gems and Iron.",
+  guard: 'Used on Today, when the wild Pokemon is about to flee or a leader has won HP back.',
+  lure: 'Shows three Pokemon of its kind of work: the one you tap is the next wild Pokemon.',
+  incense: 'Shows three Pokemon of any type: the one you tap is the next wild Pokemon.',
+  egg: 'Warmed by the steps your band counts, in the Nursery.',
+  chest: 'Opens the moment it is bought.',
+  theme: 'Changes the scene on Today.',
+}
+const GROUPS: [string, (id: string) => boolean][] = [
+  ['Balls', (id) => ITEMS[id]?.kind === 'ball'],
+  ['Berries', (id) => ITEMS[id]?.kind === 'berry'],
+  ['Held items', (id) => id in HELD],
+  ['TMs', (id) => ITEMS[id]?.kind === 'tm'],
+  ['Keepsakes', (id) => ['shard', 'key', 'unique'].includes(ITEMS[id]?.kind)],
+]
+
 export function Bag({ game }: { game: Game }) {
+  const [open, setOpen] = useState<string | null>(null)
   const have = (id: string) => game.inv[id] ?? 0
-  const held = Object.keys(HELD).filter((id) => have(id) > 0 || game.partner.held === id)
-  const tms = Object.keys(ITEMS).filter((id) => ITEMS[id].kind === 'tm' && have(id) > 0)
   const equipped = game.partner.moves ?? []
+  const owned = Object.keys(game.inv).filter((id) => have(id) > 0 && ITEMS[id])
+  // an item held by the partner is not in the count of what is loose, but it is still in the bag
+  if (game.partner.held && !owned.includes(game.partner.held) && ITEMS[game.partner.held]) owned.push(game.partner.held)
+  const used = new Set<string>()
+  const groups = GROUPS.map(([name, test]) => {
+    const ids = owned.filter((id) => !used.has(id) && test(id))
+    ids.forEach((id) => used.add(id))
+    return [name, ids] as const
+  }).filter(([, ids]) => ids.length > 0)
+  // everything that is not one of the groups above: gear, guards, incense, an egg, a chest, a scene
+  const rest = owned.filter((id) => !used.has(id))
+  const balls = owned.filter((id) => ITEMS[id].kind === 'ball').reduce((n, id) => n + have(id), 0)
+  const berries = owned.filter((id) => ITEMS[id].kind === 'berry').reduce((n, id) => n + have(id), 0)
   const toggleTm = (id: string) => {
     const next = equipped.includes(id) ? equipped.filter((x) => x !== id) : [...equipped, id].slice(-TM_SLOTS)
     useItem('', '', 'move', next.join(','))
     play('tap')
   }
-  const rest = Object.keys(game.inv).filter((id) => have(id) > 0 && ['shard', 'key', 'unique'].includes(ITEMS[id]?.kind) && !HELD[id])
-  const stuff = Object.keys(game.inv).filter((id) => have(id) > 0 && ['ball', 'berry'].includes(ITEMS[id]?.kind))
-  const empty = !held.length && !tms.length && !rest.length && !stuff.length
+  const tile = (id: string) => {
+    const on = game.partner.held === id || equipped.includes(id) || game.theme === id
+    return (
+      <button key={id} type="button" className={`bagtile ${on ? 'on' : ''}`} onClick={() => { setOpen(id); play('tap') }} title={ITEMS[id].text} aria-label={`${itemName(id)}, ${have(id) || 'held'}. Open`}>
+        <ItemIcon id={id} size={40} />
+        <b>{itemName(id)}</b>
+        <small>{on ? (game.theme === id ? 'In use' : 'Equipped') : have(id) > 0 ? `×${have(id)}` : 'Held'}</small>
+      </button>
+    )
+  }
+  const card = open && ITEMS[open] ? open : null
+  const kind = card ? ITEMS[card].kind : null
   return (
-    <Win title="Bag" tone="purple" fold aside={game.keyStone ? <><ItemIcon id="key-stone" size={22} /> Key Stone</> : undefined}>
+    <Win title="Bag" tone="purple" fold aside={balls || berries ? <>{balls > 0 && `${balls} ${balls === 1 ? 'ball' : 'balls'}`}{balls > 0 && berries > 0 && ' · '}{berries > 0 && `${berries} ${berries === 1 ? 'berry' : 'berries'}`}</> : game.keyStone ? <><ItemIcon id="key-stone" size={22} /> Key Stone</> : undefined}>
       <span className="k-label">Money and marks</span>
       <div className="baggrid wallet">
         <div className="bagtile" title="Coins: for showing up, quests, the season, chests and the Professor"><Coin size={40} /><b>Coins</b><small>{game.wallet.coins.toLocaleString('en-IN')}{game.wallet.coinsToday > 0 ? ` · +${game.wallet.coinsToday} today` : ''}</small></div>
@@ -391,49 +436,38 @@ export function Bag({ game }: { game: Game }) {
           </div>
         ))}
       </div>
-      {empty && <p className="muted">No items yet. The Mart opens each morning, and feats hand out the rest.</p>}
-      {stuff.length > 0 && (
-        <div className="baggrid">
-          {stuff.map((id) => <div key={id} className="bagtile" title={ITEMS[id].text}><ItemIcon id={id} size={40} /><b>{itemName(id)}</b><small>×{have(id)} · {isBall(id) ? 'thrown from Home' : 'fed from Home'}</small></div>)}
-        </div>
-      )}
-      {held.length > 0 && (
-        <>
-          <span className="k-label">Held by {nameOf(game.partner.form)}: one at a time</span>
-          <div className="baggrid">
-            {held.map((id) => {
-              const on = game.partner.held === id
-              return (
-                <div key={id} className={`bagtile ${on ? 'on' : ''}`} title={ITEMS[id].text}>
-                  <ItemIcon id={id} size={40} />
-                  <b>{itemName(id)}</b>
-                  <small>{HELD[id].tag ? `${TAG_NAME[HELD[id].tag!]} ×${HELD[id].mult}` : `everything ×${HELD[id].mult}`}</small>
-                  <button type="button" className={`k-btn ${on ? '' : 'main'}`} onClick={() => { useItem(on ? '' : id, '', 'hold', on ? '' : id); play('tap') }}>{on ? 'Take off' : 'Hold'}</button>
-                </div>
-              )
-            })}
-          </div>
-        </>
-      )}
-      {tms.length > 0 && (
-        <>
-          <span className="k-label">TMs on {nameOf(game.partner.form)}: {equipped.length} of {TM_SLOTS}. Each counts as one of its types against a leader</span>
-          <div className="tmgrid">
-            {tms.map((id) => (
-              <button key={id} type="button" className={`tm ${equipped.includes(id) ? 'on' : ''}`} aria-pressed={equipped.includes(id)} onClick={() => toggleTm(id)}>
-                <ItemIcon id={id} size={36} /><small>{tmType(id)}</small>
-              </button>
-            ))}
-          </div>
-        </>
-      )}
+      {owned.length === 0 && <p className="muted">No items yet. The Mart opens each morning, and feats hand out the rest.</p>}
+      {groups.map(([name, ids]) => (
+        <section key={name} className="bag-group">
+          <span className="k-label">{name === 'TMs' ? `TMs · ${equipped.length} of ${TM_SLOTS} on ${nameOf(game.partner.form)}` : name === 'Held items' ? `Held items · ${nameOf(game.partner.form)} holds one` : name}</span>
+          <div className="baggrid">{ids.map(tile)}</div>
+        </section>
+      ))}
       {rest.length > 0 && (
-        <>
-          <span className="k-label">Kept</span>
-          <div className="baggrid">
-            {rest.map((id) => <div key={id} className="bagtile" title={ITEMS[id].text}><ItemIcon id={id} size={40} /><b>{itemName(id)}</b><small>{ITEMS[id].kind === 'shard' ? `×${have(id)} · ${FORGE_COST} forge a Mega Stone` : ITEMS[id].text}</small></div>)}
+        <section className="bag-group">
+          <span className="k-label">Everything else</span>
+          <div className="baggrid">{rest.map(tile)}</div>
+        </section>
+      )}
+      {card && kind && (
+        <Sheet title={itemName(card)} onClose={() => setOpen(null)}>
+          <div className="ware-sheet">
+            <span className="ware-sheet-art"><ItemIcon id={card} size={96} /></span>
+            <h2 className="k-type">{itemName(card)}</h2>
+            <p>{ITEMS[card].text}</p>
+            <small className="ware-sheet-have">{have(card) > 0 ? `You have ${have(card)}` : 'Held by your partner'}</small>
+            <p className="muted">{USED[kind]}</p>
+            {kind === 'berry' && <button type="button" className="k-btn ok big" onClick={() => { useItem(card, '', 'feed'); play('feed'); if (have(card) <= 1) setOpen(null) }}>Feed it now</button>}
+            {kind === 'held' && (() => {
+              const on = game.partner.held === card
+              return <KButton tone={on ? 'neutral' : 'main'} big onClick={() => { useItem(on ? '' : card, '', 'hold', on ? '' : card); play('tap'); setOpen(null) }}>{on ? 'Take it off' : `Give it to ${nameOf(game.partner.form)}`}</KButton>
+            })()}
+            {kind === 'tm' && <KButton tone={equipped.includes(card) ? 'neutral' : 'main'} big onClick={() => { toggleTm(card); setOpen(null) }}>{equipped.includes(card) ? 'Take it off' : `Equip on ${nameOf(game.partner.form)}`}</KButton>}
+            {kind === 'theme' && <KButton tone={game.theme === card ? 'neutral' : 'main'} big onClick={() => { useItem('', '', 'theme', game.theme === card ? undefined : card); setOpen(null) }}>{game.theme === card ? 'Take it off' : 'Use this scene'}</KButton>}
+            {card === 'max-repel' && <button type="button" className="k-btn main big" disabled={!(game.wild && !game.wild.caught && !game.wild.repel)} onClick={() => { useItem('max-repel', '', 'repel'); play('tap'); setOpen(null) }}>Use on the wild Pokemon</button>}
+            {card === 'revive' && <button type="button" className="k-btn main big" disabled={game.league.slipped <= 0} onClick={() => { useItem('revive', '', 'revive'); play('tap'); setOpen(null) }}>Use on the leader</button>}
           </div>
-        </>
+        </Sheet>
       )}
     </Win>
   )
@@ -449,11 +483,9 @@ export function MonPage({ m, game, onClose }: { m: Mon; game: Game; onClose: () 
   const inTeam = game.team.some((x) => x.uid === m.uid)
   const hearts = (m.together ?? 0) + (m.fed ?? 0)
   const v5 = true
-  const cap = TEAM_SIZE
-  const setTeam = () => {
-    const ids = inTeam ? game.team.filter((x) => x.uid !== m.uid).map((x) => x.uid) : [...game.team.map((x) => x.uid), m.uid].slice(-cap)
-    useItem('', '', 'team', ids.join(','))
-  }
+  const open = game.today.day >= TEAM_OPEN_FROM
+  const canTeam = !isPartner && (trained || (open && inBox))
+  const setTeam = () => putOnTeam(game, m.uid, !inTeam)
   const act = (what: string) => { useItem('', m.uid, what); play('tap'); onClose() }
   const megas = rec.m ?? []
   const sell = SELL[rec.r ?? 'C'] ?? SELL.C
@@ -467,7 +499,7 @@ export function MonPage({ m, game, onClose }: { m: Mon; game: Game; onClose: () 
           <div className="mp-types">
             {[rec.t, rec.t2].filter(Boolean).map((t) => <span key={t} className="chip type"><img src={`/sprites/types/${t}.png`} alt="" width={14} height={14} onError={(e) => { e.currentTarget.style.display = 'none' }} />{t}</span>)}
             {(m.moves ?? []).map((id) => <span key={id} className="chip type tmchip"><ItemIcon id={id} size={16} />{tmType(id)}</span>)}
-            <span className="chip where">{isPartner ? 'Your partner' : trained ? (inTeam ? 'On the team' : 'Fully trained') : 'In the Box'}</span>
+            <span className="chip where">{isPartner ? 'Your partner' : inTeam ? 'In the party' : trained ? 'Fully trained' : 'In My Pokemon'}</span>
           </div>
           <div className="mp-tiles">
             <div className="k-tile"><span className="k-label">Level</span><b>{levelOf(m.xp)}</b></div>
@@ -489,7 +521,7 @@ export function MonPage({ m, game, onClose }: { m: Mon; game: Game; onClose: () 
             {inBox && <KButton tone="main" disabled={m.uid === game.nextUp} onClick={() => act('next')}>{m.uid === game.nextUp ? 'Next up' : 'Make next'}</KButton>}
             {inBox && <KButton onClick={() => act('lead')}>Partner now</KButton>}
             {inBox && v5 && <button type="button" className="k-btn ok" onClick={() => act('transfer')}>To the Professor <Price coins={sell} /></button>}
-            {trained && v5 && <KButton tone={inTeam ? 'neutral' : 'main'} onClick={() => { setTeam(); play('tap') }}>{inTeam ? 'Take off the team' : 'Put on the team'}</KButton>}
+            {canTeam && <KButton tone={inTeam ? 'neutral' : 'main'} onClick={() => { setTeam(); play('tap'); onClose() }}>{inTeam ? 'Take out of the party' : 'Add to the party'}</KButton>}
           </div>
         </div>
       </div>
@@ -498,6 +530,42 @@ export function MonPage({ m, game, onClose }: { m: Mon; game: Game; onClose: () 
 }
 
 // ── team ────────────────────────────────────────────────────────────────────
+/** Put someone in the party (first in line: the newest choice pushes the last one out when it is full) or take them out. One `team` event holds the whole choice. */
+function putOnTeam(game: Game, uid: string, on: boolean): void {
+  const rest = game.team.map((x) => x.uid).filter((id) => id !== uid)
+  useItem('', '', 'team', (on ? [uid, ...rest].slice(0, TEAM_SIZE) : rest).join(','))
+}
+
+/** Everyone who can join the party and is not in it: from the day the team opened, My Pokemon as well as the fully trained. */
+function Joiners({ game, onPick, onClose }: { game: Game; onPick: (uid: string) => void; onClose: () => void }) {
+  const open = game.today.day >= TEAM_OPEN_FROM
+  const inTeam = new Set(game.team.map((m) => m.uid))
+  const trained = game.graduates.filter((m) => !inTeam.has(m.uid))
+  const waiting = open ? game.queue.filter((m) => !inTeam.has(m.uid)) : []
+  return (
+    <Sheet title="Add to the party" onClose={onClose}>
+      <div className="joiners">
+        <h2 className="k-type">Add to the party</h2>
+        <p className="muted">{game.team.length >= TEAM_SIZE ? 'The party is full: the one you add comes first and the last place is given up.' : `${TEAM_SIZE - game.team.length} ${TEAM_SIZE - game.team.length === 1 ? 'place is' : 'places are'} open.`} Each one adds {Math.round(TEAM_BONUS * 100)}% to every strike.</p>
+        {trained.length > 0 && (
+          <>
+            <span className="k-label">Fully trained</span>
+            <div className="boxgrid">{trained.map((m) => <Standee key={m.uid} m={m} size={52} onClick={() => { onPick(m.uid); onClose() }} />)}</div>
+          </>
+        )}
+        {waiting.length > 0 && (
+          <>
+            <span className="k-label">In My Pokemon</span>
+            <div className="boxgrid">{waiting.map((m) => <Standee key={m.uid} m={m} size={52} onClick={() => { onPick(m.uid); onClose() }} />)}</div>
+          </>
+        )}
+        {trained.length === 0 && waiting.length === 0 && <p className="muted">Nobody else is free to join. Catch more Pokemon, or finish training one.</p>}
+        {!open && <p className="muted">Pokemon still being raised can join the party from {fmtDay(TEAM_OPEN_FROM)}.</p>}
+      </div>
+    </Sheet>
+  )
+}
+
 /** One Pokemon as it stands on the Party tab: the sprite on its shadow, its name and level under it. No frame. */
 function Standee({ m, size = 64, note, onClick, title }: { m: Mon; size?: number; note?: ReactNode; onClick: () => void; title?: string }) {
   return (
@@ -513,12 +581,16 @@ function Standee({ m, size = 64, note, onClick, title }: { m: Mon; size?: number
   )
 }
 
-/** Party: what you have, and what you can do with it. The partner first, then the six who stand together, the Forge, and the stores folded below. */
+/** Party: what you have, and what you can do with it. The partner, the six who stand together, My Pokemon, the Forge, and the rest of what you own under its own heading. */
 export function TeamTab({ game, partnerCard, choices, onShop }: { game: Game; partnerCard: (open: () => void) => ReactNode; choices: ReactNode; onShop: () => void }) {
   const [page, setPage] = useState<string | null>(null)
+  const [joining, setJoining] = useState(false)
   const inTeam = new Set(game.team.map((m) => m.uid))
   const shown = [game.partner, ...game.queue, ...game.graduates].find((m) => m.uid === page)
   const cap = TEAM_SIZE
+  const open = game.today.day >= TEAM_OPEN_FROM
+  // who could still join: the fully trained, and from the day the team opened, everyone in My Pokemon
+  const free = game.graduates.filter((m) => !inTeam.has(m.uid)).length + (open ? game.queue.filter((m) => !inTeam.has(m.uid)).length : 0)
   const bench = game.graduates.filter((m) => !inTeam.has(m.uid))
   return (
     <div className="partypage">
@@ -530,43 +602,60 @@ export function TeamTab({ game, partnerCard, choices, onShop }: { game: Game; pa
             {Array.from({ length: cap }, (_, i) => {
               const m = game.team[i]
               return m
-                ? <div key={m.uid} className="plat"><Standee m={m} onClick={() => setPage(m.uid)} title={`${nameOf(m.form)}${m.nature ? ` · ${m.nature.name}` : ''}`} /></div>
-                : <div key={i} className="plat empty" aria-label="Empty place in the party"><span className="plat-ball" aria-hidden /><small>Open</small></div>
+                ? <div key={m.uid} className="plat"><Standee m={m} note={m.graduated ? `Lv ${levelOf(m.xp)}` : `Lv ${levelOf(m.xp)} · raising`} onClick={() => setPage(m.uid)} title={`${nameOf(m.form)}${m.nature ? ` · ${m.nature.name}` : ''}`} /></div>
+                : <button key={i} type="button" className="plat empty" disabled={free === 0} onClick={() => setJoining(true)} aria-label={free ? 'Add someone to the party' : 'Empty place in the party'}><span className="plat-ball" aria-hidden /><small>{free ? 'Add' : 'Open'}</small></button>
             })}
           </div>
-          {bench.length > 0
-            ? (
-              <div className="bench">
-                <span className="k-label">Bench · {bench.length} fully trained · tap one to put it in</span>
-                <div className="bench-row" data-noswipe>
-                  {bench.map((m) => <Standee key={m.uid} m={m} size={48} onClick={() => setPage(m.uid)} title={`${nameOf(m.form)} · ${SPECIES[m.form].t}${SPECIES[m.form].t2 ? ` / ${SPECIES[m.form].t2}` : ''}${m.nature ? ` · ${m.nature.name}` : ''}`} />)}
-                </div>
+          <div className="party-actions">
+            <button type="button" className="k-btn main" disabled={free === 0} onClick={() => { setJoining(true); play('tap') }}>Add to the party</button>
+            <small>{free === 0 ? 'Nobody else is free to join yet.' : `${free} could join. A place nobody chose fills itself with the oldest in My Pokemon.`}</small>
+          </div>
+          {bench.length > 0 && (
+            <div className="bench">
+              <span className="k-label">Fully trained, off the party · {bench.length}</span>
+              <div className="bench-row" data-noswipe>
+                {bench.map((m) => <Standee key={m.uid} m={m} size={48} onClick={() => setPage(m.uid)} title={`${nameOf(m.form)} · ${SPECIES[m.form].t}${SPECIES[m.form].t2 ? ` / ${SPECIES[m.form].t2}` : ''}${m.nature ? ` · ${m.nature.name}` : ''}`} />)}
               </div>
-            )
-            : game.graduates.length === 0 && <p className="muted">Fully trained Pokemon stand here. Each adds {Math.round(TEAM_BONUS * 100)}% to every strike, and {Math.round(TEAM_NATURE * 100)}% more to the work its nature raised.</p>}
+            </div>
+          )}
         </Win>
-        <Nursery game={game} onShop={onShop} />
+        <MyPokemon game={game} onOpen={setPage} />
       </div>
       <div className="party-side">
         <Forge game={game} />
       </div>
       <div className="party-stores">
-        {choices}
+        <h2 className="extras-h">Items and extras</h2>
+        <Nursery game={game} onShop={onShop} />
         <Bag game={game} />
         <IncenseWin game={game} />
-        <Win title="Box" tone="dark" fold aside={plural(game.queue.length, 'Pokemon', 'Pokemon')}>
-          {game.queue.length === 0 ? <p className="muted">Empty. Catch the wild Pokemon and it comes here.</p> : (
-            <div className="boxgrid">
-              {game.queue.map((m) => (
-                <Standee key={m.uid} m={m} size={52} note={m.uid === game.nextUp ? <em className="nextup">Next up</em> : undefined} onClick={() => setPage(m.uid)} title={`${nameOf(m.form)}${m.ball ? ` · ${m.thrown ? itemName(m.thrown) : BALL_NAME[m.ball]}` : ''}`} />
-              ))}
-            </div>
-          )}
-        </Win>
+        {choices}
       </div>
       {shown && <MonPage m={shown} game={game} onClose={() => setPage(null)} />}
+      {joining && <Joiners game={game} onPick={(uid) => putOnTeam(game, uid, true)} onClose={() => setJoining(false)} />}
     </div>
   )
+}
+
+/** Everything caught and not yet raised, oldest first. Open when there are few, folded when it grows. */
+function MyPokemon({ game, onOpen }: { game: Game; onOpen: (uid: string) => void }) {
+  const inTeam = new Set(game.team.map((m) => m.uid))
+  const body = game.queue.length === 0
+    ? <p className="muted">Empty. Catch the wild Pokemon and it comes here.</p>
+    : (
+      <div className="boxgrid">
+        {game.queue.map((m) => (
+          <Standee key={m.uid} m={m} size={52} note={m.uid === game.nextUp ? <em className="nextup">Next up</em> : inTeam.has(m.uid) ? <em className="nextup">In the party</em> : undefined} onClick={() => onOpen(m.uid)} title={`${nameOf(m.form)}${m.ball ? ` · ${m.thrown ? itemName(m.thrown) : BALL_NAME[m.ball]}` : ''}`} />
+        ))}
+      </div>
+    )
+  return <MyPokemonWin n={game.queue.length}>{body}</MyPokemonWin>
+}
+function MyPokemonWin({ n, children }: { n: number; children: ReactNode }) {
+  // open by default while it holds eight or fewer; the details element keeps the choice the reader makes
+  return n <= 8
+    ? <Win title="My Pokemon" tone="dark" aside={plural(n, 'Pokemon', 'Pokemon')}>{children}</Win>
+    : <Win title="My Pokemon" tone="dark" fold aside={plural(n, 'Pokemon', 'Pokemon')}>{children}</Win>
 }
 
 /** A number that pops up and floats away: what today did to something. */

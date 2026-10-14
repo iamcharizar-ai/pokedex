@@ -69,12 +69,12 @@ function tell(m: Moment, game: Game): Told {
       const mon = game.graduates.find((g) => g.uid === m.uid)
       return { title: 'Fully trained', line: `${nameOf(m.form)} is in the Pokedex for good${mon?.nature ? `, with a ${mon.nature.name} nature` : ''}.`, art: 'mon', form: m.form, shiny: mon?.shiny }
     }
-    case 'hatch': return { title: 'The egg hatched!', line: `${nameOf(m.form)} is in your Box.`, art: 'mon', form: m.form }
+    case 'hatch': return { title: 'The egg hatched!', line: `${nameOf(m.form)} is in My Pokemon.`, art: 'mon', form: m.form }
     case 'partner': return { title: m.origin === 'egg' ? 'An egg hatched' : 'New partner', line: `${nameOf(m.form)} is your partner now.`, art: 'mon', form: m.form }
     case 'catch': {
       const mon = [...game.queue, ...game.graduates, game.partner].find((x) => x.uid === m.uid)
       const ball = mon?.ball ?? game.days.find((d) => d.day === m.day)?.ball ?? 'poke'
-      return { title: m.how === 'perfect' ? 'Perfect day: caught!' : 'Gotcha!', line: `${m.shiny ? 'A shiny ' : ''}${nameOf(m.form)} was caught in ${mon?.thrown ? `a ${itemName(mon.thrown)}` : aBall(ball)} and is in your Box.`, art: 'catch', form: m.form, shiny: m.shiny, ball, thrown: mon?.thrown }
+      return { title: m.how === 'perfect' ? 'Perfect day: caught!' : 'Gotcha!', line: `${m.shiny ? 'A shiny ' : ''}${nameOf(m.form)} was caught in ${mon?.thrown ? `a ${itemName(mon.thrown)}` : aBall(ball)} and is in My Pokemon.`, art: 'catch', form: m.form, shiny: m.shiny, ball, thrown: mon?.thrown }
     }
     case 'form': return { title: m.what === 'mega' ? 'Mega form' : 'Gigantamax', line: `${nameOf(m.form)} is registered in the Pokedex.`, art: 'mon', form: m.form }
     case 'mega': return { title: 'Mega Stone forged', line: `${nameOf(m.form)} is registered to this Pokemon and never runs out.`, art: 'mon', form: m.form }
@@ -85,7 +85,7 @@ function tell(m: Moment, game: Game): Told {
     case 'boss':
       if (m.what === 'appear') return { title: 'A boss appeared', line: `Lv ${m.level} ${nameOf(m.form)} is here for the week. Its card is on Home.`, art: 'mon', form: m.form }
       if (m.what === 'kill') return { title: 'Boss beaten', line: `${nameOf(m.form)} is down. Its prize waits in Collect.`, art: 'mon', form: m.form }
-      if (m.what === 'catch') return { title: 'Boss caught!', line: `${m.shiny ? 'A shiny ' : ''}${nameOf(m.form)} is in your Box.`, art: 'mon', form: m.form, shiny: m.shiny }
+      if (m.what === 'catch') return { title: 'Boss caught!', line: `${m.shiny ? 'A shiny ' : ''}${nameOf(m.form)} is in My Pokemon.`, art: 'mon', form: m.form, shiny: m.shiny }
       return { title: '', line: '', art: 'none' }
     case 'review': return { title: 'Month reviewed', line: 'A Comet Shard is yours. It fits any Mega: three forge a stone.', art: 'item', item: 'comet-shard' }
     case 'key': return { title: 'Key Stone', line: 'Three shards now forge a Mega Stone for a fully evolved Pokemon.', art: 'key' }

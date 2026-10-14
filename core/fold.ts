@@ -15,7 +15,7 @@ import { LEAGUES, lineup, type Leader } from './gyms.ts'
 import {
   ADVANTAGE_MULT, BALL_MULT, CATCH_WEIGHTS, DAILY_PAY, EGG_STEPS, GEMS, LEADER_HP, LEGENDARY_EVERY_WILD, MEGA_BONUS, MOMENTUM_WINDOW, NATURES, NATURE_DOMAIN, NATURE_STATS,
   CLAIM_AUTO, KIT_IRON, KIT_SHARD_EVERY, PAY_STREAK, PILLARS_FOR_A_DAY, REPEL_DAYS, SEASON_STEP, SHINY_ODDS, SHINY_ODDS_WORN, SLEEP_AFTER, SLEEP_DEEP, REVIEW_GEMS, SLEEP_HABIT, SLIP, STAKES_FROM, START_SPECIES, STAT_DAYS, STEPS_GOAL, TAGS,
-  TEAM_BONUS, TEAM_NATURE, TEAM_SIZE, WEAK_MULT, WEEK_DAYS, WILD_HP, WILD_STAY, ballFor, bondLevel, evolveAt, graduateAt, levelOf, momentumMult, regionsOpen, wildHit, xpForLevel,
+  TEAM_BONUS, TEAM_NATURE, TEAM_OPEN_FROM, TEAM_SIZE, WEAK_MULT, WEEK_DAYS, WILD_HP, WILD_STAY, ballFor, bondLevel, evolveAt, graduateAt, levelOf, momentumMult, regionsOpen, wildHit, xpForLevel,
   type Ball, type NatureStat, type Rarity, type Tag,
 } from './rules.ts'
 import { COMET_SHARD } from './economy.ts'
@@ -305,7 +305,7 @@ export interface Game {
   inv: Record<string, number>
   /** the scene theme in use, '' for the ordinary one */
   theme: string
-  /** up to TEAM_SIZE fully trained Pokemon standing behind the partner, and what the strike is raised by */
+  /** up to TEAM_SIZE Pokemon standing behind the partner (fully trained ones, or from TEAM_OPEN_FROM any you own), and what the strike is raised by */
   team: Mon[]
   power: Power
   /** this week's quests (the day's own reward is its pay) */
@@ -416,6 +416,8 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
   const bossWeeks = new Set<string>()
   // ── rewards that wait to be collected ──
   const held = new Map<string, Held>()
+  /** a claim made before its reward existed (a quest or feat won later the same day): it pays the moment the reward appears */
+  const claimedEarly = new Set<string>()
   /** pay it into the wallet and the bag (not today's tally: that counted when it was earned) */
   const credit = (h: Held, day: string) => {
     wallet.coins += h.coins; wallet.gems += h.gems
@@ -435,12 +437,23 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
     if (coins <= 0 && gems <= 0 && !items.length) return
     wallet.coinsToday += coins; wallet.gemsToday += gems
     const h: Held = { key, day, title, coins, gems, items }
-    if (opts.instant) credit(h, day)
+    if (opts.instant || claimedEarly.delete(key)) credit(h, day)
     else held.set(key, h)
   }
   /** the three the wild Pokemon after this one can be chosen from: of any type, or of one domain's types for a domain incense */
   const wishOptions = (tag: Tag | null): string[] => [0, 1, 2].map((k) => roll(`wish:${spawns + 1}:${tag ?? 'any'}:${k}`, 'any', tag))
-  const teamNow = (): Mon[] => (teamPick ? teamPick.flatMap((u) => graduates.filter((m) => m.uid === u)) : graduates.slice(-TEAM_SIZE).reverse()).slice(0, TEAM_SIZE)
+  /** the day being folded: the team's rules depend on it (TEAM_OPEN_FROM) */
+  let teamDay = ''
+  /** who stands on the team: the ones you chose, or the latest fully trained; from TEAM_OPEN_FROM any Pokemon you own can be chosen, and empty places fill with the oldest in My Pokemon */
+  const teamNow = (): Mon[] => {
+    if (teamDay < TEAM_OPEN_FROM) return (teamPick ? teamPick.flatMap((u) => graduates.filter((m) => m.uid === u)) : graduates.slice(-TEAM_SIZE).reverse()).slice(0, TEAM_SIZE)
+    const owned = [...graduates, ...queue]
+    const picked = (teamPick ? teamPick.flatMap((u) => owned.filter((m) => m.uid === u)) : graduates.slice(-TEAM_SIZE).reverse()).slice(0, TEAM_SIZE)
+    const taken = new Set(picked.map((m) => m.uid))
+    return [...picked, ...queue.filter((m) => !taken.has(m.uid)).slice(0, TEAM_SIZE - picked.length)]
+  }
+  /** the fully trained among the team: the only ones that count towards the boss's party of six */
+  const trainedTeam = (): Mon[] => teamNow().filter((m) => m.graduated)
   /** the types the partner fights with: its own, and the TMs it carries */
   const typesOf = (m: Mon): (string | undefined)[] => [rec(m.form).t, rec(m.form).t2, ...(m.moves ?? []).map((id) => tmType(id) ?? undefined)]
   const notes: Notes = { codeDays: 0, arborDays: 0, guitarDays: 0, workouts: 0, records: 0, clean: 0, owned: 0, steps: 0, stepDays: 0 }
@@ -751,7 +764,9 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
       }
       case 'claim': {
         // a reward collected by hand; one that is not waiting (or was never earned) is ignored
-        if (u.to) release(u.to, day)
+        if (!u.to) return
+        if (held.has(u.to)) release(u.to, day)
+        else claimedEarly.add(u.to)
         return
       }
       case 'boss-throw': {
@@ -762,7 +777,7 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
         if (hpLeft > THROW_AT + 1e-9) return
         inv[item]--
         b.throws++
-        const chance = catchChance(item, teamNow().length, cardDone(b.card, b.p), hpLeft, b.strike)
+        const chance = catchChance(item, trainedTeam().length, cardDone(b.card, b.p), hpLeft, b.strike)
         if (rng(`boss-catch:${b.card.week}:${b.throws}`)() < chance) {
           const shiny = rng(`boss-shiny:${b.card.week}`)() < 1 / BOSS_SHINY
           const mon = make(b.card.species, 'catch', day, shiny)
@@ -785,7 +800,7 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
         return
       }
       case 'team': {
-        const ids = (u.to ?? '').split(',').filter((id) => graduates.some((m) => m.uid === id))
+        const ids = (u.to ?? '').split(',').filter((id) => graduates.some((m) => m.uid === id) || (day >= TEAM_OPEN_FROM && queue.some((m) => m.uid === id)))
         teamPick = [...new Set(ids)].slice(0, TEAM_SIZE)
         return
       }
@@ -860,6 +875,7 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
   let dayStart = { uid: partner.uid, xp: partner.xp }
 
   facts.forEach((f, i) => {
+    teamDay = f.day
     wallet.coinsToday = 0; wallet.gemsToday = 0; wallet.marksToday = zeroMarks()
     caughtToday = null
     fledToday = null
@@ -1124,6 +1140,19 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
       }
     }
 
+    /** the week's quests, paid as soon as they are met: before the day's own actions as well as after, so what was won this evening can be collected this evening */
+    const payQuests = () => {
+      const met: Record<string, boolean> = { 'five-days': (weekDays[wk] ?? 0) >= WEEK_DAYS, catch: (weekCatch[wk] ?? 0) >= 1 }
+      for (const q of WEEKLY_QUESTS) {
+        if (!met[q.id] || paid.has(`${wk}:${q.id}`)) continue
+        paid.add(`${wk}:${q.id}`)
+        const coins = Math.round((q.coins ?? 0) * amulet)
+        hold(`quest:${wk}:${q.id}`, f.day, q.name, coins, q.gems ?? 0)
+        moments.push({ kind: 'quest', day: f.day, id: q.id, name: q.name, coins, gems: q.gems ?? 0 })
+      }
+    }
+    payQuests()
+    evalFeats(f.day)
     for (const u of f.uses ?? []) spend(u, f.day)
 
     // an egg: one kept warm at a time, a day nearer on each day with two pillars
@@ -1138,14 +1167,7 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
       egg = null
     }
 
-    const met: Record<string, boolean> = { 'five-days': (weekDays[wk] ?? 0) >= WEEK_DAYS, catch: (weekCatch[wk] ?? 0) >= 1 }
-    for (const q of WEEKLY_QUESTS) {
-      if (!met[q.id] || paid.has(`${wk}:${q.id}`)) continue
-      paid.add(`${wk}:${q.id}`)
-      const coins = Math.round((q.coins ?? 0) * amulet)
-      hold(`quest:${wk}:${q.id}`, f.day, q.name, coins, q.gems ?? 0)
-      moments.push({ kind: 'quest', day: f.day, id: q.id, name: q.name, coins, gems: q.gems ?? 0 })
-    }
+    payQuests()
     // feats last, so everything the day did is counted
     evalFeats(f.day)
 
@@ -1196,7 +1218,7 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
       daysLeft: Math.max(0, 6 - dayGap(b.card.week, last.day)),
       throws: b.throws, throwsLeft: Math.max(0, THROWS - b.throws),
       canThrow: !b.caught && !b.fled && b.throws < THROWS && hpLeft <= THROW_AT + 1e-9,
-      trained: teamNow().length, killed: b.killed, caught: b.caught, fled: b.fled,
+      trained: trainedTeam().length, killed: b.killed, caught: b.caught, fled: b.fled,
     }
   }
   // the quests as they stand today
@@ -1297,7 +1319,7 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
     slip: slipToday,
     boss: bossView(),
     bossLog,
-    bossParty: 1 + teamNow().length,
+    bossParty: 1 + trainedTeam().length,
     notes,
     warnings,
     stats: statsOf(facts),

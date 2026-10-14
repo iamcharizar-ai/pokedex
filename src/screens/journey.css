@@ -86,3 +86,7 @@
 .cal-cell { max-height: 22px; }
 .cal-cell.perfect { box-shadow: inset 0 0 0 2px var(--tone-gold); }
 .cal-key .cal-cell.perfect { box-shadow: inset 0 0 0 2px var(--tone-gold); }
+
+/* a quest's name gets its own line; the bar and the pay share the next */
+.quest { grid-template-columns: 1fr auto; gap: 6px var(--s-3); }
+.quest .q-name { grid-column: 1 / -1; font-size: 15px; }

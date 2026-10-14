@@ -182,7 +182,7 @@ export function HatchOpener({ game }: { game: Game }) {
   const turn = useOverlay(Boolean(h), RANK.hatch)
   if (!h || !turn) return null
   return (
-    <Capsule key={h.uid} box={<ItemIcon id="rare-egg" size={130} />} rarity="epic" title={`${nameOf(h.form)}!`} line="The egg hatched. It is in your Box." onDone={() => setQueue((q) => q.slice(1))}>
+    <Capsule key={h.uid} box={<ItemIcon id="rare-egg" size={130} />} rarity="epic" title={`${nameOf(h.form)}!`} line="The egg hatched. It is in My Pokemon." onDone={() => setQueue((q) => q.slice(1))}>
       <img src={spritePath(h.form)} alt="" width={128} height={128} className="sprite" />
     </Capsule>
   )

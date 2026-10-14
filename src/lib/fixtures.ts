@@ -4,7 +4,7 @@
 //   ?fixture=week    eleven ordinary days: a wild Pokemon half worn down, rewards to collect
 //   ?fixture=late    five months in: evolutions, trained Pokemon, feats, an egg, a chest
 //   ?fixture=boss    a full party in a boss week, with the boss weak enough to throw at
-//   add &band=<score> to give any of them a band: fourteen measured nights, the last one scoring that (0 to 100)
+//   add &band=<score> to give any of them a band: fourteen measured nights, the last one scoring that (0 to 100); &band=wait is a band whose reading for this morning has not arrived
 //   add &news to any of them to have everything recent told again (reveals, toasts, chests)
 //
 // A fixture is a list of ordinary ledger events (a habit library, ticks, things
@@ -116,11 +116,12 @@ const empty = (): Fixture => ({ name: 'empty', today: addDays(GAME_START, 9), no
 const BUILD: Record<FixtureName, () => Fixture> = { empty, week, late, boss }
 export const isFixture = (x: string | null | undefined): x is FixtureName => typeof x === 'string' && (FIXTURES as readonly string[]).includes(x)
 /** Fourteen nights a band measured, the last (this morning's) scoring `last`: Sleep becomes a pillar paid by the score, and the Last night section has something to show. */
-function withBand(f: Fixture, last: number): Fixture {
+function withBand(f: Fixture, last: number | null): Fixture {
   const events = [...f.events]
   for (let i = 0; i < 14; i++) {
+    if (i === 13 && last === null) continue // this morning's reading has not arrived
     const day = addDays(f.today, i - 13)
-    const score = i === 13 ? last : [84, 71, 92, 66, 88, 79, 95, 58, 83, 90, 74, 86, 81][i]
+    const score = i === 13 ? last! : [84, 71, 92, 66, 88, 79, 95, 58, 83, 90, 74, 86, 81][i]
     const sleepMin = Math.round(300 + score * 2.4)
     const deepMin = Math.round(sleepMin * 0.17), remMin = Math.round(sleepMin * 0.22), awakeMin = 24 + (100 - score)
     events.push(ev('vitals', day, { sleepScore: score, sleepMin, deepMin, remMin, lightMin: sleepMin - deepMin - remMin, awakeMin, bed: `${addDays(day, -1)}T22:${String(10 + (i * 7) % 40)}`, wake: `${day}T0${5 + (i % 3)}:${String((i * 11) % 60).padStart(2, '0')}` }, 7))
@@ -130,6 +131,7 @@ function withBand(f: Fixture, last: number): Fixture {
 export const fixture = (name: string | null | undefined, band?: string | null): Fixture | null => {
   if (!isFixture(name)) return null
   const f = BUILD[name]()
+  if (band === 'wait') return withBand(f, null)
   const score = band === null || band === undefined || band === '' ? NaN : Number(band)
   return Number.isFinite(score) ? withBand(f, Math.max(0, Math.min(100, Math.round(score)))) : f
 }
