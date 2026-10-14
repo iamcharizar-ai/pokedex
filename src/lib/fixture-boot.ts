@@ -11,7 +11,7 @@ import { fixture, type Fixture } from './fixtures.ts'
 
 const params = typeof location === 'undefined' ? new URLSearchParams() : new URLSearchParams(location.search)
 /** The fixture this page was opened with, or null for the real game. */
-export const FIXTURE: Fixture | null = fixture(params.get('fixture'))
+export const FIXTURE: Fixture | null = fixture(params.get('fixture'), params.get('band'))
 
 /** What the app keeps per device about what it has already told. */
 const TOLD = ['pokedex.seen.v1', 'pokedex.toasted.v1', 'pokedex.opened.v1', 'pokedex.hatched.v1']

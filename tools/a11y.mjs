@@ -21,7 +21,7 @@ const strict = process.argv.includes('--strict')
 
 const server = spawn(process.execPath, [path.join(ROOT, 'node_modules', 'vite', 'bin', 'vite.js'), 'preview', '--port', String(PORT), '--strictPort'], { cwd: ROOT, stdio: 'ignore' })
 for (let i = 0; i < 60; i++) { try { if ((await fetch(`http://localhost:${PORT}/`)).ok) break } catch { /* not yet */ } await new Promise((r) => setTimeout(r, 250)) }
-const browser = await chromium.launch()
+const browser = await chromium.launch(process.env.PW_CHROME ? { executablePath: process.env.PW_CHROME } : {})
 const small = new Map(), unnamed = new Map()
 const weight = []
 try {

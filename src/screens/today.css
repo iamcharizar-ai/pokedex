@@ -124,7 +124,7 @@
   .say2 p { font-size: 20px; }
   .pace { grid-template-columns: 1fr; }
   .pace-cell + .pace-cell { border-left: 0; border-top: 1px solid var(--hair); margin-top: var(--s-3); padding-top: var(--s-3); }
-  .pillars { grid-template-columns: repeat(4, 1fr); gap: var(--s-2); }
+  .pillars { grid-template-columns: repeat(auto-fit, minmax(60px, 1fr)); gap: var(--s-2); }
   .pillar-ring { width: 58px; height: 58px; background: radial-gradient(circle, var(--ground) 0 22px, transparent 23px), conic-gradient(var(--c) calc(var(--p, 0) * 1turn), rgba(255, 255, 255, 0.09) 0); }
   .pillar.done .pillar-ring { background: radial-gradient(circle, color-mix(in srgb, var(--c) 30%, var(--ground)) 0 22px, transparent 23px), var(--c); }
 }
@@ -145,3 +145,25 @@
   .pace { grid-template-columns: 1fr; }
   .pace-cell + .pace-cell { border-left: 0; border-top: 1px solid var(--hair); margin-top: var(--s-3); padding-top: var(--s-3); }
 }
+
+/* ── the bar that pays Bells: it fills to last night's score; the marks at 80 and 90 are the Bells it passed ── */
+.bellbar { display: grid; gap: var(--s-3); }
+.bellbar-track { position: relative; display: block; height: 14px; border-radius: 99px; background: var(--well); box-shadow: inset 0 0 0 1px var(--hair); overflow: hidden; }
+.bellbar-track i { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: linear-gradient(90deg, #6b5be0, var(--tone-purple)); box-shadow: 0 0 12px rgba(150, 110, 255, 0.6); transition: width 0.7s var(--ease-out); }
+.bellmark { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(255, 255, 255, 0.5); }
+.bellchips { display: flex; gap: var(--s-2); }
+.bell { position: relative; flex: 1; display: flex; align-items: center; gap: var(--s-2); padding: var(--s-2) var(--s-3) var(--s-2) var(--s-2); border: 1px dashed var(--hair-hi); border-radius: var(--r-3); }
+.bell-ico { width: 40px; height: 40px; display: grid; place-items: center; flex: none; border-radius: 50%; background: var(--well); }
+.bell-ico img { opacity: 0.35; filter: grayscale(1); }
+.bell-txt { display: grid; line-height: 1.15; }
+.bell-txt b { font-family: var(--k-face); font-weight: 400; font-size: 16px; color: var(--text-2); }
+.bell-txt small { font-size: 11.5px; color: var(--text-3); }
+.bell.got { border-style: solid; border-color: var(--tone-purple); background: linear-gradient(90deg, rgba(150, 110, 255, 0.22), transparent); box-shadow: 0 0 14px rgba(150, 110, 255, 0.35); }
+.bell.got .bell-ico { background: radial-gradient(circle at 50% 35%, rgba(169, 139, 255, 0.55), rgba(60, 40, 140, 0.6)); }
+.bell.got .bell-ico img { opacity: 1; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.4)); }
+.bell.got .bell-txt b { color: var(--text); }
+.bell.got .bell-txt small { color: var(--text-2); }
+.bell-n { position: absolute; right: 8px; top: 6px; font-style: normal; font-size: 13px; color: var(--tone-green); }
+.bellnote { margin: 0; font-size: 13.5px; color: var(--text-2); }
+.bellnote b { color: var(--tone-gold); font-family: var(--k-face); font-weight: 400; }
+@media (prefers-reduced-motion: reduce) { .bellbar-track i { transition: none; } }

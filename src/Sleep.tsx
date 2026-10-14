@@ -12,6 +12,8 @@ const hm = (m: number) => `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '
 const clock = (s?: string) => (s ? s.slice(11, 16) : '')
 const weekday = (day: string) => new Date(day + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'narrow' })
 
+/** [the score it takes, the Bells it pays in all] */
+const BELLS: [number, number][] = [[SLEEP_DONE, 1], [SLEEP_DEEP, 2]]
 const STAGES: [keyof SleepNight, string, string][] = [['deepMin', 'Deep', '#6b5be0'], ['remMin', 'REM', '#63c6ff'], ['lightMin', 'Light', '#9aa6c2'], ['awakeMin', 'Awake', '#e0559a']]
 
 export function SleepWin({ game, nights }: { game: Game; nights: Record<string, SleepNight> }) {
@@ -30,13 +32,26 @@ export function SleepWin({ game, nights }: { game: Game; nights: Record<string, 
             <div className="sleeptext">
               {night?.sleepMin !== undefined && <b className="k-type">{hm(night.sleepMin)}</b>}
               {night?.bed && night?.wake && <small>{clock(night.bed)} to {clock(night.wake)}</small>}
-              <small>
-                Paid <b>+{sleep.xp} XP</b>
-                {(sleep.score ?? 0) >= SLEEP_DONE ? ' · the Sleep pillar is full' : ` · ${SLEEP_DONE} fills the pillar`}
-                {bells > 0 && <> · <MarkIcon tag="sleep" size={16} /> +{bells} Bell{bells > 1 ? 's' : ''}</>}
-              </small>
+              <small>Paid <b>+{sleep.xp} XP</b>{(sleep.score ?? 0) >= SLEEP_DONE ? ' · the Sleep pillar is full' : ` · ${SLEEP_DONE} fills the pillar`}</small>
             </div>
           </div>
+          {/* the bar that pays Bells: it fills to last night's score, and a Bell hangs at each mark it passed */}
+          <div className="bellbar" role="img" aria-label={`Last night scored ${sleep.score}. ${bells} ${bells === 1 ? 'Bell' : 'Bells'} paid: one at ${SLEEP_DONE}, two at ${SLEEP_DEEP}.`}>
+            <span className="bellbar-track"><i style={{ width: `${Math.max(0, Math.min(100, sleep.score ?? 0))}%` }} />{BELLS.map(([at]) => <b key={at} className="bellmark" style={{ left: `${at}%` }} />)}</span>
+            <span className="bellchips">
+              {BELLS.map(([at, n]) => {
+                const got = (sleep.score ?? 0) >= at
+                return (
+                  <span key={at} className={`bell ${got ? 'got' : ''}`}>
+                    <span className="bell-ico"><MarkIcon tag="sleep" size={26} /></span>
+                    <span className="bell-txt"><b>{at}+</b><small>{n === 1 ? '1 Bell' : `${n} Bells in all`}</small></span>
+                    {got && <i className="bell-n" aria-hidden>✓</i>}
+                  </span>
+                )
+              })}
+            </span>
+          </div>
+          <p className="bellnote">{bells > 0 ? <><b>+{bells} {bells === 1 ? 'Bell' : 'Bells'}</b> paid this morning. Spend them in the Dream House.</> : <>A night of {SLEEP_DONE} or more pays a Bell, {SLEEP_DEEP} or more two.</>}</p>
           {stageTotal > 0 && (
             <>
               <div className="stagebar" role="img" aria-label={STAGES.map(([k, n]) => `${n} ${hm((night?.[k] as number | undefined) ?? 0)}`).join(', ')}>

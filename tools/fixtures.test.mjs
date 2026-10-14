@@ -56,3 +56,15 @@ test('boss: a full party, a boss in its week, weak enough to throw at, and balls
   assert.ok(Object.entries(g.inv).some(([id, n]) => id.endsWith('-ball') && n > 0))
   assert.ok(g.boss.tasks.some((t) => t.p >= 1) && g.boss.tasks.some((t) => t.p < 1), 'some tasks done, some not')
 })
+
+test('a band turns Sleep into a measured pillar and gives the Last night section a night to show', () => {
+  const plain = play('week').g
+  assert.notEqual(plain.sleep.state, 'measured', 'a fixture has no band unless asked')
+  for (const [score, bells] of [[84, 1], [93, 2], [60, 0]]) {
+    const f = fixture('week', String(score))
+    const g = foldGame(buildFacts(ingest(f.events, f.config, f.today)))
+    assert.equal(g.sleep.state, 'measured')
+    assert.equal(g.sleep.score, score)
+    assert.equal(g.wallet.marksToday.sleep, bells, `${score} pays ${bells} Bell(s)`)
+  }
+})
