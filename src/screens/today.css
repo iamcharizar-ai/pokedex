@@ -172,3 +172,4 @@
 .pillar.waiting .pillar-ring { background: radial-gradient(circle, var(--ground) 0 25px, transparent 26px), repeating-conic-gradient(var(--c) 0 6deg, transparent 6deg 14deg); opacity: 0.8; }
 .pillar.waiting .pillar-ring > img { opacity: 0.5; }
 .pillar.waiting small { color: var(--text-3); white-space: normal; }
+@media (max-width: 560px) { .pillar b { font-size: 13.5px; letter-spacing: -0.01em; } .pillar small { font-size: 11px; } }

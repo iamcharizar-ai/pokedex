@@ -4,7 +4,7 @@ import type { DayFacts, HabitFact } from '../core/facts.ts'
 import { LEAGUES, lineup } from '../core/gyms.ts'
 import {
   ADVANTAGE_MULT, GEMS, SEASON_STEP, BALL_MULT, BALL_NAME, GAME_START, GRADUATES_PER_REGION, LEADER_HP, MOMENTUM_WINDOW,
-  CLAIM_AUTO, EGG_STEPS, bondLevel, HEART_LEVELS, LEGENDARY_EVERY_WILD, PAY_STREAK, REGIONS, REPEL_DAYS, SHINY_ODDS, SHINY_ODDS_WORN, SLEEP_AFTER, SLIP, STAKES_FROM, STEPS_GOAL, TEAM_SIZE, WILD_STAY, TIER_XP, WEAK_MULT, evolveAt, graduateAt, xpForLevel,
+  CLAIM_AUTO, EGG_STEPS, SLEEP_HABIT, bondLevel, HEART_LEVELS, LEGENDARY_EVERY_WILD, PAY_STREAK, REGIONS, REPEL_DAYS, SHINY_ODDS, SHINY_ODDS_WORN, SLEEP_AFTER, SLIP, STAKES_FROM, STEPS_GOAL, TEAM_SIZE, WILD_STAY, TIER_XP, WEAK_MULT, evolveAt, graduateAt, xpForLevel,
 } from '../core/rules.ts'
 import { MARKS, EGG_STEPS_OLD_CHARM, BOND_PARTY, BOND_STEP, MASTERY_MAX, MASTERY_STEP, SELL, itemName as econName, masteryCost } from '../core/economy.ts'
 import { TEAM_BONUS, TEAM_NATURE, type Tag as TagKind } from '../core/rules.ts'
@@ -188,7 +188,7 @@ function Scene({ game }: { game: Game }) {
 const pillarIcon = (tag: string): string => (MARKS as Record<string, { icon: string }>)[tag]?.icon ?? 'journal'
 
 /** Under the scene: what the partner says about today, how close a perfect day is, and the pillars as rings that fill. */
-function Talk({ game, pillars }: { game: Game; pillars: HabitFact[] }) {
+function Talk({ game, pillars, sleepH }: { game: Game; pillars: HabitFact[]; sleepH?: HabitFact }) {
   const { today, wild } = game
   const me = nameOf(game.display)
   const left = today.total - today.done
@@ -198,6 +198,9 @@ function Talk({ game, pillars }: { game: Game; pillars: HabitFact[] }) {
     : today.xp > 0 ? <>{me} gained <em>{today.xp} XP</em> today!</>
     : <>What will {me} do today?</>
   const share = today.total > 0 ? today.done / today.total : 0
+  // Sleep as a ring: a measured night is one of the pillars already; otherwise its habit gets a ring of its own
+  const showSleep = game.sleep.state !== 'measured' && Boolean(sleepH || game.sleep.band)
+  const sleepDone = Boolean(sleepH && sleepH.frac >= 1)
   return (
     <section className="dayboard" aria-label="Today's habits">
       <div className="say2" aria-live="polite">
@@ -215,20 +218,20 @@ function Talk({ game, pillars }: { game: Game; pillars: HabitFact[] }) {
           return (
             <li key={h.id} className={`pillar ${st}`} data-tag={h.tag} style={{ ['--p' as string]: h.frac }} title={`${label(h)}: ${Math.round(h.worth * h.frac)} of ${h.worth} XP`}>
               <span className="pillar-ring"><ItemIcon id={pillarIcon(h.tag)} size={30} />{st === 'done' && <i className="pillar-tick" aria-hidden />}</span>
-              <b>{label(h)}</b>
+              <b>{h.tag === 'sleep' ? 'Sleep' : label(h)}</b>
               <small>{st === 'done' ? 'Done' : st === 'part' ? `${Math.round(h.frac * 100)}%` : `${h.worth} XP`}</small>
             </li>
           )
         })}
-        {/* with a band, Sleep is a pillar paid by last night's score: until the reading arrives it waits here, so it is never taken for a miss */}
-        {game.sleep.band && game.sleep.state !== 'measured' && (
-          <li className="pillar waiting" data-tag="sleep" title="Last night's reading has not arrived. The band syncs about 07:00; a night with no reading is never a zero.">
-            <span className="pillar-ring"><ItemIcon id={pillarIcon('sleep')} size={30} /></span>
+        {/* Sleep is always on the board while its habit is on today's list. With a band it is a pillar paid by last night's score; until the reading arrives it waits here (never a miss); with no band it is a habit ticked by hand */}
+        {showSleep && (
+          <li className={`pillar ${sleepDone ? 'done' : 'waiting'}`} data-tag="sleep" title={game.sleep.band ? "Last night's reading has not arrived. The band syncs about 07:00; a night with no reading is never a zero." : 'No band yet: tick Sleep by hand in Life OS. With a band it is paid by last night\'s score, and a good night pays Bells.'}>
+            <span className="pillar-ring"><ItemIcon id={pillarIcon('sleep')} size={30} />{sleepDone && <i className="pillar-tick" aria-hidden />}</span>
             <b>Sleep</b>
-            <small>Waiting for the band</small>
+            <small>{sleepDone ? 'Done' : game.sleep.band ? 'Waiting for the band' : `No band · ${sleepH?.worth ?? 30} XP`}</small>
           </li>
         )}
-        {pillars.length === 0 && !(game.sleep.band && game.sleep.state !== 'measured') && <li className="muted">No pillar habits are on today's list.</li>}
+        {pillars.length === 0 && !showSleep && <li className="muted">No pillar habits are on today's list.</li>}
       </ul>
       <a className="lifeos-link" href={LIFEOS_URL} target="_blank" rel="noreferrer">Tick habits in Life OS <span aria-hidden>↗</span></a>
     </section>
@@ -445,7 +448,7 @@ function PartnerTab({ game, facts, nights, onShop }: { game: Game; facts: DayFac
         <FirstRun game={game} />
         <SlipNote game={game} />
         {game.warnings.map((w) => <p key={w} className="notice warn">{w}</p>)}
-        <Talk game={game} pillars={habits.filter((h) => h.pillar)} />
+        <Talk game={game} pillars={habits.filter((h) => h.pillar)} sleepH={habits.find((h) => h.id === SLEEP_HABIT && !h.measured)} />
       </div>
       <div className="day-side">
       <Pace game={game} />
@@ -458,7 +461,7 @@ function PartnerTab({ game, facts, nights, onShop }: { game: Game; facts: DayFac
           <BossTile game={game} />
         </div>
       </Win>
-      {game.sleep.state !== 'off' && <SleepWin game={game} nights={nights} />}
+      {(game.sleep.state !== 'off' || game.sleep.band) && <SleepWin game={game} nights={nights} />}
       </div>
     </div>
   )

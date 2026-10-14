@@ -68,4 +68,6 @@ A list of changes from another machine (commits `eb8216d` and `acc1845`, never p
 - **The Pokedex grid** draws each sprite by what is in it (`tools/build-sprite-bbox.mjs` measures them into `public/sprites/bbox.json`, fetched once): small and large Pokemon look alike, and all stand on one baseline. It stays one flat grid. The folded blocks of 36 from the other machine's list were **not** brought over: you asked for the bands to go.
 - Reveals use soft, blurred rays instead of hard wedges; a quest's name has its own line; the shop and region strips fade at the edge.
 
-Not brought over, because this build is a different design: the old Forge rows, season medals, top-bar pill and calendar-header fixes (those screens were rebuilt), and the ball-sprite halo fix (these sprites have clean edges).
+Not brought over, because this build is a different design: the old Forge rows, season medals, top-bar pill and calendar-header fixes (those screens were rebuilt), 
+
+**Follow-ups, same day.** The Sleep ring is on Today whenever its habit is on the day's list: a measured night is a ring that fills with the score, a band whose reading has not come waits ("Waiting for the band"), and with no band it is a habit ticked by hand ("No band"). The Last night section shows whenever there is a band. The six ball sprites had a fringe of light-grey pixels baked into their outermost ring, which read as a white rim: that ring is now solid black (nothing else was changed or removed).

@@ -24,7 +24,7 @@ export function SleepWin({ game, nights }: { game: Game; nights: Record<string, 
   const recent = Array.from({ length: 14 }, (_, i) => addDays(today, i - 13))
   const stageTotal = night ? STAGES.reduce((a, [k]) => a + ((night[k] as number | undefined) ?? 0), 0) : 0
   return (
-    <Win title="Last night" tone="blue" aside={sleep.state === 'measured' ? `${sleep.score} of 100` : sleep.state === 'self' ? 'Waiting' : 'No band'}>
+    <Win title="Last night" tone="blue" aside={sleep.state === 'measured' ? `${sleep.score} of 100` : sleep.state === 'self' || sleep.band ? 'Waiting' : 'No band'}>
       {sleep.state === 'measured' ? (
         <>
           <div className="sleephead">
@@ -61,7 +61,7 @@ export function SleepWin({ game, nights }: { game: Game; nights: Record<string, 
             </>
           )}
         </>
-      ) : sleep.state === 'self' ? (
+      ) : sleep.state === 'self' || sleep.band ? (
         <p className="muted">Last night's reading has not arrived. The band syncs about 07:00. Until it does, the Sleep habit can be ticked by hand in Life OS for {TIER_XP.core} XP; the reading replaces the tick when it comes, and a night with no reading is never a zero.</p>
       ) : (
         <p className="muted">No band yet. Sleep is a habit you tick by hand, worth {TIER_XP.core} XP. From the first night your band reports, it becomes a pillar of 100 XP paid by the night's score.</p>
