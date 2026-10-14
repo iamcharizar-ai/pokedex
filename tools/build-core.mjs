@@ -5,7 +5,7 @@ import path from 'node:path'
 
 const ROOT = path.resolve(import.meta.dirname, '..')
 const DEST = path.resolve(ROOT, '../lifeos/src/game-core')
-const FILES = ['rules.ts', 'facts.ts', 'fold.ts', 'order.ts', 'species.ts', 'gyms.ts', 'events.ts', 'types.ts', 'economy.ts', 'boss.ts', 'frontier.ts']
+const FILES = ['rules.ts', 'facts.ts', 'fold.ts', 'order.ts', 'species.ts', 'gyms.ts', 'events.ts', 'types.ts', 'economy.ts', 'boss.ts', 'frontier.ts', 'day.ts']
 
 if (!fs.existsSync(path.dirname(DEST))) {
   console.error('Life OS not found next to this repo; nothing copied.')

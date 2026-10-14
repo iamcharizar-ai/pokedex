@@ -2,7 +2,7 @@
 //   node --test core/v13.test.ts
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { addDays, type DayFacts, type HabitFact } from './facts.ts'
+import { addDays, buildFacts, type DayFacts, type HabitFact } from './facts.ts'
 import { foldGame } from './fold.ts'
 import { LEAGUES, lineup } from './gyms.ts'
 import { CRIT_MULT, GIGANTAMAX, DYNAMAX, HEART_LEVELS, LEADER_HP, LEVEL_POWER, V13_START, bondLevel, hasPerk, leaderHp, levelOf, xpForLevel } from './rules.ts'
@@ -199,4 +199,23 @@ test('after the last Champion the leagues come back at Rematch rank two', () => 
   assert.ok(g.league.lap >= 1, `lap ${g.league.lap}, league ${g.league.index}`)
   assert.ok(kinds(g, 'lap').length >= 1)
   assert.ok(g.hall.some((h) => h.lap === 1) || g.league.lap >= 1)
+})
+
+test('the day ends when you wake: after midnight it stays yesterday until the night is read, the day is started, or 14:00', async () => {
+  const { wakingDay, ROLLOVER_HOUR } = await import('./day.ts')
+  const at = (iso: string) => new Date(iso)
+  const none = () => false
+  assert.equal(wakingDay(at('2026-10-20T23:30:00'), none), '2026-10-20')
+  assert.equal(wakingDay(at('2026-10-21T01:30:00'), none), '2026-10-20', 'past midnight, still awake: still yesterday')
+  assert.equal(wakingDay(at('2026-10-21T07:10:00'), (d) => d === '2026-10-21'), '2026-10-21', 'the band read the night: the new day has begun')
+  assert.equal(wakingDay(at('2026-10-21T09:00:00'), none), '2026-10-20', 'no reading and no start by hand yet')
+  assert.equal(wakingDay(at(`2026-10-21T${String(ROLLOVER_HOUR).padStart(2, '0')}:00:00`), none), '2026-10-21', 'the fallback hour')
+})
+
+test('from version 13 a night the band has not read is not part of the day: no tick by hand, never a miss', () => {
+  const lib = [{ id: 'leetcode-coding', tier: 'pillar', spans: [{ from: '1970-01-01', to: null }] }, { id: 'sleep-before-10', tier: 'pillar', spans: [{ from: '1970-01-01', to: null }] }]
+  const d1 = V13_START, d2 = addDays(V13_START, 1)
+  const facts = buildFacts({ today: d2, habits: lib, ticks: { [d2]: { 'sleep-before-10': `${d2}T08:00:00` } }, body: { [d1]: { sleepScore: 84 } } })
+  assert.equal(facts.find((f) => f.day === d1)!.habits.find((h) => h.id === 'sleep-before-10')!.measured, true)
+  assert.equal(facts.find((f) => f.day === d2)!.habits.find((h) => h.id === 'sleep-before-10'), undefined, 'waiting: not in the day, and the hand tick is ignored')
 })

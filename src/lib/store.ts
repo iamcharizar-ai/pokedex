@@ -7,7 +7,8 @@ import { addDays, buildFacts, mondayOf, type DayFacts, type FactsInput } from '.
 import { USE_EVENT, sleepOf, type SleepNight } from '../../core/events.ts'
 import { settled } from '../../core/order.ts'
 import { foldGame, type Game } from '../../core/fold.ts'
-import { dayISO, type LedgerEvent } from '../linked/arbor-model.ts'
+import type { LedgerEvent } from '../linked/arbor-model.ts'
+import { DAY_START_EVENT, wakingDay } from '../../core/day.ts'
 import { createLedger, type LedgerStatus } from './ledger.ts'
 import { measure, planCard } from './boss.ts'
 import { FIXTURE } from './fixture-boot.ts'
@@ -46,8 +47,12 @@ let input: FactsInput | null = null
 const keyOf = (e: LedgerEvent): string => `${e.device}|${e.at}|${e.type}|${JSON.stringify(e.payload)}`
 const seen = new Set<string>()
 let config: LedgerEvent | undefined = FIXTURE?.config
-/** A fixture carries its own date; the real game uses the clock. */
-const todayISO = (): string => FIXTURE?.today ?? dayISO()
+/**
+ * A fixture carries its own date; the real game uses the waking day (core/day.ts): after midnight it stays yesterday until the band
+ * reads the night (a sleep score filed under the date), the day is started in Life OS, or it is 14:00. Life OS reads it the same way.
+ */
+const begun = (date: string): boolean => events.some((e) => e.day === date && (e.type === DAY_START_EVENT || (e.type === 'vitals' && typeof e.payload?.sleepScore === 'number')))
+const todayISO = (): string => FIXTURE?.today ?? wakingDay(new Date(), begun)
 let status: LedgerStatus = URL_ && KEY ? 'connecting' : 'off'
 let view: View = compute()
 const listeners = new Set<() => void>()
