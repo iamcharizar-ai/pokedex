@@ -3,9 +3,10 @@
 // into Life OS. Pure TypeScript, no DOM, no dependencies.
 //
 // Every number that shapes the game is in this file (the shops and prices are
-// in economy.ts). There is one ruleset: version 9 (RULES-V9.md). Version 8 and
-// the older ones were replaced when the game was folded again from the ledger
-// on 2026-10-12; the last commit that still carries them is the git tag `pre-v9`.
+// in economy.ts, the Battle Frontier in frontier.ts). The ruleset is version 9
+// (RULES-V9.md) with version 13 laid over it from V13_START (RULES-V13.md):
+// days before that fold exactly as they did. Version 8 and the older ones were
+// replaced on 2026-10-12; the last commit that still carries them is `pre-v9`.
 
 /** Days before this are not part of the game. */
 export const GAME_START = '2026-10-03'
@@ -153,8 +154,8 @@ export const KIT_SHARD_EVERY = 3
 export const KIT_IRON = 3
 export const GEMS = { catch: 3, shiny: 20, evolve: 10, gym: 20, elite: 30, league: 50, graduate: 15, perfect: 5, kit: 10 } as const
 
-/** Hearts at which a partner's bond steps up a level. Hearts only ever count up. */
-export const HEART_LEVELS = [10, 30, 60] as const
+/** Hearts at which a partner's bond steps up a level. Hearts only ever count up. (Version 13 added the 100 and 150 levels; the first three are as they always were.) */
+export const HEART_LEVELS = [10, 30, 60, 100, 150] as const
 export const bondLevel = (hearts: number): number => HEART_LEVELS.filter((n) => hearts >= n).length
 
 /** Coins for showing up: by the share of the day's habits ticked, the best bar reached. (Version 9 folded the daily quests, which paid for the same days, into these.) */
@@ -183,3 +184,42 @@ export const WILD_STAY: Record<Rarity, number> = { C: 21, U: 21, R: 28, L: 42 }
 export const REPEL_DAYS = 7
 /** What one empty day gives back: HP to the leader, HP to the wild Pokemon, and the share of the XP into the current level the partner loses. */
 export const SLIP = { leader: 100, wild: 60, xp: 0.1 } as const
+
+// ── version 13: Champion's Road (RULES-V13.md) ──────────────────────────────
+/** The first day of version 13. Everything below applies from this day; earlier days fold as they always did. */
+export const V13_START = '2026-10-15'
+
+/** A leader's HP: 2,000, plus 15% for every league further on, ×1.25 for the Elite Four and ×1.6 for a Champion, and +60% for every Rematch rank above the first. */
+export const LEAGUE_STEP = 0.15
+export const ELITE_MULT = 1.25
+export const CHAMPION_MULT = 1.6
+export const RANK_STEP = 0.6
+export const leaderHp = (league: number, kind: 'gym' | 'elite' | 'champion', lap: number): number =>
+  Math.round((LEADER_HP * (1 + LEAGUE_STEP * league) * (kind === 'champion' ? CHAMPION_MULT : kind === 'elite' ? ELITE_MULT : 1) * (1 + RANK_STEP * lap)) / 50) * 50
+
+/** Every level of the partner adds this to every strike. */
+export const LEVEL_POWER = 0.01
+/** Every level of a party member adds this to every strike, on top of TEAM_BONUS. */
+export const TEAM_LEVEL = 0.002
+/** A forged Mega Stone: MEGA_BONUS, and this much more for each bond level. A Mega for the day (no stone) adds MEGA_DAY. */
+export const MEGA_BOND = 0.05
+export const MEGA_DAY = 0.1
+
+/** What each bond level unlocks (HEART_LEVELS says how many hearts each takes). */
+export const BOND_PERKS = ['pickup', 'endure', 'focus', 'friends', 'share'] as const
+export type BondPerk = (typeof BOND_PERKS)[number]
+export const hasPerk = (bond: number, perk: BondPerk): boolean => bond >= BOND_PERKS.indexOf(perk) + 1
+/** Pickup: the chance of a find on a day with a pillar, at bond 1, and what each level above adds. */
+export const PICKUP_BASE = 0.3
+export const PICKUP_STEP = 0.1
+/** Endure forgives one empty day in this many. */
+export const ENDURE_DAYS = 7
+/** Focus: the chance of a critical day, and what a critical hit does to the strike. */
+export const CRIT_BASE = 0.12
+export const CRIT_MULT = 1.5
+/** Best friends: XP ×this. Exp. Share: each party member still being raised gets this share of the partner's XP. */
+export const FRIENDS_XP = 1.1
+export const SHARE_XP = 0.1
+/** A perfect day Dynamaxes the partner: its strike ×DYNAMAX, ×GIGANTAMAX when the partner has a Gigantamax form. */
+export const DYNAMAX = 2
+export const GIGANTAMAX = 2.5

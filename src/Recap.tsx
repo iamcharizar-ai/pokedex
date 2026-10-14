@@ -16,17 +16,18 @@ import { EvoReveal } from './Reveal.tsx'
 import { party } from './lib/fx.ts'
 import { told } from './lib/told.ts'
 import { RANK, useOverlay } from './screens/overlay.ts'
+import { FACILITIES } from '../core/frontier.ts'
 import { aBall, badgeArt, badgeName, fmtDay, leagueName, still } from './lib/art.ts'
 
 const SEEN_KEY = 'pokedex.seen.v1'
 /** How far back a moment can still be news. Older than this it is history, in the Adventure log. */
 const NEWS_DAYS = 30
 /** Not news by themselves: a level is one of many, a wild Pokemon is on the screen already, a choice was made by hand. */
-const QUIET = new Set<Moment['kind']>(['level', 'appear', 'use', 'quest', 'season', 'transfer', 'chest', 'slip', 'gear', 'hatch'])
+const QUIET = new Set<Moment['kind']>(['level', 'appear', 'use', 'quest', 'season', 'transfer', 'chest', 'slip', 'gear', 'hatch', 'pickup', 'endure', 'fossil'])
 /** A feat is news only when it paid something no shop sells (the Key Stone has a moment of its own). */
 const prize = (m: Extract<Moment, { kind: 'feat' }>): string | undefined => m.items.find((id) => ITEMS[id]?.kind === 'unique')
 /** Bigger things first. */
-const WEIGHT: Partial<Record<Moment['kind'], number>> = { league: 9, boss: 8.5, key: 8, mega: 7, feat: 6.5, gym: 6, evolve: 5, graduate: 4, region: 3, catch: 2, form: 1, partner: 0 }
+const WEIGHT: Partial<Record<Moment['kind'], number>> = { lap: 9.5, league: 9, boss: 8.5, key: 8, symbol: 7.5, mega: 7, summon: 6.8, feat: 6.5, gym: 6, evolve: 5, itemevo: 4.5, graduate: 4, region: 3, catch: 2, form: 1, partner: 0 }
 
 const keyOf = (m: Moment): string =>
   `${m.day}|${m.kind}|${'form' in m ? m.form : ''}|${'n' in m ? m.n : ''}|${'league' in m ? m.league : ''}|${'slot' in m ? m.slot : ''}|${'id' in m ? m.id : ''}${m.kind === 'boss' ? `|${m.what}` : ''}`
@@ -97,14 +98,21 @@ function tell(m: Moment, game: Game): Told {
       return { title: m.slot === lineup(l).length - 1 ? 'Champion' : 'Elite Four', line: `You beat ${t.name} of ${l.name}.`, art: 'none' }
     }
     case 'league': return { title: 'Hall of Fame', line: `The ${leagueName(m.league)} league is yours.`, art: 'none' }
+    case 'symbol': {
+      const f = FACILITIES.find((x) => x.id === m.facility)
+      return { title: `${m.tier === 'gold' ? 'Gold' : 'Silver'} Symbol`, line: `You beat ${f?.brain ?? 'the Frontier Brain'} at the ${f?.name ?? 'Battle Frontier'}${m.tier === 'gold' && f ? `: the ${itemName(f.goldKey)} is yours` : ''}.`, art: 'item', item: m.tier === 'gold' && f ? f.goldKey : f?.icon }
+    }
+    case 'summon': return { title: 'A legend stirs', line: `The ${itemName(m.key)} called ${nameOf(m.form)}. It comes as the next wild Pokemon.`, art: 'item', item: m.key }
+    case 'itemevo': return { title: 'Evolved', line: `The ${itemName(m.item)} evolved ${nameOf(m.from)} into ${nameOf(m.form)}.`, art: 'evolve', form: m.form, from: m.from }
+    case 'lap': return { title: `Rematch rank ★${m.lap + 1}`, line: 'Every league is beaten. They are all back, stronger, and every Champion now hands over a Legend key.', art: 'none' }
     default: return { title: '', line: '', art: 'none' }
   }
 }
 
 /** How big a moment is: it picks the whole look of its reveal. */
 const tierOf = (m: Moment): Tier =>
-  m.kind === 'key' || m.kind === 'mega' || m.kind === 'league' || (m.kind === 'catch' && m.shiny) || (m.kind === 'boss' && m.what !== 'appear') ? 'rare'
-    : m.kind === 'boss' || m.kind === 'evolve' || m.kind === 'feat' || m.kind === 'kit' || m.kind === 'gym' || m.kind === 'graduate' || m.kind === 'region' ? 'big' : 'ordinary'
+  m.kind === 'key' || m.kind === 'mega' || m.kind === 'league' || m.kind === 'lap' || (m.kind === 'symbol' && m.tier === 'gold') || (m.kind === 'catch' && m.shiny) || (m.kind === 'boss' && m.what !== 'appear') ? 'rare'
+    : m.kind === 'boss' || m.kind === 'evolve' || m.kind === 'itemevo' || m.kind === 'symbol' || m.kind === 'summon' || m.kind === 'feat' || m.kind === 'kit' || m.kind === 'gym' || m.kind === 'graduate' || m.kind === 'region' ? 'big' : 'ordinary'
 
 const STAR = <ItemIcon id="star-piece" size={72} />
 

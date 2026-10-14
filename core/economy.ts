@@ -3,7 +3,7 @@
 //
 // An item's id is the name of its sprite file (public/sprites/items/<id>.png),
 // so a new item is one line here and one picture.
-import { REPEL_DAYS, STEPS_GOAL, type Tag } from './rules.ts'
+import { REPEL_DAYS, STEPS_GOAL, V13_START, type Tag } from './rules.ts'
 import { TYPE_DOMAIN } from './types.ts'
 
 /** seeded randomness: the same seed always gives the same run of numbers */
@@ -48,6 +48,7 @@ export const MARK_OWNED = 3
 
 // ── items ───────────────────────────────────────────────────────────────────
 export type ItemKind = 'gear' | 'guard' | 'ball' | 'berry' | 'held' | 'tm' | 'lure' | 'shard' | 'key' | 'unique' | 'egg' | 'chest' | 'theme' | 'incense'
+  | 'treasure' | 'fossil' | 'evo' | 'vitamin' | 'battle' | 'field' | 'candy' | 'legend'
 export interface ItemDef { name: string; kind: ItemKind; text: string }
 
 const TYPES = ['Bug', 'Dark', 'Dragon', 'Electric', 'Fighting', 'Fire', 'Flying', 'Ghost', 'Grass', 'Ground', 'Ice', 'Normal', 'Poison', 'Psychic', 'Rock', 'Steel', 'Water'] as const
@@ -196,7 +197,7 @@ for (const [id, [name, what]] of Object.entries(GEAR_INFO)) ITEMS[id] = { name, 
 
 // ── shops ───────────────────────────────────────────────────────────────────
 export interface Offer { item: string; coins?: number; gems?: number; marks?: number }
-export type ShopId = 'mart' | 'rare' | MarkTag
+export type ShopId = 'mart' | 'rare' | 'bp' | MarkTag
 
 /** The pool the Mart draws its daily deals from (coins). The chore types (Water, Ice, Bug, Poison) have no domain shop, so their ball and lure are here. */
 export const MART_POOL: Offer[] = [
@@ -264,8 +265,11 @@ export const DOMAIN_SHOPS: Record<MarkTag, DomainShop> = {
 /** Where an item can be bought, searched in this order when the shop is not named. */
 export function offerFor(shop: ShopId | undefined, item: string, day: string, deals: number): { shop: ShopId; offer: Offer } | null {
   const find = (s: ShopId): Offer | undefined =>
-    s === 'mart' ? [...martDeals(day, deals), ...STANDING].find((o) => o.item === item) : s === 'rare' ? RARE_SHELF.find((o) => o.item === item) : DOMAIN_SHOPS[s].stock.find((o) => o.item === item)
-  const order: ShopId[] = shop ? [shop] : ['mart', 'rare', ...MARK_TAGS]
+    s === 'mart' ? [...martDeals(day, deals), ...STANDING, ...(day >= V13_START ? BATTLE_SHELF : [])].find((o) => o.item === item)
+      : s === 'rare' ? [...RARE_SHELF, ...(day >= V13_START ? RARE_SHELF_V13 : [])].find((o) => o.item === item)
+        : s === 'bp' ? (day >= V13_START ? BP_SHELF.find((o) => o.item === item) : undefined)
+          : [...DOMAIN_SHOPS[s].stock, ...(day >= V13_START ? DOMAIN_V13[s] : [])].find((o) => o.item === item)
+  const order: ShopId[] = shop ? [shop] : ['mart', 'rare', ...MARK_TAGS, 'bp']
   for (const s of order) { const offer = find(s); if (offer) return { shop: s, offer } }
   return null
 }
@@ -375,3 +379,227 @@ export const FEATS: Feat[] = [
   { id: 'badge8', name: 'Eight badges', text: 'Win eight gym badges', group: 'league', key: 'badges', n: 8, reward: { gems: 40 } },
 ]
 export const featById = (id: string): Feat | undefined => FEATS.find((f) => f.id === id)
+
+// ══ version 13: Champion's Road (RULES-V13.md) ══════════════════════════════
+// Everything here is sold, found or used only from V13_START.
+
+// ── hearts: berries and treats that feed the bond ──
+/** The six friendship berries: five hearts each, one per domain (Tamato is the chores' own, sold in the Mart). */
+export const FRIEND_BERRY: Record<string, Tag> = { 'hondew-berry': 'code', 'kelpsy-berry': 'fitness', 'grepa-berry': 'guitar', 'qualot-berry': 'arbor', 'pomeg-berry': 'sleep', 'tamato-berry': 'routine' }
+for (const id of Object.keys(FRIEND_BERRY)) BERRY_HEARTS[id] = 5
+BERRY_HEARTS['sweet-heart'] = 3
+BERRY_HEARTS['heart-scale'] = 2
+const DOMAIN_NAME: Record<Tag, string> = { code: 'code', fitness: 'gym', guitar: 'guitar', arbor: 'Arbor', sleep: 'sleep', routine: 'chores' }
+for (const [id, tag] of Object.entries(FRIEND_BERRY)) {
+  const name = id.split('-')[0]
+  ITEMS[id] = { name: `${name[0].toUpperCase()}${name.slice(1)} Berry`, kind: 'berry', text: `Feed your partner: five hearts. The ${DOMAIN_NAME[tag]} berry.` }
+}
+ITEMS['sweet-heart'] = { name: 'Sweet Heart', kind: 'berry', text: 'A chocolate heart. Feed your partner: three hearts.' }
+ITEMS['heart-scale'] = { name: 'Heart Scale', kind: 'berry', text: 'A pretty scale found by Pickup. Give it to your partner: two hearts.' }
+
+// ── vitamins: a Pokemon's own strength on one kind of work, for good ──
+/** Each vitamin makes the work of its domain strike 3% harder for the Pokemon it is given to; ten at most of one kind. */
+export const VITAMINS: Record<string, MarkTag> = { calcium: 'code', protein: 'fitness', zinc: 'guitar', carbos: 'arbor', 'hp-up': 'sleep' }
+export const VITAMIN_STEP = 0.03
+export const VITAMIN_MAX = 10
+const VIT_NAME: Record<string, string> = { calcium: 'Calcium', protein: 'Protein', zinc: 'Zinc', carbos: 'Carbos', 'hp-up': 'HP Up' }
+for (const [id, tag] of Object.entries(VITAMINS)) ITEMS[id] = { name: VIT_NAME[id], kind: 'vitamin', text: `Give it to a Pokemon: its ${DOMAIN_NAME[tag]} work strikes 3% harder, for good (ten at most).` }
+
+// ── battle items: one day's boost against the leader ──
+/** X items: one domain's strike today. The x6 strength is only sold at the Battle Frontier. */
+export const BOOST: Record<string, { tag: Tag; add: number }> = {}
+const X_BASE: [string, Tag, string][] = [['x-special', 'code', 'X Sp. Atk'], ['x-attack', 'fitness', 'X Attack'], ['x-sp-def', 'guitar', 'X Sp. Def'], ['x-defend', 'arbor', 'X Defend'], ['x-speed', 'routine', 'X Speed'], ['x-accuracy', 'sleep', 'X Accuracy']]
+const X_TIERS: [string, number, string][] = [['', 0.2, ''], ['-2', 0.4, ' 2'], ['-3', 0.6, ' 3'], ['-6', 1.2, ' 6']]
+for (const [base, tag, name] of X_BASE) for (const [suffix, add, tname] of X_TIERS) {
+  BOOST[base + suffix] = { tag, add }
+  ITEMS[base + suffix] = { name: name + tname, kind: 'battle', text: `Use it before the day's work: today, ${DOMAIN_NAME[tag]} strikes the leader +${Math.round(add * 100)}%. The strongest one used today counts.` }
+}
+/** Dire Hit raises today's chance of a critical hit (it needs bond level 3 to mean anything, or a Scope Lens). */
+export const DIRE_HIT: Record<string, number> = { 'dire-hit': 0.1, 'dire-hit-2': 0.2, 'dire-hit-3': 0.3 }
+for (const [id, add] of Object.entries(DIRE_HIT)) ITEMS[id] = { name: `Dire Hit${id.endsWith('2') ? ' 2' : id.endsWith('3') ? ' 3' : ''}`, kind: 'battle', text: `Use it before the day's work: today's chance of a critical hit +${Math.round(add * 100)}%.` }
+ITEMS['guard-spec'] = { name: 'Guard Spec.', kind: 'battle', text: 'Use it to stand guard: the next empty day costs nothing.' }
+ITEMS['honey'] = { name: 'Honey', kind: 'field', text: 'Spread it: the next wild Pokemon to come is a rare one.' }
+ITEMS['rare-candy'] = { name: 'Rare Candy', kind: 'candy', text: 'Give it to a Pokemon in My Pokemon: one level up.' }
+
+// ── evolution items: one stage for a Pokemon that is not the partner ──
+/** An item evolves a Pokemon in My Pokemon by one stage when the form it would become has one of these types. */
+export const EVO_ITEMS: Record<string, { name: string; types: string[] }> = {
+  'fire-stone': { name: 'Fire Stone', types: ['Fire'] },
+  'water-stone': { name: 'Water Stone', types: ['Water'] },
+  thunderstone: { name: 'Thunder Stone', types: ['Electric'] },
+  'leaf-stone': { name: 'Leaf Stone', types: ['Grass'] },
+  'ice-stone': { name: 'Ice Stone', types: ['Ice'] },
+  'moon-stone': { name: 'Moon Stone', types: ['Fairy', 'Normal', 'Poison'] },
+  'sun-stone': { name: 'Sun Stone', types: ['Grass', 'Fire', 'Bug'] },
+  'shiny-stone': { name: 'Shiny Stone', types: ['Fairy', 'Steel'] },
+  'dusk-stone': { name: 'Dusk Stone', types: ['Dark', 'Ghost'] },
+  'dawn-stone': { name: 'Dawn Stone', types: ['Psychic', 'Ice', 'Fighting'] },
+  'oval-stone': { name: 'Oval Stone', types: ['Normal'] },
+  'dragon-scale': { name: 'Dragon Scale', types: ['Dragon'] },
+  'metal-coat': { name: 'Metal Coat', types: ['Steel', 'Bug'] },
+  'kings-rock': { name: 'King’s Rock', types: ['Water', 'Psychic'] },
+  'up-grade': { name: 'Up-Grade', types: ['Normal', 'Electric'] },
+  'dubious-disc': { name: 'Dubious Disc', types: ['Normal', 'Psychic'] },
+  'reaper-cloth': { name: 'Reaper Cloth', types: ['Ghost'] },
+  'razor-claw': { name: 'Razor Claw', types: ['Dark', 'Fighting'] },
+  'razor-fang': { name: 'Razor Fang', types: ['Ground', 'Flying'] },
+  electirizer: { name: 'Electirizer', types: ['Electric'] },
+  magmarizer: { name: 'Magmarizer', types: ['Fire'] },
+  'prism-scale': { name: 'Prism Scale', types: ['Water', 'Dragon'] },
+  deepseatooth: { name: 'DeepSeaTooth', types: ['Water', 'Dark'] },
+  deepseascale: { name: 'DeepSeaScale', types: ['Water', 'Psychic'] },
+  'sharp-beak': { name: 'Sharp Beak', types: ['Flying'] },
+  'hard-stone': { name: 'Hard Stone', types: ['Rock', 'Ground'] },
+}
+const orList = (xs: string[]): string => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} or ${xs[xs.length - 1]}` : xs[0])
+for (const [id, e] of Object.entries(EVO_ITEMS)) ITEMS[id] = { name: e.name, kind: 'evo', text: `Evolves a Pokemon in My Pokemon by one stage, if the form it becomes is ${orList(e.types)}.` }
+
+// ── fossils: the Lab brings them back ──
+export const FOSSILS: Record<string, { name: string; species: string }> = {
+  'helix-fossil': { name: 'Helix Fossil', species: 'omanyte' }, 'dome-fossil': { name: 'Dome Fossil', species: 'kabuto' }, 'old-amber': { name: 'Old Amber', species: 'aerodactyl' },
+  'root-fossil': { name: 'Root Fossil', species: 'lileep' }, 'claw-fossil': { name: 'Claw Fossil', species: 'anorith' }, 'skull-fossil': { name: 'Skull Fossil', species: 'cranidos' },
+  'armor-fossil': { name: 'Armor Fossil', species: 'shieldon' }, 'cover-fossil': { name: 'Cover Fossil', species: 'tirtouga' }, 'plume-fossil': { name: 'Plume Fossil', species: 'archen' },
+}
+/** Coins the Lab asks to bring a fossil back. */
+export const REVIVE_COST = 150
+for (const [id, f] of Object.entries(FOSSILS)) ITEMS[id] = { name: f.name, kind: 'fossil', text: `The Lab in the Shop brings it back to life for ${REVIVE_COST} coins.` }
+
+// ── treasures: the Collector buys them ──
+/** What the Collector pays, in coins. */
+export const TREASURE: Record<string, [string, number]> = {
+  tinymushroom: ['Tiny Mushroom', 25], pearl: ['Pearl', 60], stardust: ['Stardust', 60], 'shoal-salt': ['Shoal Salt', 40], 'shoal-shell': ['Shoal Shell', 40],
+  'big-mushroom': ['Big Mushroom', 150], 'big-pearl': ['Big Pearl', 250], 'star-piece': ['Star Piece', 400], nugget: ['Nugget', 500], 'rare-bone': ['Rare Bone', 600],
+  'pearl-string': ['Pearl String', 900], balmmushroom: ['Balm Mushroom', 1000], 'big-nugget': ['Big Nugget', 1500], 'relic-copper': ['Relic Copper', 300], 'relic-silver': ['Relic Silver', 800],
+  'relic-gold': ['Relic Gold', 2000], 'relic-vase': ['Relic Vase', 2500], 'relic-band': ['Relic Band', 3000], 'relic-statue': ['Relic Statue', 4000], 'relic-crown': ['Relic Crown', 6000],
+  ruby: ['Ruby', 1200], sapphire: ['Sapphire', 1200],
+}
+for (const [id, [name, coins]] of Object.entries(TREASURE)) ITEMS[id] = { name, kind: 'treasure', text: `A treasure. The Collector in the Shop pays ${coins.toLocaleString('en-IN')} coins for it.` }
+
+// ── held items from the Battle Frontier (each has an effect of its own, read by the fold) ──
+export const SPECIAL_HELD: Record<string, string> = {
+  'expert-belt': 'Hold: every strike +20% against a leader your partner’s type beats.',
+  'focus-sash': 'Hold: an empty day never costs anything while it is held.',
+  'rocky-helmet': 'Hold: the weekly boss is struck 20% harder.',
+  'scope-lens': 'Hold: +10% chance of a critical hit, even before bond level 3.',
+  'quick-claw': 'Hold: the day wears the wild Pokemon down 25% faster.',
+  'shell-bell': 'Hold: a pillar day as partner gives two hearts, not one.',
+  'wide-lens': 'Hold: thrown balls take 25% more HP off the wild Pokemon.',
+  'zoom-lens': 'Hold: +5% to every ball thrown at a boss.',
+  'exp-share': 'Hold: the one next up in My Pokemon gets 20% of the partner’s daily XP.',
+  everstone: 'Hold: the partner keeps its form. It goes on levelling, and evolves the day you take it off.',
+  'lucky-punch': 'Hold: Pickup finds twice as often.',
+}
+const SPECIAL_NAME: Record<string, string> = { 'expert-belt': 'Expert Belt', 'focus-sash': 'Focus Sash', 'rocky-helmet': 'Rocky Helmet', 'scope-lens': 'Scope Lens', 'quick-claw': 'Quick Claw', 'shell-bell': 'Shell Bell', 'wide-lens': 'Wide Lens', 'zoom-lens': 'Zoom Lens', 'exp-share': 'Exp. Share', everstone: 'Everstone', 'lucky-punch': 'Lucky Punch' }
+for (const [id, text] of Object.entries(SPECIAL_HELD)) { HELD[id] = { mult: 1 }; ITEMS[id] = { name: SPECIAL_NAME[id], kind: 'held', text }; ONCE.add(id) }
+
+// ── Legend keys: each one summons a legendary as the next wild Pokemon ──
+export const LEGEND_KEYS: Record<string, { name: string; forms: string[] }> = {
+  'red-orb': { name: 'Red Orb', forms: ['groudon'] }, 'blue-orb': { name: 'Blue Orb', forms: ['kyogre'] }, 'jade-orb': { name: 'Jade Orb', forms: ['rayquaza'] },
+  'adamant-orb': { name: 'Adamant Orb', forms: ['dialga'] }, 'lustrous-orb': { name: 'Lustrous Orb', forms: ['palkia'] }, 'griseous-orb': { name: 'Griseous Orb', forms: ['giratina'] },
+  'soul-dew': { name: 'Soul Dew', forms: ['latios'] }, 'eon-ticket': { name: 'Eon Ticket', forms: ['latias'] }, 'rainbow-wing': { name: 'Rainbow Wing', forms: ['hooh'] },
+  'tidal-bell': { name: 'Tidal Bell', forms: ['lugia'] }, 'clear-bell': { name: 'Clear Bell', forms: ['suicune'] }, auroraticket: { name: 'AuroraTicket', forms: ['raikou', 'entei'] },
+  gracidea: { name: 'Gracidea', forms: ['shaymin'] }, meteorite: { name: 'Meteorite', forms: ['deoxys'] }, 'azure-flute': { name: 'Azure Flute', forms: ['arceus'] },
+  'old-sea-map': { name: 'Old Sea Map', forms: ['mew'] }, 'member-card': { name: 'Member Card', forms: ['darkrai'] }, 'magma-stone': { name: 'Magma Stone', forms: ['heatran'] },
+  'liberty-pass': { name: 'Liberty Pass', forms: ['victini'] }, mysticticket: { name: 'MysticTicket', forms: ['mewtwo'] }, 'lock-capsule': { name: 'Lock Capsule', forms: ['jirachi'] },
+  'red-chain': { name: 'Red Chain', forms: ['regigigas'] }, 'god-stone': { name: 'God Stone', forms: ['regirock', 'regice', 'registeel'] }, 'secret-key': { name: 'Secret Key', forms: ['articuno', 'zapdos', 'moltres'] },
+  'kyurem-black': { name: 'DNA Black', forms: ['zekrom'] }, 'kyurem-white': { name: 'DNA White', forms: ['reshiram'] }, 'keldeo-resolution': { name: 'Resolve Scroll', forms: ['keldeo'] },
+  'thundurus-therian': { name: 'Thunder Cloud', forms: ['thundurus'] }, 'tornadus-therian': { name: 'Gale Cloud', forms: ['tornadus'] }, 'landorus-therian': { name: 'Land Cloud', forms: ['landorus'] },
+}
+for (const [id, k] of Object.entries(LEGEND_KEYS)) ITEMS[id] = { name: k.name, kind: 'legend', text: `A Legend key. Use it and ${k.forms.length > 1 ? `one of ${k.forms.length} legends` : 'a legend'} comes as the next wild Pokemon, to be caught by your work.` }
+/** Which legend a key brings this time: the same answer on every device. */
+export const legendFor = (key: string, n: number): string | null => {
+  const k = LEGEND_KEYS[key]
+  return k ? k.forms[Math.floor(rng(`legend:${key}:${n}`)() * k.forms.length)] : null
+}
+/** The Legend key a Rematch Champion hands over: they come round in this order. */
+export const REMATCH_KEYS = ['red-orb', 'blue-orb', 'jade-orb', 'adamant-orb', 'lustrous-orb', 'griseous-orb', 'azure-flute', 'secret-key', 'god-stone', 'kyurem-black', 'kyurem-white', 'mysticticket']
+
+// ── Pickup: what the partner finds ──
+/** [item, weight, from tier]. The tier is how far you are: one for each two leagues, one for each Rematch rank, three at most. */
+export const PICKUP: [string, number, number][] = [
+  ['oran-berry', 14, 0], ['great-ball', 10, 0], ['tinymushroom', 12, 0], ['pearl', 10, 0], ['stardust', 9, 0], ['honey', 5, 0], ['heart-scale', 6, 0],
+  ['tamato-berry', 3, 0], ['hondew-berry', 3, 0], ['kelpsy-berry', 3, 0], ['grepa-berry', 3, 0], ['qualot-berry', 3, 0], ['pomeg-berry', 3, 0],
+  ['shoal-salt', 4, 0], ['shoal-shell', 4, 0], ['rare-candy', 3, 0], ['oval-stone', 2, 0], ['moon-stone', 2, 0],
+  ['helix-fossil', 1, 0], ['dome-fossil', 1, 0], ['old-amber', 1, 0],
+  ['sitrus-berry', 8, 1], ['ultra-ball', 6, 1], ['big-mushroom', 6, 1], ['big-pearl', 5, 1], ['star-piece', 4, 1], ['fire-stone', 2, 1], ['water-stone', 2, 1], ['thunderstone', 2, 1], ['leaf-stone', 2, 1],
+  ['root-fossil', 1, 1], ['claw-fossil', 1, 1], ['x-attack', 2, 1], ['x-special', 2, 1], ['dire-hit', 2, 1],
+  ['nugget', 5, 2], ['rare-bone', 3, 2], ['relic-copper', 3, 2], ['sun-stone', 2, 2], ['dusk-stone', 2, 2], ['dawn-stone', 2, 2], ['shiny-stone', 2, 2], ['ice-stone', 2, 2],
+  ['skull-fossil', 1, 2], ['armor-fossil', 1, 2], ['dragon-scale', 1, 2], ['metal-coat', 1, 2], ['kings-rock', 1, 2], ['up-grade', 1, 2], ['sweet-heart', 3, 2], ['pearl-string', 2, 2],
+  ['big-nugget', 2, 3], ['relic-silver', 2, 3], ['relic-gold', 1, 3], ['relic-vase', 1, 3], ['relic-band', 1, 3], ['relic-statue', 1, 3], ['relic-crown', 1, 3], ['balmmushroom', 2, 3],
+  ['cover-fossil', 1, 3], ['plume-fossil', 1, 3], ['reaper-cloth', 1, 3], ['razor-claw', 1, 3], ['razor-fang', 1, 3], ['electirizer', 1, 3], ['magmarizer', 1, 3], ['prism-scale', 1, 3],
+  ['dubious-disc', 1, 3], ['ruby', 1, 3], ['sapphire', 1, 3], ['deepseatooth', 1, 3], ['deepseascale', 1, 3], ['sharp-beak', 1, 3], ['hard-stone', 1, 3], ['x-attack-2', 1, 3], ['x-special-2', 1, 3],
+]
+export const PICKUP_TIERS = 3
+/** One find from the table, for the tier reached: the same find on every device. */
+export function pickupFind(seed: string, tier: number): string {
+  const pool = PICKUP.filter(([, , t]) => t <= tier)
+  const total = pool.reduce((n, [, w]) => n + w, 0)
+  let x = rng(seed)() * total
+  for (const [id, w] of pool) if ((x -= w) < 0) return id
+  return pool[0][0]
+}
+
+// ── the version 13 shelves ──
+/** The Mart's battle shelf: X items in three strengths, Dire Hits and the Guard Spec. Honey and the chores' berry too. */
+export const BATTLE_SHELF: Offer[] = [
+  ...X_BASE.flatMap(([base]) => [{ item: base, coins: 120 }, { item: `${base}-2`, coins: 240 }, { item: `${base}-3`, coins: 380 }]),
+  { item: 'dire-hit', coins: 150 }, { item: 'dire-hit-2', coins: 280 }, { item: 'dire-hit-3', coins: 420 }, { item: 'guard-spec', coins: 250 },
+  { item: 'honey', coins: 300 }, { item: 'tamato-berry', coins: 160 },
+]
+/** More on the rare shelf (gems). */
+export const RARE_SHELF_V13: Offer[] = [{ item: 'rare-candy', gems: 25 }, { item: 'sweet-heart', gems: 10 }, { item: 'moon-stone', gems: 40 }, { item: 'sun-stone', gems: 40 }]
+/** Each domain shop adds its vitamin, its friendship berry and one evolution stone. */
+const vit = (tag: MarkTag): string => Object.keys(VITAMINS).find((v) => VITAMINS[v] === tag)!
+const berryOf = (tag: MarkTag): string => Object.keys(FRIEND_BERRY).find((b) => FRIEND_BERRY[b] === tag)!
+const STONE: Record<MarkTag, string> = { code: 'thunderstone', fitness: 'fire-stone', guitar: 'shiny-stone', arbor: 'leaf-stone', sleep: 'dusk-stone' }
+export const DOMAIN_V13: Record<MarkTag, Offer[]> = Object.fromEntries(MARK_TAGS.map((t) => [t, [{ item: vit(t), marks: 10 }, { item: berryOf(t), marks: 2 }, { item: STONE[t], marks: 15 }]])) as Record<MarkTag, Offer[]>
+/** What a Legend key costs at the BP Exchange. */
+export const LEGEND_KEY_BP = 250
+/** The BP Exchange at the Battle Frontier. Prices are in Battle Points (written as `marks`, the shop's own currency). */
+export const BP_SHELF: Offer[] = [
+  { item: 'expert-belt', marks: 72 }, { item: 'focus-sash', marks: 96 }, { item: 'rocky-helmet', marks: 72 }, { item: 'scope-lens', marks: 72 }, { item: 'quick-claw', marks: 72 },
+  { item: 'shell-bell', marks: 84 }, { item: 'wide-lens', marks: 60 }, { item: 'zoom-lens', marks: 60 }, { item: 'exp-share', marks: 140 }, { item: 'everstone', marks: 24 }, { item: 'lucky-punch', marks: 108 },
+  ...X_BASE.map(([base]) => ({ item: `${base}-6`, marks: 24 })), { item: 'rare-candy', marks: 15 },
+  ...['dragon-scale', 'metal-coat', 'kings-rock', 'up-grade', 'reaper-cloth', 'razor-claw', 'razor-fang', 'electirizer', 'magmarizer', 'prism-scale', 'dubious-disc', 'ice-stone', 'dawn-stone'].map((item) => ({ item, marks: 30 })),
+  ...Object.keys(FOSSILS).map((f) => ({ item: f, marks: 30 })),
+  ...Object.keys(LEGEND_KEYS).map((k) => ({ item: k, marks: LEGEND_KEY_BP })),
+  { item: 'master-ball', marks: 600 },
+]
+// ── the fair forge: three shards of three different colours ──
+/** The colours of shard, the Comet standing in for any of them. */
+export const SHARD_KINDS: string[] = [...SHARDS, COMET_SHARD]
+/**
+ * Version 13: a Mega Stone takes three shards of three different colours, and the X or Y is yours to choose. `want` names the shards to use
+ * (comma separated); without it the three colours you hold most of are used, a Comet only where a colour is missing. Null when it cannot be done.
+ */
+export function forgeFair(inv: Record<string, number>, want?: string): string[] | null {
+  if (want) {
+    const ids = want.split(',').filter(Boolean)
+    if (ids.length !== 3 || !ids.every((id) => SHARD_KINDS.includes(id))) return null
+    const coloured = ids.filter((id) => id !== COMET_SHARD)
+    if (new Set(coloured).size !== coloured.length) return null
+    const need: Record<string, number> = {}
+    for (const id of ids) need[id] = (need[id] ?? 0) + 1
+    return Object.entries(need).every(([id, n]) => (inv[id] ?? 0) >= n) ? ids : null
+  }
+  const pick: string[] = [...SHARDS].filter((s) => (inv[s] ?? 0) > 0).sort((a, b) => (inv[b] ?? 0) - (inv[a] ?? 0)).slice(0, 3)
+  let comets = inv[COMET_SHARD] ?? 0
+  while (pick.length < 3 && comets > 0) { pick.push(COMET_SHARD); comets-- }
+  return pick.length === 3 ? pick : null
+}
+
+// ── version 13 feats ──
+export const FEATS_V13: Feat[] = [
+  { id: 'bond5', name: 'Best of friends', text: 'A partner reaches 150 hearts', group: 'raise', key: 'hearts', n: 150, reward: { gems: 40, items: { 'sweet-heart': 3 } } },
+  { id: 'pickup25', name: 'Good nose', text: 'Twenty-five Pickup finds', group: 'collect', key: 'pickups', n: 25, reward: { gems: 25, items: { 'big-nugget': 1 } } },
+  { id: 'fossil1', name: 'Back from the rock', text: 'Revive a fossil at the Lab', group: 'collect', key: 'fossils', n: 1, reward: { gems: 15, items: { 'old-amber': 1 } } },
+  { id: 'stone1', name: 'A little push', text: 'Evolve a Pokemon with an item', group: 'raise', key: 'itemevos', n: 1, reward: { gems: 10, items: { 'rare-candy': 2 } } },
+  { id: 'vitamins10', name: 'Well fed', text: 'Give ten vitamins', group: 'raise', key: 'vitamins', n: 10, reward: { gems: 20, items: { 'hp-up': 1 } } },
+  { id: 'symbol1', name: 'A Frontier symbol', text: 'Win your first Silver Symbol', group: 'league', key: 'symbols', n: 1, reward: { gems: 30 } },
+  { id: 'gold1', name: 'Gold', text: 'Win your first Gold Symbol', group: 'league', key: 'golds', n: 1, reward: { gems: 60, items: { 'master-ball': 1 } } },
+  { id: 'legends3', name: 'Legends', text: 'Catch three legendary Pokemon', group: 'collect', key: 'legend', n: 3, reward: { gems: 60 } },
+  { id: 'dynamax5', name: 'Max power', text: 'Five Dynamax days', group: 'perfect', key: 'dynamax', n: 5, reward: { gems: 30, items: { 'x-attack-3': 1, 'x-special-3': 1 } } },
+  { id: 'crits10', name: 'Critical', text: 'Ten critical hits on leaders', group: 'league', key: 'crits', n: 10, reward: { gems: 25, items: { 'dire-hit-3': 2 } } },
+  { id: 'rank2', name: 'Rematch', text: 'Beat a Champion at Rematch rank ★2', group: 'league', key: 'rematch', n: 1, reward: { gems: 100, items: { 'azure-flute': 1 } } },
+]
+FEATS.push(...FEATS_V13)

@@ -12,7 +12,7 @@
 // they go back to the ring.
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useHold } from './overlay.ts'
-import { COMET_SHARD, FORGE_COST, SHARDS, forgeShard, itemName } from '../../core/economy.ts'
+import { COMET_SHARD, FORGE_COST, SHARDS, forgeFair, forgeShard, itemName } from '../../core/economy.ts'
 import { nameOf, spritePath, type Game, type Mon } from '../../core/fold.ts'
 import { SPECIES } from '../../core/species.ts'
 import { Win } from '../App.tsx'
@@ -44,6 +44,8 @@ const wants = (s: Slot): string[] => (s.count > 1 ? (s.index === 0 ? ['red-shard
 const wantText = (s: Slot): string => (s.count > 1 ? (s.index === 0 ? 'three red shards' : 'three blue or three yellow shards') : 'three shards of one colour')
 
 const wait = (ms: number) => new Promise<void>((r) => window.setTimeout(r, ms))
+/** A shard on the ring is keyed "kind:index". */
+const kindOf = (key: string): string => key.split(':')[0]
 const centre = (el: Element) => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 } }
 
 export function Forge({ game }: { game: Game }) {
@@ -68,7 +70,9 @@ export function Forge({ game }: { game: Game }) {
     return out
   }, [game])
 
-  const shardOf = (s: Slot): string | null => forgeShard(s.count, s.index, s.m.nature?.up, game.inv)
+  // version 13: any three shards of three different colours forge a stone, and the X or Y is chosen below
+  const fair = game.v13
+  const shardOf = (s: Slot): string | null => (fair ? (forgeFair(game.inv) ? 'any' : null) : forgeShard(s.count, s.index, s.m.nature?.up, game.inv))
   const state = (s: Slot): State => (s.m.megas?.includes(s.mega) ? 'done' : !game.keyStone ? 'locked' : shardOf(s) ? 'ready' : 'waiting')
   const order: Record<State, number> = { ready: 0, waiting: 1, locked: 2, done: 3 }
   const sorted = [...slots].sort((a, b) => order[state(a)] - order[state(b)])
@@ -93,7 +97,7 @@ export function Forge({ game }: { game: Game }) {
     return out
   }, [game.inv])
 
-  const ignite = async (s: Slot) => {
+  const ignite = async (s: Slot, kinds: string[]) => {
     setLit(true)
     play('catch')
     if (!motionConfig.reduced) {
@@ -102,7 +106,7 @@ export function Forge({ game }: { game: Game }) {
       await wait(900)
     }
     told.add(`mega:${s.mega}`) // the news window would tell it again: this is the telling
-    useItem('', s.m.uid, 'forge', s.mega)
+    useItem(fair ? kinds.join(',') : '', s.m.uid, 'forge', s.mega)
     setPick(`${s.m.uid}:${s.mega}`)
     setPlaced([])
     settle()
@@ -127,15 +131,25 @@ export function Forge({ game }: { game: Game }) {
         { translate: `${dx}px ${dy}px`, scale: '0.85' },
       ], { duration: 520, easing: 'cubic-bezier(0.55, 0, 0.75, 0.2)', fill: 'forwards' }).finished
     }
-    setPlaced((p) => [...p, key])
+    const next = [...placed, key]
+    setPlaced(next)
     play('thud', n * 3)
     const img = target.querySelector('img')
     if (img && !motionConfig.reduced) void motion.slam(img, { from: 2.2, color: '#c890ff' })
     busy.current = false
-    if (n + 1 === FORGE_COST) void ignite(sel)
+    if (n + 1 === FORGE_COST) void ignite(sel, next.map(kindOf))
   }
   const placeAll = async () => {
-    const free = ring.filter((r) => r.kind === shard && !placed.includes(r.key))
+    // the fair forge places the three colours held most of (a Comet where one is missing)
+    const want = fair ? (forgeFair(game.inv) ?? []) : []
+    const pickFair = (): typeof ring => {
+      const out: typeof ring = []
+      const left = [...want]
+      for (const k of placed.map(kindOf)) { const i = left.indexOf(k); if (i >= 0) left.splice(i, 1) }
+      for (const k of left) { const r = ring.find((x) => x.kind === k && !placed.includes(x.key) && !out.includes(x)); if (r) out.push(r) }
+      return out
+    }
+    const free = fair ? pickFair() : ring.filter((r) => r.kind === shard && !placed.includes(r.key))
     for (const r of free.slice(0, FORGE_COST - placed.length)) {
       await place(r.key, altar.current?.querySelector<HTMLElement>(`[data-key="${r.key}"]`) ?? null)
       if (!motionConfig.reduced) await wait(120)
@@ -146,8 +160,8 @@ export function Forge({ game }: { game: Game }) {
     : !sel ? 'None of your Pokemon has a Mega form yet. Train one that does and it appears here.'
       : lit ? 'The stone wakes...'
       : st === 'done' ? `Forged. ${nameOf(sel.m.form)} keeps its Mega Stone for good.`
-        : st === 'ready' ? (placed.length === 0 ? `Tap three ${itemName(shard!)}s into the stone.` : `${FORGE_COST - placed.length} more.`)
-          : `${shortName(sel.mega)} needs ${wantText(sel)}, or three Comet Shards.`
+        : st === 'ready' ? (placed.length === 0 ? (fair ? 'Tap three shards of three different colours into the stone.' : `Tap three ${itemName(shard!)}s into the stone.`) : `${FORGE_COST - placed.length} more.`)
+          : fair ? `${shortName(sel.mega)} needs three shards of three different colours. A Comet Shard fills any socket.` : `${shortName(sel.mega)} needs ${wantText(sel)}, or three Comet Shards.`
   const total = KINDS.reduce((n, k) => n + (game.inv[k] ?? 0), 0)
 
   return (
@@ -161,16 +175,18 @@ export function Forge({ game }: { game: Game }) {
           </span>
           {SOCKETS.map((a, i) => {
             const full = st === 'done' || i < placed.length
-            const ghost = shard ?? (sel ? wants(sel)[0] : 'red-shard')
+            const ghost = fair ? (i < placed.length ? kindOf(placed[i]) : SHARDS[i]) : shard ?? (sel ? wants(sel)[0] : 'red-shard')
             return (
               <span key={a} ref={(el) => { sockets.current[i] = el }} className={`socket3 ${full ? 'full' : ''}`} style={{ ['--a' as string]: `${a}deg` } as CSSProperties}>
-                {st === 'done' ? <i className="socket3-glow" /> : <ItemIcon id={i < placed.length && shard ? shard : ghost} size={30} />}
+                {st === 'done' ? <i className="socket3-glow" /> : <ItemIcon id={fair ? ghost : i < placed.length && shard ? shard : ghost} size={30} />}
               </span>
             )
           })}
           {ring.map((r, i) => {
             const a = (360 / Math.max(ring.length, 8)) * i - 90 + (ring.length < 8 ? (360 / 8) * (8 - ring.length) / 2 : 0)
-            const fits = Boolean(shard) && r.kind === shard && !placed.includes(r.key) && placed.length < FORGE_COST
+            // the fair forge: any colour not placed yet (a Comet always fits)
+            const fits = fair ? Boolean(shard) && !placed.includes(r.key) && placed.length < FORGE_COST && (r.kind === COMET_SHARD || !placed.map(kindOf).includes(r.kind))
+              : Boolean(shard) && r.kind === shard && !placed.includes(r.key) && placed.length < FORGE_COST
             const gone = placed.includes(r.key)
             return (
               <button
@@ -199,7 +215,7 @@ export function Forge({ game }: { game: Game }) {
             {sorted.map((s) => {
               const k = keyOf(s), on = sel && keyOf(sel) === k, ss = state(s)
               return (
-                <button key={k} type="button" role="radio" aria-checked={Boolean(on)} className={`fp ${ss} ${on ? 'on' : ''}`} onClick={() => { setPick(k); play('tap') }} title={`${nameOf(s.mega)}: ${ss === 'done' ? 'forged' : ss === 'ready' ? 'ready to forge' : ss === 'locked' ? 'needs the Key Stone' : `needs ${wantText(s)}`}`}>
+                <button key={k} type="button" role="radio" aria-checked={Boolean(on)} className={`fp ${ss} ${on ? 'on' : ''}`} onClick={() => { setPick(k); play('tap') }} title={`${nameOf(s.mega)}: ${ss === 'done' ? 'forged' : ss === 'ready' ? 'ready to forge' : ss === 'locked' ? 'needs the Key Stone' : `needs ${fair ? 'three shards of different colours' : wantText(s)}`}`}>
                   <span className="fp-face"><img src={still(s.m.form, s.m.shiny)} alt="" width={52} height={52} className="sprite" />{ss === 'done' && <i className="fp-star" aria-hidden>★</i>}</span>
                   <b>{shortName(s.mega)}</b>
                   <small>{ss === 'done' ? 'Forged' : ss === 'ready' ? 'Ready' : ss === 'locked' ? 'Locked' : 'Needs shards'}</small>
@@ -210,7 +226,7 @@ export function Forge({ game }: { game: Game }) {
         )}
         <p className="forge-where">
           {total === 0 ? 'No shards yet. ' : `${total} ${total === 1 ? 'shard' : 'shards'} held. `}
-          Shards come from feats, every third set of Strong gear, a month reviewed and a boss. Red forges an X, blue or yellow a Y; a Comet fits any.
+          Shards come from feats, every third set of Strong gear, a month reviewed and a boss. {fair ? 'Any three of three different colours forge a Mega Stone, and for a Pokemon with two Megas the X or Y is yours to choose above; a Comet fills any socket.' : 'Red forges an X, blue or yellow a Y; a Comet fits any.'}
         </p>
       </div>
 

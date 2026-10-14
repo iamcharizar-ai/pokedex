@@ -6,8 +6,8 @@ import {
   ADVANTAGE_MULT, GEMS, SEASON_STEP, BALL_MULT, BALL_NAME, GAME_START, GRADUATES_PER_REGION, LEADER_HP, MOMENTUM_WINDOW,
   CLAIM_AUTO, EGG_STEPS, SLEEP_HABIT, bondLevel, HEART_LEVELS, LEGENDARY_EVERY_WILD, PAY_STREAK, REGIONS, REPEL_DAYS, SHINY_ODDS, SHINY_ODDS_WORN, SLEEP_AFTER, SLIP, STAKES_FROM, STEPS_GOAL, TEAM_SIZE, WILD_STAY, TIER_XP, WEAK_MULT, evolveAt, graduateAt, xpForLevel,
 } from '../core/rules.ts'
-import { MARKS, EGG_STEPS_OLD_CHARM, BOND_PARTY, BOND_STEP, MASTERY_MAX, MASTERY_STEP, SELL, itemName as econName, masteryCost } from '../core/economy.ts'
-import { TEAM_BONUS, TEAM_NATURE, type Tag as TagKind } from '../core/rules.ts'
+import { BERRY_HEARTS, MARKS, EGG_STEPS_OLD_CHARM, BOND_PARTY, BOND_STEP, MASTERY_MAX, MASTERY_STEP, SELL, itemName as econName, masteryCost } from '../core/economy.ts'
+import { CRIT_MULT, DYNAMAX, GIGANTAMAX, LEVEL_POWER, MEGA_BONUS, MEGA_BOND, TEAM_BONUS, TEAM_LEVEL, TEAM_NATURE, type Tag as TagKind } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
 import { Ball, KeyStone } from './Ball.tsx'
 import { FeatsWin } from './Feats.tsx'
@@ -27,6 +27,8 @@ import { Sheet } from './screens/Sheet.tsx'
 import { Tour } from './screens/Tour.tsx'
 import { TOUR_KEY, shouldTour } from './screens/tour.ts'
 import { SeasonRoad } from './Road.tsx'
+import { BattlePrep, BondPerks, FrontierWin, LegendWin, TodayEffects } from './Champion.tsx'
+import { FACILITIES } from '../core/frontier.ts'
 import { BOSS_HEAL, KILL_CAP, THROWS, THROW_AT } from '../core/boss.ts'
 import { KIT_SHARD_EVERY } from '../core/rules.ts'
 import { CollectButton } from './Claim.tsx'
@@ -273,7 +275,7 @@ function Summary({ game, onOpen }: { game: Game; onOpen?: () => void }) {
   const hearts = (partner.together ?? 0) + (partner.fed ?? 0)
   const bond = bondLevel(hearts)
   const nextAt = HEART_LEVELS[bond]
-  const berry = ['oran-berry', 'sitrus-berry'].find((b) => (game.inv[b] ?? 0) > 0)
+  const berry = Object.keys(BERRY_HEARTS).find((b) => (game.inv[b] ?? 0) > 0)
   // what it may become: by what you have done most, when that is known; else every form it can take
   const ahead = game.lean.length > 0 ? game.lean.slice(0, 3).map((x) => ({ form: x.form, note: `${x.pct}% ${TAG_NAME[x.tag] ?? x.tag}` })) : (rec.e ?? []).slice(0, 3).map((f) => ({ form: f, note: '' }))
   return (
@@ -315,13 +317,14 @@ function Summary({ game, onOpen }: { game: Game; onOpen?: () => void }) {
             )}
             {ahead.length === 0 && <span className="hero-next">Fully trained at Lv {game.next.level}</span>}
           </div>
-          <div className="hero-bond" title={`A heart for each day it was your partner and you did a pillar, and one for each berry. At ${HEART_LEVELS.join(', ')} hearts the bond steps up: +${Math.round(BOND_STEP * 100)}% to every strike each. It only ever counts up.`}>
+          <div className="hero-bond" title={`A heart for each pillar done while it is your partner, and more for each berry. At ${HEART_LEVELS.join(', ')} hearts the bond steps up: +${Math.round(BOND_STEP * 100)}% to every strike each, and a perk. It only ever counts up.`}>
             <span className="hero-hearts" aria-label={`Bond level ${bond} of ${HEART_LEVELS.length}`}>{HEART_LEVELS.map((_, i) => <img key={i} src="/sprites/items/heart-scale.png" width={22} height={22} alt="" className={`pix ${i < bond ? 'on' : ''}`} />)}</span>
             <span className="hero-bondtxt"><b>{hearts} ♥</b>{nextAt ? ` · ${nextAt - hearts} to bond ${bond + 1}` : ' · full bond'}</span>
             <button type="button" className="hero-feed" disabled={!berry} onClick={() => { useItem(berry!, '', 'feed'); play('feed') }} title={berry ? `Feed it: ${econName(berry)}` : 'No berries: the Mart and the Garden sell them'}><ItemIcon id={berry ?? 'oran-berry'} size={24} />Feed{berry ? <i>{game.inv[berry]}</i> : null}</button>
           </div>
         </div>
       </section>
+      {game.v13 && <BondPerks game={game} />}
       {game.asleep && <p className="notice warn">Dozing after two days without a pillar. Finish one pillar to wake it. Nothing finished is lost{game.today.day >= STAKES_FROM ? '; a day with nothing ticked also costs what is still in progress (see How it works)' : `. From ${fmtDay(STAKES_FROM)} a day with nothing ticked also costs what is still in progress`}.</p>}
       {game.aura === 'mega' && <p className="notice good">{partner.megas?.length ? 'Mega form: registered for good. Choose which form shows in Choices.' : 'Mega form: full momentum and every pillar done today.'}</p>}
       {game.aura === 'gmax' && <p className="notice gmax">Perfect day: Gigantamax for today.</p>}
@@ -333,14 +336,14 @@ const pct = (x: number): string => `${Math.round(x * 100)}%`
 /** Everything that raises a strike, added: what applies to all work, then what applies to one kind of work. The sum is applied once. */
 function PowerLine({ game }: { game: Game }) {
   const { power } = game
-  const common = power.team + power.bond + power.mega + power.item
-  const parts: [string, number][] = [['Team', power.team], ['Bond', power.bond], ['Mega', power.mega], ['Life Orb', power.item]]
-  const kinds = (Object.keys(power.domain) as TagKind[]).map((t) => [t, power.domain[t]] as const).filter(([, d]) => d.held + d.mastery + d.nature > 0)
+  const common = power.team + power.bond + power.mega + power.item + power.level
+  const parts: [string, number][] = [['Level', power.level], ['Team', power.team], ['Bond', power.bond], ['Mega', power.mega], ['Life Orb', power.item]]
+  const kinds = (Object.keys(power.domain) as TagKind[]).map((t) => [t, power.domain[t]] as const).filter(([, d]) => d.held + d.mastery + d.nature + d.vitamin > 0)
   return (
     <div className="power" aria-label="What raises a strike">
       <span className="chip" title={parts.filter(([, v]) => v > 0).map(([n, v]) => `${n} +${pct(v)}`).join(' · ') || 'Nothing yet: a team, a bond level or a Mega adds here'}>All work +{pct(common)}</span>
       {kinds.map(([t, d]) => (
-        <span key={t} className="chip" data-tag={t} title={[['Held item', d.held], ['Mastery', d.mastery], ['Natures on the team', d.nature]].filter(([, v]) => (v as number) > 0).map(([n, v]) => `${n} +${pct(v as number)}`).join(' · ')}>{TAG_NAME[t]} +{pct(d.held + d.mastery + d.nature)}</span>
+        <span key={t} className="chip" data-tag={t} title={[['Held item', d.held], ['Mastery', d.mastery], ['Natures on the team', d.nature], ['Vitamins', d.vitamin]].filter(([, v]) => (v as number) > 0).map(([n, v]) => `${n} +${pct(v as number)}`).join(' · ')}>{TAG_NAME[t]} +{pct(d.held + d.mastery + d.nature + d.vitamin)}</span>
       ))}
       <small className="muted">all added together, once</small>
     </div>
@@ -385,6 +388,7 @@ function LeaderBody({ game, t, l }: { game: Game; t: NonNullable<ReturnType<type
           {game.team.map((m) => <img key={m.uid} src={still(m.form, m.shiny)} alt={nameOf(m.form)} width={40} height={40} className="sprite" />)}
         </div>
       )}
+      <TodayEffects game={game} />
       <PowerLine game={game} />
     </Win>
   )
@@ -455,6 +459,7 @@ function PartnerTab({ game, facts, nights, onShop }: { game: Game; facts: DayFac
       <Win title="Throw and feed" tone="gold" aside={game.wild && !game.wild.caught ? `${nameOf(game.wild.form)} · ${game.wild.hp} HP` : undefined}>
         <Actions game={game} onShop={onShop} />
       </Win>
+      <BattlePrep game={game} />
       <Win title="Challenges" tone="red">
         <div className="duels">
           <LeaderTile game={game} />
@@ -697,7 +702,8 @@ function DexTab({ game }: { game: Game }) {
 }
 
 // ── Journey (the Trainer tab's old name in the code) ───────────────────────
-const KIND: Record<Moment['kind'], string> = { level: 'Level', evolve: 'Evolved', graduate: 'Trained', partner: 'Partner', catch: 'Caught', appear: 'Wild', form: 'Form', region: 'Region', gym: 'Gym', league: 'League', use: 'Choice', key: 'Key Stone', review: 'Review', boss: 'Boss', mega: 'Mega', transfer: 'Professor', quest: 'Quest', season: 'Season', hatch: 'Hatched', chest: 'Chest', feat: 'Feat', gear: 'Gear', kit: 'Kit', flee: 'Fled', slip: 'Slipped' }
+const KIND: Record<Moment['kind'], string> = { level: 'Level', evolve: 'Evolved', graduate: 'Trained', partner: 'Partner', catch: 'Caught', appear: 'Wild', form: 'Form', region: 'Region', gym: 'Gym', league: 'League', use: 'Choice', key: 'Key Stone', review: 'Review', boss: 'Boss', mega: 'Mega', transfer: 'Professor', quest: 'Quest', season: 'Season', hatch: 'Hatched', chest: 'Chest', feat: 'Feat', gear: 'Gear', kit: 'Kit', flee: 'Fled', slip: 'Slipped', pickup: 'Pickup', endure: 'Endured', symbol: 'Frontier', summon: 'Legend', fossil: 'Lab', itemevo: 'Evolved', lap: 'Rematch' }
+const aOrAn = (w: string): string => `${/^[AEIOU]/i.test(w) ? 'an' : 'a'} ${w}`
 function line(m: Moment): string {
   switch (m.kind) {
     case 'level': return `${nameOf(m.form)} reached level ${m.level}`
@@ -731,6 +737,16 @@ function line(m: Moment): string {
     case 'chest': return `Chest ${m.n}: ${m.coins ? `${m.coins} coins` : `${itemName(m.item)}${m.count > 1 ? ` ×${m.count}` : ''}`}`
     case 'gear': return `${itemName(m.item)} dropped by a Strong workout`
     case 'kit': return m.shard ? `A full set of gear (set ${m.n}) became a Red Shard` : `A full set of gear (set ${m.n}) paid gems and Iron`
+    case 'pickup': return `${nameOf(m.form)} found ${aOrAn(itemName(m.item))} on the day's walk`
+    case 'endure': return `An empty day (${fmtDay(m.empty)}) cost nothing: ${m.how === 'endure' ? 'the bond held (Endure)' : m.how === 'sash' ? 'the Focus Sash held' : 'the Guard Spec stood guard'}`
+    case 'symbol': {
+      const f = FACILITIES.find((x) => x.id === m.facility)
+      return `${f?.brain ?? 'A Frontier Brain'} beaten at the ${f?.name ?? 'Battle Frontier'}: the ${m.tier === 'gold' ? 'Gold' : 'Silver'} Symbol`
+    }
+    case 'summon': return `The ${itemName(m.key)} called ${nameOf(m.form)}: it comes next`
+    case 'fossil': return `The Lab brought the ${itemName(m.item)} back: ${nameOf(m.form)}`
+    case 'itemevo': return `${nameOf(m.from)} evolved into ${nameOf(m.form)} (${itemName(m.item)})`
+    case 'lap': return `Every league beaten: the Rematch begins at rank ★${m.lap + 1}`
     case 'feat': return `Feat: ${m.name}${[m.gems ? `+${m.gems} gems` : '', m.coins ? `+${m.coins} coins` : '', ...m.items.map(itemName)].filter(Boolean).map((x, i) => (i ? x : ` (${x}`)).join(', ')}${m.gems || m.coins || m.items.length ? ')' : ''}`
   }
 }
@@ -743,7 +759,7 @@ export function Road({ game }: { game: Game }) {
   const all = lineup(l)
   const at = done ? all.length : league.slot
   return (
-    <Win title={`${l.name} league`} tone="gold" aside={done ? 'All beaten' : `${Math.min(at, l.gyms.length)} / ${l.gyms.length} badges`}>
+    <Win title={`${league.lap > 0 ? `★${league.lap + 1} ` : ''}${l.name} league`} tone="gold" aside={done ? 'All beaten' : league.lap > 0 ? `Rematch rank ★${league.lap + 1}` : `${Math.min(at, l.gyms.length)} / ${l.gyms.length} badges`}>
       <div className="road-win">
         <div className="k-road">
           {at > 0 && <div className="k-road-done"><span className="k-rung past">{at} {at === 1 ? 'leader' : 'leaders'} beaten</span></div>}
@@ -769,6 +785,7 @@ export function Road({ game }: { game: Game }) {
         </div>
       </div>
       {league.waiting && <p className="muted">{l.name} is not open yet.</p>}
+      {game.v13 && <p className="muted">{league.lap > 0 ? `Rematch rank ★${league.lap + 1}: every leader has ${Math.round(60 * league.lap)}% more HP, wins pay Battle Points, and each Champion a Legend key.` : 'After Paldea\'s Champion, every league comes back at Rematch rank ★2, then ★3: the road never ends.'}</p>}
     </Win>
   )
 }
@@ -840,11 +857,13 @@ function TrainerTab({ game }: { game: Game }) {
     <div className="journeypage">
       <div className="journey-a">
         <Road game={game} />
+        <FrontierWin game={game} />
         <SeasonRoad game={game} />
         <Quests game={game} />
       </div>
       <div className="journey-b">
         <Calendar game={game} />
+        <LegendWin game={game} />
         <FeatsWin game={game} />
         <BossLog game={game} />
       </div>
@@ -916,17 +935,38 @@ function RulesTab({ onTour }: { onTour: () => void }) {
           <Rule title="Feats" tone="gold" pic={<><ItemIcon id="key-stone" size={30} /><ItemIcon id="master-ball" size={30} /><ItemIcon id="choice-band" size={30} /></>}>
             Runs of days and lifetime totals pay things no shop sells. One rest day inside a run is forgiven.
           </Rule>
-          <Rule title="Mega, forged" tone="purple" pic={<><ItemIcon id="red-shard" size={26} /><ItemIcon id="blue-shard" size={26} /><Arrow /><KeyStone size={38} /></>}>
-            The Key Stone is a feat. Three shards forge a Mega Stone for one Pokemon: red for X, blue or yellow for Y. A Comet Shard, one for each month-end review in Life OS, fits any.
+          <Rule title="Mega, forged" tone="purple" pic={<><ItemIcon id="red-shard" size={26} /><ItemIcon id="blue-shard" size={26} /><ItemIcon id="yellow-shard" size={26} /><Arrow /><KeyStone size={38} /></>}>
+            The Key Stone is a feat. Three shards of three different colours forge a Mega Stone for one Pokemon, and for one with two Megas the X or Y is yours to choose. A Comet Shard, one for each month-end review in Life OS, fills any socket. A forged stone adds {Math.round(MEGA_BONUS * 100)}% to every strike, and {Math.round(MEGA_BOND * 100)}% more for each bond level.
+          </Rule>
+          <Rule title="Level is power" tone="gold" pic={<><span className="rule-chip sm">Lv</span><Arrow /><span className="rule-chip">+{Math.round(LEVEL_POWER * 100)}%</span></>}>
+            Every level of your partner adds {Math.round(LEVEL_POWER * 100)}% to every strike, and every member of the party {Math.round(TEAM_BONUS * 100)}% plus {(TEAM_LEVEL * 100).toFixed(1)}% a level. Leaders grow too: 15% more HP for every league further on, a quarter more for the Elite Four, 60% more for a Champion.
+          </Rule>
+          <Rule title="Critical hits and Dynamax" tone="red" pic={<><ItemIcon id="scope-lens" size={30} /><ItemIcon id="dire-hit" size={30} /><span className="rule-chip sm">×{DYNAMAX}</span></>}>
+            From bond level 3 about one day in eight is a critical hit: the day's strike ×{CRIT_MULT}. A Dire Hit or a Scope Lens raises the chance. A perfect day Dynamaxes your partner: ×{DYNAMAX}, or ×{GIGANTAMAX} for one with a Gigantamax form.
+          </Rule>
+          <Rule title="Battle items" tone="red" pic={<><ItemIcon id="x-attack" size={30} /><ItemIcon id="x-special" size={30} /><ItemIcon id="guard-spec" size={30} /></>}>
+            An X item, used any time in the day, makes one kind of work strike the leader harder for the whole day: +20%, +40% or +60% from the Mart, +120% from the Battle Frontier. A Guard Spec stands guard over the next empty day.
+          </Rule>
+          <Rule title="Pickup and treasures" tone="green" pic={<><ItemIcon id="itemfinder" size={30} /><ItemIcon id="nugget" size={30} /><ItemIcon id="helix-fossil" size={30} /></>}>
+            From bond level 1 your partner finds things on days with a pillar: berries, balls, treasures for the Collector, fossils the Lab brings back to life, evolution stones. The further you are in the leagues, the better the finds.
+          </Rule>
+          <Rule title="Evolution items and vitamins" tone="green" pic={<><ItemIcon id="fire-stone" size={30} /><ItemIcon id="rare-candy" size={30} /><ItemIcon id="calcium" size={30} /></>}>
+            A stone or trade item evolves a Pokemon in My Pokemon by one stage when the form it becomes has the item's type. A Rare Candy is a level. A vitamin makes one kind of work strike 3% harder for the Pokemon it is given to, for good.
+          </Rule>
+          <Rule title="The Battle Frontier" tone="purple" pic={<><ItemIcon id="rainbow-pass" size={30} /><ItemIcon id="point-card" size={30} /></>}>
+            Seven facilities, each a run of one kind of day. Every win pays a Battle Point, every seventh in a row a bonus, and the Frontier Brains hand over Silver and Gold Symbols. BP buy held items, X items, fossils and Legend keys at the Exchange.
+          </Rule>
+          <Rule title="Legends and Rematch" tone="gold" pic={<><ItemIcon id="red-orb" size={30} /><ItemIcon id="blue-orb" size={30} /><ItemIcon id="jade-orb" size={30} /></>}>
+            A Legend key calls one legend as the next wild Pokemon, to catch by your work. After Paldea's Champion every league comes back at Rematch rank ★2, then ★3, stronger each time, and every Rematch Champion hands over a Legend key.
           </Rule>
           <Rule title="Added, not stacked" tone="purple" pic={<><span className="rule-chip sm">+</span><span className="rule-chip sm">+</span><span className="rule-chip sm">+</span><Arrow /><span className="rule-chip">×1</span></>}>
-            Team, bond, a Mega, the held item, mastery and natures are added together and applied once. The leader card shows the sum.
+            Level, team, bond, a Mega, the held item, mastery, vitamins, natures and the day's X items are added together and applied once. The leader card shows the sum.
           </Rule>
           <Rule title="Strong's training kit" tone="red" pic={<><ItemIcon id="protector" size={28} /><ItemIcon id="power-band" size={28} /><Arrow /><ItemIcon id="red-shard" size={30} /></>}>
             Each workout in Strong's split drops its own piece of gear. A full set of seven pays gems and Iron, and every {KIT_SHARD_EVERY}rd set a Red Shard as well.
           </Rule>
           <Rule title="Leaders and badges" tone="purple" pic={<><span className="rule-chip">{(LEADER_HP / 1000).toFixed(0)}k</span><Arrow /><img src="/sprites/badges/1-1.png" alt="" width={32} height={32} className="gymbadge pix" /></>}>
-            Each leader has {LEADER_HP.toLocaleString('en-IN')} HP and is weak to two kinds of work (×{WEAK_MULT}). Beat one, keep the badge.
+            Kanto's gym leaders have {LEADER_HP.toLocaleString('en-IN')} HP, and each league further on more. Each is weak to two kinds of work (×{WEAK_MULT}). Beat one, keep the badge.
           </Rule>
           <Rule title="Your team" tone="blue" pic={<><img src="/sprites/ui/party-on.png" alt="" width={30} height={30} className="pix" /><img src="/sprites/ui/party-on.png" alt="" width={30} height={30} className="pix" /><img src="/sprites/ui/party-empty.png" alt="" width={30} height={30} className="pix" /><span className="rule-chip sm">+10%</span></>}>
             The partner and up to {TEAM_SIZE} fully trained Pokemon stand together, a party of six. Each of the {TEAM_SIZE} adds {Math.round(TEAM_BONUS * 100)}% to every strike, and {Math.round(TEAM_NATURE * 100)}% more to the work its nature raised.
@@ -941,7 +981,7 @@ function RulesTab({ onTour }: { onTour: () => void }) {
             Showing-up pay, weekly quests, season steps, feats and a month reviewed wait in the Collect strip until you tap them. Left alone, each pays itself {CLAIM_AUTO} days later, so nothing is lost. A catch, a chest and selling a Pokemon pay at once.
           </Rule>
           <Rule title="Hearts and bond" tone="green" pic={<><ItemIcon id="heart-scale" size={28} /><ItemIcon id="oran-berry" size={28} /><ItemIcon id="sitrus-berry" size={28} /></>}>
-            A heart for every day this Pokemon is your partner and you finish a pillar, and one for each berry you feed it (Oran one, Sitrus three). At {HEART_LEVELS.join(', ')} hearts the bond steps up, and each step adds {Math.round(BOND_STEP * 100)}% to every strike. Hearts belong to the Pokemon and only count up. A new partner starts again, but a fully trained one keeps its hearts for the party: each of its bond levels adds {Math.round(BOND_PARTY * 100)}% to every strike on top of its place in the party.
+            A heart for every pillar you finish while this Pokemon is your partner, and more for the berries you feed it (Oran one, Sitrus three, a friendship berry five). Each bond level unlocks a perk: Pickup, Endure, Focus, Best friends, Exp. Share. At {HEART_LEVELS.join(', ')} hearts the bond steps up, and each step adds {Math.round(BOND_STEP * 100)}% to every strike. Hearts belong to the Pokemon and only count up. A new partner starts again, but a fully trained one keeps its hearts for the party: each of its bond levels adds {Math.round(BOND_PARTY * 100)}% to every strike on top of its place in the party.
           </Rule>
           <Rule title="Momentum" tone="blue" pic={<><span className="rule-chip sm">×1.2</span><span className="rule-chip sm">×1.35</span><span className="rule-chip">×1.5</span></>}>
             Of the last seven days, three with two pillars make XP ×1.2, five ×1.35, seven ×1.5. It slides back one day at a time, never resets. {SLEEP_AFTER} days with no pillar at all and the partner dozes off until you finish one.

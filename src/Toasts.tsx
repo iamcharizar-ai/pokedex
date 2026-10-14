@@ -1,6 +1,7 @@
 // Small news that does not deserve a window: a level, a Pokemon that got away.
 // They slide in at the top for a few seconds and go. Said once per device (the
 // first run says nothing: history is not news), and never blocking.
+import { itemName } from '../core/economy.ts'
 import { useEffect, useRef, useState } from 'react'
 import { motionConfig } from './lib/fx.ts'
 import { levelUp, toast } from './lib/motion.js'
@@ -19,6 +20,9 @@ const textOf = (m: Moment): { title: string; line: string; big?: boolean } | nul
   m.kind === 'level' ? { title: `Level ${m.level}`, line: `${nameOf(m.form)} grew.`, ...(bigLevel(m.level) ? { big: true } : {}) }
     : m.kind === 'flee' ? { title: 'It got away', line: `The wild ${nameOf(m.form)} left.` }
       : m.kind === 'boss' && m.what === 'left' ? { title: 'The boss left', line: `${nameOf(m.form)} is gone. Another comes on Monday.` }
+      : m.kind === 'pickup' ? { title: 'Pickup!', line: `${nameOf(m.form)} found ${/^[AEIOU]/i.test(itemName(m.item)) ? 'an' : 'a'} ${itemName(m.item)}.` }
+      : m.kind === 'endure' ? { title: m.how === 'endure' ? 'Endured!' : 'Held on', line: `The empty day cost nothing (${m.how === 'endure' ? 'your bond' : m.how === 'sash' ? 'the Focus Sash' : 'the Guard Spec'}).` }
+      : m.kind === 'fossil' ? { title: 'Back to life', line: `The Lab revived ${nameOf(m.form)}. It is in My Pokemon.`, big: true }
       : null
 
 function load(): Set<string> | null {

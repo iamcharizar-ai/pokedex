@@ -10,10 +10,10 @@ import { foldGame, isGym, leaderOf, statsOf } from './fold.ts'
 import { LEAGUES, lineup } from './gyms.ts'
 import { beats, weakDomains } from './types.ts'
 import {
-  BALL_MULT, CLAIM_AUTO, DAILY_PAY, PAY_STREAK, REVIEW_GEMS, EGG_STEPS, STEPS_GOAL, GAME_START, GEMS, KIT_IRON, LEADER_HP, MEGA_BONUS, REPEL_DAYS, SEASON_STEP, SLEEP_DEEP, SLIP, STAKES_FROM, TEAM_BONUS, TEAM_NATURE, TEAM_OPEN_FROM, TEAM_SIZE, WEAK_MULT, WILD_HP, WILD_STAY,
+  BALL_MULT, CLAIM_AUTO, DAILY_PAY, PAY_STREAK, REVIEW_GEMS, EGG_STEPS, STEPS_GOAL, GAME_START, GEMS, KIT_IRON, LEADER_HP, MEGA_BONUS, REPEL_DAYS, SEASON_STEP, SLEEP_DEEP, SLIP, STAKES_FROM, TEAM_BONUS, TEAM_NATURE, TEAM_OPEN_FROM, TEAM_LEVEL, TEAM_SIZE, WEAK_MULT, WILD_HP, WILD_STAY,
   ballFor, bondLevel, evolveAt, graduateAt, levelOf, momentumMult, regionsOpen, wildHit, xpForLevel,
 } from './rules.ts'
-import { BALLS, BOND_PARTY, CHEST, rng, DOMAIN_SHOPS, FEATS, FORGE_COST, GEAR, GEAR_ITEMS, LURES, MART_POOL, SELL, STANDING, forgeShard, lureTypes, martDeals, throwHp } from './economy.ts'
+import { forgeFair, BALLS, BOND_PARTY, CHEST, rng, DOMAIN_SHOPS, FEATS, FORGE_COST, GEAR, GEAR_ITEMS, LURES, MART_POOL, SELL, STANDING, forgeShard, lureTypes, martDeals, throwHp } from './economy.ts'
 import { SPECIES } from './species.ts'
 
 const H = (id: string, tag: HabitFact['tag'], worth: number, frac: number): HabitFact =>
@@ -235,9 +235,9 @@ test('a party of six: the partner and five trained Pokemon behind it, each addin
   assert.deepEqual([TEAM_BONUS, TEAM_NATURE], [0.02, 0.03])
   const g = fold(run(400, ALL))
   assert.ok(g.team.length > 0 && g.team.length <= 5)
-  // each member adds TEAM_BONUS, plus BOND_PARTY for every bond level its hearts reached
+  // each member adds TEAM_BONUS, plus BOND_PARTY for every bond level its hearts reached, and (version 13) TEAM_LEVEL for every level
   const hearts = (m: (typeof g.team)[number]) => (m.together ?? 0) + (m.fed ?? 0)
-  assert.ok(Math.abs(g.power.team - g.team.reduce((sum, m) => sum + TEAM_BONUS + BOND_PARTY * bondLevel(hearts(m)), 0)) < 1e-9)
+  assert.ok(Math.abs(g.power.team - g.team.reduce((sum, m) => sum + TEAM_BONUS + BOND_PARTY * bondLevel(hearts(m)) + TEAM_LEVEL * levelOf(m.xp), 0)) < 1e-9)
   assert.ok(g.team.some((m) => bondLevel(hearts(m)) > 0), 'a trained Pokemon keeps its bond for the party')
   for (const t of ['code', 'fitness', 'guitar', 'arbor', 'sleep', 'routine'] as const)
     assert.equal(g.power.domain[t].nature, TEAM_NATURE * g.team.filter((m) => m.nature?.up === t).length, t)
@@ -867,8 +867,9 @@ test('a held item makes its domain strike harder, and nothing else', () => {
   const buy = withUse(facts, 12, { item: 'soothe-bell', uid: '', what: 'buy', to: 'guitar' }, { item: 'soothe-bell', uid: '', what: 'hold', to: 'soothe-bell' })
   const g = fold(buy), plain = fold(facts)
   assert.equal(g.partner.held, 'soothe-bell')
-  // the bond and mastery multipliers also round, so allow a point either way
-  assert.ok(Math.abs(g.days[13].strike - Math.round(plain.days[13].strike * 1.15)) <= 1)
+  // its +15% is added to the other bonuses (version 13 has the partner's level among them), so the strike rises by at most 15%
+  const k = plain.days[13].strike
+  assert.ok(g.days[13].strike > k && g.days[13].strike <= Math.round(k * 1.15) + 1)
   assert.equal(g.days[13].xp, plain.days[13].xp)
   // it comes off, and goes back in the bag
   const off = fold(withUse(buy, 13, { item: '', uid: '', what: 'hold', to: '' }))
@@ -905,8 +906,11 @@ test('a Mega Stone is forged from shards, and nothing makes one by itself', () =
   const forged = fold(withUse(facts, 899, { item: '', uid: m.uid, what: 'forge', to: form }))
   const mon = forged.graduates.find((x) => x.uid === m.uid)!
   assert.deepEqual(mon.megas, [form])
-  const shard = SPECIES[m.form].m!.length > 1 ? 'red-shard' : forgeShard(1, 0, mon.nature?.up, g.inv)!
-  assert.equal(g.inv[shard] - forged.inv[shard], FORGE_COST)
+  // version 13: three shards of three different colours, one of each
+  const used = forgeFair(g.inv)!
+  assert.equal(used.length, FORGE_COST)
+  for (const id of new Set(used)) assert.equal(g.inv[id] - forged.inv[id], used.filter((x) => x === id).length)
+  const shard = used[0]
   assert.ok(forged.feats.some((f) => f.id === 'mega1'))
   // forging it twice costs nothing the second time
   const again = fold(withUse(facts, 899, { item: '', uid: m.uid, what: 'forge', to: form }, { item: '', uid: m.uid, what: 'forge', to: form }))

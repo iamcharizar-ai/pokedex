@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { nameOf, spritePath, type Game, type Mon, type Quest } from '../core/fold.ts'
 import {
-  BALLS, DOMAIN_SHOPS, GEAR_ITEMS, HELD, ITEMS, LURES, MARKS, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, masteryCost, RARE_SHELF, SELL, TM_SLOTS, itemName, throwHp, tmType,
+  BALLS, BATTLE_SHELF, BERRY_HEARTS, BOOST, BP_SHELF, DOMAIN_SHOPS, DOMAIN_V13, EVO_ITEMS, FOSSILS, GEAR_ITEMS, HELD, ITEMS, LEGEND_KEYS, LURES, MARKS, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, masteryCost, RARE_SHELF, RARE_SHELF_V13, REVIVE_COST, SELL, TM_SLOTS, TREASURE, itemName, throwHp, tmType,
   type MarkTag, type Offer, type ShopId,
 } from '../core/economy.ts'
 import { KIT_SHARD_EVERY } from '../core/rules.ts'
@@ -22,6 +22,7 @@ import { aBall, fmtDay, still } from './lib/art.ts'
 import { buyPop } from './lib/fx.ts'
 import { play } from './lib/sfx.ts'
 import { useItem } from './lib/store.ts'
+import { BpIcon, CollectorWin, LabWin, MonExtras, evolutionsFor } from './Champion.tsx'
 
 export { Coin, EggIcon, Gem }
 
@@ -56,9 +57,9 @@ export function Count({ value }: { value: number }) {
   return <>{shown.toLocaleString('en-IN')}</>
 }
 
-export const Price = ({ coins, gems, marks, tag }: { coins?: number; gems?: number; marks?: number; tag?: MarkTag }) => (
+export const Price = ({ coins, gems, marks, tag, bp }: { coins?: number; gems?: number; marks?: number; tag?: MarkTag; bp?: boolean }) => (
   <span className="price">
-    {coins ? <><Coin size={20} />{coins.toLocaleString('en-IN')}</> : gems ? <><Gem size={20} />{gems}</> : marks && tag ? <><MarkIcon tag={tag} size={20} />{marks}</> : null}
+    {coins ? <><Coin size={20} />{coins.toLocaleString('en-IN')}</> : gems ? <><Gem size={20} />{gems}</> : marks && bp ? <><BpIcon size={20} />{marks}</> : marks && tag ? <><MarkIcon tag={tag} size={20} />{marks}</> : null}
   </span>
 )
 
@@ -98,7 +99,7 @@ export function Actions({ game, onShop }: { game: Game; onShop: () => void }) {
     timer.current = setTimeout(() => { useItem(item, '', 'throw'); setFlying(null); play(sound) }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 650)
   }
   const balls = Object.keys(BALLS).filter((b) => (game.inv[b] ?? 0) > 0).sort((a, b) => hitOf(game, b) - hitOf(game, a))
-  const berries = ['oran-berry', 'sitrus-berry'].filter((b) => (game.inv[b] ?? 0) > 0)
+  const berries = Object.keys(BERRY_HEARTS).filter((b) => (game.inv[b] ?? 0) > 0)
   const hearts = (game.partner.together ?? 0) + (game.partner.fed ?? 0)
   const socket = (key: string, icon: ReactNode, name: string, sub: string, o: { tone?: 'feed' | 'guard' | 'shop'; n?: number; disabled?: boolean; ready?: boolean; title?: string; onClick: (e: React.MouseEvent<HTMLButtonElement>) => void }) => (
     <button key={key} type="button" className={`socket ${o.tone ?? ''} ${o.ready ? 'ready' : ''}`} disabled={o.disabled} onClick={o.onClick} title={o.title} aria-label={`${name}: ${sub}`}>
@@ -116,7 +117,7 @@ export function Actions({ game, onShop }: { game: Game; onShop: () => void }) {
       })}
       {balls.length === 0 && socket('shop', <ItemIcon id="great-ball" size={36} />, 'Get balls', 'at the Mart', { tone: 'shop', onClick: onShop })}
       {berries.length > 0
-        ? berries.map((b) => socket(b, <ItemIcon id={b} size={36} />, 'Feed', `${hearts} ♥`, { tone: 'feed', n: game.inv[b], title: ITEMS[b]?.text, onClick: () => { useItem(b, '', 'feed'); play('feed') } }))
+        ? berries.map((b) => socket(b, <ItemIcon id={b} size={36} />, itemName(b).replace(' Berry', ''), `+${BERRY_HEARTS[b]} ♥ · ${hearts}`, { tone: 'feed', n: game.inv[b], title: ITEMS[b]?.text, onClick: () => { useItem(b, '', 'feed'); play('feed') } }))
         : socket('feed', <ItemIcon id="oran-berry" size={36} />, 'Feed', 'no berries', { tone: 'feed', disabled: true, title: 'Berries are at the Mart and in the Garden shop', onClick: () => undefined })}
       {(game.inv['max-repel'] ?? 0) > 0 && wild && !game.wild?.repel && socket('repel', <ItemIcon id="max-repel" size={36} />, 'Max Repel', `+${REPEL_DAYS} days`, { tone: 'guard', n: game.inv['max-repel'], title: ITEMS['max-repel'].text, onClick: () => { useItem('max-repel', '', 'repel'); play('tap') } })}
       {(game.inv['revive'] ?? 0) > 0 && game.league.slipped > 0 && socket('revive', <ItemIcon id="revive" size={36} />, 'Revive', `−${game.league.slipped} HP`, { tone: 'guard', n: game.inv['revive'], title: ITEMS['revive'].text, onClick: () => { useItem('revive', '', 'revive'); play('tap') } })}
@@ -196,7 +197,7 @@ function canBuy(game: Game, o: Offer, shop: ShopId): boolean {
   const owned = once && (Boolean(game.inv[o.item]) || game.partner.held === o.item)
   if (owned) return false
   if (shop === 'mart' && game.mart.bought.includes(o.item)) return false
-  const marks = MARK_TAGS.includes(shop as MarkTag) ? game.wallet.marks[shop as MarkTag] : 0
+  const marks = MARK_TAGS.includes(shop as MarkTag) ? game.wallet.marks[shop as MarkTag] : shop === 'bp' ? game.wallet.bp : 0
   return (o.coins ?? 0) <= game.wallet.coins && (o.gems ?? 0) <= game.wallet.gems && (o.marks ?? 0) <= marks
 }
 
@@ -207,7 +208,7 @@ function whyNot(game: Game, o: Offer, shop: ShopId): string | null {
   if (once && (game.inv[o.item] || game.partner.held === o.item)) return 'Yours already'
   if (shop === 'mart' && game.mart.bought.includes(o.item)) return 'Sold today: back tomorrow'
   if (canBuy(game, o, shop)) return null
-  return o.coins ? 'Not enough coins yet' : o.gems ? 'Not enough gems yet' : 'Not enough marks yet'
+  return o.coins ? 'Not enough coins yet' : o.gems ? 'Not enough gems yet' : shop === 'bp' ? 'Not enough Battle Points yet' : 'Not enough marks yet'
 }
 
 /** A shelf of goods: each one standing on a plank with its price tag hanging under it. Tap one to see what it does and buy it.
@@ -228,7 +229,7 @@ function Shelf({ game, offers, shop }: { game: Game; offers: Offer[]; shop: Shop
         {offers.map((o) => {
           const have = game.inv[o.item] ?? 0
           const def = ITEMS[o.item]
-          const once = def?.kind === 'tm' || def?.kind === 'theme'
+          const once = def?.kind === 'tm' || def?.kind === 'theme' || ONCE.has(o.item)
           const sold = shop === 'mart' && game.mart.bought.includes(o.item)
           const owned = once && have > 0
           const worn = game.theme === o.item
@@ -237,7 +238,7 @@ function Shelf({ game, offers, shop }: { game: Game; offers: Offer[]; shop: Shop
             <button key={o.item} type="button" data-ware={`${shop}:${o.item}`} className={`ware ${bump === o.item ? 'bump' : ''} ${sold ? 'sold' : ''} ${owned ? 'owned' : ''} ${afford ? 'can' : ''}`} onClick={() => { setOpen(o.item); play('tap') }} aria-label={`${itemName(o.item)}: ${sold ? 'sold today' : owned ? 'owned' : 'see it and buy it'}`}>
               <span className="ware-art"><ItemIcon id={o.item} size={56} />{have > 0 && !once && <i className="ware-have">×{have}</i>}</span>
               <b>{itemName(o.item)}</b>
-              <span className="ware-tag">{owned ? (def.kind === 'theme' ? (worn ? 'Worn' : 'Owned') : 'Owned') : sold ? 'Sold' : <Price coins={o.coins} gems={o.gems} marks={o.marks} tag={tag} />}</span>
+              <span className="ware-tag">{owned ? (def.kind === 'theme' ? (worn ? 'Worn' : 'Owned') : 'Owned') : sold ? 'Sold' : <Price coins={o.coins} gems={o.gems} marks={o.marks} tag={tag} bp={shop === 'bp'} />}</span>
             </button>
           )
         })}
@@ -253,7 +254,7 @@ function Shelf({ game, offers, shop }: { game: Game; offers: Offer[]; shop: Shop
               ? <KButton tone={game.theme === o.item ? 'neutral' : 'main'} big onClick={() => useItem('', '', 'theme', game.theme === o.item ? undefined : o.item)}>{game.theme === o.item ? 'Take it off' : 'Use this scene'}</KButton>
               : (
                 <>
-                  <button type="button" className="k-btn ok big" disabled={!canBuy(game, o, shop)} onClick={() => buy(o.item)}>Buy <Price coins={o.coins} gems={o.gems} marks={o.marks} tag={tag} /></button>
+                  <button type="button" className="k-btn ok big" disabled={!canBuy(game, o, shop)} onClick={() => buy(o.item)}>Buy <Price coins={o.coins} gems={o.gems} marks={o.marks} tag={tag} bp={shop === 'bp'} /></button>
                   {whyNot(game, o, shop) && <small className="ware-sheet-why">{whyNot(game, o, shop)}</small>}
                 </>
               )}
@@ -289,7 +290,7 @@ function TrainingKit({ game }: { game: Game }) {
 /** One domain's shop: its mastery, what its marks buy, and its TMs. */
 export function DomainShop({ game, tag }: { game: Game; tag: MarkTag }) {
   const shop = DOMAIN_SHOPS[tag]
-  const goods = shop.stock.filter((o) => ITEMS[o.item]?.kind !== 'tm')
+  const goods = [...shop.stock.filter((o) => ITEMS[o.item]?.kind !== 'tm'), ...(game.v13 ? DOMAIN_V13[tag] : [])]
   const tms = shop.stock.filter((o) => ITEMS[o.item]?.kind === 'tm')
   const lv = game.mastery[tag]
   return (
@@ -318,10 +319,15 @@ export function DomainShop({ game, tag }: { game: Game; tag: MarkTag }) {
   )
 }
 
-export function ShopTab({ game, only }: { game: Game; only?: ShopId }) {
-  const [which, setWhich] = useState<ShopId>('mart')
-  const show = (s: ShopId) => (only ?? which) === s
-  const chips: [ShopId, string, ReactNode][] = [['mart', 'Mart', <Coin key="m" size={18} />], ['rare', 'Rare', <Gem key="r" size={18} />], ...MARK_TAGS.map((t): [ShopId, string, ReactNode] => [t, DOMAIN_SHOPS[t].name, <MarkIcon key={t} tag={t} size={18} />])]
+type Place = ShopId | 'collector' | 'lab'
+export function ShopTab({ game, only }: { game: Game; only?: Place }) {
+  const [which, setWhich] = useState<Place>('mart')
+  const show = (s: Place) => (only ?? which) === s
+  const chips: [Place, string, ReactNode][] = [
+    ['mart', 'Mart', <Coin key="m" size={18} />], ['rare', 'Rare', <Gem key="r" size={18} />],
+    ...(game.v13 ? [['bp', 'BP Exchange', <BpIcon key="bp" size={18} />], ['collector', 'Collector', <ItemIcon key="c" id="nugget" size={18} />], ['lab', 'Lab', <ItemIcon key="l" id="helix-fossil" size={18} />]] as [Place, string, ReactNode][] : []),
+    ...MARK_TAGS.map((t): [Place, string, ReactNode] => [t, DOMAIN_SHOPS[t].name, <MarkIcon key={t} tag={t} size={18} />]),
+  ]
   return (
     <>
       {!only && (
@@ -339,15 +345,36 @@ export function ShopTab({ game, only }: { game: Game; only?: ShopId }) {
               <Shelf game={game} offers={game.mart.standing} shop="mart" />
             </>
           )}
+          {game.v13 && (
+            <>
+              <span className="k-label shelf-label">Battle items · X items boost one kind of work for a day; Dire Hit, Guard Spec, Honey</span>
+              <Shelf game={game} offers={BATTLE_SHELF} shop="mart" />
+            </>
+          )}
         </Win>
       )}
       {show('rare') && (
         <Win title="Rare things" tone="blue" aside={<><Gem size={22} /> <Count value={game.wallet.gems} /></>}>
-          <Shelf game={game} offers={RARE_SHELF} shop="rare" />
+          <Shelf game={game} offers={game.v13 ? [...RARE_SHELF, ...RARE_SHELF_V13] : RARE_SHELF} shop="rare" />
           {game.egg && <div className="eggrow"><span className="warm"><EggIcon size={44} /></span><div style={{ flex: 1 }}><span className="k-label">An egg is being kept warm</span><KBar value={game.egg.have} max={game.egg.need} kind="gold" label={`${game.egg.have.toLocaleString()} / ${game.egg.need.toLocaleString()} steps`} /></div></div>}
         </Win>
       )}
       {show('rare') && <IncenseWin game={game} />}
+      {show('bp') && (
+        <Win title="BP Exchange" tone="purple" aside={<><BpIcon size={22} /> {game.wallet.bp.toLocaleString('en-IN')} BP</>}>
+          <p className="muted">Battle Points come from the Battle Frontier (Journey tab): a point for every win, more for every seventh in a row, and each Symbol. Here they buy what no other shop sells.</p>
+          <span className="k-label shelf-label">Held items · each one does something of its own</span>
+          <Shelf game={game} offers={BP_SHELF.filter((o) => ITEMS[o.item]?.kind === 'held')} shop="bp" />
+          <span className="k-label shelf-label">Battle items, evolution items and a Rare Candy</span>
+          <Shelf game={game} offers={BP_SHELF.filter((o) => ['battle', 'evo', 'candy'].includes(ITEMS[o.item]?.kind))} shop="bp" />
+          <span className="k-label shelf-label">Fossils · the Lab brings them back</span>
+          <Shelf game={game} offers={BP_SHELF.filter((o) => ITEMS[o.item]?.kind === 'fossil')} shop="bp" />
+          <span className="k-label shelf-label">Legend keys · each calls a legend as the next wild Pokemon</span>
+          <Shelf game={game} offers={BP_SHELF.filter((o) => ITEMS[o.item]?.kind === 'legend' || o.item === 'master-ball')} shop="bp" />
+        </Win>
+      )}
+      {show('collector') && <CollectorWin game={game} />}
+      {show('lab') && <LabWin game={game} />}
       {MARK_TAGS.filter((t) => show(t)).map((t) => <DomainShop key={t} game={game} tag={t} />)}
       {!only && (
         <Win title="Where it all comes from" tone="dark" fold>
@@ -381,12 +408,26 @@ const USED: Record<string, string> = {
   egg: 'Warmed by the steps your band counts, in the Nursery.',
   chest: 'Opens the moment it is bought.',
   theme: 'Changes the scene on Today.',
+  treasure: 'Sold to the Collector in the Shop.',
+  fossil: `Brought back to life at the Lab in the Shop, for ${REVIVE_COST} coins.`,
+  evo: 'Used on a Pokemon in My Pokemon, from its page: one stage, if the type fits.',
+  vitamin: 'Given to a Pokemon from its page (or here, to your partner): for good.',
+  battle: 'Used on Today, under Battle prep: it counts for the whole day.',
+  field: 'Used here or on Today: the next wild Pokemon is a rare one.',
+  candy: 'Given to a Pokemon in My Pokemon, from its page.',
+  legend: 'Used here or under Legend quests on the Journey tab.',
 }
 const GROUPS: [string, (id: string) => boolean][] = [
   ['Balls', (id) => ITEMS[id]?.kind === 'ball'],
   ['Berries', (id) => ITEMS[id]?.kind === 'berry'],
   ['Held items', (id) => id in HELD],
   ['TMs', (id) => ITEMS[id]?.kind === 'tm'],
+  ['Battle items', (id) => ['battle', 'field'].includes(ITEMS[id]?.kind)],
+  ['Vitamins and candy', (id) => ['vitamin', 'candy'].includes(ITEMS[id]?.kind)],
+  ['Evolution items', (id) => ITEMS[id]?.kind === 'evo'],
+  ['Legend keys', (id) => ITEMS[id]?.kind === 'legend'],
+  ['Fossils', (id) => ITEMS[id]?.kind === 'fossil'],
+  ['Treasures', (id) => ITEMS[id]?.kind === 'treasure'],
   ['Keepsakes', (id) => ['shard', 'key', 'unique'].includes(ITEMS[id]?.kind)],
 ]
 
@@ -465,6 +506,21 @@ export function Bag({ game }: { game: Game }) {
             {kind === 'tm' && <KButton tone={equipped.includes(card) ? 'neutral' : 'main'} big onClick={() => { toggleTm(card); setOpen(null) }}>{equipped.includes(card) ? 'Take it off' : `Equip on ${nameOf(game.partner.form)}`}</KButton>}
             {kind === 'theme' && <KButton tone={game.theme === card ? 'neutral' : 'main'} big onClick={() => { useItem('', '', 'theme', game.theme === card ? undefined : card); setOpen(null) }}>{game.theme === card ? 'Take it off' : 'Use this scene'}</KButton>}
             {card === 'max-repel' && <button type="button" className="k-btn main big" disabled={!(game.wild && !game.wild.caught && !game.wild.repel)} onClick={() => { useItem('max-repel', '', 'repel'); play('tap'); setOpen(null) }}>Use on the wild Pokemon</button>}
+            {kind === 'treasure' && <button type="button" className="k-btn ok big" onClick={() => { useItem(card, '', 'sell', String(have(card))); play('buy'); setOpen(null) }}>Sell {have(card) > 1 ? `all ${have(card)} ` : ''}for <Coin size={18} />{(TREASURE[card][1] * have(card)).toLocaleString('en-IN')}</button>}
+            {kind === 'fossil' && <button type="button" className="k-btn main big" disabled={game.wallet.coins < REVIVE_COST} onClick={() => { useItem(card, '', 'fossil'); play('catch'); setOpen(null) }}>Revive it: {nameOf(FOSSILS[card].species)} (<Coin size={16} />{REVIVE_COST})</button>}
+            {kind === 'vitamin' && <button type="button" className="k-btn main big" onClick={() => { useItem(card, game.partner.uid, 'vitamin'); play('feed') }}>Give it to {nameOf(game.partner.form)}</button>}
+            {kind === 'battle' && <button type="button" className="k-btn main big" disabled={card === 'guard-spec' ? game.guard : Boolean(BOOST[card] && (game.today.boost?.[BOOST[card].tag] ?? 0) >= BOOST[card].add)} onClick={() => { useItem(card, '', card === 'guard-spec' ? 'guard' : 'boost'); play('tap'); setOpen(null) }}>{card === 'guard-spec' ? (game.guard ? 'Already on guard' : 'Stand guard') : 'Use it today'}</button>}
+            {kind === 'field' && <button type="button" className="k-btn main big" disabled={Boolean(game.wish.chosen)} onClick={() => { useItem(card, '', 'honey'); play('tap'); setOpen(null) }}>{game.wish.chosen ? `${nameOf(game.wish.chosen)} is coming next` : 'Spread it'}</button>}
+            {kind === 'legend' && <button type="button" className="k-btn main big" disabled={Boolean(game.wish.chosen)} onClick={() => { useItem(card, '', 'summon'); play('catch'); setOpen(null) }}>{game.wish.chosen ? `${nameOf(game.wish.chosen)} is coming next` : `Call ${LEGEND_KEYS[card].forms.length > 1 ? 'a legend' : nameOf(LEGEND_KEYS[card].forms[0])}`}</button>}
+            {(kind === 'evo' || kind === 'candy') && (() => {
+              const fits = game.queue.filter((m) => (kind === 'candy' ? true : evolutionsFor(game, m).some((e) => e.item === card)))
+              return fits.length ? (
+                <div className="kit-row">{fits.slice(0, 8).map((m) => {
+                  const into = kind === 'evo' ? evolutionsFor(game, m).find((e) => e.item === card)?.form : undefined
+                  return <button key={m.uid} type="button" className="k-btn" onClick={() => { useItem(card, m.uid, kind === 'evo' ? 'evolve' : 'candy', into); play(kind === 'evo' ? 'catch' : 'feed'); if (kind === 'evo') setOpen(null) }}><img src={still(m.form, m.shiny)} alt="" width={28} height={28} className="sprite" />{nameOf(m.form)}{into ? ` → ${nameOf(into)}` : ` Lv ${levelOf(m.xp)}`}</button>
+                })}</div>
+              ) : <small className="muted">{kind === 'evo' ? `Nobody in My Pokemon would evolve with it: the form it becomes must be ${EVO_ITEMS[card].types.join(' or ')}.` : 'Nobody in My Pokemon to give it to.'}</small>
+            })()}
             {card === 'revive' && <button type="button" className="k-btn main big" disabled={game.league.slipped <= 0} onClick={() => { useItem('revive', '', 'revive'); play('tap'); setOpen(null) }}>Use on the leader</button>}
           </div>
         </Sheet>
@@ -505,7 +561,7 @@ export function MonPage({ m, game, onClose }: { m: Mon; game: Game; onClose: () 
             <div className="k-tile"><span className="k-label">Level</span><b>{levelOf(m.xp)}</b></div>
             <div className="k-tile"><span className="k-label">Hearts</span><b>{hearts} ♥</b></div>
             {m.nature && <div className="k-tile"><span className="k-label">Nature</span><b>{m.nature.name}</b></div>}
-            <div className="k-tile"><span className="k-label">{m.origin === 'egg' ? 'Hatched' : m.origin === 'starter' ? 'Starter' : 'Caught'}</span><b>{fmtDay(m.from)}</b></div>
+            <div className="k-tile"><span className="k-label">{m.origin === 'egg' ? 'Hatched' : m.origin === 'starter' ? 'Starter' : m.origin === 'fossil' ? 'Revived' : 'Caught'}</span><b>{fmtDay(m.from)}</b></div>
             {m.held && <div className="k-tile"><span className="k-label">Holding</span><b className="holdline"><ItemIcon id={m.held} size={22} />{itemName(m.held)}</b></div>}
           </div>
           {m.nature?.up && m.nature.down && <p className="muted">Raised most on {TAG_NAME[m.nature.up]}, least on {TAG_NAME[m.nature.down]}.</p>}
@@ -517,6 +573,7 @@ export function MonPage({ m, game, onClose }: { m: Mon; game: Game; onClose: () 
             {(m.megas ?? []).map((f) => <span key={f} className="path-step"><span className="arrow">★</span><img src={still(f, m.shiny)} alt={nameOf(f)} title={`${nameOf(f)}, for good`} width={48} height={48} className="sprite" /></span>)}
           </div>
           {megas.length > 0 && <p className="muted">{(m.megas ?? []).length ? 'Its Mega is forged and kept for good.' : 'It has a Mega form. Stones are forged in the Forge, on the Party tab.'}</p>}
+          <MonExtras game={game} m={m} onDone={onClose} />
           <div className="kit-row">
             {inBox && <KButton tone="main" disabled={m.uid === game.nextUp} onClick={() => act('next')}>{m.uid === game.nextUp ? 'Next up' : 'Make next'}</KButton>}
             {inBox && <KButton onClick={() => act('lead')}>Partner now</KButton>}
