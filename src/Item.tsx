@@ -4,7 +4,7 @@ import { BallItem } from './Ball.tsx'
 
 const BIG_BALLS = /^(poke|great|ultra|master|premier|safari)-ball$/
 /** Items whose file is not named for them. */
-const FILE: Record<string, string> = { chest: 'loot-sack', 'rare-egg': 'mystery-egg', coin: 'nugget', gem: 'ruby', berry: 'oran-berry', incense: 'full-incense' }
+const FILE: Record<string, string> = { chest: 'loot-sack', 'rare-egg': 'mystery-egg', coin: 'nugget', gem: 'psychic-gem', berry: 'oran-berry', incense: 'full-incense' }
 const THEME_SWATCH: Record<string, [string, string]> = { 'theme-beach': ['#58c8e8', '#f1dc9a'], 'theme-cave': ['#4a4466', '#8a7a6a'], 'theme-night': ['#121a3d', '#3d7a5c'] }
 
 export function ItemIcon({ id, size = 44, className = '' }: { id: string; size?: number; className?: string }) {

@@ -11,7 +11,7 @@ import { LEAGUES, lineup } from './gyms.ts'
 import { beats, weakDomains } from './types.ts'
 import {
   BALL_MULT, CLAIM_AUTO, DAILY_PAY, PAY_STREAK, REVIEW_GEMS, EGG_STEPS, STEPS_GOAL, GAME_START, GEMS, KIT_IRON, LEADER_HP, MEGA_BONUS, REPEL_DAYS, SEASON_STEP, SLEEP_DEEP, SLIP, STAKES_FROM, TEAM_BONUS, TEAM_NATURE, TEAM_OPEN_FROM, TEAM_LEVEL, TEAM_SIZE, WEAK_MULT, WILD_HP, WILD_STAY,
-  ballFor, bondLevel, evolveAt, graduateAt, levelOf, momentumMult, regionsOpen, wildHit, xpForLevel,
+  V13_START, ballFor, bondLevel, evolveAt, graduateAt, levelOf, momentumMult, regionsOpen, wildHit, xpForLevel,
 } from './rules.ts'
 import { forgeFair, BALLS, BOND_PARTY, CHEST, rng, DOMAIN_SHOPS, FEATS, FORGE_COST, GEAR, GEAR_ITEMS, LURES, MART_POOL, SELL, STANDING, forgeShard, lureTypes, martDeals, throwHp } from './economy.ts'
 import { SPECIES } from './species.ts'
@@ -708,8 +708,9 @@ test('the team is open to My Pokemon from TEAM_OPEN_FROM: any Pokemon you own ca
   assert.equal(g.graduates.length, 0, 'nobody is fully trained yet, so every place is filled from My Pokemon')
   // nobody chosen: the places fill with the oldest in My Pokemon, oldest first
   assert.deepEqual(g.team.map((m) => m.uid), g.queue.slice(0, TEAM_SIZE).map((m) => m.uid))
-  // none of them is trained, so none counts for the boss's party of six, though each still adds to every strike
-  assert.equal(g.bossParty, 1)
+  // none of them is trained; before version 13 none counted for the boss's party of six, from it everyone in the party does
+  assert.equal(g.bossParty, g.today.day >= V13_START ? 1 + g.team.length : 1)
+  assert.equal(g.bossTrained, 0)
   assert.ok(g.power.team > 0)
   // choosing one from My Pokemon puts it first; the empty places still fill with the oldest
   const pick = g.queue[g.queue.length - 1]

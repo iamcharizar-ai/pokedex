@@ -157,7 +157,8 @@ function Scene({ game }: { game: Game }) {
         </>
       )}
       <div className="pad me-pad" role="button" tabIndex={0} aria-label={`Pat ${nameOf(game.display)}`} onClick={() => pat('me')} onKeyDown={press('me')}>
-        <Sprite form={game.display} shiny={partner.shiny} size={184} className={game.asleep ? 'asleep' : ''} />
+        {/* a perfect day: a Gigantamax form when it has one, else it Dynamaxes (the same Pokemon, giant, glowing red) */}
+        <Sprite form={game.display} shiny={partner.shiny} size={184} className={`${game.asleep ? 'asleep' : ''} ${game.aura === 'gmax' && game.display === partner.form ? 'dynamax' : ''}`} />
         {game.asleep && <span className="zzz" aria-hidden>Zzz</span>}
       </div>
       <div className="hpbox me-box">
@@ -166,7 +167,7 @@ function Scene({ game }: { game: Game }) {
             {nameOf(game.display)}
             {partner.shiny && <span className="chip">shiny</span>}
             {game.aura === 'mega' && <span className="chip mega">mega</span>}
-            {game.aura === 'gmax' && <span className="chip gmax">g-max</span>}
+            {game.aura === 'gmax' && <span className="chip gmax">{game.display === partner.form ? 'dynamax' : 'g-max'}</span>}
           </span>
           <span className="hp-lv">Lv{game.level}</span>
         </div>
@@ -327,7 +328,7 @@ function Summary({ game, onOpen }: { game: Game; onOpen?: () => void }) {
       {game.v13 && <BondPerks game={game} />}
       {game.asleep && <p className="notice warn">Dozing after two days without a pillar. Finish one pillar to wake it. Nothing finished is lost{game.today.day >= STAKES_FROM ? '; a day with nothing ticked also costs what is still in progress (see How it works)' : `. From ${fmtDay(STAKES_FROM)} a day with nothing ticked also costs what is still in progress`}.</p>}
       {game.aura === 'mega' && <p className="notice good">{partner.megas?.length ? 'Mega form: registered for good. Choose which form shows in Choices.' : 'Mega form: full momentum and every pillar done today.'}</p>}
-      {game.aura === 'gmax' && <p className="notice gmax">Perfect day: Gigantamax for today.</p>}
+      {game.aura === 'gmax' && <p className="notice gmax">{game.display === partner.form ? 'Perfect day: Dynamaxed for today, every strike ×2.' : 'Perfect day: Gigantamax for today, every strike ×2.5.'}</p>}
     </>
   )
 }
@@ -466,7 +467,7 @@ function PartnerTab({ game, facts, nights, onShop }: { game: Game; facts: DayFac
           <BossTile game={game} />
         </div>
       </Win>
-      {(game.sleep.state !== 'off' || game.sleep.band) && <SleepWin game={game} nights={nights} />}
+      {game.sleep.state === 'measured' && <SleepWin game={game} nights={nights} />}
       </div>
     </div>
   )

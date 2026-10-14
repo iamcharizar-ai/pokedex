@@ -502,8 +502,8 @@ export const LEGEND_KEYS: Record<string, { name: string; forms: string[] }> = {
   'old-sea-map': { name: 'Old Sea Map', forms: ['mew'] }, 'member-card': { name: 'Member Card', forms: ['darkrai'] }, 'magma-stone': { name: 'Magma Stone', forms: ['heatran'] },
   'liberty-pass': { name: 'Liberty Pass', forms: ['victini'] }, mysticticket: { name: 'MysticTicket', forms: ['mewtwo'] }, 'lock-capsule': { name: 'Lock Capsule', forms: ['jirachi'] },
   'red-chain': { name: 'Red Chain', forms: ['regigigas'] }, 'god-stone': { name: 'God Stone', forms: ['regirock', 'regice', 'registeel'] }, 'secret-key': { name: 'Secret Key', forms: ['articuno', 'zapdos', 'moltres'] },
-  'kyurem-black': { name: 'DNA Black', forms: ['zekrom'] }, 'kyurem-white': { name: 'DNA White', forms: ['reshiram'] }, 'keldeo-resolution': { name: 'Resolve Scroll', forms: ['keldeo'] },
-  'thundurus-therian': { name: 'Thunder Cloud', forms: ['thundurus'] }, 'tornadus-therian': { name: 'Gale Cloud', forms: ['tornadus'] }, 'landorus-therian': { name: 'Land Cloud', forms: ['landorus'] },
+  // Unova's own: the Dark Stone and the Light Stone hold Zekrom and Reshiram (the DNA and Therian pictures in the sheet are Pokemon, not items)
+  'dark-stone': { name: 'Dark Stone', forms: ['zekrom'] }, 'light-stone': { name: 'Light Stone', forms: ['reshiram'] },
 }
 for (const [id, k] of Object.entries(LEGEND_KEYS)) ITEMS[id] = { name: k.name, kind: 'legend', text: `A Legend key. Use it and ${k.forms.length > 1 ? `one of ${k.forms.length} legends` : 'a legend'} comes as the next wild Pokemon, to be caught by your work.` }
 /** Which legend a key brings this time: the same answer on every device. */
@@ -512,7 +512,7 @@ export const legendFor = (key: string, n: number): string | null => {
   return k ? k.forms[Math.floor(rng(`legend:${key}:${n}`)() * k.forms.length)] : null
 }
 /** The Legend key a Rematch Champion hands over: they come round in this order. */
-export const REMATCH_KEYS = ['red-orb', 'blue-orb', 'jade-orb', 'adamant-orb', 'lustrous-orb', 'griseous-orb', 'azure-flute', 'secret-key', 'god-stone', 'kyurem-black', 'kyurem-white', 'mysticticket']
+export const REMATCH_KEYS = ['red-orb', 'blue-orb', 'jade-orb', 'adamant-orb', 'lustrous-orb', 'griseous-orb', 'azure-flute', 'secret-key', 'god-stone', 'dark-stone', 'light-stone', 'mysticticket']
 
 // ── Pickup: what the partner finds ──
 /** [item, weight, from tier]. The tier is how far you are: one for each two leagues, one for each Rematch rank, three at most. */

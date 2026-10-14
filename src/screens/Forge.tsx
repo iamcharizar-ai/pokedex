@@ -16,7 +16,7 @@ import { COMET_SHARD, FORGE_COST, SHARDS, forgeFair, forgeShard, itemName } from
 import { nameOf, spritePath, type Game, type Mon } from '../../core/fold.ts'
 import { SPECIES } from '../../core/species.ts'
 import { Win } from '../App.tsx'
-import { KeyStone } from '../Ball.tsx'
+import { KeyStone, MegaStone, megaStoneName } from '../Ball.tsx'
 import { ItemIcon } from '../Item.tsx'
 import { EvoReveal } from '../Reveal.tsx'
 import { still } from '../lib/art.ts'
@@ -159,7 +159,7 @@ export function Forge({ game }: { game: Game }) {
   const say = !game.keyStone ? 'The altar is cold until the Key Stone is yours: any one kind of work, seven days running.'
     : !sel ? 'None of your Pokemon has a Mega form yet. Train one that does and it appears here.'
       : lit ? 'The stone wakes...'
-      : st === 'done' ? `Forged. ${nameOf(sel.m.form)} keeps its Mega Stone for good.`
+      : st === 'done' ? `Forged: ${megaStoneName(sel.mega)}. ${nameOf(sel.m.form)} keeps it for good.`
         : st === 'ready' ? (placed.length === 0 ? (fair ? 'Tap three shards of three different colours into the stone.' : `Tap three ${itemName(shard!)}s into the stone.`) : `${FORGE_COST - placed.length} more.`)
           : fair ? `${shortName(sel.mega)} needs three shards of three different colours. A Comet Shard fills any socket.` : `${shortName(sel.mega)} needs ${wantText(sel)}, or three Comet Shards.`
   const total = KINDS.reduce((n, k) => n + (game.inv[k] ?? 0), 0)
@@ -216,7 +216,7 @@ export function Forge({ game }: { game: Game }) {
               const k = keyOf(s), on = sel && keyOf(sel) === k, ss = state(s)
               return (
                 <button key={k} type="button" role="radio" aria-checked={Boolean(on)} className={`fp ${ss} ${on ? 'on' : ''}`} onClick={() => { setPick(k); play('tap') }} title={`${nameOf(s.mega)}: ${ss === 'done' ? 'forged' : ss === 'ready' ? 'ready to forge' : ss === 'locked' ? 'needs the Key Stone' : `needs ${fair ? 'three shards of different colours' : wantText(s)}`}`}>
-                  <span className="fp-face"><img src={still(s.m.form, s.m.shiny)} alt="" width={52} height={52} className="sprite" />{ss === 'done' && <i className="fp-star" aria-hidden>★</i>}</span>
+                  <span className="fp-face"><img src={still(s.m.form, s.m.shiny)} alt="" width={52} height={52} className="sprite" />{ss === 'done' && <i className="fp-star" aria-hidden>★</i>}<span className="fp-stone"><MegaStone mega={s.mega} size={20} /></span></span>
                   <b>{shortName(s.mega)}</b>
                   <small>{ss === 'done' ? 'Forged' : ss === 'ready' ? 'Ready' : ss === 'locked' ? 'Locked' : 'Needs shards'}</small>
                 </button>

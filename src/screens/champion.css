@@ -77,3 +77,15 @@
 .mon-extras .k-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
 .mon-extras .k-btn img { image-rendering: pixelated; }
 .vits { display: grid; gap: 6px; }
+
+/* ── Mega Stones (drawn: the sheet has none). The Key Stone is the item picture; each Pokemon's stone is an orb in its colours ── */
+.megastone { position: relative; display: inline-block; flex: none; vertical-align: middle; border-radius: 50%; background: radial-gradient(circle at 34% 30%, rgba(255, 255, 255, 0.95) 0 10%, transparent 11%), conic-gradient(from 210deg, var(--mc), color-mix(in srgb, var(--mc) 40%, #fff) 25%, var(--mc2) 50%, color-mix(in srgb, var(--mc2) 50%, #000) 75%, var(--mc)); box-shadow: inset 0 -2px 4px rgba(0, 0, 0, 0.45), 0 0 0 1.5px rgba(10, 14, 30, 0.9), 0 0 8px color-mix(in srgb, var(--mc) 70%, transparent); }
+.megastone::after { content: ''; position: absolute; inset: 24%; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.75); border-left-color: transparent; border-bottom-color: transparent; transform: rotate(-20deg); }
+.megachip { display: inline-flex; align-items: center; gap: 4px; margin: 0 3px; padding: 1px 8px 1px 2px; border-radius: 999px; background: rgba(123, 92, 240, 0.2); color: #fff; font-family: var(--k-face); font-size: 13px; }
+.fp-face { position: relative; }
+.fp-stone { position: absolute; right: -2px; bottom: -2px; }
+
+/* a Dynamaxed partner (a perfect day, no Gigantamax form): the same Pokemon, giant and glowing red */
+.sprite.dynamax { transform: scale(1.28); transform-origin: 50% 90%; filter: drop-shadow(0 0 8px #ff2f6d) drop-shadow(0 0 22px rgba(255, 47, 109, 0.55)); animation: dyna 2.4s ease-in-out infinite; }
+@keyframes dyna { 50% { filter: drop-shadow(0 0 14px #ff2f6d) drop-shadow(0 0 30px rgba(255, 47, 109, 0.75)); } }
+@media (prefers-reduced-motion: reduce) { .sprite.dynamax { animation: none; } }

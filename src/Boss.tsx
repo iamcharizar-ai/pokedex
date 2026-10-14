@@ -30,11 +30,11 @@ const pct = (x: number): string => `${Math.round(x * 100)}%`
 function Locked({ game }: { game: Game }) {
   const have = Math.min(BOSS_PARTY, game.bossParty)
   return (
-    <div className="duel static bosslock" title="A boss is a week-long fight. It only comes once your party is full: the partner and five fully trained Pokemon.">
+    <div className="duel static bosslock" title="A boss is a week-long fight. It only comes once your party is full: the partner and five more.">
       <ItemIcon id="master-ball" size={30} />
       <span>
         <b>{have >= BOSS_PARTY ? 'A boss comes on Monday' : 'A boss comes once your party is six'}</b>
-        <small>{have >= BOSS_PARTY ? 'Your party is full. Open the Pokedex on Monday to meet it.' : `${have} of ${BOSS_PARTY}: train ${BOSS_PARTY - have} more to bring one out.`}</small>
+        <small>{have >= BOSS_PARTY ? 'Your party is full. Open the Pokedex on Monday to meet it.' : `${have} of ${BOSS_PARTY} in your party: add ${BOSS_PARTY - have} more to bring one out. Fully trained members make a throw at it likelier.`}</small>
       </span>
       <span className="bosslock-pips" aria-hidden>{Array.from({ length: BOSS_PARTY }, (_, i) => <i key={i} className={i < have ? 'on' : ''} />)}</span>
     </div>
@@ -182,7 +182,7 @@ export function BossLog({ game }: { game: Game }) {
   if (!game.bossLog.length) {
     return (
       <Win title="Bosses" tone="purple" fold aside="None yet">
-        <p className="muted">{game.bossParty >= 6 ? 'A boss comes on Monday. Each one you meet, beat or catch is listed here.' : `A boss comes each Monday once your party is six (${game.bossParty} of 6). Each one you meet, beat or catch is listed here.`}</p>
+        <p className="muted">{game.bossParty >= 6 ? 'A boss comes on Monday. Each one you meet, beat or catch is listed here.' : `A boss comes each Monday once your party is six (${game.bossParty} of 6 now). Each one you meet, beat or catch is listed here.`}</p>
       </Win>
     )
   }

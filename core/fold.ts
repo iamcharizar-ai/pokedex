@@ -301,6 +301,8 @@ export interface Game {
   boss: BossView | null
   bossLog: BossPast[]
   bossParty: number
+  /** how many of the party behind the partner are fully trained: they make a throw at the boss more likely */
+  bossTrained: number
   /** rewards waiting to be collected, oldest first */
   held: Held[]
   partner: Mon
@@ -1580,7 +1582,9 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
     slip: slipToday,
     boss: bossView(),
     bossLog,
-    bossParty: 1 + trainedTeam().length,
+    // version 13: the boss comes once the party is six, whoever stands in it; the fully trained still make a throw more likely
+    bossParty: 1 + (last && v13On(last.day) ? teamNow().length : trainedTeam().length),
+    bossTrained: trainedTeam().length,
     notes,
     warnings,
     stats: statsOf(facts),

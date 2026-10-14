@@ -12,7 +12,7 @@ import { KIT_SHARD_EVERY } from '../core/rules.ts'
 import { BALL_NAME, DAILY_PAY, REPEL_DAYS, TEAM_BONUS, TEAM_NATURE, TEAM_OPEN_FROM, TEAM_SIZE, levelOf } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
 import { TAG_NAME, Win, plural } from './App.tsx'
-import { Ball, BallItem } from './Ball.tsx'
+import { Ball, BallItem, MegaStone, megaStoneName } from './Ball.tsx'
 import { Forge } from './screens/Forge.tsx'
 import { Sheet } from './screens/Sheet.tsx'
 import { Nursery } from './screens/Nursery.tsx'
@@ -113,7 +113,7 @@ export function Actions({ game, onShop }: { game: Game; onShop: () => void }) {
       {balls.map((b) => {
         const hp = hitOf(game, b)
         const double = BALLS[b].vs && hp > 0 && hp >= (BALLS[b].hp * 2)
-        return socket(b, <BallItem id={b} size={40} />, itemName(b), BALLS[b].hp >= 1_000_000 ? 'catches it' : `−${hp} HP${double ? ' ×2' : ''}`, { n: game.inv[b], disabled: !wild || Boolean(flying), ready: Boolean(wild), title: ITEMS[b]?.text, onClick: (e) => throwIt(b, e.currentTarget) })
+        return socket(b, <BallItem id={b} size={58} />, itemName(b), BALLS[b].hp >= 1_000_000 ? 'catches it' : `−${hp} HP${double ? ' ×2' : ''}`, { n: game.inv[b], disabled: !wild || Boolean(flying), ready: Boolean(wild), title: ITEMS[b]?.text, onClick: (e) => throwIt(b, e.currentTarget) })
       })}
       {balls.length === 0 && socket('shop', <ItemIcon id="great-ball" size={36} />, 'Get balls', 'at the Mart', { tone: 'shop', onClick: onShop })}
       {berries.length > 0
@@ -570,9 +570,9 @@ export function MonPage({ m, game, onClose }: { m: Mon; game: Game; onClose: () 
           <div className="mp-line">
             {m.path.map((f, i) => <span key={f} className="path-step">{i > 0 && <span className="arrow">▸</span>}<img src={still(f, m.shiny)} alt={nameOf(f)} title={nameOf(f)} width={48} height={48} className="sprite" /></span>)}
             {(rec.e ?? []).length > 0 && <span className="path-step"><span className="arrow">▸</span>{rec.e!.slice(0, 3).map((f) => <img key={f} src={still(f)} alt="" width={48} height={48} className={`sprite ${game.dex[f] ? '' : 'unseen'}`} />)}</span>}
-            {(m.megas ?? []).map((f) => <span key={f} className="path-step"><span className="arrow">★</span><img src={still(f, m.shiny)} alt={nameOf(f)} title={`${nameOf(f)}, for good`} width={48} height={48} className="sprite" /></span>)}
+            {(m.megas ?? []).map((f) => <span key={f} className="path-step"><span className="arrow">★</span><img src={still(f, m.shiny)} alt={nameOf(f)} title={`${nameOf(f)}, for good`} width={48} height={48} className="sprite" /><MegaStone mega={f} size={22} /></span>)}
           </div>
-          {megas.length > 0 && <p className="muted">{(m.megas ?? []).length ? 'Its Mega is forged and kept for good.' : 'It has a Mega form. Stones are forged in the Forge, on the Party tab.'}</p>}
+          {megas.length > 0 && <p className="muted megaline">{(m.megas ?? []).length ? <>It holds {(m.megas ?? []).map((f) => <span key={f} className="megachip"><MegaStone mega={f} size={18} />{megaStoneName(f)}</span>)}, forged and kept for good.</> : <>It can hold {megas.map((f) => <span key={f} className="megachip"><MegaStone mega={f} size={18} />{megaStoneName(f)}</span>)}. Mega Stones are forged in the Forge on the Party tab, once the Key Stone is yours.</>}</p>}
           <MonExtras game={game} m={m} onDone={onClose} />
           <div className="kit-row">
             {inBox && <KButton tone="main" disabled={m.uid === game.nextUp} onClick={() => act('next')}>{m.uid === game.nextUp ? 'Next up' : 'Make next'}</KButton>}
@@ -659,7 +659,7 @@ export function TeamTab({ game, partnerCard, choices, onShop }: { game: Game; pa
             {Array.from({ length: cap }, (_, i) => {
               const m = game.team[i]
               return m
-                ? <div key={m.uid} className="plat"><Standee m={m} note={m.graduated ? `Lv ${levelOf(m.xp)}` : `Lv ${levelOf(m.xp)} · raising`} onClick={() => setPage(m.uid)} title={`${nameOf(m.form)}${m.nature ? ` · ${m.nature.name}` : ''}`} /></div>
+                ? <div key={m.uid} className="plat"><Standee m={m} note={m.graduated ? `Lv ${levelOf(m.xp)}` : `Lv ${levelOf(m.xp)} · ${m.uid === game.nextUp ? "next up" : "raising"}`} onClick={() => setPage(m.uid)} title={`${nameOf(m.form)}${m.nature ? ` · ${m.nature.name}` : ''}`} /></div>
                 : <button key={i} type="button" className="plat empty" disabled={free === 0} onClick={() => setJoining(true)} aria-label={free ? 'Add someone to the party' : 'Empty place in the party'}><span className="plat-ball" aria-hidden /><small>{free ? 'Add' : 'Open'}</small></button>
             })}
           </div>
@@ -696,17 +696,19 @@ export function TeamTab({ game, partnerCard, choices, onShop }: { game: Game; pa
 
 /** Everything caught and not yet raised, oldest first. Open when there are few, folded when it grows. */
 function MyPokemon({ game, onOpen }: { game: Game; onOpen: (uid: string) => void }) {
+  // whoever stands in the party is shown there, not here as well
   const inTeam = new Set(game.team.map((m) => m.uid))
-  const body = game.queue.length === 0
-    ? <p className="muted">Empty. Catch the wild Pokemon and it comes here.</p>
+  const waiting = game.queue.filter((m) => !inTeam.has(m.uid))
+  const body = waiting.length === 0
+    ? <p className="muted">{game.queue.length ? 'Everyone you have caught is in your party.' : 'Empty. Catch the wild Pokemon and it comes here.'}</p>
     : (
       <div className="boxgrid">
-        {game.queue.map((m) => (
-          <Standee key={m.uid} m={m} size={52} note={m.uid === game.nextUp ? <em className="nextup">Next up</em> : inTeam.has(m.uid) ? <em className="nextup">In the party</em> : undefined} onClick={() => onOpen(m.uid)} title={`${nameOf(m.form)}${m.ball ? ` · ${m.thrown ? itemName(m.thrown) : BALL_NAME[m.ball]}` : ''}`} />
+        {waiting.map((m) => (
+          <Standee key={m.uid} m={m} size={52} note={m.uid === game.nextUp ? <em className="nextup">Next up</em> : undefined} onClick={() => onOpen(m.uid)} title={`${nameOf(m.form)}${m.ball ? ` · ${m.thrown ? itemName(m.thrown) : BALL_NAME[m.ball]}` : ''}`} />
         ))}
       </div>
     )
-  return <MyPokemonWin n={game.queue.length}>{body}</MyPokemonWin>
+  return <MyPokemonWin n={waiting.length}>{body}</MyPokemonWin>
 }
 function MyPokemonWin({ n, children }: { n: number; children: ReactNode }) {
   // open by default while it holds eight or fewer; the details element keeps the choice the reader makes
