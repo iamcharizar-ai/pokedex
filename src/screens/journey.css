@@ -1,0 +1,88 @@
+/* JOURNEY after the second overhaul (UI-REVIEW.md): roads are trails, a thin
+   line with a node for each stop, and only the stop you are on is lit. Lists are
+   rows with hairlines between them, not a stack of boxes. */
+
+.journeypage { display: grid; gap: var(--s-6); }
+.journey-a, .journey-b { display: grid; gap: var(--s-6); align-content: start; min-width: 0; }
+.journey-c { display: grid; gap: var(--s-3); }
+@media (min-width: 900px) {
+  .journeypage { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  .journey-c { grid-column: 1 / -1; }
+}
+
+/* ── a road: the trail, a node per stop ── */
+.sec .k-road { gap: 0; padding-left: 44px; }
+.sec .k-road::before { left: 19px; top: 18px; bottom: 18px; width: 2px; background: linear-gradient(var(--hair-hi), var(--hair)); border: 0; border-radius: 1px; }
+.sec .k-step { grid-template-columns: 56px 1fr auto; gap: var(--s-3); min-height: 72px; padding: var(--s-2) var(--s-3) var(--s-2) var(--s-2); background: none; border: 0; border-radius: var(--r-3); box-shadow: none; }
+.sec .k-step::before { left: -37px; width: 26px; height: 26px; font-size: 12px; color: var(--text-2); background: var(--ground); border: 2px solid var(--hair-hi); }
+.sec .k-step.done { background: none; }
+.sec .k-step.done::before { content: '✓'; color: var(--k-edge); background: var(--tone-green); border-color: var(--tone-green); }
+.sec .k-step.now { background: linear-gradient(90deg, rgba(255, 200, 40, 0.16), rgba(255, 200, 40, 0.02) 80%); box-shadow: inset 0 0 0 1px rgba(255, 200, 40, 0.35); }
+.sec .k-step.now::before { color: var(--k-edge); background: var(--tone-gold); border-color: var(--tone-gold); box-shadow: 0 0 0 4px rgba(255, 200, 40, 0.2), 0 0 14px var(--gold-glow); }
+.sec .k-step.ahead { opacity: 0.75; }
+.sec .k-step .name { font-size: 17px; }
+.sec .k-step small { color: var(--text-2); font-size: 12.5px; }
+.sec .k-step .sprite { image-rendering: pixelated; filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.3)); }
+.sec .k-step .k-bar { height: 16px; border-width: 1px; background: var(--well); box-shadow: none; }
+.sec .k-step .k-bar > span { font-size: 11px; -webkit-text-stroke: 2px var(--k-edge); }
+.k-road-done { margin: 0 0 var(--s-1) 44px; }
+.k-road-done .k-rung, .sec .k-rung.past { display: block; padding: 0 var(--s-2); text-align: left; font-family: var(--k-face); font-size: 13px; color: var(--text-3); background: none; border: 0; }
+/* a medal on the season road, smaller and without its ribbon tails */
+.sec .k-step .k-medal { width: 52px; height: 52px; }
+.sec .k-step .k-medal::before, .sec .k-step .k-medal::after { display: none; }
+.sec .k-step .k-medal > span { width: 48px; height: 48px; border-width: 2px; box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.3), 0 0 14px var(--gold-glow); }
+.sec .k-step.ahead .k-medal > span { box-shadow: none; }
+
+/* ── pay and quests ── */
+.questcols { gap: var(--s-5); }
+.paytiers { gap: 0; margin: var(--s-2) 0; border-radius: var(--r-2); overflow: hidden; border: 1px solid var(--hair); }
+.paytier { padding: var(--s-2) 4px; background: none; border: 0; border-radius: 0; opacity: 0.7; }
+.paytier + .paytier { border-left: 1px solid var(--hair); }
+.paytier.on { opacity: 1; background: rgba(255, 200, 40, 0.14); }
+.questcols .k-bar { height: 16px; border-width: 1px; background: var(--well); box-shadow: none; }
+.questcols .k-bar > span { font-size: 11px; -webkit-text-stroke: 2px var(--k-edge); }
+.quests { gap: 0; }
+.quest { padding: var(--s-2) 0; background: none; border: 0; border-bottom: 1px solid var(--hair); border-radius: 0; box-shadow: none; }
+.quest.done { background: none; }
+.quest.done .q-name { color: var(--tone-green); }
+
+/* ── the calendar: soft squares, no outlines ── */
+.cal { gap: 4px; }
+.cal-head, .cal-week { gap: 4px; }
+.cal-cell { border: 0; border-radius: 4px; background: rgba(255, 255, 255, 0.05); }
+.cal-cell.l1 { background: #2f4778; }
+.cal-cell.l2 { background: #3f74b8; }
+.cal-cell.l3 { background: #3fb36a; }
+.cal-cell.l4 { background: #45d483; box-shadow: none; }
+.cal-cell.off { background: transparent; border: 1px dashed rgba(255, 255, 255, 0.1); }
+
+.cal-cell.today { outline: 2px solid #fff; outline-offset: 2px; }
+
+/* ── feats: rows, a hairline between ── */
+.feats { gap: 0; margin: 0 0 var(--s-2); }
+.feat { padding: var(--s-2) 0; background: none; border: 0; border-bottom: 1px solid var(--hair); border-radius: 0; box-shadow: none; }
+.feat.done { background: none; }
+.feat.done .fname b { color: var(--tone-gold); }
+.feat .k-bar { height: 14px; border-width: 1px; background: var(--well); box-shadow: none; }
+.feat .k-bar > span { font-size: 10px; -webkit-text-stroke: 2px var(--k-edge); }
+.featgroup summary { padding: 0; background: none; border: 0; border-radius: 0; }
+.featgroup .featgroup { margin: 0 0 0 var(--s-3); }
+
+/* ── bosses beaten, the badge case, the Hall of Fame ── */
+.boss-log { list-style: none; margin: 0; padding: 0; }
+.boss-log li { border-bottom: 1px solid var(--hair); }
+.casemedals { gap: var(--s-2); padding: var(--s-1) 0 0; }
+.caserow .k-ribbon { justify-content: flex-start; min-height: 0; margin: 0; padding: 0; font-size: 16px; background: none; border: 0; box-shadow: none; -webkit-text-stroke: 0; text-shadow: none; }
+.caserow .k-ribbon::before, .caserow .k-ribbon::after { display: none; }
+.keyrow { border-top: 1px solid var(--hair); }
+.hall { gap: 0; }
+.hall li { padding: var(--s-3) 0; background: none; border: 0; border-bottom: 1px solid var(--hair); border-radius: 0; }
+
+/* ── the adventure log ── */
+.log .ev { grid-template-columns: 78px 1fr; border-top: 1px solid var(--hair); font-size: 14px; }
+.kind { border: 0; border-radius: 99px; padding: 2px 0 3px; }
+.log .dayhead { color: var(--tone-gold); }
+.journeypage .questcols { grid-template-columns: 1fr; }
+.cal-cell { max-height: 22px; }
+.cal-cell.perfect { box-shadow: inset 0 0 0 2px var(--tone-gold); }
+.cal-key .cal-cell.perfect { box-shadow: inset 0 0 0 2px var(--tone-gold); }

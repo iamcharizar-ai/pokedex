@@ -27,3 +27,11 @@
 @import '../motion.css' layer(legacy);
 @import '../economy.css' layer(legacy);
 @import '../screens/screens.css' layer(screens);
+@import '../screens/frame.css' layer(screens);
+@import '../screens/today.css' layer(screens);
+@import '../screens/party.css' layer(screens);
+@import '../screens/forge.css' layer(screens);
+@import '../screens/shop.css' layer(screens);
+@import '../screens/dex.css' layer(screens);
+@import '../screens/journey.css' layer(screens);
+@import '../screens/sheets.css' layer(screens);

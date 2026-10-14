@@ -7,7 +7,6 @@
 /* ── frame: type ── */
 /* body text in a plain face: in the pixel face a 5 read as an S */
 body { -webkit-font-smoothing: auto; font-size: 16px; }
-.num { font-family: var(--k-face); }
 h1, h2, h3 { font-family: var(--k-face); letter-spacing: 0.03em; text-transform: none; }
 .shell { padding-bottom: 104px; }
 
@@ -33,10 +32,6 @@ h1, h2, h3 { font-family: var(--k-face); letter-spacing: 0.03em; text-transform:
 
 /* ── frame: windows. A thick frame and a header that is an object ── */
 .win { border-radius: 16px; box-shadow: 0 6px 0 var(--k-edge); border-color: var(--k-edge); }
-.win-h { padding: 8px 14px 11px; border-bottom: 3px solid var(--k-edge); box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.36), inset 0 -5px 0 rgba(0, 0, 0, 0.2); }
-.win-h h2 { font-size: 19px; color: #fff; -webkit-text-stroke: 4px var(--k-edge); paint-order: stroke fill; text-shadow: 0 2px 0 var(--k-edge); }
-.win-h .aside { font-family: var(--k-face); font-size: 16px; color: #fff; -webkit-text-stroke: 3px var(--k-edge); paint-order: stroke fill; }
-.win.t-gold .win-h { color: #fff; }
 
 /* ── frame: buttons and bars ── */
 .go, .plain { font-family: var(--k-face); font-size: 17px; letter-spacing: 0.02em; text-transform: none; color: #fff; -webkit-text-stroke: 3px var(--k-edge); paint-order: stroke fill; padding: 9px 16px 13px; border: 3px solid var(--k-edge); border-radius: 12px; box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.42), inset 0 -6px 0 rgba(0, 0, 0, 0.26), 0 4px 0 var(--k-edge); transition: transform 0.07s, box-shadow 0.07s; }
@@ -55,39 +50,26 @@ h1, h2, h3 { font-family: var(--k-face); letter-spacing: 0.03em; text-transform:
 .hp-sub b { font-family: var(--k-face); }
 
 /* ── home: the talk box, and the pillars as buttons you can read at a glance ── */
-.talk { border-color: var(--k-edge); border-radius: 0 0 16px 16px; box-shadow: 0 6px 0 var(--k-edge); background-color: var(--k-body); background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.035) 25%, transparent 25%, transparent 75%, rgba(255, 255, 255, 0.035) 75%), linear-gradient(-45deg, rgba(0, 0, 0, 0.07) 25%, transparent 25%, transparent 75%, rgba(0, 0, 0, 0.07) 75%); background-size: 44px 44px; }
 .say { border: 0; margin: 0; padding: 18px 20px; font-family: var(--k-face); font-size: 24px; -webkit-text-stroke: 4px var(--k-edge); paint-order: stroke fill; text-shadow: 0 2px 0 var(--k-edge); }
 .say small { font-family: var(--px); font-size: 15px; -webkit-text-stroke: 0; text-shadow: none; color: var(--k-dim); }
 .moves { background: none; border-left: 0; padding: 10px 10px 12px 0; }
 .move { color: #fff; background: var(--k-tile); border: 3px solid var(--k-edge); border-left: 10px solid var(--c); border-radius: 12px; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.12), inset 0 -4px 0 rgba(0, 0, 0, 0.2), 0 3px 0 var(--k-edge); padding: 9px 10px 13px; }
 .move.done { background: #2a6a52; }
-.mv-name { font-family: var(--k-face); font-size: 17px; text-transform: none; }
-.mv-meta { color: var(--k-dim); } .mv-meta b { font-family: var(--k-face); color: #fff; }
-.move.done .mv-name::after { color: #9dffc4; }
-.mv-bar { height: 6px; }
-
 /* ── home: what is next, as three tiles ── */
 /* ── home: its windows get the dark quilted body, and everything in them is retuned for it ── */
 main .win { padding: 5px; background: linear-gradient(var(--k-frame), var(--k-frame-lo)); overflow: visible; }
-main .win-h { border: 3px solid var(--k-edge); border-radius: 10px 10px 0 0; }
-main .win-b { --ink: #fff; --muted: var(--k-dim); --win-2: var(--k-tile); --win-3: rgba(255, 255, 255, 0.18); color: #fff; border: 3px solid var(--k-edge); border-top: 0; border-radius: 0 0 10px 10px; background-color: var(--k-body); background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.035) 25%, transparent 25%, transparent 75%, rgba(255, 255, 255, 0.035) 75%), linear-gradient(-45deg, rgba(0, 0, 0, 0.07) 25%, transparent 25%, transparent 75%, rgba(0, 0, 0, 0.07) 75%); background-size: 44px 44px; }
-main .win-b .hp-row b { color: var(--k-gold); }
 main .facts dt, main .week .d, main .pts { font-family: var(--k-face); font-size: 13px; text-transform: none; letter-spacing: 0.03em; }
 main .box { background: #0c1126; border-color: var(--k-edge); }
 main .done > .box { background: var(--k-green); box-shadow: inset 0 0 0 2px #0c1126; } main .part > .box { background: var(--k-gold); box-shadow: inset 0 0 0 2px #0c1126; }
-main .meter { background: #0c1126; border-color: var(--k-edge); }
 main .dot { background: #0c1126; border-color: var(--k-edge); border-radius: 8px; box-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.5); }
 main .dot.on { background: var(--k-green); box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.35); } main .dot.off { background: #5a2f3d; }
 main .ladder div { color: var(--k-dim); border-color: var(--k-edge); border-radius: 8px; }
 main .ladder b { font-family: var(--k-face); font-size: 18px; }
 main .ladder .on, main .ladder .on b { color: var(--k-edge); }
-main .ribbon { font-family: var(--k-face); font-size: 14px; text-transform: none; border-radius: 8px; padding: 3px 10px 5px; }
-main .ribbon.on { background: #1d8a4e; }
 main .notice { color: #fff; border-color: var(--k-edge); border-radius: 10px; }
 main .notice.warn { background: #6a2f3a; } main .notice.good { background: #24507e; } main .notice.gmax { background: #6a2f58; }
 main .queue img { background: var(--k-tile); border-color: var(--k-edge); border-radius: 10px; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.12); }
 main .queue.pick button.on img { background: var(--k-tile-hi); outline: 3px solid var(--k-gold); }
-main .nexttag { font-family: var(--k-face); color: var(--k-edge); font-size: 11px; }
 main .nopic { background: var(--k-tile); color: var(--k-dim); border-color: var(--k-edge); }
 main .lean b, main .arrow { font-family: var(--k-face); }
 main .path img, main .lean img { background: var(--k-tile); border: 2px solid var(--k-edge); border-radius: 8px; }
@@ -95,17 +77,13 @@ main .chip { color: var(--k-edge); } main .chip.gmax, main .chip.r-R { color: #f
 main details.fold, main .list li { border-top-color: rgba(255, 255, 255, 0.16); }
 
 /* ══ step 2: every tab on the dark body ══════════════════════════════════ */
-main .muted, .lead { color: var(--k-dim); }
-main .win-b a { color: #fff; }
+main .muted { color: var(--k-dim); }
 
 /* ── Pokedex: region tabs, filter, and each Pokemon as a small card ── */
 .regions button { font-family: var(--k-face); background: var(--k-body); color: var(--k-dim); border-color: var(--k-edge); border-radius: 12px; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.08), 0 4px 0 var(--k-edge); }
 .regions .n { font-family: var(--k-face); font-size: 16px; text-transform: none; }
 .regions .c { font-family: var(--k-face); font-size: 13px; }
 .regions button.on { background: linear-gradient(#6176c8, #3b4c94); color: #fff; box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.28), 0 4px 0 var(--k-edge); }
-.regions button.on .meter, .regions .meter { background: #0c1126; border-color: var(--k-edge); }
-.seg button { font-family: var(--k-face); font-size: 14px; text-transform: none; color: #fff; background: var(--k-tile); border-color: var(--k-edge); border-radius: 10px; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.14), inset 0 -4px 0 rgba(0, 0, 0, 0.22); padding: 6px 12px 9px; }
-.seg button.on { background: var(--k-gold); color: var(--k-edge); }
 .dex { gap: 8px; }
 .cell { --m: #5d647c; --m-hi: #8d93a8; padding: 4px; background: linear-gradient(160deg, var(--m-hi), var(--m) 55%, var(--m-hi)); border: 3px solid var(--k-edge); border-radius: 12px; box-shadow: 0 3px 0 var(--k-edge); }
 .cell:hover { border-color: var(--k-edge); transform: translateY(-3px); }
@@ -124,10 +102,6 @@ main .win-b a { color: #fff; }
 .cell .star { right: 6px; top: 3px; } .cell .shine { left: 7px; top: 3px; color: #7fe3ff; }
 .cell img { width: 100%; height: 100%; }
 .found { margin-left: auto; font-family: var(--k-face); font-size: 17px; color: #ffb3d9; }
-.detail { color: #fff; background: var(--k-tile); border-color: var(--k-edge); border-radius: 14px; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.1); overflow: visible; margin-top: 26px; }
-.detail .art { height: 150px; margin-top: -40px; border: 0; background: none; overflow: visible; filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.3)); }
-.detail h3 { font-size: 26px; color: #fff; -webkit-text-stroke: 4px var(--k-edge); paint-order: stroke fill; text-shadow: 0 2px 0 var(--k-edge); }
-.detail .eyebrow { font-family: var(--k-face); font-size: 13px; text-transform: none; color: var(--k-dim); }
 .close { font-family: var(--k-face); color: #fff; background: var(--k-red); border: 3px solid var(--k-edge); border-radius: 10px; padding: 4px 10px 7px; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.4), inset 0 -4px 0 rgba(0, 0, 0, 0.25); }
 
 /* ── Trainer: the card, the road, the badge case, the notes ── */
@@ -200,10 +174,6 @@ main .win-b a { color: #fff; }
 .rc-win .go { background: var(--k-gold); font-size: 20px; padding: 9px 30px 13px; }
 
 /* ── the partner as a card, in its summary ── */
-.sumrow { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: start; }
-.sumrow .k-card { width: 128px; }
-.sumrow .k-card-art { height: 120px; }
-.sumrow .k-card-art img { width: 104px; height: 104px; }
 .queue.pick .k-card { width: 86px; }
 .queue.pick .k-card-art { height: 76px; }
 .queue.pick .k-card-art img { width: 64px; height: 64px; background: none; border: 0; box-shadow: none; }
@@ -230,10 +200,6 @@ main .queue.pick button.on img { background: none; outline: 0; }
 .dmg { font-family: var(--k-face); color: #ff9aa2; }
 
 /* ── the talk box's second line: one pip for each habit of the day ── */
-.pips { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
-.pips i { width: 12px; height: 12px; border-radius: 3px; background: #0c1126; border: 2px solid var(--k-edge); }
-.pips i.on { background: var(--k-gold); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.5); }
-.pips b { margin-left: 8px; font-family: var(--k-face); font-weight: 400; font-size: 14px; color: var(--k-dim); -webkit-text-stroke: 0; text-shadow: none; }
 
 /* ── what you can do right now ── */
 .actions { position: relative; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 0 0 18px; }
@@ -269,20 +235,12 @@ main .queue.pick button.on img { background: none; outline: 0; }
 
 /* ── shop ── */
 .shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
-.good { position: relative; display: grid; justify-items: center; align-content: start; gap: 4px; padding: 14px 10px 12px; text-align: center; background: var(--k-tile); border: 3px solid var(--k-edge); border-radius: 14px; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.12), 0 4px 0 var(--k-edge); }
-.good b { font-family: var(--k-face); font-weight: 400; font-size: 19px; }
-.good small { color: var(--k-dim); font-size: 13px; line-height: 1.25; min-height: 2.5em; }
-.good .k-btn { width: 100%; min-height: 42px; margin-top: 6px; font-size: 18px; padding: 6px 10px 10px; }
-.good .held { position: absolute; top: 6px; right: 8px; font-family: var(--k-face); font-size: 16px; color: var(--k-gold); }
-.good.bump { animation: bump 0.35s cubic-bezier(0.3, 1.6, 0.5, 1); }
 @keyframes bump { 40% { transform: scale(1.08); } }
 .earn { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .earn li { display: flex; align-items: center; gap: 8px; } .earn b { font-family: var(--k-face); font-weight: 400; font-size: 18px; color: var(--k-gold); }
 
 /* ── team ── */
 .hearts { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
-.heartrow { display: inline-flex; gap: 3px; }
-.teamrow { display: flex; gap: 12px; flex-wrap: wrap; }
 .slot { position: relative; width: 92px; padding: 0; line-height: 0; border-radius: 12px; }
 .slot .k-card, main .queue.pick .k-card { width: 86px; }
 .slot .k-card-art { height: 76px; } .slot .k-card-art img { width: 64px; height: 64px; }
@@ -297,19 +255,7 @@ main .queue.pick button.on img { background: none; outline: 0; }
    No frame around a sprite anywhere. It stands on a soft shadow; its stage is
    three small pips under it, its ball and nature are small marks beside it. */
 .mon { position: relative; display: inline-grid; justify-items: center; gap: 2px; line-height: 1; vertical-align: top; }
-.mon-art { position: relative; display: grid; place-items: end center; width: 100%; }
-.mon-art::after { content: ''; position: absolute; left: 18%; right: 18%; bottom: 0; height: 10px; border-radius: 50%; background: rgba(0, 0, 0, 0.32); }
-.mon-art img { position: relative; z-index: 1; background: none !important; border: 0 !important; box-shadow: none !important; outline: 0 !important; }
-.mon.mega .mon-art img { filter: drop-shadow(0 0 5px #7fe3ff) drop-shadow(0 0 2px var(--k-purple)); }
-.mon-ball { position: absolute; right: 0; bottom: 0; z-index: 2; filter: drop-shadow(0 1px 0 var(--k-edge)); }
-.mon-gem { position: absolute; left: 2px; top: 2px; z-index: 2; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--k-edge); background: var(--k-dim); }
-.mon-gem[data-tag='code'] { background: var(--k-blue); } .mon-gem[data-tag='fitness'] { background: var(--k-red); } .mon-gem[data-tag='guitar'] { background: #ee7b2f; } .mon-gem[data-tag='arbor'] { background: var(--k-green); }
-.mon-pips { display: inline-flex; gap: 3px; margin-top: 2px; }
-.mon-pips i { width: 7px; height: 7px; border-radius: 50%; background: rgba(255, 255, 255, 0.18); }
-.mon-pips i.on { background: var(--k-gold); }
-.mon-lv { font-family: var(--k-face); font-weight: 400; font-size: 17px; margin-top: 2px; }
 .mon .k-bar { width: 100%; min-width: 110px; margin-top: 2px; }
-.mon-note { font-size: 12px; color: var(--k-dim); }
 
 /* where Pokemon are listed: a tap target with no box until it is chosen */
 main .queue.pick button, .slot { padding: 6px 2px 4px; border-radius: 12px; line-height: 1; background: transparent; transition: background 0.12s, transform 0.12s; }
@@ -320,8 +266,6 @@ main .queue.pick button.on img { background: none; outline: 0; }
 .backing img.edge { box-shadow: none; filter: drop-shadow(0 0 4px var(--k-gold)); }
 .slot { width: auto; min-width: 84px; }
 .slot.empty { width: 84px; height: 92px; }
-.nexttag { position: static; margin-top: 2px; padding: 1px 8px 2px; border-radius: 6px; }
-.sumrow .mon { min-width: 140px; }
 
 /* the Pokedex grid: plain tiles. Found ones are lit, not framed */
 .cell, .cell.seen { padding: 0; background: rgba(8, 12, 30, 0.32); border: 0; border-radius: 12px; box-shadow: none; animation: none; }
@@ -371,14 +315,9 @@ main .queue.pick button.on img { background: none; outline: 0; }
 .mp-line { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; padding: 6px 8px; background: rgba(8, 12, 30, 0.4); border-radius: 10px; }
 .mp-body p { margin: 0; }
 .mp-body .k-btn { min-height: 44px; font-size: 18px; padding: 6px 14px 10px; }
-.tappable { cursor: pointer; }
 
 @media (max-width: 760px) {
-  .sumrow { grid-template-columns: 1fr; justify-items: center; }
-  .sumrow .facts { width: 100%; }
-  .detail { margin-top: 0; }
-  .detail .art { margin-top: 0; height: 92px; }
-}
+        }
 @media (prefers-reduced-motion: reduce) {
   .cell.mg { animation: none; }
 }
@@ -389,8 +328,7 @@ main .queue.pick button.on img { background: none; outline: 0; }
   .navbar button { min-height: 64px; font-size: 12px; } .navbar button .tabicon { width: 48px; height: 48px; } .navbar button:first-child, .navbar button:last-child { border-radius: 0; }
   .moves { padding: 0 10px 12px; border-top: 0; }
   .say { font-size: 20px; padding: 14px 16px 10px; }
-  .detail { bottom: 78px; }
-  .recap { padding-bottom: 86px; }
+    .recap { padding-bottom: 86px; }
 }
 @media (max-width: 760px) {
   .questcols { grid-template-columns: 1fr; }
@@ -400,7 +338,7 @@ main .queue.pick button.on img { background: none; outline: 0; }
   .thrown { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .monpage, .mp-art img, .tabin, .foe-pad > img, .foe img, .pop, .k-btn.main.act, .thrown, .good.bump { animation: none !important; }
+  .monpage, .mp-art img, .tabin, .foe-pad > img, .foe img, .pop, .k-btn.main.act, .thrown { animation: none !important; }
   .pop { display: none; }
   .navbar button, .navbar button .tabicon, .go, .plain { transition: none; }
 }

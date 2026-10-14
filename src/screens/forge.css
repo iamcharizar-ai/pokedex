@@ -1,0 +1,91 @@
+/* THE FORGE as a ritual (screens/Forge.tsx): a round altar, the stone in the
+   middle, three sockets round it, and the shards floating on the outer ring.
+   Positions are angles: everything on the altar is placed by rotating out from
+   its centre, so the circle stays a circle at any size. */
+
+.forge2 { --S: min(340px, calc(100vw - 48px)); --r1: calc(var(--S) * 0.25); --r2: calc(var(--S) * 0.43); display: grid; justify-items: center; gap: var(--s-3); }
+
+/* ── the altar ── */
+.altar { position: relative; width: var(--S); height: var(--S); margin: var(--s-2) 0; border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(190, 140, 255, 0.35) 0, rgba(120, 80, 230, 0.12) 22%, transparent 34%),
+    radial-gradient(circle, transparent 0 calc(var(--r1) - 2px), rgba(200, 170, 255, 0.22) calc(var(--r1) - 1px) calc(var(--r1) + 1px), transparent calc(var(--r1) + 2px)),
+    radial-gradient(circle, transparent 0 calc(var(--r2) - 30px), rgba(255, 255, 255, 0.025) calc(var(--r2) - 29px) calc(var(--r2) + 29px), transparent calc(var(--r2) + 30px)),
+    radial-gradient(circle, #1e1748 0, #120f30 62%, transparent 70.5%);
+  box-shadow: 0 0 60px rgba(120, 80, 230, 0.18); }
+/* two rings of runes that turn the other way to each other */
+.altar-runes, .altar-runes::after { position: absolute; border-radius: 50%; pointer-events: none; }
+.altar-runes { inset: calc(var(--S) * 0.5 - var(--r2) - 30px); border: 1px dashed rgba(200, 170, 255, 0.28); animation: altar-turn 60s linear infinite; }
+.altar-runes::after { content: ''; inset: calc(var(--r2) + 30px - var(--r1) - 16px); border: 2px dotted rgba(200, 170, 255, 0.35); animation: altar-turn 40s linear infinite reverse; }
+
+/* the beams from each socket to the stone: dark until the third shard lands */
+.altar-beams i { position: absolute; left: 50%; top: 50%; width: 4px; height: var(--r1); margin-left: -2px; transform-origin: 50% 0; transform: rotate(calc(var(--a) + 180deg)); border-radius: 2px; background: linear-gradient(#f3e4ff, #b48cff); opacity: 0; box-shadow: 0 0 12px #b48cff; }
+.lit .altar-beams i { animation: beam 0.9s var(--ease-out) both; }
+
+/* the stone, or the Mega waiting inside it */
+.altar-core { position: absolute; left: 50%; top: 50%; width: calc(var(--S) * 0.3); height: calc(var(--S) * 0.3); translate: -50% -50%; display: grid; place-items: center; border-radius: 50%;
+  background: radial-gradient(circle at 50% 40%, #5b3ec2, #2a1d66 70%); box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.18), 0 0 0 3px rgba(200, 170, 255, 0.35), 0 0 30px rgba(150, 110, 255, 0.4); }
+.altar-core img { image-rendering: pixelated; max-width: 92%; max-height: 92%; object-fit: contain; filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.35)); }
+.altar-core img.unseen { filter: brightness(0) opacity(0.55) drop-shadow(0 0 6px rgba(200, 170, 255, 0.6)); }
+.forge2.done .altar-core { background: radial-gradient(circle at 50% 40%, #8a6af0, #3a2690 70%); box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.25), 0 0 0 3px #d9b8ff, 0 0 40px rgba(190, 140, 255, 0.7); }
+.lit .altar-core { animation: core-charge 0.9s var(--ease-in) both; }
+
+/* the three sockets: a ghost of the shard that fits, until one is placed */
+.socket3 { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px; display: grid; place-items: center; border-radius: 50%;
+  transform: rotate(var(--a)) translateY(calc(var(--r1) * -1)) rotate(calc(var(--a) * -1));
+  background: radial-gradient(circle, #0b0820 0 55%, #241a55 56% 100%); box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.7), 0 0 0 2px rgba(200, 170, 255, 0.35); }
+.socket3 img { opacity: 0.22; filter: grayscale(1) brightness(1.4); transition: opacity var(--t-pop) linear, filter var(--t-pop) linear; }
+.socket3.full { box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.5), 0 0 0 2px #d9b8ff, 0 0 18px rgba(190, 140, 255, 0.8); }
+.socket3.full img { opacity: 1; filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.7)); }
+.socket3-glow { width: 22px; height: 22px; border-radius: 50%; background: radial-gradient(circle, #fff, #c9a8ff 60%, transparent 70%); box-shadow: 0 0 14px #c9a8ff; }
+
+/* the shards you hold, floating on the outer ring */
+.orb { position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -22px; padding: 0; display: grid; place-items: center; border: 0; border-radius: 50%; background: none; cursor: default;
+  transform: rotate(var(--a)) translateY(calc(var(--r2) * -1)) rotate(calc(var(--a) * -1)); transition: opacity var(--t-pop) linear; }
+.orb img { animation: orb-bob 3.2s ease-in-out infinite; animation-delay: calc(var(--i) * -0.37s); filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.45)); }
+.orb:disabled { opacity: 0.8; }
+.ready .orb:disabled { opacity: 0.45; }
+.orb.fits { cursor: pointer; opacity: 1; }
+.orb.fits::before { content: ''; position: absolute; inset: 2px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 230, 140, 0.55), transparent 70%); animation: orb-call 1.134s ease-in-out infinite; }
+.orb.fits img { filter: drop-shadow(0 0 6px rgba(255, 230, 140, 0.9)); }
+.orb.fits:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+.altar .orb.gone { opacity: 0; pointer-events: none; transition: none; }
+.orb-more { position: absolute; right: -4px; bottom: -2px; padding: 0 5px; font: normal 11px var(--k-face); color: #fff; background: rgba(4, 7, 22, 0.85); border-radius: 99px; }
+
+/* without the Key Stone the altar is cold: drawn, so the goal is in view, but grey */
+.forge2.cold .altar { filter: grayscale(0.85) brightness(0.75); }
+.forge2.cold .altar-runes, .forge2.cold .altar-runes::after { animation: none; }
+
+/* ── under the altar: what to do, and who it is for ── */
+.forge-say { margin: 0; max-width: 34ch; text-align: center; font-family: var(--k-face); font-size: 18px; line-height: 1.25; color: var(--text); }
+.forge2.ready .forge-say { color: #f3e4ff; }
+.forge-all { min-height: 44px; padding: 0 var(--s-3); font-family: var(--k-face); font-size: 14px; color: var(--text-2); text-decoration: underline; text-underline-offset: 3px; background: none; border: 0; cursor: pointer; }
+.forge-all:hover { color: var(--text); }
+.forge-pick { width: 100%; display: flex; gap: var(--s-2); overflow-x: auto; padding: var(--s-2) 2px; scrollbar-width: none; justify-content: safe center; }
+.forge-pick::-webkit-scrollbar { display: none; }
+.fp { flex: none; width: 82px; display: grid; justify-items: center; gap: 2px; padding: 0; color: var(--text); background: none; border: 0; cursor: pointer; text-align: center; }
+.fp-face { position: relative; width: 64px; height: 64px; margin-bottom: 4px; display: grid; place-items: center; border-radius: 50%; background: radial-gradient(circle at 50% 35%, #2f3a7a, #151b40 75%); box-shadow: inset 0 0 0 1px var(--hair-hi); transition: transform var(--t-fade) var(--ease-out), box-shadow var(--t-pop) linear; }
+.fp-face img { image-rendering: pixelated; }
+.fp b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--k-face); font-weight: 400; font-size: 13px; }
+.fp small { font-size: 11px; color: var(--text-3); }
+.fp.ready .fp-face { box-shadow: 0 0 0 2px var(--tone-gold), 0 0 14px var(--gold-glow); }
+.fp.ready small { color: var(--tone-gold); font-weight: 700; }
+.fp.done .fp-face { background: radial-gradient(circle at 50% 35%, #6a4ad8, #2a1d66 75%); box-shadow: 0 0 0 2px #c9a8ff; }
+.fp.done small { color: #c9a8ff; }
+.fp.waiting .fp-face img, .fp.locked .fp-face img { opacity: 0.5; filter: grayscale(0.7); }
+.fp.on .fp-face { transform: translateY(-4px); box-shadow: 0 0 0 3px #fff, 0 8px 18px rgba(0, 0, 0, 0.4); }
+.fp.ready.on .fp-face { box-shadow: 0 0 0 3px #fff, 0 0 18px var(--gold-glow); }
+.fp-star { position: absolute; right: -2px; top: -4px; font-style: normal; font-size: 18px; color: #ffe27a; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5); }
+.fp:focus-visible { outline: none; }
+.fp:focus-visible .fp-face { outline: 3px solid #fff; outline-offset: 3px; }
+.forge-where { margin: 0; max-width: 46ch; text-align: center; font-size: 13px; color: var(--text-3); }
+
+@keyframes altar-turn { to { rotate: 360deg; } }
+@keyframes orb-bob { 50% { translate: 0 -5px; } }
+@keyframes orb-call { 50% { transform: scale(1.35); opacity: 0.4; } }
+@keyframes beam { from { opacity: 0; height: 0; } 60% { opacity: 1; } to { opacity: 1; height: var(--r1); } }
+@keyframes core-charge { 0% { box-shadow: 0 0 0 3px #d9b8ff, 0 0 30px rgba(150, 110, 255, 0.4); } 70% { scale: 1.12; box-shadow: 0 0 0 4px #fff, 0 0 80px 20px rgba(220, 190, 255, 0.9); } 100% { scale: 1; box-shadow: 0 0 0 3px #fff, 0 0 120px 40px rgba(255, 255, 255, 0.95); } }
+@media (prefers-reduced-motion: reduce) {
+  .altar-runes, .altar-runes::after, .orb img, .orb.fits::before, .lit .altar-core, .lit .altar-beams i { animation: none; }
+  .lit .altar-beams i { opacity: 1; }
+}

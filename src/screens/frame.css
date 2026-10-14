@@ -1,0 +1,100 @@
+/* THE FRAME after the second overhaul (UI-REVIEW.md): the ground, a section,
+   a drawer, the top bar, the dock and the sheet. Every tab is built from these.
+
+   The rule the whole look follows: content stands on the page; only what you
+   press is an object (the chunky k-btn, a chip, a socket). Nothing is a box
+   inside a box inside a box. */
+
+/* ── the ground: a night with light pooled where the eye starts ── */
+html, body { background: var(--ground-lo); }
+body {
+  color: var(--text);
+  background:
+    radial-gradient(900px 520px at 50% -140px, var(--ground-hi) 0, transparent 70%),
+    radial-gradient(600px 420px at 110% 40%, rgba(110, 80, 220, 0.16), transparent 70%),
+    radial-gradient(700px 500px at -20% 90%, rgba(40, 120, 220, 0.12), transparent 70%),
+    linear-gradient(var(--ground), var(--ground-lo));
+  background-attachment: fixed;
+}
+.shell { max-width: 1040px; padding: 0 var(--gutter) 128px; }
+main { display: grid; gap: var(--s-6); }
+main > * { margin: 0; }
+main .muted { color: var(--text-2); font-size: 14px; line-height: 1.45; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ── a section: a heading on the page, and its content under it ── */
+.sec { --tc: var(--tone-dark); position: relative; display: grid; gap: var(--s-3); color: var(--text); --ink: var(--text); --muted: var(--text-2); --win-2: var(--surface-2); --win-3: var(--hair-hi); }
+.sec[data-tone='gold'] { --tc: var(--tone-gold); }
+.sec[data-tone='blue'] { --tc: var(--tone-blue); }
+.sec[data-tone='green'] { --tc: var(--tone-green); }
+.sec[data-tone='red'] { --tc: var(--tone-red); }
+.sec[data-tone='purple'] { --tc: var(--tone-purple); }
+.sec-h { display: flex; align-items: center; gap: var(--s-2); min-height: 28px; padding: 0 2px; }
+.sec-h h2 { flex: 1; min-width: 0; margin: 0; font-family: var(--k-face); font-weight: 400; font-size: 21px; letter-spacing: 0.02em; color: var(--text); text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35); }
+.sec-mark { flex: none; width: 10px; height: 10px; border-radius: 3px; transform: rotate(45deg); background: var(--tc); box-shadow: 0 0 10px var(--tc); }
+.sec-aside { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-family: var(--k-face); font-size: 14px; color: var(--text-2); white-space: nowrap; }
+.sec-b { display: grid; gap: var(--s-3); min-width: 0; }
+.sec-b > * { margin: 0; }
+.sec-b a { color: var(--text); }
+
+/* a drawer: a section shut until tapped. Shut, it is one quiet row you can press */
+details.drawer { gap: 0; }
+details.drawer > summary { list-style: none; cursor: pointer; min-height: 52px; padding: 0 var(--s-4); background: var(--surface-1); border: 1px solid var(--hair); border-radius: var(--r-3); transition: background var(--t-fade) linear; }
+details.drawer > summary::-webkit-details-marker { display: none; }
+details.drawer > summary:hover { background: var(--surface-2); }
+details.drawer > summary h2 { font-size: 17px; }
+details.drawer .chev { flex: none; width: 9px; height: 9px; margin-left: var(--s-2); border-right: 2px solid var(--text-2); border-bottom: 2px solid var(--text-2); transform: rotate(45deg) translate(-2px, -2px); transition: transform var(--t-slide) var(--ease-out); }
+details.drawer[open] .chev { transform: rotate(-135deg) translate(-2px, -2px); }
+details.drawer[open] > summary { background: none; border-color: transparent; padding: 0 2px; min-height: 28px; }
+details.drawer[open] > summary h2 { font-size: 21px; }
+details.drawer > .sec-b { padding-top: var(--s-3); }
+
+/* a plain fold inside a section ("All feats", "Last 14 nights") */
+.fold-row { border-top: 1px solid var(--hair); }
+.fold-row > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; min-height: 44px; font-family: var(--k-face); color: var(--text); }
+.fold-row > summary::-webkit-details-marker { display: none; }
+.fold-row > summary span { color: var(--text-2); font-size: 14px; }
+.fold-row > summary::after { content: ''; width: 8px; height: 8px; margin-left: var(--s-2); border-right: 2px solid var(--text-2); border-bottom: 2px solid var(--text-2); transform: rotate(45deg); }
+.fold-row[open] > summary::after { transform: rotate(-135deg); }
+
+/* a notice: a line with a coloured edge, not a box */
+main .notice, .sheet .notice { margin: 0; padding: var(--s-2) var(--s-3); color: var(--text); font-size: 14px; background: linear-gradient(90deg, color-mix(in srgb, var(--nc, var(--tone-blue)) 22%, transparent), transparent 90%); border: 0; border-left: 3px solid var(--nc, var(--tone-blue)); border-radius: 0 var(--r-1) var(--r-1) 0; box-shadow: none; }
+main .notice.warn, .sheet .notice.warn { --nc: var(--tone-red); }
+main .notice.good, .sheet .notice.good { --nc: var(--tone-green); }
+main .notice.gmax, .sheet .notice.gmax { --nc: var(--k-pink); }
+
+/* ── the top bar: glass over the page, no slab ── */
+.topbar { margin: 0 calc(var(--gutter) * -1) var(--s-5); padding: 10px var(--gutter) 10px; background: var(--glass); border-bottom: 1px solid var(--hair); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); backdrop-filter: blur(16px) saturate(1.3); -webkit-backdrop-filter: blur(16px) saturate(1.3); }
+.topbar .k-pill { background: var(--well); border: 1px solid var(--hair); box-shadow: none; }
+.tb-ring .track { fill: var(--well); stroke: rgba(255, 255, 255, 0.08); stroke-width: 5; }
+.tb-ring .fill { filter: drop-shadow(0 0 4px var(--gold-glow)); }
+.tb-collect { background: var(--well); border: 1px solid var(--hair); }
+.tb-collect.has { background: radial-gradient(circle at 50% 40%, #ffe27a, var(--k-gold)); border-color: transparent; box-shadow: 0 0 18px var(--gold-glow); }
+.tb-season .k-bar { height: 14px; background: var(--well); border: 1px solid var(--hair); box-shadow: none; }
+.tb-season .k-bar > i { box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.35); }
+.tb-season .k-bar > span { font-size: 11px; -webkit-text-stroke: 2px var(--k-edge); }
+.tb .help { width: 44px; height: 44px; min-height: 44px; padding: 0 0 3px; font-size: 18px; border-width: 2px; border-radius: 50%; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.35), 0 3px 0 var(--k-edge); }
+
+/* ── the dock: five places, floating over the page. Each says what it is ── */
+.navbar { left: 50%; right: auto; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); width: min(560px, calc(100% - 20px)); translate: -50% 0; padding: 6px; gap: 2px; background: var(--glass); border: 1px solid var(--hair-hi); border-radius: 28px; box-shadow: var(--shadow-float); backdrop-filter: blur(16px) saturate(1.3); -webkit-backdrop-filter: blur(16px) saturate(1.3); }
+.navbar button, .navbar button:first-child, .navbar button:last-child { min-height: 60px; padding: 4px 2px 6px; gap: 0; font-size: 11px; letter-spacing: 0.03em; color: var(--text-3); -webkit-text-stroke: 0; border: 0; border-radius: 22px; transform: none; background: none; box-shadow: none; }
+.navbar button .tabicon { width: 40px; height: 40px; opacity: 0.6; filter: grayscale(0.5) drop-shadow(0 2px 0 rgba(0, 0, 0, 0.4)); transition: transform var(--t-pop) var(--ease-out), opacity var(--t-fade) linear, filter var(--t-fade) linear; }
+.navbar button.on { color: var(--text); background: radial-gradient(60px 44px at 50% 34%, rgba(255, 210, 80, 0.28), transparent 70%), var(--surface-2); box-shadow: inset 0 1px 0 var(--hair-hi); transform: none; }
+.navbar button.on .tabicon { opacity: 1; filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.45)); transform: translateY(-3px) scale(1.12); }
+.navbar button:active .tabicon { transform: scale(0.92); }
+
+/* ── a sheet: the dark glass the page is made of, rising from the bottom ── */
+.sheet { color: var(--text); background: linear-gradient(#222b5c, #161c42 160px); border: 1px solid var(--hair-hi); border-bottom: 0; border-radius: 28px 28px 0 0; box-shadow: 0 -20px 50px rgba(0, 0, 0, 0.5); padding-left: var(--s-4); padding-right: var(--s-4); }
+.sheet-grip { background: var(--text-2); opacity: 0.5; }
+.sheet .muted { color: var(--text-2); }
+.sheet-body { display: grid; gap: var(--s-4); }
+.sheet-body > .sec { margin: 0; }
+.sheet-body > .sec > .sec-h { padding-right: 52px; }
+
+@media (min-width: 900px) {
+  .shell { padding-bottom: 140px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .navbar button .tabicon, details.drawer .chev { transition: none; }
+}
+

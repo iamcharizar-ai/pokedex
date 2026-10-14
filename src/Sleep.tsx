@@ -26,7 +26,7 @@ export function SleepWin({ game, nights }: { game: Game; nights: Record<string, 
       {sleep.state === 'measured' ? (
         <>
           <div className="sleephead">
-            <div className={`sleepdial ${(sleep.score ?? 0) >= SLEEP_DEEP ? 'deepnight' : (sleep.score ?? 0) >= SLEEP_DONE ? 'goodnight' : ''}`}><b>{sleep.score}</b><small>of 100</small></div>
+            <div className={`sleepdial ${(sleep.score ?? 0) >= SLEEP_DEEP ? 'deepnight' : (sleep.score ?? 0) >= SLEEP_DONE ? 'goodnight' : ''}`} style={{ ['--p' as string]: (sleep.score ?? 0) / 100 }}><b>{sleep.score}</b><small>of 100</small></div>
             <div className="sleeptext">
               {night?.sleepMin !== undefined && <b className="k-type">{hm(night.sleepMin)}</b>}
               {night?.bed && night?.wake && <small>{clock(night.bed)} to {clock(night.wake)}</small>}
@@ -53,8 +53,8 @@ export function SleepWin({ game, nights }: { game: Game; nights: Record<string, 
       )}
       {sleep.state === 'measured' && <p className="muted">The sky behind your partner follows it: clear after {SLEEP_DEEP} or more, fair from {SLEEP_DONE}, then cloudy, overcast and rain.</p>}
       {sleep.band && (
-        <details className="nights">
-          <summary className="k-label">Last 14 nights</summary>
+        <details className="nights fold-row">
+          <summary>Last 14 nights</summary>
           <div className="nightbars" role="img" aria-label="Sleep score for each of the last 14 nights">
             {recent.map((d) => {
               const s = nights[d]?.score

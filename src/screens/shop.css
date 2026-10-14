@@ -1,0 +1,75 @@
+/* THE SHOP after the second overhaul (UI-REVIEW.md): a shop, not a grid of
+   cards. Goods stand on wooden shelves whose planks join across a row, each
+   with a paper price tag hanging under it. What a thing does is in its sheet,
+   so the shelf stays a shelf. */
+
+/* ── which shop: a row of signs ── */
+.shopchips { gap: var(--s-2); padding: 2px 2px var(--s-1); margin: 0 -2px; }
+.shopchips .k-btn { min-height: 44px; padding: 0 var(--s-4) 0 var(--s-3); font-size: 15px; color: var(--text-2); -webkit-text-stroke: 0; text-shadow: none; background: var(--surface-1); border: 1px solid var(--hair-hi); border-radius: 99px; box-shadow: none; }
+.shopchips .k-btn:active { transform: scale(0.97); box-shadow: none; }
+.shopchips .k-btn.main { color: var(--k-edge); background: linear-gradient(#ffe27a, var(--tone-gold)); border-color: transparent; box-shadow: 0 0 16px var(--gold-glow); }
+
+/* ── the shelf ── */
+.shelf-label { display: block; margin: var(--s-2) 0 calc(var(--s-1) * -1); }
+.shelf2 { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); column-gap: 0; row-gap: var(--s-5); }
+.ware { position: relative; display: flex; flex-direction: column; align-items: center; gap: 0; padding: 0 var(--s-1) var(--s-1); color: var(--text); text-align: center; background: none; border: 0; cursor: pointer; }
+.ware-art { position: relative; width: 100%; height: 92px; display: grid; place-items: end center; padding-bottom: 14px; }
+.ware-art > img, .ware-art > .swatch { position: relative; z-index: 1; filter: drop-shadow(0 5px 3px rgba(0, 0, 0, 0.45)); transition: transform var(--t-pop) var(--ease-out); }
+.ware-art > .swatch { border-radius: 8px; box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.3); }
+/* the plank: wood, a lit top edge, a dark underside; flush with its neighbours, so a row is one shelf */
+.ware-art::after { content: ''; position: absolute; left: calc(var(--s-1) * -1); right: calc(var(--s-1) * -1); bottom: 0; height: 14px; background: linear-gradient(#b07a48 0 3px, #8a5a34 3px 9px, #5e3a20 9px); box-shadow: 0 8px 14px rgba(0, 0, 0, 0.35); }
+.ware:hover .ware-art > img, .ware:hover .ware-art > .swatch { transform: translateY(-6px) rotate(-4deg); }
+.ware:focus-visible { outline: none; }
+.ware:focus-visible .ware-art > img { outline: 3px solid #fff; outline-offset: 6px; border-radius: 8px; }
+.ware-have { position: absolute; z-index: 2; right: calc(50% - 46px); top: 14px; padding: 0 6px; font: normal 12px var(--k-face); font-style: normal; color: var(--k-edge); background: var(--tone-gold); border-radius: 99px; }
+/* the price tag: paper on a string, a little crooked */
+.ware-tag { order: 2; position: relative; margin-top: 10px; display: inline-flex; align-items: center; gap: 4px; min-height: 26px; padding: 2px 10px 2px 16px; font-family: var(--k-face); font-size: 15px; color: #2a2238; background: linear-gradient(#fbf4df, #eadfbf); border-radius: 4px 7px 7px 4px; box-shadow: 0 3px 6px rgba(0, 0, 0, 0.35); transform: rotate(-3deg); transform-origin: 50% -10px; transition: transform var(--t-pop) var(--ease-out); }
+.ware:nth-child(even) .ware-tag { transform: rotate(2.5deg); }
+.ware-tag::before { content: ''; position: absolute; left: 50%; top: -10px; width: 1px; height: 10px; background: rgba(240, 230, 200, 0.6); }
+.ware-tag::after { content: ''; position: absolute; left: 6px; top: 50%; width: 5px; height: 5px; margin-top: -2.5px; border-radius: 50%; background: var(--ground); }
+.ware:hover .ware-tag { transform: rotate(0deg); }
+.ware-tag .price img { width: 18px; height: 18px; }
+.ware b { order: 3; margin-top: 6px; max-width: 100%; font-family: var(--k-face); font-weight: 400; font-size: 14px; line-height: 1.15; }
+.ware:not(.can):not(.owned):not(.sold) .ware-tag { color: #8a7f6a; }
+.ware.sold .ware-art > img { opacity: 0.4; filter: grayscale(1); }
+.ware.sold .ware-tag { color: #fff; background: #a8323d; }
+.ware.owned .ware-tag { color: #fff; background: linear-gradient(#3fc97a, #279c58); }
+.ware.bump .ware-art > img { animation: bump 0.35s cubic-bezier(0.3, 1.6, 0.5, 1); }
+
+/* ── an item's sheet: the thing, what it does, the price ── */
+.ware-sheet { display: grid; justify-items: center; gap: var(--s-3); padding: var(--s-2) 0 var(--s-4); text-align: center; }
+.ware-sheet-art { width: 150px; height: 150px; display: grid; place-items: center; border-radius: 50%; background: radial-gradient(circle, rgba(255, 210, 90, 0.3), transparent 68%); }
+.ware-sheet-art img { filter: drop-shadow(0 8px 4px rgba(0, 0, 0, 0.45)); }
+.ware-sheet h2 { margin: 0; font-size: var(--t-display); }
+.ware-sheet p { margin: 0; max-width: 36ch; color: var(--text); font-size: 16px; line-height: 1.45; }
+.ware-sheet-have { color: var(--tone-gold); font-family: var(--k-face); font-size: 15px; }
+.ware-sheet-why { color: var(--text-2); font-size: 13px; }
+.ware-sheet .k-btn .price img { width: 24px; height: 24px; }
+
+/* ── mastery: a level as pips, and the one thing to press ── */
+.mastery { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: var(--s-3); padding: var(--s-3) 0; border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); }
+.mastery-mark { width: 54px; height: 54px; display: grid; place-items: center; border-radius: 50%; background: radial-gradient(circle at 50% 35%, var(--surface-3), var(--surface-1) 70%); box-shadow: 0 0 0 2px color-mix(in srgb, var(--tc) 60%, transparent); }
+.mastery-txt { display: grid; gap: 4px; min-width: 0; }
+.mastery-txt b { font-family: var(--k-face); font-weight: 400; font-size: 17px; }
+.mastery-txt b small { font-size: 13px; color: var(--text-2); }
+.mastery-txt > small { font-size: 12px; color: var(--text-2); }
+.mastery-pips { display: flex; gap: 3px; }
+.mastery-pips i { flex: 1; max-width: 22px; height: 6px; border-radius: 3px; background: var(--well); box-shadow: inset 0 0 0 1px var(--hair); }
+.mastery-pips i.on { background: var(--tc); box-shadow: 0 0 6px color-mix(in srgb, var(--tc) 60%, transparent); }
+.mastery .k-btn { min-height: 44px; padding: 4px 14px 8px; font-size: 16px; }
+@media (max-width: 520px) { .mastery { grid-template-columns: auto 1fr; } .mastery .k-btn { grid-column: 1 / -1; } }
+
+/* Strong's kit: seven pieces in a row, dark until held */
+.kit .k-label { display: block; margin-bottom: var(--s-2); }
+.kitrow { gap: var(--s-1); }
+.gear { padding: var(--s-1) 2px; background: none; border: 0; box-shadow: none; }
+.gear img { padding: 6px; box-sizing: content-box; border-radius: 50%; background: var(--surface-1); }
+.gear:not(.on) img { filter: brightness(0) opacity(0.35); }
+.gear.on img { background: color-mix(in srgb, var(--tone-gold) 20%, transparent); box-shadow: 0 0 0 1px var(--tone-gold); }
+
+/* the egg warming, under the Rare shelf */
+.eggrow { background: none; border: 0; border-top: 1px solid var(--hair); border-radius: 0; padding: var(--s-3) 0 0; }
+
+/* where everything comes from: a plain list */
+.earn { gap: var(--s-3); }
+.earn li { font-size: 14px; color: var(--text-2); }

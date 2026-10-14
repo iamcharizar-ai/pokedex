@@ -71,3 +71,35 @@
   --ease-in: cubic-bezier(0.7, 0, 0.84, 0.3);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 }
+
+/* ── the look after the second overhaul (UI-REVIEW.md): content stands on the
+   page, only what you press is an object. A night ground with light pooled at
+   the top, soft surfaces instead of outlined boxes, hairlines instead of
+   borders, and a glow in a section's colour where something wants attention. */
+:root {
+  --ground: #11163a;
+  --ground-lo: #0b0f28;
+  --ground-hi: #24306a;
+  --glass: rgba(17, 22, 54, 0.78);
+  --surface-1: rgba(255, 255, 255, 0.04);
+  --surface-2: rgba(255, 255, 255, 0.075);
+  --surface-3: rgba(255, 255, 255, 0.12);
+  --hair: rgba(255, 255, 255, 0.09);
+  --hair-hi: rgba(255, 255, 255, 0.18);
+  --well: rgba(4, 7, 22, 0.55);
+  --text: #f4f6ff;
+  --text-2: #aab6e6;
+  --text-3: #7d88b8;
+  --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --shadow-float: 0 18px 40px rgba(0, 0, 0, 0.5);
+  --gold-glow: rgba(255, 200, 40, 0.45);
+  --purple-glow: rgba(150, 110, 255, 0.5);
+  --r-4: 24px;
+  --gutter: 16px;
+  /* a section's colour: its mark, its glow */
+  --tone-gold: #ffc93a;  --tone-blue: #5aa8ff;  --tone-green: #45d483;
+  --tone-red: #ff5a64;   --tone-purple: #a98bff; --tone-dark: #8a95c4;
+  /* the habits' own colours, the same everywhere a kind of work is drawn */
+  --tag-code: #5aa8ff;  --tag-fitness: #ff5a64;  --tag-guitar: #ff9a3c;
+  --tag-arbor: #45d483; --tag-sleep: #a98bff;    --tag-routine: #ffc93a;
+}

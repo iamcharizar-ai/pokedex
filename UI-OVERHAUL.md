@@ -1,5 +1,7 @@
 # A complete UI overhaul: the plan
 
+> **14 Oct 2026: the look was rebuilt after this plan.** Phases 0 to 7 fixed the structure; UI-REVIEW.md is the review of the look that followed (every section a framed box, no hero, the Forge as a list) and the rebuild: sections that stand on the page, a hero on each tab, the Forge as a ritual, a shop of shelves.
+
 Written 13 Oct 2026, revised 14 Oct after your answers. **All eight phases (0 to 7) are built.** It comes from reading the Pokedex end to end (about 1,370 lines of CSS in five files, a 1,070-line `App.tsx`, five tabs) and from the motion study.
 
 ## 0. Where this stands

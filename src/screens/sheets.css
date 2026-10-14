@@ -1,0 +1,57 @@
+/* SHEETS AND WINDOWS after the second overhaul (UI-REVIEW.md): the leader's card,
+   the boss fight, Collect, a Pokemon's page and the help window, on the same dark
+   glass as the page. Lists are rows; only what you press is an object. */
+
+/* the leader's card: the scene's HP label, readable on the dark */
+.sheet .hp-row b, .sec .hp-row b { color: var(--text-2); }
+.sheet .hp-sub, .sec .hp-sub { color: var(--text-2); font-size: 13px; }
+.sheet .weak, .sec .weak { color: var(--text-2); }
+.sheet .power .chip, .sec .power .chip { height: 24px; display: inline-flex; align-items: center; margin: 0; padding: 0 9px; color: var(--text); background: var(--surface-3); border: 0; border-radius: 99px; }
+.backing { border-top: 1px solid var(--hair); }
+
+/* the boss: the tasks as rows, a hairline between */
+.boss-stage { border-radius: 50%; }
+.boss-tasks { gap: 0; margin: 0; }
+.boss-tasks li { padding: var(--s-3) 0; background: none; border: 0; border-bottom: 1px solid var(--hair); border-radius: 0; }
+.boss-tasks li.done { background: none; }
+.boss-tasks li.done b { color: var(--tone-green); }
+.boss-task b { font-weight: 600; }
+.boss-task small { color: var(--text-2); opacity: 1; }
+.boss-task .k-bar { height: 14px; border-width: 1px; background: var(--well); box-shadow: none; }
+.boss-task .k-bar > span { font-size: 10px; -webkit-text-stroke: 2px var(--k-edge); }
+.boss-throws .actions { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+
+/* Collect: each reward a row you tap, its colour a thin edge and a glow behind the icon */
+.claim-chip { --c: var(--tone-gold); gap: var(--s-3); min-height: 60px; padding: var(--s-2) var(--s-3); color: var(--text); background: linear-gradient(90deg, color-mix(in srgb, var(--c) 16%, transparent), var(--surface-1) 70%); border: 1px solid color-mix(in srgb, var(--c) 35%, var(--hair)); border-radius: var(--r-2); box-shadow: none; }
+.claim-chip[data-pocket='gems'] { --c: var(--tone-green); background: linear-gradient(90deg, color-mix(in srgb, var(--c) 16%, transparent), var(--surface-1) 70%); }
+.claim-chip[data-pocket='bag'] { --c: var(--tone-blue); background: linear-gradient(90deg, color-mix(in srgb, var(--c) 16%, transparent), var(--surface-1) 70%); }
+.claim-chip:hover { border-color: var(--c); }
+.claim-chip:active { transform: scale(0.98); box-shadow: none; }
+.claim-chip.breathe { animation: none; }
+.claim-ico { min-width: 44px; justify-content: center; filter: drop-shadow(0 0 8px color-mix(in srgb, var(--c) 60%, transparent)); }
+.claim-txt b { font-family: var(--k-face); font-weight: 400; font-size: 16px; }
+.claim-txt small { color: var(--text-2); opacity: 1; font-size: 12px; }
+.claim-chip::after { content: 'Collect'; margin-left: auto; padding: 4px 12px; font-family: var(--k-face); font-size: 13px; color: var(--k-edge); background: var(--c); border-radius: 99px; }
+
+/* a Pokemon's page: a small shadow under it, not a disc */
+.mp-art { background: radial-gradient(ellipse 70px 12px at 50% 86%, rgba(0, 0, 0, 0.4), transparent), radial-gradient(circle at 50% 50%, rgba(90, 168, 255, 0.35), transparent 62%); }
+.mp-art.mega { background: radial-gradient(ellipse 70px 12px at 50% 86%, rgba(0, 0, 0, 0.4), transparent), radial-gradient(circle at 50% 50%, rgba(169, 139, 255, 0.55), transparent 62%); }
+
+/* the help window: the rules as a list down a dark page, each with its picture at the left */
+.helpbody .k-panel { padding: 0; background: linear-gradient(#222b5c, #161c42 200px); border: 1px solid var(--hair-hi); border-radius: var(--r-4); box-shadow: var(--shadow-float); }
+.helpbody .k-panel-b { padding: var(--s-5) var(--s-4); background: none; border: 0; box-shadow: none; }
+.helpbody .k-panel-b > h2 { -webkit-text-stroke: 0; text-shadow: 0 3px 0 rgba(0, 0, 0, 0.35); }
+.rules { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 0 var(--s-5); }
+.rule { grid-template-columns: 96px 1fr; grid-template-rows: auto 1fr; column-gap: var(--s-3); padding: var(--s-3) 0; background: none; border: 0; border-bottom: 1px solid var(--hair); border-radius: 0; box-shadow: none; }
+.rule-pic { grid-row: 1 / 3; justify-content: flex-start; height: auto; flex-wrap: wrap; gap: 3px; transform: scale(0.8); transform-origin: 0 50%; }
+.rule b { align-self: end; color: var(--c); }
+.rule p { color: var(--text-2); }
+
+/* the news window: the same glass, the older news as rows */
+.rc-win { padding: 0; background: linear-gradient(#222b5c, #161c42 220px); border: 1px solid var(--hair-hi); border-radius: var(--r-4); box-shadow: var(--shadow-float); }
+.rc-body { padding: var(--s-5) var(--s-4) var(--s-3); background: none; border: 0; box-shadow: none; }
+.rc-win > .go { margin-top: var(--s-2); }
+.rc-note { padding-bottom: var(--s-4); }
+.rc-list { gap: 0; }
+.rc-list li { padding: var(--s-2) 0; background: none; border: 0; border-bottom: 1px solid var(--hair); border-radius: 0; }
+.rc-list li.more { border: 0; padding-top: var(--s-3); }

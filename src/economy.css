@@ -4,19 +4,12 @@
 .pix { image-rendering: pixelated; }
 .ball:not(.pix) { image-rendering: auto; }
 img.itemimg, img.pix, img.ball, img.keystone { flex: none; vertical-align: middle; max-width: none; }
-.mon-pips { display: inline-flex; gap: 1px; align-items: center; }
-.mon-pips img { opacity: 1; }
-.mon-pips img[src$='empty.png'] { opacity: 0.45; }
 
 /* the window headers for two more tones */
-.win.t-red .win-h { background: var(--k-red); }
-.win.t-purple .win-h { background: var(--k-purple); }
 
 /* six tabs */
 
 /* shelves */
-.good.sold { opacity: 0.6; }
-.good .owned { display: inline-block; margin-top: 6px; font-family: var(--k-face); font-size: 16px; color: var(--k-green); }
 .q-pay { display: inline-flex; gap: 8px; min-width: 58px; justify-content: flex-end; }
 .quest.done .q-pay { opacity: 0.55; }
 .tmgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 8px; margin-top: 8px; }
@@ -119,9 +112,6 @@ img.itemimg, img.pix, img.ball, img.keystone { flex: none; vertical-align: middl
 
 .shopchips { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 8px; margin: 0 -2px; scrollbar-width: none; }
 .shopchips .k-btn { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 4px 12px 8px; font-size: 15px; white-space: nowrap; }
-.trainrow { display: flex; align-items: center; gap: 10px; padding: 6px 4px 12px; }
-.trainrow > span { flex: 1; display: grid; line-height: 1.1; font-family: var(--k-face); }
-.trainrow small { font-size: 13px; opacity: 0.8; font-family: inherit; }
 
 /* the journey: the road through the leagues, and who is on it */
 

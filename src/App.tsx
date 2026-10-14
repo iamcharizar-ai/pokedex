@@ -6,7 +6,7 @@ import {
   ADVANTAGE_MULT, GEMS, SEASON_STEP, BALL_MULT, BALL_NAME, GAME_START, GRADUATES_PER_REGION, LEADER_HP, MOMENTUM_WINDOW,
   CLAIM_AUTO, EGG_STEPS, bondLevel, HEART_LEVELS, LEGENDARY_EVERY_WILD, PAY_STREAK, REGIONS, REPEL_DAYS, SHINY_ODDS, SHINY_ODDS_WORN, SLEEP_AFTER, SLIP, STAKES_FROM, STEPS_GOAL, TEAM_SIZE, WILD_STAY, TIER_XP, WEAK_MULT, evolveAt, graduateAt, xpForLevel,
 } from '../core/rules.ts'
-import { EGG_STEPS_OLD_CHARM, BOND_PARTY, BOND_STEP, MASTERY_MAX, MASTERY_STEP, SELL, itemName as econName, masteryCost } from '../core/economy.ts'
+import { MARKS, EGG_STEPS_OLD_CHARM, BOND_PARTY, BOND_STEP, MASTERY_MAX, MASTERY_STEP, SELL, itemName as econName, masteryCost } from '../core/economy.ts'
 import { TEAM_BONUS, TEAM_NATURE, type Tag as TagKind } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
 import { Ball, KeyStone } from './Ball.tsx'
@@ -21,6 +21,7 @@ import { BossLog, BossTile } from './Boss.tsx'
 import { Calendar } from './screens/Calendar.tsx'
 import { HpBar } from './screens/HpBar.tsx'
 import { hpTone } from './screens/hp.ts'
+import { typeColor } from './screens/types.ts'
 import { Sheet } from './screens/Sheet.tsx'
 import { Tour } from './screens/Tour.tsx'
 import { TOUR_KEY, shouldTour } from './screens/tour.ts'
@@ -46,25 +47,6 @@ export const plural = (n: number, one: string, many = one + 's') => `${n.toLocal
 const dexNo = (n: number) => String(n).padStart(3, '0')
 const itemName = (item: string): string => econName(item)
 const RARITY: Record<string, string> = { C: 'Common', U: 'Uncommon', R: 'Rare', L: 'Legendary' }
-/** How far along its line a form is, as the card frame shows it: 1 bronze, 2 silver, 3 gold (it evolves no further). */
-const frameOf = (form: string): 1 | 2 | 3 => (SPECIES[form]?.e?.length ? (SPECIES[form].s >= 2 ? 2 : 1) : 3)
-export function MonCard({ m, form = m.form, size, level, bar, note }: { m: Mon; form?: string; size: number; level?: number; bar?: ReactNode; note?: string }) {
-  const stage = frameOf(m.form)
-  return (
-    <span className={`mon ${m.megas?.length ? 'mega' : ''}`} style={{ width: size + 16 }}>
-      <span className="mon-art" style={{ height: size + 6 }}>
-        <img src={still(form, m.shiny)} alt={nameOf(form)} width={size} height={size} className="sprite" loading="lazy" decoding="async" />
-        {m.ball && <Ball ball={m.ball} size={Math.max(14, Math.round(size / 4.5))} className="mon-ball" />}
-        {m.nature?.up && <span className="mon-gem" data-tag={m.nature.up} title={`${m.nature.name}: raised most on ${TAG_NAME[m.nature.up]}`} />}
-      </span>
-      <span className="mon-pips" title={stage === 3 ? 'Fully evolved' : `Stage ${stage}`} aria-hidden>{[1, 2, 3].map((n) => <img key={n} src={`/sprites/ui/party-${n <= stage ? 'on' : 'empty'}.png`} width={14} height={14} className="pix" alt="" />)}</span>
-      {level !== undefined && <b className="mon-lv">Lv {level}</b>}
-      {bar}
-      {note && <small className="mon-note">{note}</small>}
-    </span>
-  )
-}
-
 /** Badges won so far, across every league. */
 const badgesWon = (game: Game): number =>
   LEAGUES.reduce((n, l, i) => n + (i < game.league.index ? l.gyms.length : i === game.league.index ? Math.min(game.league.slot, l.gyms.length) : 0), 0)
@@ -73,21 +55,23 @@ function Sprite({ form, shiny, size, className = '' }: { form: string; shiny?: b
   return <img src={spritePath(form, shiny)} alt="" width={size} height={size} className={`sprite ${className}`} style={{ width: size, height: size }} />
 }
 
-/** A game window: coloured title strip over a cream body. */
-export function Win({ title, aside, tone = '', fold, children }: { title: string; aside?: ReactNode; tone?: '' | 'blue' | 'green' | 'gold' | 'dark' | 'red' | 'purple'; fold?: boolean; children: ReactNode }) {
+export type Tone = '' | 'blue' | 'green' | 'gold' | 'dark' | 'red' | 'purple'
+/** A section of a tab: a heading on the page (a coloured mark, the title, a note on the right) and its content under it.
+    No frame: the content stands on the page, and only the things you press look like objects. */
+export function Win({ title, aside, tone = '', fold, children }: { title: string; aside?: ReactNode; tone?: Tone; fold?: boolean; children: ReactNode }) {
   // `fold`: shut until tapped, for a store that grows (the Bag, the Box) so the tab around it stays short
   if (fold) {
     return (
-      <details className={`win folded ${tone ? `t-${tone}` : ''}`}>
-        <summary className="win-h"><h2>{title}</h2>{aside !== undefined && <span className="aside">{aside}</span>}<i className="chev" aria-hidden>▾</i></summary>
-        <div className="win-b">{children}</div>
+      <details className="sec drawer" data-tone={tone || 'dark'}>
+        <summary className="sec-h"><i className="sec-mark" aria-hidden /><h2>{title}</h2>{aside !== undefined && <span className="sec-aside">{aside}</span>}<i className="chev" aria-hidden /></summary>
+        <div className="sec-b">{children}</div>
       </details>
     )
   }
   return (
-    <section className={`win ${tone ? `t-${tone}` : ''}`}>
-      <header className="win-h"><h2>{title}</h2>{aside !== undefined && <span className="aside">{aside}</span>}</header>
-      <div className="win-b">{children}</div>
+    <section className="sec" data-tone={tone || 'dark'}>
+      <header className="sec-h"><i className="sec-mark" aria-hidden /><h2>{title}</h2>{aside !== undefined && <span className="sec-aside">{aside}</span>}</header>
+      <div className="sec-b">{children}</div>
     </section>
   )
 }
@@ -199,6 +183,10 @@ function Scene({ game }: { game: Game }) {
   )
 }
 
+/** A pillar's picture: the mark its kind of work pays, or the journal for one with no mark. */
+const pillarIcon = (tag: string): string => (MARKS as Record<string, { icon: string }>)[tag]?.icon ?? 'journal'
+
+/** Under the scene: what the partner says about today, how close a perfect day is, and the pillars as rings that fill. */
 function Talk({ game, pillars }: { game: Game; pillars: HabitFact[] }) {
   const { today, wild } = game
   const me = nameOf(game.display)
@@ -206,106 +194,126 @@ function Talk({ game, pillars }: { game: Game; pillars: HabitFact[] }) {
   const say: ReactNode = wild?.caught ? <>Gotcha! {nameOf(wild.form)} was caught!</>
     : game.fled ? <>The wild {nameOf(game.fled)} got away. A new one is here.</>
     : game.asleep ? <>{me} is dozing.</>
-    : today.xp > 0 ? <>{me} gained {today.xp} XP today!</>
+    : today.xp > 0 ? <>{me} gained <em>{today.xp} XP</em> today!</>
     : <>What will {me} do today?</>
-  // the habits still open, as pips: all of them filled is a perfect day
-  const sub: ReactNode = today.total > 0 && (
-    <span className="pips" title={left ? `${left} left for a perfect day, which catches the wild Pokemon on the spot` : 'A perfect day'}>
-      {Array.from({ length: Math.min(today.total, 40) }, (_, i) => <i key={i} className={i < Math.round((today.done / today.total) * Math.min(today.total, 40)) ? 'on' : ''} />)}
-      <b>{left ? `${left} to a perfect day` : 'Perfect day!'}</b>
-    </span>
-  )
+  const share = today.total > 0 ? today.done / today.total : 0
   return (
-    <div className="talk">
-      <div className="say" aria-live="polite"><span>{say}</span><small>{sub}</small></div>
-      <div className="moves">
+    <section className="dayboard" aria-label="Today's habits">
+      <div className="say2" aria-live="polite">
+        <p>{say}</p>
+        {today.total > 0 && (
+          <div className="perfect" title={left ? `${left} left for a perfect day, which catches the wild Pokemon on the spot` : 'A perfect day'}>
+            <span className="perfect-track" role="progressbar" aria-valuemin={0} aria-valuemax={today.total} aria-valuenow={today.done} aria-label="Habits ticked today"><i style={{ width: `${share * 100}%` }} /></span>
+            <b>{left ? <>{today.done} of {today.total} · <span>{left} to a perfect day</span></> : 'Perfect day!'}</b>
+          </div>
+        )}
+      </div>
+      <ul className="pillars">
         {pillars.map((h) => {
           const st = stateOf(h)
           return (
-            <div key={h.id} className={`move ${st}`} data-tag={h.tag}>
-              <span className="mv-name">{label(h)}</span>
-              <span className="mv-meta"><span>{st === 'done' ? 'Done' : st === 'part' ? `${Math.round(h.frac * 100)}% done` : (TAG_NAME[h.tag] ?? 'Pillar')}</span><b>{Math.round(h.worth * h.frac)}/{h.worth}</b></span>
-              <i className="mv-bar" style={{ width: `${h.frac * 100}%` }} />
-            </div>
+            <li key={h.id} className={`pillar ${st}`} data-tag={h.tag} style={{ ['--p' as string]: h.frac }} title={`${label(h)}: ${Math.round(h.worth * h.frac)} of ${h.worth} XP`}>
+              <span className="pillar-ring"><ItemIcon id={pillarIcon(h.tag)} size={30} />{st === 'done' && <i className="pillar-tick" aria-hidden />}</span>
+              <b>{label(h)}</b>
+              <small>{st === 'done' ? 'Done' : st === 'part' ? `${Math.round(h.frac * 100)}%` : `${h.worth} XP`}</small>
+            </li>
           )
         })}
-        {pillars.length === 0 && <p className="muted" style={{ gridColumn: '1 / -1' }}>No pillar habits are on today's list.</p>}
-        <a className="go" href={LIFEOS_URL} target="_blank" rel="noreferrer">Tick habits in Life OS ↗</a>
-      </div>
-    </div>
+        {pillars.length === 0 && <li className="muted">No pillar habits are on today's list.</li>}
+      </ul>
+      <a className="lifeos-link" href={LIFEOS_URL} target="_blank" rel="noreferrer">Tick habits in Life OS <span aria-hidden>↗</span></a>
+    </section>
   )
 }
 
-/** The week's momentum as seven dots and the bonus they make: three days with two pillars is x1.2, five x1.35, seven x1.5. */
-function MomentumStrip({ game }: { game: Game }) {
+/** The pace of things: the week's momentum as seven dots and the bonus they make (3 days with two pillars x1.2, 5 x1.35, 7 x1.5), and how far the partner is from its next change. */
+function Pace({ game }: { game: Game }) {
   const { momentum } = game
   const prev = game.days.slice(-(MOMENTUM_WINDOW + 1), -1)
   const missing = MOMENTUM_WINDOW - prev.length
+  const toLevel = Math.max(0, Math.ceil(xpForLevel(game.next.level) - game.partner.xp))
   return (
-    <div className="momentum" title="Days with two pillars in the last seven: 3 make XP x1.2, 5 x1.35, 7 x1.5. It slides back a day at a time, never resets.">
-      <span className="k-label">Momentum</span>
-      <span className="week" aria-label={`${momentum.days} of the last 7 days counted`}>
-        {Array.from({ length: MOMENTUM_WINDOW }, (_, i) => {
-          const d = prev[i - missing]
-          return (
-            <span key={i} className="d" title={d ? `${fmtDay(d.day)}: ${d.pillars} of ${d.pillarTotal} pillars` : 'before the game began'}>
-              <span className={`dot ${d?.counts ? 'on' : d ? 'off' : 'none'}`} />
-              {d ? weekday(d.day) : '·'}
-            </span>
-          )
-        })}
-        <span className="d today" title="Today"><span className={`dot ${game.today.counts ? 'on' : ''}`} />Today</span>
-      </span>
-      <b className="mult">×{momentum.mult}</b>
+    <div className="pace">
+      <div className="pace-cell" title="Days with two pillars in the last seven: 3 make XP x1.2, 5 x1.35, 7 x1.5. It slides back a day at a time, never resets.">
+        <span className="k-label">Momentum</span>
+        <span className="pace-week" aria-label={`${momentum.days} of the last 7 days counted`}>
+          {Array.from({ length: MOMENTUM_WINDOW }, (_, i) => {
+            const d = prev[i - missing]
+            return <i key={i} className={d?.counts ? 'on' : d ? 'off' : 'none'} title={d ? `${fmtDay(d.day)}: ${d.pillars} of ${d.pillarTotal} pillars` : 'before the game began'} />
+          })}
+          <i className={`now ${game.today.counts ? 'on' : ''}`} title="Today" />
+        </span>
+        <b className="pace-big">×{momentum.mult}</b>
+      </div>
+      <div className="pace-cell">
+        <span className="k-label">{game.next.what === 'evolve' ? 'Evolves' : 'Fully trained'} at Lv {game.next.level}</span>
+        <b className="pace-big">{toLevel.toLocaleString('en-IN')}<small> XP to go</small></b>
+      </div>
     </div>
   )
 }
 
-function Summary({ game }: { game: Game }) {
+/** The partner, as the Party tab's hero: on a plinth against its type's colour, with its level, its line ahead, and the bond. Tap it for its page. */
+function Summary({ game, onOpen }: { game: Game; onOpen?: () => void }) {
   const { partner } = game
   const rec = SPECIES[partner.form]
   const toGo = Math.max(0, xpForLevel(game.next.level) - Math.round(partner.xp))
+  const hearts = (partner.together ?? 0) + (partner.fed ?? 0)
+  const bond = bondLevel(hearts)
+  const nextAt = HEART_LEVELS[bond]
+  const berry = ['oran-berry', 'sitrus-berry'].find((b) => (game.inv[b] ?? 0) > 0)
+  // what it may become: by what you have done most, when that is known; else every form it can take
+  const ahead = game.lean.length > 0 ? game.lean.slice(0, 3).map((x) => ({ form: x.form, note: `${x.pct}% ${TAG_NAME[x.tag] ?? x.tag}` })) : (rec.e ?? []).slice(0, 3).map((f) => ({ form: f, note: '' }))
   return (
-    <Win title="Summary" tone="blue" aside={`No. ${dexNo(rec.d)}`}>
-      <div className="sumrow">
-      <MonCard m={partner} form={game.display} size={120} level={game.level} bar={<KBar value={Math.round(game.into)} max={game.need} ready={toGo === 0} />} />
-      <dl className="facts">
-        <dt>Met</dt><dd>{partner.origin === 'starter' ? 'Starter' : partner.origin === 'egg' ? 'Hatched from an egg' : 'Caught'}, {fmtDay(partner.from)}</dd>
-        <dt>Type</dt><dd>{rec.t}{rec.t2 ? ` / ${rec.t2}` : ''}</dd>
-        <dt>Next</dt><dd>{game.next.what === 'evolve' ? 'Evolves' : 'Fully trained'} at level {game.next.level} <span className="muted">({toGo.toLocaleString('en-IN')} XP to go)</span></dd>
-        {game.lean.length > 0 && (
-          <>
-            <dt>Leaning</dt>
-            <dd className="lean">
-              {game.lean.slice(0, 4).map((x) => (
-                <span key={x.form} title={`${TAG_NAME[x.tag] ?? x.tag}: what you have done most while raising it`}>
-                  <img src={still(x.form, partner.shiny)} alt="" width={36} height={36} className={`sprite ${game.dex[x.form] ? '' : 'unseen'}`} />
-                  <b>{x.pct}%</b><small>{TAG_NAME[x.tag] ?? x.tag}</small>
-                </span>
-              ))}
-            </dd>
-          </>
-        )}
-        <dt>Line</dt>
-        <dd className="path">
-          {partner.path.map((f, i) => (
-            <span key={f} className="path-step">{i > 0 && <span className="arrow">▸</span>}<img src={still(f, partner.shiny)} alt={nameOf(f)} title={nameOf(f)} width={44} height={44} className="sprite" /></span>
-          ))}
-        </dd>
-        <dt>Bond</dt>
-        <dd>
-          <span className={`ribbon ${(partner.together ?? 0) + (partner.fed ?? 0) ? 'on' : ''}`} title={`A heart for each day it was your partner and you did a pillar, and one for each berry. At ${HEART_LEVELS.join(', ')} hearts the bond steps up: +${Math.round(BOND_STEP * 100)}% to every strike each. It only ever counts up.`}>
-            {(partner.together ?? 0) + (partner.fed ?? 0)} ♥ · bond {bondLevel((partner.together ?? 0) + (partner.fed ?? 0))}/{HEART_LEVELS.length}
-          </span>{' '}
-          <span className="muted">{plural(partner.together ?? 0, 'day')} together{(partner.fed ?? 0) > 0 ? `, ${plural(partner.fed ?? 0, 'berry heart')}` : ''}</span>
-        </dd>
-      </dl>
-      </div>
-      {game.lean.length > 0 && <p className="muted">It evolves by itself at level {game.next.level}, into whichever your habits lean to most by then.</p>}
+    <>
+      <section className="hero" style={{ ['--tc' as string]: typeColor(rec.t) }} aria-label="Your partner">
+        <button type="button" className="hero-stage" onClick={onOpen} aria-label={`${nameOf(game.display)}: open its page`}>
+          <span className="hero-glow" aria-hidden />
+          <span className="hero-plinth" aria-hidden />
+          <img src={spritePath(game.display, partner.shiny)} alt="" className="sprite" />
+        </button>
+        <div className="hero-info">
+          <span className="k-label">Your partner · No. {dexNo(rec.d)}</span>
+          <h2 className="hero-name">
+            {nameOf(game.display)}
+            {partner.shiny && <span className="tagchip shiny">Shiny</span>}
+            {game.aura === 'mega' && <span className="tagchip mega">Mega</span>}
+            {game.aura === 'gmax' && <span className="tagchip gmax">G-Max</span>}
+          </h2>
+          <div className="hero-types">
+            {[rec.t, rec.t2].filter(Boolean).map((t) => <span key={t} className="typechip" style={{ ['--tc' as string]: typeColor(t) }}><img src={`/sprites/types/${t}.png`} alt="" width={14} height={14} />{t}</span>)}
+            <span className="hero-met">{partner.origin === 'starter' ? 'Starter' : partner.origin === 'egg' ? 'Hatched' : 'Caught'} {fmtDay(partner.from)}</span>
+          </div>
+          <div className="hero-lv">
+            <b>Lv {game.level}</b>
+            <KBar value={Math.round(game.into)} max={game.need} ready={toGo === 0} label={`${Math.round(game.into)} / ${game.need}`} />
+          </div>
+          <div className="hero-line" aria-label="Its line">
+            {partner.path.map((f) => <img key={f} src={still(f, partner.shiny)} alt={nameOf(f)} title={nameOf(f)} width={40} height={40} className={`sprite ${f === partner.form ? 'now' : 'past'}`} />)}
+            {ahead.length > 0 && (
+              <>
+                <span className="hero-next">Lv {game.next.level}</span>
+                {ahead.map((x) => (
+                  <span key={x.form} className="hero-ahead" title={game.dex[x.form] ? nameOf(x.form) : 'Not seen yet'}>
+                    <img src={still(x.form, partner.shiny)} alt="" width={40} height={40} className={`sprite ${game.dex[x.form] ? '' : 'unseen'}`} />
+                    {x.note && <small>{x.note}</small>}
+                  </span>
+                ))}
+              </>
+            )}
+            {ahead.length === 0 && <span className="hero-next">Fully trained at Lv {game.next.level}</span>}
+          </div>
+          <div className="hero-bond" title={`A heart for each day it was your partner and you did a pillar, and one for each berry. At ${HEART_LEVELS.join(', ')} hearts the bond steps up: +${Math.round(BOND_STEP * 100)}% to every strike each. It only ever counts up.`}>
+            <span className="hero-hearts" aria-label={`Bond level ${bond} of ${HEART_LEVELS.length}`}>{HEART_LEVELS.map((_, i) => <img key={i} src="/sprites/items/heart-scale.png" width={22} height={22} alt="" className={`pix ${i < bond ? 'on' : ''}`} />)}</span>
+            <span className="hero-bondtxt"><b>{hearts} ♥</b>{nextAt ? ` · ${nextAt - hearts} to bond ${bond + 1}` : ' · full bond'}</span>
+            <button type="button" className="hero-feed" disabled={!berry} onClick={() => { useItem(berry!, '', 'feed'); play('feed') }} title={berry ? `Feed it: ${econName(berry)}` : 'No berries: the Mart and the Garden sell them'}><ItemIcon id={berry ?? 'oran-berry'} size={24} />Feed{berry ? <i>{game.inv[berry]}</i> : null}</button>
+          </div>
+        </div>
+      </section>
       {game.asleep && <p className="notice warn">Dozing after two days without a pillar. Finish one pillar to wake it. Nothing finished is lost{game.today.day >= STAKES_FROM ? '; a day with nothing ticked also costs what is still in progress (see How it works)' : `. From ${fmtDay(STAKES_FROM)} a day with nothing ticked also costs what is still in progress`}.</p>}
-      {game.aura === 'mega' && <p className="notice good">{partner.megas?.length ? 'Mega form: registered for good. Choose which form shows in the Bag.' : 'Mega form: full momentum and every pillar done today.'}</p>}
+      {game.aura === 'mega' && <p className="notice good">{partner.megas?.length ? 'Mega form: registered for good. Choose which form shows in Choices.' : 'Mega form: full momentum and every pillar done today.'}</p>}
       {game.aura === 'gmax' && <p className="notice gmax">Perfect day: Gigantamax for today.</p>}
-    </Win>
+    </>
   )
 }
 
@@ -394,32 +402,24 @@ function SlipNote({ game }: { game: Game }) {
   )
 }
 
-/** How far the partner is from its next change. The leader and the wild Pokemon have a tile and the scene. */
-function EvolveLine({ game }: { game: Game }) {
-  const toLevel = Math.max(0, Math.ceil(xpForLevel(game.next.level) - game.partner.xp))
-  return (
-    <p className="evolveline">
-      <b>{game.next.what === 'evolve' ? 'Evolves' : 'Fully trained'}</b> at level {game.next.level}: <span className="num">{toLevel.toLocaleString('en-IN')}</span> XP to go
-    </p>
-  )
-}
-
-/** The leader as a tile: who is up and how much HP they have left. Tap for the whole card. */
+/** The leader as a challenge card: who is up and how much HP they have left, against their type's colour. Tap for the whole card. */
 function LeaderTile({ game }: { game: Game }) {
   const [open, setOpen] = useState(false)
   const { league, today } = game
   const t = leaderOf(league.index, league.slot)
-  if (!t) return <div className="tile static"><span className="k-label">League</span><b>Every league is beaten</b></div>
+  if (!t) return <div className="duel static"><span className="duel-txt"><span className="k-label">League</span><b>Every league is beaten</b></span></div>
   const l = LEAGUES[league.index]
+  const role = isGym(league.index, league.slot) ? `Gym ${league.slot + 1}` : league.slot === lineup(l).length - 1 ? 'Champion' : 'Elite Four'
   return (
     <>
-      <button type="button" className="tile" onClick={() => setOpen(true)} aria-label={`${t.name}, ${Math.round(league.hp)} HP left. Open the leader card`}>
-        <span className="tile-top">
-          {t.sprite ? <img src={`/sprites/trainers/${t.sprite}.png`} alt="" width={44} height={44} className="sprite" /> : <span className="nopic" aria-hidden>?</span>}
-          <span className="tile-name"><span className="k-label">{l.name}</span><b>{t.name}</b></span>
+      <button type="button" className="duel" style={{ ['--tc' as string]: typeColor(t.type) }} onClick={() => setOpen(true)} aria-label={`${t.name}, ${Math.round(league.hp)} HP left. Open the leader card`}>
+        <span className="duel-art">{t.sprite ? <img src={`/sprites/trainers/${t.sprite}.png`} alt="" width={72} height={72} className="sprite" /> : <span className="nopic" aria-hidden>?</span>}</span>
+        <span className="duel-txt">
+          <span className="k-label">{l.name} · {role}</span>
+          <b>{t.name}</b>
+          <HpBar value={league.hp} max={league.max} />
+          <small>{league.waiting ? 'Waiting for the region' : today.strike > 0 ? <>Today <em>−{today.strike}</em></> : 'Weak to ' + (league.weak.map((w) => TAG_NAME[w] ?? w).join(' and ') || 'nothing')}</small>
         </span>
-        <HpBar value={league.hp} max={league.max} />
-        <small>{league.waiting ? 'Waiting for the region' : today.strike > 0 ? `Today −${today.strike}` : 'Weak to ' + (league.weak.map((w) => TAG_NAME[w] ?? w).join(' and ') || 'nothing')}</small>
       </button>
       {open && <Sheet title={`${l.name}: ${t.name}`} onClose={() => setOpen(false)}><LeaderCard game={game} /></Sheet>}
     </>
@@ -431,19 +431,26 @@ function PartnerTab({ game, facts, nights, onShop }: { game: Game; facts: DayFac
   const habits = facts[facts.length - 1]?.habits ?? []
   return (
     <div className="home daypage">
-      <Scene game={game} />
-      <FirstRun game={game} />
-      <SlipNote game={game} />
-      {game.warnings.map((w) => <p key={w} className="notice warn">{w}</p>)}
-      <Talk game={game} pillars={habits.filter((h) => h.pillar)} />
-      <MomentumStrip game={game} />
-      <EvolveLine game={game} />
-      <Actions game={game} onShop={onShop} />
-      <div className="tiles">
-        <LeaderTile game={game} />
-        <BossTile game={game} />
+      <div className="day-main">
+        <Scene game={game} />
+        <FirstRun game={game} />
+        <SlipNote game={game} />
+        {game.warnings.map((w) => <p key={w} className="notice warn">{w}</p>)}
+        <Talk game={game} pillars={habits.filter((h) => h.pillar)} />
       </div>
+      <div className="day-side">
+      <Pace game={game} />
+      <Win title="Throw and feed" tone="gold" aside={game.wild && !game.wild.caught ? `${nameOf(game.wild.form)} · ${game.wild.hp} HP` : undefined}>
+        <Actions game={game} onShop={onShop} />
+      </Win>
+      <Win title="Challenges" tone="red">
+        <div className="duels">
+          <LeaderTile game={game} />
+          <BossTile game={game} />
+        </div>
+      </Win>
       {game.sleep.state !== 'off' && <SleepWin game={game} nights={nights} />}
+      </div>
     </div>
   )
 }
@@ -533,7 +540,7 @@ function Choices({ game }: { game: Game }) {
 }
 
 // ── Pokedex ─────────────────────────────────────────────────────────────────
-type Show = 'all' | 'seen' | 'unseen'
+type Show = 'all' | 'own' | 'seen' | 'unseen'
 const regionOf = (id: string): number => SPECIES[SPECIES[id].b ?? '']?.g ?? SPECIES[id].g ?? 0
 
 /** What it was raised on, as its nature says it. */
@@ -541,6 +548,58 @@ const natureLine = (m: Mon): string =>
   !m.nature ? '' : m.nature.up && m.nature.down
     ? `${m.nature.name} nature: raised most on ${TAG_NAME[m.nature.up]}, least on ${TAG_NAME[m.nature.down]}.`
     : `${m.nature.name} nature: raised evenly.`
+
+/** A ring that fills with a share, a number in the middle. */
+function Ring({ value, size = 64, children }: { value: number; size?: number; children?: ReactNode }) {
+  const R = size / 2 - 4, C = 2 * Math.PI * R
+  return (
+    <span className="ring" style={{ width: size, height: size }}>
+      <svg viewBox={`0 0 ${size} ${size}`} aria-hidden>
+        <circle cx={size / 2} cy={size / 2} r={R} className="ring-track" />
+        <circle cx={size / 2} cy={size / 2} r={R} className="ring-fill" strokeDasharray={`${C * clamp01(value)} ${C}`} transform={`rotate(-90 ${size / 2} ${size / 2})`} />
+      </svg>
+      <span className="ring-in">{children}</span>
+    </span>
+  )
+}
+
+/** One Pokedex entry, opened: when you met it, what it became, its other forms. */
+function DexEntry({ game, id, owned, onClose }: { game: Game; id: string; owned: Map<string, Mon>; onClose: () => void }) {
+  const sel = SPECIES[id]
+  const e = game.dex[id]
+  const mon = owned.get(id)
+  const forms = [...(sel.m ?? []), ...(sel.gm ? [sel.gm] : [])]
+  return (
+    <Sheet title={e ? sel.n : `Number ${sel.d}`} onClose={onClose}>
+      <div className="entry" style={{ ['--tc' as string]: typeColor(e ? sel.t : null) }}>
+        <div className="entry-art">
+          {e ? <Sprite form={id} shiny={e.shiny} size={136} /> : <img src={still(id)} alt="" width={112} height={112} className="sprite unseen" />}
+        </div>
+        <span className="k-label">No. {dexNo(sel.d)}{e?.own ? ' · caught' : e ? ' · seen' : ''}</span>
+        <h2 className="entry-name">{e ? sel.n : '???'}{e?.shiny && <span className="tagchip">Shiny</span>}</h2>
+        {e && <div className="hero-types">{[sel.t, sel.t2].filter(Boolean).map((t) => <span key={t} className="typechip" style={{ ['--tc' as string]: typeColor(t) }}><img src={`/sprites/types/${t}.png`} alt="" width={14} height={14} />{t}</span>)}</div>}
+        <dl className="entry-facts">
+          <div><dt>First seen</dt><dd>{e ? fmtDay(e.first) : 'Not yet'}</dd></div>
+          <div><dt>Yours since</dt><dd>{e?.own ? fmtDay(e.own) : e ? 'Seen, not caught' : '—'}</dd></div>
+          {mon?.graduated && <div><dt>Fully trained</dt><dd>{fmtDay(mon.graduated)}, after {plural(mon.together ?? 0, 'day')}</dd></div>}
+          {mon?.ball && <div><dt>Caught in</dt><dd className="ballname"><Ball ball={mon.ball} size={16} />{aBall(mon.ball)}</dd></div>}
+        </dl>
+        {mon?.nature && <p className="muted">{natureLine(mon)}</p>}
+        {sel.e && sel.e.length > 1 && <p className="muted">Branches by what you do most while raising it: {sel.e.map((x, i) => `${game.dex[x] ? SPECIES[x].n : '???'} (${TAG_NAME[sel.bt?.[i] ?? ''] ?? '?'})`).join(', ')}.</p>}
+        {forms.length > 0 && (
+          <div className="entry-forms">
+            {forms.map((f) => (
+              <span key={f} title={game.dex[f] ? SPECIES[f].n : 'Not registered yet'}>
+                <img src={game.dex[f] ? spritePath(f) : still(f)} alt="" width={72} height={72} className={`sprite ${game.dex[f] ? '' : 'unseen'}`} />
+                <small>{SPECIES[f].n.includes('Mega') ? 'Mega' : 'Gigantamax'}</small>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    </Sheet>
+  )
+}
 
 function DexTab({ game }: { game: Game }) {
   const [region, setRegion] = useState(1)
@@ -564,93 +623,61 @@ function DexTab({ game }: { game: Game }) {
     return out
   }, [all, game.dex])
   const entries = useMemo(() => all.filter(([id]) => regionOf(id) === region).sort((a, b) => a[1].d - b[1].d), [all, region])
-  const shown = entries.filter(([id]) => (show === 'all' ? true : show === 'seen' ? game.dex[id] : !game.dex[id]))
+  const shown = entries.filter(([id]) => (show === 'all' ? true : show === 'own' ? game.dex[id]?.own : show === 'seen' ? game.dex[id] : !game.dex[id]))
   const locked = region > game.regions
   const raisedIn = entries.filter(([id]) => owned.get(id)?.graduated).length
-  const sel = open ? SPECIES[open] : null
-  const forms = sel ? [...(sel.m ?? []), ...(sel.gm ? [sel.gm] : [])] : []
   const seenTotal = Object.keys(game.dex).filter((id) => !SPECIES[id]?.f).length
+  const here = perRegion[region - 1]
   return (
-    <>
-      <div className="regions" role="tablist" aria-label="Region">
-        {REGIONS.map((name, i) => (
-          <button key={name} role="tab" aria-selected={region === i + 1} className={`${region === i + 1 ? 'on' : ''} ${i + 1 > game.regions ? 'lock' : ''}`} onClick={() => { setRegion(i + 1); setOpen(null) }}>
-            <span className="n">{name}</span>
-            <span className="c">{i + 1 > game.regions ? 'locked' : `${perRegion[i].own} / ${perRegion[i].total}`}</span>
-            <span className="meter"><i style={{ width: `${perRegion[i].total ? (perRegion[i].own / perRegion[i].total) * 100 : 0}%` }} /></span>
-          </button>
+    <div className="dexpage">
+      <div className="regions2" role="tablist" aria-label="Region" data-noswipe>
+        {REGIONS.map((name, i) => {
+          const r = perRegion[i], shut = i + 1 > game.regions
+          return (
+            <button key={name} role="tab" aria-selected={region === i + 1} className={`rg ${region === i + 1 ? 'on' : ''} ${shut ? 'lock' : ''}`} onClick={() => { setRegion(i + 1); setOpen(null) }}>
+              <b>{name}</b>
+              <small>{shut ? 'Locked' : `${r.own} / ${r.total}`}</small>
+              <i style={{ width: `${r.total ? (r.own / r.total) * 100 : 0}%` }} />
+            </button>
+          )
+        })}
+      </div>
+
+      <header className="dexhead">
+        <Ring value={here.total ? here.own / here.total : 0} size={84}><b>{here.total ? Math.round((here.own / here.total) * 100) : 0}%</b></Ring>
+        <div className="dexhead-txt">
+          <span className="k-label">Region {region} · {seenTotal} of {all.length} seen in all</span>
+          <h2>{REGIONS[region - 1]}</h2>
+          <p>{locked
+            ? `Opens when the ${REGIONS[region - 2]} league is beaten and ${(region - 1) * GRADUATES_PER_REGION} Pokemon are fully trained (you have ${game.graduates.length}).`
+            : <><b>{here.own}</b> caught · <b>{here.seen}</b> seen · <b>{raisedIn}</b> raised · {here.total} in all</>}</p>
+        </div>
+      </header>
+
+      <div className="seg2" role="group" aria-label="Show">
+        {([['all', 'All'], ['own', 'Caught'], ['seen', 'Seen'], ['unseen', 'Not seen']] as [Show, string][]).map(([id, text]) => (
+          <button key={id} type="button" aria-pressed={show === id} className={show === id ? 'on' : ''} onClick={() => setShow(id)}>{text}</button>
         ))}
       </div>
-      <Win title={REGIONS[region - 1]} aside={`${seenTotal} of ${all.length} seen in all`}>
-        <div className="toolbar">
-          <div className="seg" role="group" aria-label="Filter">
-            {([['all', 'All'], ['seen', 'Seen'], ['unseen', 'Not seen']] as [Show, string][]).map(([id, text]) => (
-              <button key={id} aria-pressed={show === id} className={show === id ? 'on' : ''} onClick={() => setShow(id)}>{text}</button>
-            ))}
-          </div>
-          <span className="muted">
-            {locked
-              ? `Locked until the ${REGIONS[region - 2]} league is beaten and ${(region - 1) * GRADUATES_PER_REGION} Pokemon are fully trained (you have ${game.graduates.length}, and ${plural(game.league.beaten, 'regional league')}).`
-              : `${perRegion[region - 1].seen} seen · ${raisedIn} raised.`}
-          </span>
-          {!locked && <span className="found">Found: {perRegion[region - 1].own}/{entries.length}</span>}
-        </div>
-        <div className="dexwrap">
-          <div className={`dex ${locked ? 'locked' : ''}`}>
-            {shown.map(([id, r]) => {
-              const e = game.dex[id]
-              const mon = owned.get(id)
-              return (
-                <button key={id} className={`cell ${e ? 'seen' : ''} ${e && !e.own ? 'met' : ''} ${e?.own ? 'own' : ''} ${(r.m ?? []).some((f) => game.dex[f]?.own) ? 'mg' : ''} ${open === id ? 'sel' : ''}`} onClick={() => setOpen(open === id ? null : id)} title={e ? r.n : `#${r.d}`} aria-pressed={open === id} aria-label={e ? `${r.n}, number ${r.d}` : `Not seen, number ${r.d}`}>
-                  <img src={still(id, e?.shiny)} alt="" loading="lazy" width={64} height={64} className={`sprite ${e ? '' : 'unseen'}`} />
-                  <span className="no">{dexNo(r.d)}</span>
-                  {mon?.graduated && <span className="star" title="Fully trained">★</span>}
-                  {e?.shiny && <span className="shine" title="Shiny">✦</span>}
-                </button>
-              )
-            })}
-            {shown.length === 0 && <p className="muted">Nothing here with this filter.</p>}
-          </div>
 
-          {sel && open ? (
-            <aside className="detail" aria-live="polite">
-              <div className="art">
-                {game.dex[open] ? <Sprite form={open} shiny={game.dex[open].shiny} size={120} /> : <img src={still(open)} alt="" width={96} height={96} className="sprite unseen" />}
-              </div>
-              <div>
-                <div className="eyebrow">No. {dexNo(sel.d)} · {sel.t}</div>
-                <h3>{game.dex[open] ? sel.n : '???'}</h3>
-                <p className="muted">
-                  {game.dex[open] ? `First seen ${fmtDay(game.dex[open].first)}.${game.dex[open].own ? ` Yours since ${fmtDay(game.dex[open].own!)}.` : ' Seen, not caught.'}` : 'Not seen yet.'}
-                  {owned.get(open)?.graduated ? ` Fully trained ${fmtDay(owned.get(open)!.graduated!)}, after ${plural(owned.get(open)!.together ?? 0, 'day')} together.` : ''}
-                </p>
-                {owned.get(open)?.nature && <p className="muted">{natureLine(owned.get(open)!)}</p>}
-                {owned.get(open)?.ball && <p className="muted ballname"><Ball ball={owned.get(open)!.ball!} size={16} />Caught in {aBall(owned.get(open)!.ball!)}.</p>}
-                {sel.e && sel.e.length > 1 && (
-                  <p className="muted">Branches by what you do most while raising it: {sel.e.map((e, i) => `${game.dex[e] ? SPECIES[e].n : '???'} (${TAG_NAME[sel.bt?.[i] ?? ''] ?? '?'})`).join(', ')}.</p>
-                )}
-                {forms.length > 0 && (
-                  <div className="forms">
-                    {forms.map((f) => (
-                      <span key={f} title={game.dex[f] ? SPECIES[f].n : 'Not registered yet'}>
-                        <img src={game.dex[f] ? spritePath(f) : still(f)} alt="" width={64} height={64} className={`sprite ${game.dex[f] ? '' : 'unseen'}`} />
-                        <small>{SPECIES[f].n.includes('Mega') ? 'Mega' : 'Gigantamax'}</small>
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <button className="close" onClick={() => setOpen(null)} aria-label="Close details">✕</button>
-            </aside>
-          ) : (
-            <aside className="detail empty">
-              <div className="art"><img src={still(entries[0]?.[0] ?? 'bulbasaur')} alt="" width={96} height={96} className="sprite unseen" /></div>
-              <p className="muted">Select a Pokemon to see when you first met it, how it evolves and its Mega or Gigantamax forms.</p>
-            </aside>
-          )}
-        </div>
-      </Win>
-    </>
+      <div className={`dex2 ${locked ? 'locked' : ''}`}>
+        {shown.map(([id, r]) => {
+          const e = game.dex[id]
+          const mon = owned.get(id)
+          return (
+            <button key={id} type="button" className={`dx ${e ? 'seen' : ''} ${e?.own ? 'own' : ''} ${(r.m ?? []).some((f) => game.dex[f]?.own) ? 'mg' : ''}`} onClick={() => setOpen(id)} title={e ? r.n : `#${r.d}`} aria-label={e ? `${r.n}, number ${r.d}${e.own ? ', caught' : ', seen'}` : `Not seen, number ${r.d}`}>
+              <img src={still(id, e?.shiny)} alt="" loading="lazy" decoding="async" width={56} height={56} className={`sprite ${e ? '' : 'unseen'}`} />
+              <span className="dx-no">{dexNo(r.d)}</span>
+              {e?.own && <i className="dx-ball" aria-hidden />}
+              {mon?.graduated && <i className="dx-star" title="Fully trained" aria-hidden>★</i>}
+              {e?.shiny && <i className="dx-shine" title="Shiny" aria-hidden>✦</i>}
+            </button>
+          )
+        })}
+        {shown.length === 0 && <p className="muted dex-none">Nothing here with this filter.</p>}
+      </div>
+      {open && <DexEntry game={game} id={open} owned={owned} onClose={() => setOpen(null)} />}
+    </div>
   )
 }
 
@@ -795,27 +822,35 @@ function TrainerTab({ game }: { game: Game }) {
     return acc
   }, [])
   return (
-    <>
-      <Road game={game} />
-      <SeasonRoad game={game} />
-      <Quests game={game} />
-      <Calendar game={game} />
-      <FeatsWin game={game} />
-      <BossLog game={game} />
-      {game.league.index > 0 && <BadgeCase game={game} />}
-      <HallOfFame game={game} />
-      <details className="logfold">
-        <summary><b>Adventure log</b><span>{plural(events.length, 'thing')}</span></summary>
-        {grouped.length === 0 ? <p className="muted">Nothing yet. Tick a pillar in Life OS and it shows up here.</p> : (
-          <ul className="log">
-            {grouped.flatMap(([day, ms]) => [
-              <li key={day} className="dayhead">{fmtDay(day)} · {weekday(day, 3)}</li>,
-              ...ms.map((m, i) => <li className="ev" key={`${day}-${i}`}><span className={`kind k-${m.kind}`}>{KIND[m.kind]}</span><span>{line(m)}</span></li>),
-            ])}
-          </ul>
-        )}
-      </details>
-    </>
+    <div className="journeypage">
+      <div className="journey-a">
+        <Road game={game} />
+        <SeasonRoad game={game} />
+        <Quests game={game} />
+      </div>
+      <div className="journey-b">
+        <Calendar game={game} />
+        <FeatsWin game={game} />
+        <BossLog game={game} />
+      </div>
+      <div className="journey-c">
+        {game.league.index > 0 && <BadgeCase game={game} />}
+        <HallOfFame game={game} />
+        <details className="sec drawer" data-tone="dark">
+          <summary className="sec-h"><i className="sec-mark" aria-hidden /><h2>Adventure log</h2><span className="sec-aside">{plural(events.length, 'thing')}</span><i className="chev" aria-hidden /></summary>
+          <div className="sec-b">
+            {grouped.length === 0 ? <p className="muted">Nothing yet. Tick a pillar in Life OS and it shows up here.</p> : (
+              <ul className="log">
+                {grouped.flatMap(([day, ms]) => [
+                  <li key={day} className="dayhead">{fmtDay(day)} · {weekday(day, 3)}</li>,
+                  ...ms.map((m, i) => <li className="ev" key={`${day}-${i}`}><span className={`kind k-${m.kind}`}>{KIND[m.kind]}</span><span>{line(m)}</span></li>),
+                ])}
+              </ul>
+            )}
+          </div>
+        </details>
+      </div>
+    </div>
   )
 }
 
@@ -1052,7 +1087,7 @@ export default function App() {
           </Win>
         )}
         {!loading && tab === 'partner' && <PartnerTab game={game} facts={view.facts} nights={view.nights} onShop={() => setTab('shop')} />}
-        {!loading && tab === 'team' && <TeamTab game={game} partnerCard={<Summary game={game} />} choices={<Choices game={game} />} onShop={() => setTab('shop')} />}
+        {!loading && tab === 'team' && <TeamTab game={game} partnerCard={(open: () => void) => <Summary game={game} onOpen={open} />} choices={<Choices game={game} />} onShop={() => setTab('shop')} />}
         {!loading && tab === 'shop' && <ShopTab game={game} />}
         {!loading && tab === 'dex' && <DexTab game={game} />}
         {!loading && tab === 'trainer' && <TrainerTab game={game} />}

@@ -43,7 +43,7 @@ export function FeatsWin({ game }: { game: Game }) {
         <p className="muted">Each one pays once. The big ones pay something no shop sells.</p>
         {next.length > 0 && (
           <>
-            <span className="k-label">Closest: the next one breathes</span>
+            <span className="k-label">Closest to done</span>
             <div className="k-road">
               {next.map((f, i) => {
                 const have = Math.min(f.n, game.counters[f.key] ?? 0)
@@ -61,13 +61,13 @@ export function FeatsWin({ game }: { game: Game }) {
             </div>
           </>
         )}
-        <details className="featgroup">
+        <details className="featgroup fold-row">
           <summary><b>All feats</b><span>{earned.size} / {FEATS.length}</span></summary>
           {ORDER.map((g) => {
             const list = FEATS.filter((f) => f.group === g)
             const n = list.filter((f) => earned.has(f.id)).length
             return (
-              <details key={g} className="featgroup">
+              <details key={g} className="featgroup fold-row">
                 <summary><b>{GROUP[g]}</b><span>{n} / {list.length}</span></summary>
                 <ul className="feats">{list.map((f) => <FeatRow key={f.id} f={f} game={game} />)}</ul>
               </details>

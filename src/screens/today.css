@@ -1,0 +1,147 @@
+/* TODAY after the second overhaul (UI-REVIEW.md). The scene is the hero; under it
+   the partner speaks, the pillars fill as rings, the pace is two numbers, the
+   items are a belt of sockets you press, and the challenges are portraits. */
+
+.daypage { display: grid; gap: var(--s-5); }
+.daypage > * + * { margin-top: 0; }
+
+/* ── the scene: a stage with rounded corners and a soft fall-off, not a slab ── */
+.scene { border: 0; border-radius: var(--r-4); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 22px 50px rgba(0, 0, 0, 0.45); }
+.hpbox { border-width: 2px; border-radius: 14px; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28), inset 0 2px 0 #fff; }
+
+/* ── the board under it: the partner's line, then the pillars ── */
+.dayboard { display: grid; gap: var(--s-4); }
+.say2 { position: relative; display: grid; gap: var(--s-2); padding: var(--s-3) var(--s-4) var(--s-4); }
+.say2 p { margin: 0; font-family: var(--k-face); font-size: 23px; line-height: 1.15; color: var(--text); text-shadow: 0 2px 0 rgba(0, 0, 0, 0.4); }
+.say2 em { font-style: normal; color: var(--tone-gold); }
+.perfect { display: grid; gap: 6px; }
+.perfect-track { position: relative; display: block; height: 8px; background: var(--well); border-radius: 99px; overflow: hidden; }
+.perfect-track i { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: linear-gradient(90deg, #ffd84a, #ffb52e); box-shadow: 0 0 10px var(--gold-glow); transition: width 0.7s var(--ease-out); }
+.perfect b { font-family: var(--k-face); font-weight: 400; font-size: 14px; color: var(--text); }
+.perfect b span { color: var(--text-2); }
+
+/* each pillar: a ring that fills in its own colour, the mark it pays in the middle */
+.pillars { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(76px, 1fr)); gap: var(--s-3); }
+.pillar { --c: var(--tone-blue); display: grid; justify-items: center; gap: 2px; text-align: center; min-width: 0; }
+.pillar[data-tag='code'] { --c: var(--tag-code); }
+.pillar[data-tag='fitness'] { --c: var(--tag-fitness); }
+.pillar[data-tag='guitar'] { --c: var(--tag-guitar); }
+.pillar[data-tag='arbor'] { --c: var(--tag-arbor); }
+.pillar[data-tag='sleep'] { --c: var(--tag-sleep); }
+.pillar[data-tag='routine'] { --c: var(--tag-routine); }
+.pillar-ring { position: relative; width: 64px; height: 64px; margin-bottom: 4px; display: grid; place-items: center; border-radius: 50%;
+  background: radial-gradient(circle, var(--ground) 0 25px, transparent 26px), conic-gradient(var(--c) calc(var(--p, 0) * 1turn), rgba(255, 255, 255, 0.09) 0); }
+.pillar-ring > img { position: relative; opacity: 0.55; filter: grayscale(0.6); transition: opacity var(--t-pop) linear, filter var(--t-pop) linear; }
+.pillar.part .pillar-ring > img { opacity: 0.9; filter: none; }
+.pillar.done .pillar-ring { background: radial-gradient(circle, color-mix(in srgb, var(--c) 30%, var(--ground)) 0 25px, transparent 26px), var(--c); box-shadow: 0 0 18px color-mix(in srgb, var(--c) 55%, transparent); }
+.pillar.done .pillar-ring > img { opacity: 1; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.35)); }
+.pillar-tick { position: absolute; right: -2px; bottom: -2px; width: 22px; height: 22px; border-radius: 50%; background: var(--c); border: 2px solid var(--ground); }
+.pillar-tick::after { content: ''; position: absolute; left: 7px; top: 3px; width: 5px; height: 10px; border: solid #fff; border-width: 0 2.5px 2.5px 0; transform: rotate(45deg); }
+.pillar b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--k-face); font-weight: 400; font-size: 15px; color: var(--text); }
+.pillar small { font-size: 12px; color: var(--text-2); }
+.pillar.done small { color: var(--c); font-weight: 700; }
+.lifeos-link { justify-self: center; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 var(--s-4); font-family: var(--k-face); font-size: 15px; color: var(--text); text-decoration: none; background: var(--surface-1); border: 1px solid var(--hair-hi); border-radius: 999px; transition: background var(--t-fade) linear; }
+.lifeos-link:hover { background: var(--surface-2); }
+
+/* ── the pace: two numbers side by side, a hairline between them ── */
+.pace { display: grid; grid-template-columns: 1.4fr 1fr; padding: var(--s-3) 0; border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); }
+.pace-cell { display: grid; align-content: center; gap: 6px; padding: 0 var(--s-3); min-width: 0; }
+.pace-cell + .pace-cell { border-left: 1px solid var(--hair); }
+.pace-cell:first-child { grid-template-columns: 1fr auto; grid-template-areas: 'l b' 'w b'; }
+.pace-cell:first-child .k-label { grid-area: l; }
+.pace-cell:first-child .pace-week { grid-area: w; }
+.pace-cell:first-child .pace-big { grid-area: b; align-self: center; }
+.pace-week { display: flex; align-items: center; gap: 5px; }
+.pace-week i { width: 12px; height: 12px; border-radius: 50%; background: var(--well); box-shadow: inset 0 0 0 1px var(--hair-hi); }
+.pace-week i.on { background: var(--tone-gold); box-shadow: 0 0 8px var(--gold-glow); }
+.pace-week i.off { background: rgba(255, 90, 100, 0.35); box-shadow: none; }
+.pace-week i.none { opacity: 0.3; }
+.pace-week i.now { width: 16px; height: 16px; margin-left: 3px; box-shadow: inset 0 0 0 2px #fff; }
+.pace-week i.now.on { box-shadow: 0 0 0 2px #fff, 0 0 10px var(--gold-glow); }
+.pace-big { font-family: var(--k-face); font-weight: 400; font-size: 26px; line-height: 1; color: var(--text); white-space: nowrap; }
+.pace-cell:first-child .pace-big { color: var(--tone-gold); }
+.pace-big small { font-size: 13px; color: var(--text-2); }
+
+/* ── the belt: every item you can use today, as a socket you press ── */
+.belt { position: relative; display: flex; gap: var(--s-3); overflow-x: auto; padding: 4px 2px var(--s-2); margin: 0 -2px; scrollbar-width: none; }
+.belt::-webkit-scrollbar { display: none; }
+.socket { --c: var(--tone-gold); flex: none; width: 84px; display: grid; justify-items: center; gap: 2px; padding: 0; color: var(--text); text-align: center; background: none; border: 0; cursor: pointer; }
+.socket.feed { --c: var(--tone-green); }
+.socket.guard { --c: var(--tone-blue); }
+.socket.shop { --c: var(--tone-dark); }
+.socket-well { position: relative; width: 68px; height: 68px; margin-bottom: 4px; display: grid; place-items: center; border-radius: 50%;
+  background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--c) 34%, #2a3570), #121838 72%);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.2), inset 0 -4px 0 rgba(0, 0, 0, 0.35), 0 0 0 2px color-mix(in srgb, var(--c) 70%, transparent), 0 6px 14px rgba(0, 0, 0, 0.35);
+  transition: transform var(--t-fade) var(--ease-out), box-shadow var(--t-pop) linear; }
+.socket-well > img { filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.4)); transition: transform var(--t-pop) var(--ease-out); }
+.socket.ready .socket-well { box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.2), inset 0 -4px 0 rgba(0, 0, 0, 0.35), 0 0 0 2px var(--c), 0 0 18px color-mix(in srgb, var(--c) 45%, transparent); }
+.socket:hover:not(:disabled) .socket-well > img { transform: translateY(-3px) rotate(-8deg); }
+.socket:active:not(:disabled) .socket-well { transform: scale(0.92); }
+.socket:disabled { cursor: default; }
+.socket:disabled .socket-well { background: var(--well); box-shadow: inset 0 0 0 1px var(--hair); }
+.socket:disabled .socket-well > img { opacity: 0.45; filter: grayscale(0.8); }
+.socket:focus-visible { outline: none; }
+.socket:focus-visible .socket-well { outline: 3px solid #fff; outline-offset: 3px; }
+.socket-n { position: absolute; right: -4px; bottom: -2px; min-width: 24px; height: 22px; padding: 0 6px; display: grid; place-items: center; font: normal 13px var(--k-face); font-style: normal; color: var(--k-edge); background: var(--c); border: 2px solid var(--ground); border-radius: 99px; }
+.socket b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--k-face); font-weight: 400; font-size: 13px; }
+.socket small { font-size: 11.5px; color: var(--text-2); white-space: nowrap; }
+.socket.ready small { color: var(--c); font-weight: 700; }
+.flyball { position: fixed; z-index: 80; width: 44px; height: 44px; pointer-events: none; image-rendering: pixelated; filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.35)); }
+
+/* ── a challenge: a portrait against its type's colour, a name, what is left ── */
+.duels { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--s-3); }
+.duel { --tc: var(--tone-dark); position: relative; display: grid; grid-template-columns: 84px 1fr; align-items: center; gap: var(--s-3); min-height: 104px; padding: var(--s-3) var(--s-4) var(--s-3) var(--s-3); color: var(--text); text-align: left; font: inherit; cursor: pointer; overflow: hidden;
+  background: radial-gradient(120px 110px at 46px 50%, color-mix(in srgb, var(--tc) 48%, transparent), transparent 75%), linear-gradient(110deg, color-mix(in srgb, var(--tc) 16%, #1d2550), #161c42 70%);
+  border: 1px solid color-mix(in srgb, var(--tc) 40%, var(--hair)); border-radius: var(--r-3); box-shadow: var(--shadow-soft); transition: transform var(--t-fade) var(--ease-out); }
+.duel:hover { transform: translateY(-2px); }
+.duel:active { transform: translateY(1px); }
+.duel.static { cursor: default; grid-template-columns: 1fr; }
+.duel.static:hover { transform: none; }
+.duel.hot { border-color: var(--tone-gold); box-shadow: 0 0 0 2px var(--tone-gold), 0 0 24px var(--gold-glow); }
+.duel-art { position: relative; display: grid; place-items: center; width: 84px; height: 84px; }
+.duel-art::after { content: ''; position: absolute; left: 14px; right: 14px; bottom: 6px; height: 10px; border-radius: 50%; background: rgba(0, 0, 0, 0.35); }
+.duel-art img { position: relative; z-index: 1; image-rendering: pixelated; filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.3)); }
+.duel-txt { display: grid; gap: 5px; min-width: 0; }
+.duel-txt b { font-family: var(--k-face); font-weight: 400; font-size: 20px; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.duel-txt small { font-size: 12.5px; color: var(--text-2); }
+.duel-txt em { font-style: normal; color: var(--text); font-weight: 700; }
+.duel .k-bar { height: 16px; border-width: 1px; border-color: rgba(0, 0, 0, 0.4); background: var(--well); box-shadow: none; }
+.duel .k-bar > span { font-size: 11px; -webkit-text-stroke: 2px var(--k-edge); }
+/* before there is a boss: the six places of the party it waits for */
+.duel.bosslock { display: flex; gap: var(--s-3); margin: 0; min-height: 0; background: linear-gradient(110deg, rgba(150, 110, 255, 0.18), #161c42 70%); border-color: rgba(150, 110, 255, 0.35); box-shadow: none; grid-column: 1 / -1; }
+.bosslock small { color: var(--text-2); opacity: 1; }
+.bosslock-pips i { border: 0; background: var(--well); box-shadow: inset 0 0 0 1px var(--hair-hi); }
+.bosslock-pips i.on { background: var(--tone-gold); box-shadow: 0 0 8px var(--gold-glow); }
+
+/* ── last night: the dial and the stages, on the page ── */
+.sleepdial { width: 92px; height: 92px; border: 0; background: radial-gradient(circle, #1a2150 0 38px, transparent 39px), conic-gradient(var(--tone-purple) calc(var(--p, 0.5) * 1turn), rgba(255, 255, 255, 0.09) 0); box-shadow: 0 0 22px rgba(150, 110, 255, 0.25); }
+.sleepdial.goodnight { background: radial-gradient(circle, #1a2150 0 38px, transparent 39px), conic-gradient(var(--tone-gold) calc(var(--p, 0.5) * 1turn), rgba(255, 255, 255, 0.09) 0); }
+.sleepdial.deepnight { box-shadow: 0 0 26px rgba(150, 110, 255, 0.5); }
+.stagebar { height: 12px; border: 0; border-radius: 99px; background: var(--well); }
+.nights { border-top: 1px solid var(--hair); padding-top: var(--s-2); }
+
+@media (max-width: 560px) {
+  .say2 p { font-size: 20px; }
+  .pace { grid-template-columns: 1fr; }
+  .pace-cell + .pace-cell { border-left: 0; border-top: 1px solid var(--hair); margin-top: var(--s-3); padding-top: var(--s-3); }
+  .pillars { grid-template-columns: repeat(4, 1fr); gap: var(--s-2); }
+  .pillar-ring { width: 58px; height: 58px; background: radial-gradient(circle, var(--ground) 0 22px, transparent 23px), conic-gradient(var(--c) calc(var(--p, 0) * 1turn), rgba(255, 255, 255, 0.09) 0); }
+  .pillar.done .pillar-ring { background: radial-gradient(circle, color-mix(in srgb, var(--c) 30%, var(--ground)) 0 22px, transparent 23px), var(--c); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .socket-well, .socket-well > img, .duel, .perfect-track i, .pillar-ring > img { transition: none; }
+}
+
+/* the scene's boxes are cream: their words are ink, whatever the page around them is */
+.hpbox { color: var(--edge); }
+
+/* ── two columns where there is room: the scene and the day on the left, everything you can act on at the right ── */
+.day-main, .day-side { display: grid; gap: var(--s-5); align-content: start; min-width: 0; }
+.day-main > .dayboard { margin-top: calc(var(--s-5) * -1 + var(--s-2)); }
+@media (min-width: 900px) {
+  .daypage { grid-template-columns: minmax(0, 1.55fr) minmax(320px, 1fr); align-items: start; gap: var(--s-6); }
+
+  .day-side .duels { grid-template-columns: 1fr; }
+  .pace { grid-template-columns: 1fr; }
+  .pace-cell + .pace-cell { border-left: 0; border-top: 1px solid var(--hair); margin-top: var(--s-3); padding-top: var(--s-3); }
+}

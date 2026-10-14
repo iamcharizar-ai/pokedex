@@ -5,7 +5,6 @@
 import { type CSSProperties } from 'react'
 import { Win } from '../App.tsx'
 import { Gem, ItemIcon } from '../Item.tsx'
-import { KBar } from '../Kit.tsx'
 import type { Game } from '../../core/fold.ts'
 import { STEPS_GOAL } from '../../core/rules.ts'
 
@@ -16,7 +15,7 @@ export function Nursery({ game, onShop }: { game: Game; onShop: () => void }) {
     return (
       <Win title="Nursery" tone="green" aside="Empty">
         <div className="nursery empty">
-          <span className="nursery-egg dim"><ItemIcon id="rare-egg" size={72} /></span>
+          <span className="nest empty"><span className="nursery-egg dim"><ItemIcon id="rare-egg" size={56} /></span></span>
           <span className="nursery-txt">
             <b>{held > 0 ? 'An egg is in your Bag' : 'No egg is warming'}</b>
             <small>{held > 0 ? 'It starts warming at the next day it can.' : 'A boss you beat can drop one, or it is 150 gems in the Rare shop. Walking hatches it, into a rare Pokemon.'}</small>
@@ -33,14 +32,16 @@ export function Nursery({ game, onShop }: { game: Game; onShop: () => void }) {
   return (
     <Win title="Nursery" tone="green" aside={`${Math.round(warm * 100)}% warm`}>
       <div className={`nursery ${near ? 'tomorrow' : ''}`} style={{ ['--warm' as string]: warm } as CSSProperties}>
-        <span className="nursery-egg">
-          <ItemIcon id="rare-egg" size={96} />
-          <i className="crack c1" /><i className="crack c2" /><i className="crack c3" />
+        <span className="nest" role="progressbar" aria-valuemin={0} aria-valuemax={egg.need} aria-valuenow={egg.have} aria-label="How warm the egg is">
+          <span className="nursery-egg">
+            <ItemIcon id="rare-egg" size={84} />
+            <i className="crack c1" /><i className="crack c2" /><i className="crack c3" />
+          </span>
         </span>
         <span className="nursery-txt">
           <b>{near ? 'It is about to hatch' : 'An egg is warming'}</b>
           <small>Walk to warm it: every step the band counts (up to {STEPS_GOAL.toLocaleString()} a day) goes in. {left.toLocaleString()} to go.</small>
-          <KBar value={egg.have} max={egg.need} kind="gold" label={counted} />
+          <span className="nest-count">{counted}</span>
         </span>
       </div>
     </Win>
