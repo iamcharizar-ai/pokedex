@@ -10,7 +10,7 @@
     "dev": "vite",
     "build": "node tools/build-api.mjs && tsc -b && vite build",
     "preview": "vite preview",
-    "test": "node --test core/fold.test.ts core/v13.test.ts tools/fixtures.test.mjs tools/styles.test.mjs tools/sky.test.mjs tools/screens.test.mjs bridge/model.test.ts bridge/map.test.ts bridge/plan.test.ts bridge/health.test.ts bridge/webhook.test.ts bridge/receiver.test.ts",
+    "test": "node --test core/fold.test.ts core/v13.test.ts core/v14.test.ts tools/fixtures.test.mjs tools/styles.test.mjs tools/sky.test.mjs tools/screens.test.mjs bridge/model.test.ts bridge/map.test.ts bridge/plan.test.ts bridge/health.test.ts bridge/webhook.test.ts bridge/receiver.test.ts bridge/check.test.ts",
     "core": "node tools/build-core.mjs",
     "species": "node tools/build-species.mjs",
     "shots": "node tools/shots.mjs",

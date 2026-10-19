@@ -201,15 +201,15 @@ test('after the last Champion the leagues come back at Rematch rank two', () => 
   assert.ok(g.hall.some((h) => h.lap === 1) || g.league.lap >= 1)
 })
 
-test('the day ends when you wake: after midnight it stays yesterday until the night is read, the day is started, or 14:00', async () => {
-  const { wakingDay, ROLLOVER_HOUR } = await import('./day.ts')
+test('the day ends when you wake: after midnight it stays yesterday until the night is read, the day is started, or the day starts', async () => {
+  const { wakingDay, DAY_STARTS_DEFAULT, clockOf } = await import('./day.ts')
   const at = (iso: string) => new Date(iso)
   const none = () => false
   assert.equal(wakingDay(at('2026-10-20T23:30:00'), none), '2026-10-20')
   assert.equal(wakingDay(at('2026-10-21T01:30:00'), none), '2026-10-20', 'past midnight, still awake: still yesterday')
-  assert.equal(wakingDay(at('2026-10-21T07:10:00'), (d) => d === '2026-10-21'), '2026-10-21', 'the band read the night: the new day has begun')
-  assert.equal(wakingDay(at('2026-10-21T09:00:00'), none), '2026-10-20', 'no reading and no start by hand yet')
-  assert.equal(wakingDay(at(`2026-10-21T${String(ROLLOVER_HOUR).padStart(2, '0')}:00:00`), none), '2026-10-21', 'the fallback hour')
+  assert.equal(wakingDay(at('2026-10-21T03:10:00'), (d) => d === '2026-10-21'), '2026-10-21', 'the band read the night: the new day has begun')
+  assert.equal(wakingDay(at('2026-10-21T04:00:00'), none), '2026-10-20', 'no reading and no start by hand yet')
+  assert.equal(wakingDay(at(`2026-10-21T${clockOf(DAY_STARTS_DEFAULT)}:00`), none), '2026-10-21', 'the day starts on its own')
 })
 
 test('from version 13 a night the band has not read is not part of the day: no tick by hand, never a miss', () => {

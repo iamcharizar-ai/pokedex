@@ -8,7 +8,7 @@ import { rolldown } from 'rolldown'
 
 const ROOT = path.resolve(import.meta.dirname, '..')
 /** source in server/ -> the route it serves under /api */
-const ROUTES = { 'health-webhook': 'health-webhook' }
+const ROUTES = { 'health-webhook': 'health-webhook', 'health-check': 'health-check' }
 
 fs.rmSync(path.join(ROOT, 'api'), { recursive: true, force: true })
 for (const [src, route] of Object.entries(ROUTES)) {

@@ -105,6 +105,8 @@ function tell(m: Moment, game: Game): Told {
     case 'summon': return { title: 'A legend stirs', line: `The ${itemName(m.key)} called ${nameOf(m.form)}. It comes as the next wild Pokemon.`, art: 'item', item: m.key }
     case 'itemevo': return { title: 'Evolved', line: `The ${itemName(m.item)} evolved ${nameOf(m.from)} into ${nameOf(m.form)}.`, art: 'evolve', form: m.form, from: m.from }
     case 'lap': return { title: `Rematch rank ★${m.lap + 1}`, line: 'Every league is beaten. They are all back, stronger, and every Champion now hands over a Legend key.', art: 'none' }
+    case 'research': return { title: `Research rank ${m.rank}`, line: `The Professor learnt more from the Pokemon on his desk: every wild Pokemon now comes ${Math.round(game.research.cut * 100)}% weaker, and his gift waits in Collect.`, art: 'item', item: 'journal' }
+    case 'master': return { title: 'Level 100', line: `${nameOf(m.form)} has nothing left to learn as your partner. It stays strong for the party or the Professor's desk.`, art: 'mon', form: m.form }
     default: return { title: '', line: '', art: 'none' }
   }
 }
@@ -112,7 +114,7 @@ function tell(m: Moment, game: Game): Told {
 /** How big a moment is: it picks the whole look of its reveal. */
 const tierOf = (m: Moment): Tier =>
   m.kind === 'key' || m.kind === 'mega' || m.kind === 'league' || m.kind === 'lap' || (m.kind === 'symbol' && m.tier === 'gold') || (m.kind === 'catch' && m.shiny) || (m.kind === 'boss' && m.what !== 'appear') ? 'rare'
-    : m.kind === 'boss' || m.kind === 'evolve' || m.kind === 'itemevo' || m.kind === 'symbol' || m.kind === 'summon' || m.kind === 'feat' || m.kind === 'kit' || m.kind === 'gym' || m.kind === 'graduate' || m.kind === 'region' ? 'big' : 'ordinary'
+    : m.kind === 'boss' || m.kind === 'evolve' || m.kind === 'itemevo' || m.kind === 'symbol' || m.kind === 'summon' || m.kind === 'feat' || m.kind === 'kit' || m.kind === 'gym' || m.kind === 'graduate' || m.kind === 'master' || m.kind === 'research' || m.kind === 'region' ? 'big' : 'ordinary'
 
 const STAR = <ItemIcon id="star-piece" size={72} />
 

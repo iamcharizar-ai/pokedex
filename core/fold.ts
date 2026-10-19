@@ -16,10 +16,10 @@ import {
   ADVANTAGE_MULT, BALL_MULT, CATCH_WEIGHTS, DAILY_PAY, EGG_STEPS, GEMS, LEADER_HP, LEGENDARY_EVERY_WILD, MEGA_BONUS, MOMENTUM_WINDOW, NATURES, NATURE_DOMAIN, NATURE_STATS,
   CLAIM_AUTO, KIT_IRON, KIT_SHARD_EVERY, PAY_STREAK, PILLARS_FOR_A_DAY, REPEL_DAYS, SEASON_STEP, SHINY_ODDS, SHINY_ODDS_WORN, SLEEP_AFTER, SLEEP_DEEP, REVIEW_GEMS, SLEEP_HABIT, SLIP, STAKES_FROM, START_SPECIES, STAT_DAYS, STEPS_GOAL, TAGS,
   TEAM_BONUS, TEAM_NATURE, TEAM_OPEN_FROM, TEAM_SIZE, WEAK_MULT, WEEK_DAYS, WILD_HP, WILD_STAY, ballFor, bondLevel, evolveAt, graduateAt, levelOf, momentumMult, regionsOpen, wildHit, xpForLevel,
-  V13_START, leaderHp, LEVEL_POWER, TEAM_LEVEL, MEGA_BOND, MEGA_DAY, hasPerk, PICKUP_BASE, PICKUP_STEP, ENDURE_DAYS, CRIT_BASE, CRIT_MULT, FRIENDS_XP, SHARE_XP, DYNAMAX, GIGANTAMAX,
+  V13_START, V14_START, HEART_CAP, MAX_LEVEL, RESEARCH_SLOTS, researchCost, researchCut, studyPoints, leaderHp, LEVEL_POWER, TEAM_LEVEL, MEGA_BOND, MEGA_DAY, hasPerk, PICKUP_BASE, PICKUP_STEP, ENDURE_DAYS, CRIT_BASE, CRIT_MULT, FRIENDS_XP, SHARE_XP, DYNAMAX, GIGANTAMAX,
   type Ball, type NatureStat, type Rarity, type Tag,
 } from './rules.ts'
-import { BOOST, COMET_SHARD, DIRE_HIT, EVO_ITEMS, FOSSILS, LEGEND_KEYS, PICKUP_TIERS, REMATCH_KEYS, REVIVE_COST, TREASURE, VITAMINS, VITAMIN_MAX, VITAMIN_STEP, forgeFair, legendFor, pickupFind } from './economy.ts'
+import { BOOST, COMET_SHARD, DIRE_HIT, EVO_ITEMS, FOSSILS, LEGEND_KEYS, PICKUP_TIERS, REMATCH_KEYS, REVIVE_COST, TREASURE, VITAMINS, VITAMIN_MAX, VITAMIN_STEP, forgeFair, legendFor, pickupFind, researchReward } from './economy.ts'
 import { FACILITIES, GOLD_BP, GOLD_GEMS, REMATCH_BP, SILVER_BP, SILVER_GEMS, bpFor } from './frontier.ts'
 import {
   BOSS_CATCH_GEMS, BOSS_HEAL, BOSS_HP_PER_LEVEL, BOSS_KILL_GEMS, BOSS_MILESTONES, BOSS_SHINY, BOSS_TAG, BOSS_TASK_COINS, BOSS_TASK_MARKS, KILL_CAP, THROWS, THROW_AT, TYPE_EDGE,
@@ -27,7 +27,7 @@ import {
 } from './boss.ts'
 import { SPECIES, type SpeciesRec } from './species.ts'
 import {
-  AMULET_MULT, BALLS, BERRY_HEARTS, MARKS, BOND_PARTY, BOND_STEP, CHEST, EGG_STEPS_OLD_CHARM, FEATS, FORGE_COST, GEAR, GEAR_ITEMS, HELD, LURES, MARK_OWNED, MARK_RECORD, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, SELL,
+  AMULET_MULT, BAIT, BALLS, BERRY_HEARTS, PARTY_VITAMIN, baitFor, treasurePrice, MARKS, BOND_PARTY, BOND_STEP, CHEST, EGG_STEPS_OLD_CHARM, FEATS, FORGE_COST, GEAR, GEAR_ITEMS, HELD, LURES, MARK_OWNED, MARK_RECORD, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, SELL,
   STANDING, TM_SLOTS, WEEKLY_QUESTS, ballClass, dayGap, dealsFor, forgeShard, heldBonus, heldCommon, isMarkTag, lureTypes, martDeals, masteryCost, offerFor, rng, seasonReward, throwHp, tmType,
   type MarkTag, type Offer, type Reward, type ShopId,
 } from './economy.ts'
@@ -126,6 +126,9 @@ export type Moment =
   | { kind: 'itemevo'; day: string; uid: string; from: string; form: string; item: string }
   /** every league beaten again: the next Rematch rank begins (`lap` 1 is rank two) */
   | { kind: 'lap'; day: string; lap: number }
+  /** version 14: the Professor's research reached a rank; a Pokemon reached the last level and stepped aside */
+  | { kind: 'research'; day: string; rank: number }
+  | { kind: 'master'; day: string; uid: string; form: string }
 
 export interface DayResult {
   day: string
@@ -313,7 +316,7 @@ export interface Game {
   /** how much of `into` was already there when today began (the rest is today's) */
   intoBeforeToday: number
   /** next level something happens at, and what */
-  next: { level: number; what: 'evolve' | 'graduate' }
+  next: { level: number; what: 'evolve' | 'graduate' | 'master' }
   /** for a partner whose next evolution branches: which way its habits are leaning, percentages that add to about 100 */
   lean: { form: string; tag: string; pct: number }[]
   /** what to draw today: the Mega or Gigantamax form when one is earned */
@@ -379,6 +382,10 @@ export interface Game {
   endure: { ready: boolean; from: string | null }
   /** version 13 is in force on the last day */
   v13: boolean
+  /** version 14 is in force: berries are food or bait, the Collector keeps a wanted list, party vitamins count, any Pokemon can be fed */
+  v14: boolean
+  /** version 14: the Professor's research: its rank, the points toward the next, who is on the desk and what they add a day, and what it takes off wild Pokemon */
+  research: { rank: number; points: number; need: number; desk: Mon[]; chosen: boolean; perDay: number; today: number; cut: number }
 }
 
 const FIRST_STAGES = Object.entries(SPECIES).filter(([, r]) => r.s === 1 && !r.f)
@@ -419,6 +426,9 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
   let spawns = 0
   /** who follows the partner, when one was chosen by hand */
   let chosenNext: string | null = null
+  /** version 14: who is on the Professor's research desk (null: the strongest not in the party), and how far the research is */
+  let deskPick: string[] | null = null
+  const research = { rank: 0, points: 0, today: 0 }
   let keyStone: string | null = null
   const zeroMarks = (): Record<MarkTag, number> => ({ code: 0, fitness: 0, guitar: 0, arbor: 0, sleep: 0 })
   const wallet = { coins: 0, gems: 0, coinsToday: 0, gemsToday: 0, marks: zeroMarks(), marksToday: zeroMarks(), bp: 0, bpToday: 0 }
@@ -427,6 +437,7 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
   let lastEndure: string | null = null
   const fr: Record<string, { cur: number; best: number; wins: number; last: string; silver: string | null; gold: string | null }> = Object.fromEntries(FACILITIES.map((x) => [x.id, { cur: 0, best: 0, wins: 0, last: '', silver: null, gold: null }]))
   const v13On = (day: string): boolean => day >= V13_START
+  const v14On = (day: string): boolean => day >= V14_START
   const heartsOf = (m: Mon): number => (m.together ?? 0) + (m.fed ?? 0)
   const bpEarn = (n: number) => { wallet.bp += n; wallet.bpToday += n }
   const inv: Record<string, number> = {}
@@ -502,6 +513,18 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
   }
   /** the fully trained among the team: the only ones that count towards the boss's party of six */
   const trainedTeam = (): Mon[] => teamNow().filter((m) => m.graduated)
+  /** version 14: the Professor's research desk: the ones chosen, else the strongest in the Box. Nobody in the party, and never the partner */
+  const deskNow = (): Mon[] => {
+    const party = new Set([partner.uid, ...teamNow().map((m) => m.uid)])
+    const free = [...graduates, ...queue].filter((m) => !party.has(m.uid))
+    const worth = (m: Mon) => studyPoints(levelOf(m.xp), (rec(m.form).r ?? 'C') as Rarity, m.shiny)
+    const picked = deskPick ? deskPick.flatMap((u) => free.filter((m) => m.uid === u)) : [...free].sort((a, b) => worth(b) - worth(a) || b.xp - a.xp)
+    return picked.slice(0, RESEARCH_SLOTS)
+  }
+  /** What a day of the desk's study adds (studyPoints in rules.ts) */
+  const studyOf = (desk: Mon[]): number => desk.reduce((n, m) => n + studyPoints(levelOf(m.xp), (rec(m.form).r ?? 'C') as Rarity, m.shiny), 0)
+  /** Fully trained Pokemon, counting a partner that was fully trained and leads again (version 14) */
+  const trainedCount = (): number => graduates.length + (partner.graduated ? 1 : 0)
   /** the types the partner fights with: its own, and the TMs it carries */
   const typesOf = (m: Mon): (string | undefined)[] => [rec(m.form).t, rec(m.form).t2, ...(m.moves ?? []).map((id) => tmType(id) ?? undefined)]
   const notes: Notes = { codeDays: 0, arborDays: 0, guitarDays: 0, workouts: 0, records: 0, clean: 0, owned: 0, steps: 0, stepDays: 0 }
@@ -540,7 +563,7 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
   const owned = () => new Set([partner.base, ...queue.map((m) => m.base), ...graduates.map((m) => m.base)])
   /** Regions only ever open: enough trained partners, and the league before it beaten. */
   const reopen = (day: string) => {
-    const n = regionsOpen(graduates.length, lg.beaten)
+    const n = regionsOpen(trainedCount(), lg.beaten)
     if (n > regions) {
       regions = n
       moments.push({ kind: 'region', day, n })
@@ -606,6 +629,18 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
     return { name: NATURES[up][down], up: NATURE_DOMAIN[up], down: NATURE_DOMAIN[down] }
   }
 
+  /** The partner has stepped aside: the one chosen, else the oldest in the Box, else an egg so the loop never stalls. `over` is the XP it had past the line. */
+  const nextPartner = (day: string, over: number) => {
+    const at = chosenNext ? queue.findIndex((m) => m.uid === chosenNext) : -1
+    partner = (at >= 0 ? queue.splice(at, 1)[0] : queue.shift()) ?? make(roll(`egg:${day}:${graduates.length}`, 'any'), 'starter', day)
+    chosenNext = null
+    partner.started = day
+    partner.xp += over
+    see(partner.form, day, partner.shiny)
+    stage = emptyShare()
+    moments.push({ kind: 'partner', day, uid: partner.uid, form: partner.form, origin: partner.origin })
+  }
+
   const gain = (xp: number, day: string) => {
     const before = levelOf(partner.xp)
     const who = partner.uid
@@ -630,6 +665,17 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
         stage = emptyShare()
         continue
       }
+      // version 14: a fully trained Pokemon leading again goes on to the last level, and there it steps aside for the next
+      if (partner.graduated && v14On(day)) {
+        if (level < MAX_LEVEL) break
+        const over = partner.xp - xpForLevel(MAX_LEVEL)
+        partner.xp = xpForLevel(MAX_LEVEL)
+        if (partner.held) { inv[partner.held] = (inv[partner.held] ?? 0) + 1; delete partner.held }
+        graduates.push(partner)
+        moments.push({ kind: 'master', day, uid: partner.uid, form: partner.form })
+        nextPartner(day, over)
+        continue
+      }
       const grad = graduateAt(stages)
       if (level >= grad) {
         const over = partner.xp - xpForLevel(grad)
@@ -641,15 +687,7 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
         earn(0, GEMS.graduate)
         moments.push({ kind: 'graduate', day, uid: partner.uid, form: partner.form })
         reopen(day)
-        // the one chosen, else the oldest in the Box, else an egg so the loop never stalls
-        const at = chosenNext ? queue.findIndex((m) => m.uid === chosenNext) : -1
-        partner = (at >= 0 ? queue.splice(at, 1)[0] : queue.shift()) ?? make(roll(`egg:${day}:${graduates.length}`, 'any'), 'starter', day)
-        chosenNext = null
-        partner.started = day
-        partner.xp += over
-        see(partner.form, day, partner.shiny)
-        stage = emptyShare()
-        moments.push({ kind: 'partner', day, uid: partner.uid, form: partner.form, origin: partner.origin })
+        nextPartner(day, over)
         continue
       }
       break
@@ -681,7 +719,7 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
   }
   const evalFeats = (day: string) => {
     cn.workouts = notes.workouts; cn.records = notes.records; cn.owned = notes.owned
-    cn.perfect = perfectDays; cn.grads = graduates.length
+    cn.perfect = perfectDays; cn.grads = trainedCount()
     cn['run:any'] = Math.max(0, ...Object.keys(runs).map((k) => runs[k].best))
     cn.dex = Object.keys(dex).filter((id) => dex[id].own && !SPECIES[id]?.f).length
     cn.hearts = Math.max(0, ...[partner, ...queue, ...graduates].map((m) => (m.together ?? 0) + (m.fed ?? 0)))
@@ -734,8 +772,11 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
         const b = BALLS[item]
         if (!b || !inv[item] || !w) return
         const r = rec(w.form)
-        const hp = Math.round(throwHp(item, { types: [r.t, r.t2], from: w.from, owned: Boolean(dex[w.form]?.own) }, day) * (v13On(day) && partner.held === 'wide-lens' ? 1.25 : 1))
+        // version 14: a berry thrown with the ball is bait
+        const bait = v14On(day) && u.to && BAIT[u.to] && inv[u.to] ? baitFor(u.to, [r.t, r.t2]) : null
+        const hp = Math.round((throwHp(item, { types: [r.t, r.t2], from: w.from, owned: Boolean(dex[w.form]?.own) }, day) + (bait?.hp ?? 0)) * (v13On(day) && partner.held === 'wide-lens' ? 1.25 : 1))
         inv[item]--
+        if (bait) inv[u.to!]--
         const took = Math.min(w.hp, hp)
         w.hp -= took
         if (today) today.hit += took
@@ -764,8 +805,11 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
       case 'feed': {
         const hearts = BERRY_HEARTS[item] ?? 0
         if (!hearts || !inv[item]) return
+        // version 14: any Pokemon you own can be fed (a party member's bond adds to every strike), and never past the last bond level
+        const m = v14On(day) && u.uid ? [partner, ...queue, ...graduates].find((x) => x.uid === u.uid) : partner
+        if (!m || (v14On(day) && heartsOf(m) >= HEART_CAP)) return
         inv[item]--
-        partner.fed = (partner.fed ?? 0) + hearts
+        m.fed = (m.fed ?? 0) + hearts
         return
       }
       case 'train': {
@@ -821,6 +865,8 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
         return
       }
       case 'transfer': {
+        // version 14: nobody is sold. The Box is the Professor's, and the ones he studies earn research (see 'study')
+        if (v14On(day)) return
         const i = queue.findIndex((m) => m.uid === u.uid)
         if (i < 0) return
         const [gone] = queue.splice(i, 1)
@@ -845,7 +891,11 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
         if (hpLeft > THROW_AT + 1e-9) return
         inv[item]--
         b.throws++
-        const chance = catchChance(item, trainedTeam().length, cardDone(b.card, b.p), hpLeft, b.strike) + (v13On(day) && partner.held === 'zoom-lens' ? 0.05 : 0)
+        // version 14: a berry thrown with the ball is bait (a Master Ball needs none, so none is spent)
+        const br = rec(b.card.form)
+        const bait = v14On(day) && item !== 'master-ball' && u.to && BAIT[u.to] && inv[u.to] ? baitFor(u.to, [br.t, br.t2]) : null
+        if (bait) inv[u.to!]--
+        const chance = catchChance(item, trainedTeam().length, cardDone(b.card, b.p), hpLeft, b.strike) + (v13On(day) && partner.held === 'zoom-lens' ? 0.05 : 0) + (bait?.catch ?? 0)
         if (rng(`boss-catch:${b.card.week}:${b.throws}`)() < chance) {
           const shiny = rng(`boss-shiny:${b.card.week}`)() < 1 / BOSS_SHINY
           const mon = make(b.card.species, 'catch', day, shiny)
@@ -950,8 +1000,9 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
         return
       }
       case 'candy': {
-        const m = queue.find((x) => x.uid === u.uid)
-        if (!v13On(day) || item !== 'rare-candy' || !inv[item] || !m) return
+        // version 14: a fully trained Pokemon takes a candy too, up to the last level
+        const m = queue.find((x) => x.uid === u.uid) ?? (v14On(day) ? graduates.find((x) => x.uid === u.uid) : undefined)
+        if (!v13On(day) || item !== 'rare-candy' || !inv[item] || !m || levelOf(m.xp) >= MAX_LEVEL) return
         inv[item]--
         m.xp = Math.max(m.xp, xpForLevel(levelOf(m.xp) + 1))
         return
@@ -970,15 +1021,28 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
         if (!v13On(day) || !t || !inv[item]) return
         const n = Math.max(1, Math.min(inv[item], Number.parseInt(u.to ?? '1', 10) || 1))
         inv[item] -= n
-        earn(t[1] * n, 0)
-        bump('sold', t[1] * n)
+        // version 14: the Collector pays double for what is on today's wanted list
+        const price = v14On(day) ? treasurePrice(item, day) : t[1]
+        earn(price * n, 0)
+        bump('sold', price * n)
+        return
+      }
+      case 'study': {
+        // version 14: who the Professor studies. 'auto' gives the desk back to the strongest in the Box
+        if (!v14On(day)) return
+        if (u.to === 'auto') { deskPick = null; return }
+        const ids = (u.to ?? '').split(',').filter((id) => id && id !== partner.uid && [...graduates, ...queue].some((m) => m.uid === id))
+        deskPick = [...new Set(ids)].slice(0, RESEARCH_SLOTS)
         return
       }
       case 'lead': {
         const i = queue.findIndex((x) => x.uid === u.uid)
-        if (i < 0) return
-        const [next] = queue.splice(i, 1)
-        queue.unshift(partner)
+        // version 14: a fully trained Pokemon can lead again, to go on to the last level
+        const g = i < 0 && v14On(day) ? graduates.findIndex((x) => x.uid === u.uid && levelOf(x.xp) < MAX_LEVEL) : -1
+        if (i < 0 && g < 0) return
+        const [next] = i >= 0 ? queue.splice(i, 1) : graduates.splice(g, 1)
+        if (partner.graduated) graduates.push(partner)
+        else queue.unshift(partner)
         partner = next
         if (chosenNext === next.uid) chosenNext = null
         partner.started ??= day
@@ -1006,10 +1070,10 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
   }
 
   /** What the strike is raised by right now. */
-  const powerOf = (v13 = false): Power => {
+  const powerOf = (v13 = false, v14 = false): Power => {
     const members = teamNow()
     const domain = {} as Power['domain']
-    for (const t of TAGS) domain[t] = { held: heldBonus(partner.held, t), mastery: isMarkTag(t) ? MASTERY_STEP * mastery[t] : 0, nature: TEAM_NATURE * members.filter((m) => m.nature?.up === t).length, vitamin: v13 && isMarkTag(t) ? VITAMIN_STEP * (partner.vits?.[t] ?? 0) : 0 }
+    for (const t of TAGS) domain[t] = { held: heldBonus(partner.held, t), mastery: isMarkTag(t) ? MASTERY_STEP * mastery[t] : 0, nature: TEAM_NATURE * members.filter((m) => m.nature?.up === t).length, vitamin: v13 && isMarkTag(t) ? VITAMIN_STEP * ((partner.vits?.[t] ?? 0) + (v14 ? PARTY_VITAMIN * members.reduce((n, m) => n + (m.vits?.[t] ?? 0), 0) : 0)) : 0 }
     const bond = bondLevel(heartsOf(partner))
     return {
       team: members.reduce((sum, m) => sum + TEAM_BONUS + BOND_PARTY * bondLevel(heartsOf(m)) + (v13 ? TEAM_LEVEL * levelOf(m.xp) : 0), 0),
@@ -1177,10 +1241,25 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
     gain(xp, f.day)
     if (v13 && xp > 0) {
       // bond level 5: everyone in the party still being raised gets a share; an Exp. Share held gives the next one up a fifth
-      if (hasPerk(bondNow, 'share')) for (const m of teamNow()) if (!m.graduated && m.uid !== partner.uid) m.xp += Math.round(xp * SHARE_XP)
+      // version 14: everyone below the last level, the fully trained as well, and never past it
+      const v14d = v14On(f.day)
+      if (hasPerk(bondNow, 'share')) for (const m of teamNow()) if ((v14d ? levelOf(m.xp) < MAX_LEVEL : !m.graduated) && m.uid !== partner.uid) m.xp = v14d ? Math.min(xpForLevel(MAX_LEVEL), m.xp + Math.round(xp * SHARE_XP)) : m.xp + Math.round(xp * SHARE_XP)
       if (partner.held === 'exp-share') {
         const next = (chosenNext && queue.find((m) => m.uid === chosenNext)) || queue[0]
         if (next) next.xp += Math.round(xp * 0.2)
+      }
+    }
+    // version 14: on a day with a pillar the Professor studies whoever is on the desk; each rank takes HP off every wild Pokemon to come, and pays
+    research.today = 0
+    if (v14On(f.day) && pillars > 0) {
+      research.today = studyOf(deskNow())
+      research.points += research.today
+      while (research.points >= researchCost(research.rank)) {
+        research.points -= researchCost(research.rank)
+        research.rank++
+        const r = researchReward(research.rank)
+        hold(`research:${research.rank}`, f.day, `Research rank ${research.rank}`, r.coins ?? 0, r.gems ?? 0, r.items)
+        moments.push({ kind: 'research', day: f.day, rank: research.rank })
       }
     }
 
@@ -1199,7 +1278,9 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
       const form = wishFor ?? roll(`wild:${f.day}`, want)
       wishFor = null
       const rarity = (rec(form).r ?? 'C') as Rarity
-      wild = { form, rarity, hp: WILD_HP[rarity], max: WILD_HP[rarity], from: f.day, shiny: false, caught: false }
+      // version 14: what the Professor has learnt takes some of its HP off before it is met
+      const wildHp = Math.round(WILD_HP[rarity] * (v14On(f.day) ? 1 - researchCut(research.rank) : 1))
+      wild = { form, rarity, hp: wildHp, max: wildHp, from: f.day, shiny: false, caught: false }
       see(form, f.day, false, false)
       moments.push({ kind: 'appear', day: f.day, form, rarity })
     }
@@ -1238,7 +1319,7 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
       const weak = weakDomains(leader.type)
       const edge = beats(typesOf(partner), leader.type)
       // the team, the bond, a Mega, the held item, mastery and natures are all added, then applied once (see Power)
-      const pw = powerOf(v13)
+      const pw = powerOf(v13, v14On(f.day))
       // version 13: the partner's level, a Mega for the day, and an Expert Belt against a leader its type beats
       const common = pw.team + pw.bond + pw.mega + pw.item + pw.level + (v13 && megaDay ? MEGA_DAY : 0) + (v13 && edge && partner.held === 'expert-belt' ? 0.2 : 0)
       let strike = 0
@@ -1529,7 +1610,7 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
     into: partner.xp - floor,
     intoBeforeToday: Math.min(partner.xp, Math.max(floor, before)) - floor,
     need: xpForLevel(level + 1) - floor,
-    next: canEvolve ? { level: evo as number, what: 'evolve' } : { level: graduateAt(stages), what: 'graduate' },
+    next: canEvolve ? { level: evo as number, what: 'evolve' } : partner.graduated ? { level: MAX_LEVEL, what: 'master' } : { level: graduateAt(stages), what: 'graduate' },
     lean,
     display,
     aura,
@@ -1558,7 +1639,7 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
     inv,
     theme,
     team,
-    power: powerOf(Boolean(last && v13On(last.day))),
+    power: powerOf(Boolean(last && v13On(last.day)), Boolean(last && v14On(last.day))),
     quests: last ? { weekly: WEEKLY_QUESTS.map(quest(wkNow)) } : { weekly: [] },
     season: (() => {
       const ym = last ? last.day.slice(0, 7) : ''
@@ -1598,6 +1679,8 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
     guard,
     endure: { ready: !lastEndure || !last || dayGap(lastEndure, last.day) >= ENDURE_DAYS, from: lastEndure ? addDays(lastEndure, ENDURE_DAYS) : null },
     v13: Boolean(last && v13On(last.day)),
+    v14: Boolean(last && v14On(last.day)),
+    research: { rank: research.rank, points: research.points, need: researchCost(research.rank), desk: deskNow(), chosen: deskPick !== null, perDay: studyOf(deskNow()), today: research.today, cut: researchCut(research.rank) },
   }
 }
 

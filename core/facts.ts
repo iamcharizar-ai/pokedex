@@ -3,7 +3,7 @@
 // so Life OS and Pokedex cannot disagree about what happened on a day.
 import type { BossCard, BossInput } from './boss.ts'
 import type { ListedHabit } from './events.ts'
-import { ARBOR_HABIT, GAME_START, GRACE_DAYS, GUITAR_HABIT, REVIEW_HABIT, SLEEP_DONE, SLEEP_HABIT, TIER_XP, V13_START, isTag, tagOf, tierXp, type Tag } from './rules.ts'
+import { ARBOR_HABIT, GAME_START, GRACE_DAYS, GUITAR_HABIT, REVIEW_HABIT, SLEEP_DONE, SLEEP_HABIT, TIER_XP, V13_START, V14_START, isTag, tagOf, tierXp, type Tag } from './rules.ts'
 
 export interface HabitLite {
   id: string
@@ -182,8 +182,9 @@ export function factsFor(input: FactsInput, day: string, band: string | null = b
     // version 2, with a band: Sleep is a pillar paid on last night's score, and a hand tick no longer counts
     // from version 6, no reading is not a miss: that morning's habit is a hand tick, paid as a core habit and not a pillar
     const unread = h.id === SLEEP_HABIT && band !== null && day >= band && typeof body?.sleepScore !== 'number'
-    // version 13: Sleep is the band's alone. With no reading it waits, and a day it never comes is simply not part of that day: never a miss, never a tick by hand
-    if (unread && day >= V13_START) continue
+    // version 13: Sleep is the band's alone. With no reading it waits, and a day it never comes is simply not part of that day: never a miss
+    // version 14: a night the band never read can be reported by hand, paid as a core habit (no Bells, no streaks). Unticked it is still not part of the day
+    if (unread && day >= V13_START && (day < V14_START || !inTime(ticks[h.id], day))) continue
     if (h.id === SLEEP_HABIT && band !== null && day >= band && !unread) {
       const score = Math.max(0, Math.min(100, body?.sleepScore ?? 0))
       habits.push({ id: h.id, name: h.name, emoji: h.emoji, tag: 'sleep', worth: TIER_XP.pillar, pillar: true, frac: score / 100, done: score >= SLEEP_DONE, measured: true })

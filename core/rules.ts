@@ -4,7 +4,7 @@
 //
 // Every number that shapes the game is in this file (the shops and prices are
 // in economy.ts, the Battle Frontier in frontier.ts). The ruleset is version 9
-// (RULES-V9.md) with version 13 laid over it from V13_START (RULES-V13.md):
+// (RULES-V9.md) with version 13 laid over it from V13_START (RULES-V13.md) and version 14 from V14_START (RULES-V14.md):
 // days before that fold exactly as they did. Version 8 and the older ones were
 // replaced on 2026-10-12; the last commit that still carries them is `pre-v9`.
 
@@ -223,3 +223,26 @@ export const SHARE_XP = 0.1
 /** A perfect day Dynamaxes the partner: its strike ×DYNAMAX, ×GIGANTAMAX when the partner has a Gigantamax form. */
 export const DYNAMAX = 2
 export const GIGANTAMAX = 2.5
+
+// ── version 14: every item asks a question (RULES-V14.md) ───────────────────
+/** The first day of version 14. Earlier days fold as they always did. */
+export const V14_START = '2026-10-19'
+/** Hearts stop counting at the last bond level: a berry is refused once a Pokemon has this many, so none is thrown away. */
+export const HEART_CAP = HEART_LEVELS[HEART_LEVELS.length - 1]
+
+// ── version 14: the party fights, the Professor researches (RULES-V14.md section 4) ──
+/** No Pokemon goes past this level. Fully trained (graduateAt) is still the milestone; after it a Pokemon can go on to this. */
+export const MAX_LEVEL = 100
+/** The Professor studies up to this many of your Pokemon at a time: the research desk. Nobody in the party can be on it. */
+export const RESEARCH_SLOTS = 3
+/** What a Pokemon on the desk adds to the day's research: (RESEARCH_BASE + its level) × its rarity's weight, a shiny half again. */
+export const RESEARCH_BASE = 10
+export const RESEARCH_RARITY: Record<Rarity, number> = { C: 1, U: 1.5, R: 2, L: 3 }
+export const RESEARCH_SHINY = 1.5
+export const studyPoints = (level: number, rarity: Rarity, shiny: boolean): number => Math.round((RESEARCH_BASE + level) * RESEARCH_RARITY[rarity] * (shiny ? RESEARCH_SHINY : 1))
+/** Research points the next rank takes, from rank `rank`. */
+export const researchCost = (rank: number): number => 500 * (rank + 1)
+/** Each research rank takes this share off every wild Pokemon's HP when it appears, up to RESEARCH_WILD_MAX. */
+export const RESEARCH_WILD = 0.03
+export const RESEARCH_WILD_MAX = 0.45
+export const researchCut = (rank: number): number => Math.min(RESEARCH_WILD_MAX, RESEARCH_WILD * rank)

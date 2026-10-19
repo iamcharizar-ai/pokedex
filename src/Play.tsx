@@ -5,11 +5,11 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { nameOf, spritePath, type Game, type Mon, type Quest } from '../core/fold.ts'
 import {
-  BALLS, BATTLE_SHELF, BERRY_HEARTS, BOOST, BP_SHELF, DOMAIN_SHOPS, DOMAIN_V13, EVO_ITEMS, FOSSILS, GEAR_ITEMS, HELD, ITEMS, LEGEND_KEYS, LURES, MARKS, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, masteryCost, RARE_SHELF, RARE_SHELF_V13, REVIVE_COST, SELL, TM_SLOTS, TREASURE, itemName, throwHp, tmType,
+  BAIT, BALLS, BATTLE_SHELF, BERRY_HEARTS, baitFor, researchReward, treasurePrice, BOOST, BP_SHELF, DOMAIN_SHOPS, DOMAIN_V13, EVO_ITEMS, FOSSILS, GEAR_ITEMS, HELD, ITEMS, LEGEND_KEYS, LURES, MARKS, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, masteryCost, RARE_SHELF, RARE_SHELF_V13, REVIVE_COST, SELL, TM_SLOTS, TREASURE, itemName, throwHp, tmType,
   type MarkTag, type Offer, type ShopId,
 } from '../core/economy.ts'
 import { KIT_SHARD_EVERY } from '../core/rules.ts'
-import { BALL_NAME, DAILY_PAY, REPEL_DAYS, TEAM_BONUS, TEAM_NATURE, TEAM_OPEN_FROM, TEAM_SIZE, levelOf } from '../core/rules.ts'
+import { BALL_NAME, DAILY_PAY, MAX_LEVEL, REPEL_DAYS, RESEARCH_SLOTS, RESEARCH_WILD, RESEARCH_WILD_MAX, TEAM_BONUS, TEAM_NATURE, TEAM_OPEN_FROM, TEAM_SIZE, levelOf, studyPoints, type Rarity } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
 import { TAG_NAME, Win, plural } from './App.tsx'
 import { Ball, BallItem, MegaStone, megaStoneName } from './Ball.tsx'
@@ -23,15 +23,16 @@ import { buyPop } from './lib/fx.ts'
 import { play } from './lib/sfx.ts'
 import { useItem } from './lib/store.ts'
 import { BpIcon, CollectorWin, LabWin, MonExtras, evolutionsFor } from './Champion.tsx'
+import { FeedSheet, treatsIn } from './Feed.tsx'
 
 export { Coin, EggIcon, Gem }
 
 /** What a thrown ball would take off the wild Pokemon in front of you today. */
-const hitOf = (game: Game, id: string): number => {
+const hitOf = (game: Game, id: string, bait?: string | null): number => {
   const w = game.wild
   if (!w || w.caught) return 0
   const r = SPECIES[w.form]
-  return Math.min(w.hp, throwHp(id, { types: [r.t, r.t2], from: w.from, owned: Boolean(game.dex[w.form]?.own) }, game.today.day))
+  return Math.min(w.hp, throwHp(id, { types: [r.t, r.t2], from: w.from, owned: Boolean(game.dex[w.form]?.own) }, game.today.day) + (bait ? baitFor(bait, [r.t, r.t2]).hp : 0))
 }
 
 /** A number that counts to its new value instead of jumping. */
@@ -86,20 +87,27 @@ function flyBall(img: Element | null | undefined, ms: number): void {
 /** Throw a ball at the wild Pokemon, or feed the partner. A thrown ball flies first, then lands. */
 export function Actions({ game, onShop }: { game: Game; onShop: () => void }) {
   const [flying, setFlying] = useState<string | null>(null)
+  /** version 14: a berry loaded as bait goes out with the next ball */
+  const [bait, setBait] = useState<string | null>(null)
+  const [feeding, setFeeding] = useState(false)
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
   useEffect(() => () => clearTimeout(timer.current), [])
   const wild = game.wild && !game.wild.caught
+  const loaded = bait && (game.inv[bait] ?? 0) > 0 && wild ? bait : null
   const throwIt = (item: string, from?: Element) => {
     if (flying) return
     setFlying(item)
     flyBall(from?.querySelector('img'), 650)
     play('throw')
     // the outcome is read from the game as it is now; the ball is seen to fly, then the ledger is told and the HP falls
-    const sound = hitOf(game, item) >= (game.wild?.hp ?? 1) ? 'catch' : 'hit'
-    timer.current = setTimeout(() => { useItem(item, '', 'throw'); setFlying(null); play(sound) }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 650)
+    const sound = hitOf(game, item, loaded) >= (game.wild?.hp ?? 1) ? 'catch' : 'hit'
+    const with_ = loaded
+    timer.current = setTimeout(() => { useItem(item, '', 'throw', with_ ?? undefined); setFlying(null); setBait(null); play(sound) }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 650)
   }
-  const balls = Object.keys(BALLS).filter((b) => (game.inv[b] ?? 0) > 0).sort((a, b) => hitOf(game, b) - hitOf(game, a))
+  const balls = Object.keys(BALLS).filter((b) => (game.inv[b] ?? 0) > 0).sort((a, b) => hitOf(game, b, loaded) - hitOf(game, a, loaded))
   const berries = Object.keys(BERRY_HEARTS).filter((b) => (game.inv[b] ?? 0) > 0)
+  const wildTypes = game.wild ? [SPECIES[game.wild.form]?.t, SPECIES[game.wild.form]?.t2] : []
+  const baits = game.v14 && wild ? berries.filter((b) => BAIT[b]) : []
   const hearts = (game.partner.together ?? 0) + (game.partner.fed ?? 0)
   const socket = (key: string, icon: ReactNode, name: string, sub: string, o: { tone?: 'feed' | 'guard' | 'shop'; n?: number; disabled?: boolean; ready?: boolean; title?: string; onClick: (e: React.MouseEvent<HTMLButtonElement>) => void }) => (
     <button key={key} type="button" className={`socket ${o.tone ?? ''} ${o.ready ? 'ready' : ''}`} disabled={o.disabled} onClick={o.onClick} title={o.title} aria-label={`${name}: ${sub}`}>
@@ -111,16 +119,23 @@ export function Actions({ game, onShop }: { game: Game; onShop: () => void }) {
   return (
     <div className="belt" role="group" aria-label="Throw, feed and guard">
       {balls.map((b) => {
-        const hp = hitOf(game, b)
+        const hp = hitOf(game, b, loaded)
         const double = BALLS[b].vs && hp > 0 && hp >= (BALLS[b].hp * 2)
         return socket(b, <BallItem id={b} size={58} />, itemName(b), BALLS[b].hp >= 1_000_000 ? 'catches it' : `−${hp} HP${double ? ' ×2' : ''}`, { n: game.inv[b], disabled: !wild || Boolean(flying), ready: Boolean(wild), title: ITEMS[b]?.text, onClick: (e) => throwIt(b, e.currentTarget) })
       })}
       {balls.length === 0 && socket('shop', <ItemIcon id="great-ball" size={36} />, 'Get balls', 'at the Mart', { tone: 'shop', onClick: onShop })}
-      {berries.length > 0
+      {game.v14 && baits.map((b) => {
+        const k = baitFor(b, wildTypes)
+        return socket(`bait-${b}`, <ItemIcon id={b} size={36} />, loaded === b ? 'Bait ready' : itemName(b).replace(' Berry', ''), `bait +${k.hp} HP${k.match ? ' ×2' : ''}`, { tone: 'feed', n: game.inv[b], ready: loaded === b, title: `Throw it with the next ball: +${k.hp} HP off ${nameOf(game.wild!.form)}${k.match ? ' (its type likes this berry: double)' : ''}. Tap again to keep it.`, onClick: () => { setBait(loaded === b ? null : b); play('tap') } })
+      })}
+      {game.v14
+        ? socket('feed', <ItemIcon id={treatsIn(game)[0] ?? 'oran-berry'} size={36} />, 'Feed', berries.length ? `${berries.reduce((n, b) => n + (game.inv[b] ?? 0), 0)} to give` : 'no berries', { tone: 'feed', disabled: berries.length === 0, title: 'Feed any of your Pokemon: berries and treats', onClick: () => setFeeding(true) })
+        : berries.length > 0
         ? berries.map((b) => socket(b, <ItemIcon id={b} size={36} />, itemName(b).replace(' Berry', ''), `+${BERRY_HEARTS[b]} ♥ · ${hearts}`, { tone: 'feed', n: game.inv[b], title: ITEMS[b]?.text, onClick: () => { useItem(b, '', 'feed'); play('feed') } }))
         : socket('feed', <ItemIcon id="oran-berry" size={36} />, 'Feed', 'no berries', { tone: 'feed', disabled: true, title: 'Berries are at the Mart and in the Garden shop', onClick: () => undefined })}
       {(game.inv['max-repel'] ?? 0) > 0 && wild && !game.wild?.repel && socket('repel', <ItemIcon id="max-repel" size={36} />, 'Max Repel', `+${REPEL_DAYS} days`, { tone: 'guard', n: game.inv['max-repel'], title: ITEMS['max-repel'].text, onClick: () => { useItem('max-repel', '', 'repel'); play('tap') } })}
       {(game.inv['revive'] ?? 0) > 0 && game.league.slipped > 0 && socket('revive', <ItemIcon id="revive" size={36} />, 'Revive', `−${game.league.slipped} HP`, { tone: 'guard', n: game.inv['revive'], title: ITEMS['revive'].text, onClick: () => { useItem('revive', '', 'revive'); play('tap') } })}
+      {feeding && <FeedSheet game={game} onClose={() => setFeeding(false)} />}
       {((wild && game.wild?.leavesIn !== undefined && game.wild.leavesIn <= 3 && (game.inv['max-repel'] ?? 0) === 0) || (game.league.slipped > 0 && (game.inv['revive'] ?? 0) === 0)) && socket('guards', <ItemIcon id="max-repel" size={36} />, 'Guards', 'at the Mart', { tone: 'shop', onClick: onShop })}
     </div>
   )
@@ -395,7 +410,7 @@ export function ShopTab({ game, only }: { game: Game; only?: Place }) {
 /** Where each kind of thing is used, in a line: shown on its card. */
 const USED: Record<string, string> = {
   ball: 'Thrown at the wild Pokemon, or at the weekly boss once it is weak, from Today.',
-  berry: 'Fed to your partner for a bond heart, from Today or here.',
+  berry: 'Fed to any of your Pokemon for hearts, or thrown with a ball as bait.',
   held: 'Held by your partner, one at a time: it adds to its kind of work.',
   tm: 'Carried by your partner: each counts as one of its types against a leader.',
   shard: 'Three of one colour forge a Mega Stone in the Forge on this tab.',
@@ -433,6 +448,7 @@ const GROUPS: [string, (id: string) => boolean][] = [
 
 export function Bag({ game }: { game: Game }) {
   const [open, setOpen] = useState<string | null>(null)
+  const [feedCard, setFeedCard] = useState<string | null>(null)
   const have = (id: string) => game.inv[id] ?? 0
   const equipped = game.partner.moves ?? []
   const owned = Object.keys(game.inv).filter((id) => have(id) > 0 && ITEMS[id])
@@ -498,7 +514,10 @@ export function Bag({ game }: { game: Game }) {
             <p>{ITEMS[card].text}</p>
             <small className="ware-sheet-have">{have(card) > 0 ? `You have ${have(card)}` : 'Held by your partner'}</small>
             <p className="muted">{USED[kind]}</p>
-            {kind === 'berry' && <button type="button" className="k-btn ok big" onClick={() => { useItem(card, '', 'feed'); play('feed'); if (have(card) <= 1) setOpen(null) }}>Feed it now</button>}
+            {kind === 'berry' && (game.v14
+              ? <button type="button" className="k-btn ok big" onClick={() => { setFeedCard(card); setOpen(null) }}>Feed it to…</button>
+              : <button type="button" className="k-btn ok big" onClick={() => { useItem(card, '', 'feed'); play('feed'); if (have(card) <= 1) setOpen(null) }}>Feed it now</button>)}
+            {kind === 'berry' && game.v14 && BAIT[card] && <p className="muted">Or keep it: thrown with a ball it is bait, worth more against the Pokemon whose type likes it.</p>}
             {kind === 'held' && (() => {
               const on = game.partner.held === card
               return <KButton tone={on ? 'neutral' : 'main'} big onClick={() => { useItem(on ? '' : card, '', 'hold', on ? '' : card); play('tap'); setOpen(null) }}>{on ? 'Take it off' : `Give it to ${nameOf(game.partner.form)}`}</KButton>
@@ -506,9 +525,10 @@ export function Bag({ game }: { game: Game }) {
             {kind === 'tm' && <KButton tone={equipped.includes(card) ? 'neutral' : 'main'} big onClick={() => { toggleTm(card); setOpen(null) }}>{equipped.includes(card) ? 'Take it off' : `Equip on ${nameOf(game.partner.form)}`}</KButton>}
             {kind === 'theme' && <KButton tone={game.theme === card ? 'neutral' : 'main'} big onClick={() => { useItem('', '', 'theme', game.theme === card ? undefined : card); setOpen(null) }}>{game.theme === card ? 'Take it off' : 'Use this scene'}</KButton>}
             {card === 'max-repel' && <button type="button" className="k-btn main big" disabled={!(game.wild && !game.wild.caught && !game.wild.repel)} onClick={() => { useItem('max-repel', '', 'repel'); play('tap'); setOpen(null) }}>Use on the wild Pokemon</button>}
-            {kind === 'treasure' && <button type="button" className="k-btn ok big" onClick={() => { useItem(card, '', 'sell', String(have(card))); play('buy'); setOpen(null) }}>Sell {have(card) > 1 ? `all ${have(card)} ` : ''}for <Coin size={18} />{(TREASURE[card][1] * have(card)).toLocaleString('en-IN')}</button>}
+            {kind === 'treasure' && <button type="button" className="k-btn ok big" onClick={() => { useItem(card, '', 'sell', String(have(card))); play('buy'); setOpen(null) }}>Sell {have(card) > 1 ? `all ${have(card)} ` : ''}for <Coin size={18} />{(treasurePrice(card, game.today.day) * have(card)).toLocaleString('en-IN')}{treasurePrice(card, game.today.day) > TREASURE[card][1] ? ' (wanted today: ×2)' : ''}</button>}
             {kind === 'fossil' && <button type="button" className="k-btn main big" disabled={game.wallet.coins < REVIVE_COST} onClick={() => { useItem(card, '', 'fossil'); play('catch'); setOpen(null) }}>Revive it: {nameOf(FOSSILS[card].species)} (<Coin size={16} />{REVIVE_COST})</button>}
             {kind === 'vitamin' && <button type="button" className="k-btn main big" onClick={() => { useItem(card, game.partner.uid, 'vitamin'); play('feed') }}>Give it to {nameOf(game.partner.form)}</button>}
+            {kind === 'vitamin' && game.v14 && <p className="muted">Or give it to a party member from its page in Party: a third as strong there, and it stays when the partner moves on.</p>}
             {kind === 'battle' && <button type="button" className="k-btn main big" disabled={card === 'guard-spec' ? game.guard : Boolean(BOOST[card] && (game.today.boost?.[BOOST[card].tag] ?? 0) >= BOOST[card].add)} onClick={() => { useItem(card, '', card === 'guard-spec' ? 'guard' : 'boost'); play('tap'); setOpen(null) }}>{card === 'guard-spec' ? (game.guard ? 'Already on guard' : 'Stand guard') : 'Use it today'}</button>}
             {kind === 'field' && <button type="button" className="k-btn main big" disabled={Boolean(game.wish.chosen)} onClick={() => { useItem(card, '', 'honey'); play('tap'); setOpen(null) }}>{game.wish.chosen ? `${nameOf(game.wish.chosen)} is coming next` : 'Spread it'}</button>}
             {kind === 'legend' && <button type="button" className="k-btn main big" disabled={Boolean(game.wish.chosen)} onClick={() => { useItem(card, '', 'summon'); play('catch'); setOpen(null) }}>{game.wish.chosen ? `${nameOf(game.wish.chosen)} is coming next` : `Call ${LEGEND_KEYS[card].forms.length > 1 ? 'a legend' : nameOf(LEGEND_KEYS[card].forms[0])}`}</button>}
@@ -525,6 +545,7 @@ export function Bag({ game }: { game: Game }) {
           </div>
         </Sheet>
       )}
+      {feedCard && <FeedSheet game={game} only={feedCard} onClose={() => { setFeedCard(null); setOpen(null) }} />}
     </Win>
   )
 }
@@ -545,6 +566,7 @@ export function MonPage({ m, game, onClose }: { m: Mon; game: Game; onClose: () 
   const act = (what: string) => { useItem('', m.uid, what); play('tap'); onClose() }
   const megas = rec.m ?? []
   const sell = SELL[rec.r ?? 'C'] ?? SELL.C
+  const onDesk = game.research.desk.some((x) => x.uid === m.uid)
   // drawn on the page itself, not inside the tab: the tab slides in and would carry the window off with it
   return (
     <Sheet title={nameOf(m.form)} onClose={onClose}>
@@ -555,7 +577,7 @@ export function MonPage({ m, game, onClose }: { m: Mon; game: Game; onClose: () 
           <div className="mp-types">
             {[rec.t, rec.t2].filter(Boolean).map((t) => <span key={t} className="chip type"><img src={`/sprites/types/${t}.png`} alt="" width={14} height={14} onError={(e) => { e.currentTarget.style.display = 'none' }} />{t}</span>)}
             {(m.moves ?? []).map((id) => <span key={id} className="chip type tmchip"><ItemIcon id={id} size={16} />{tmType(id)}</span>)}
-            <span className="chip where">{isPartner ? 'Your partner' : inTeam ? 'In the party' : trained ? 'Fully trained' : 'In My Pokemon'}</span>
+            <span className="chip where">{isPartner ? 'Your partner' : inTeam ? 'In the party' : game.v14 && game.research.desk.some((x) => x.uid === m.uid) ? 'On the research desk' : game.v14 ? 'With the Professor' : trained ? 'Fully trained' : 'In My Pokemon'}</span>
           </div>
           <div className="mp-tiles">
             <div className="k-tile"><span className="k-label">Level</span><b>{levelOf(m.xp)}</b></div>
@@ -574,16 +596,27 @@ export function MonPage({ m, game, onClose }: { m: Mon; game: Game; onClose: () 
           </div>
           {megas.length > 0 && <p className="muted megaline">{(m.megas ?? []).length ? <>It holds {(m.megas ?? []).map((f) => <span key={f} className="megachip"><MegaStone mega={f} size={18} />{megaStoneName(f)}</span>)}, forged and kept for good.</> : <>It can hold {megas.map((f) => <span key={f} className="megachip"><MegaStone mega={f} size={18} />{megaStoneName(f)}</span>)}. Mega Stones are forged in the Forge on the Party tab, once the Key Stone is yours.</>}</p>}
           <MonExtras game={game} m={m} onDone={onClose} />
+          {game.v14 && trained && !isPartner && <p className="muted">{levelOf(m.xp) >= MAX_LEVEL ? 'Level 100: it has nothing left to learn as a partner.' : `Fully trained. It can lead again to go on to level ${MAX_LEVEL}, or grow with the party's Exp. Share.`}</p>}
           <div className="kit-row">
             {inBox && <KButton tone="main" disabled={m.uid === game.nextUp} onClick={() => act('next')}>{m.uid === game.nextUp ? 'Next up' : 'Make next'}</KButton>}
-            {inBox && <KButton onClick={() => act('lead')}>Partner now</KButton>}
-            {inBox && v5 && <button type="button" className="k-btn ok" onClick={() => act('transfer')}>To the Professor <Price coins={sell} /></button>}
+            {(inBox || (game.v14 && trained && !isPartner && levelOf(m.xp) < MAX_LEVEL)) && <KButton onClick={() => act('lead')}>Partner now</KButton>}
+            {inBox && !game.v14 && v5 && <button type="button" className="k-btn ok" onClick={() => act('transfer')}>To the Professor <Price coins={sell} /></button>}
             {canTeam && <KButton tone={inTeam ? 'neutral' : 'main'} onClick={() => { setTeam(); play('tap'); onClose() }}>{inTeam ? 'Take out of the party' : 'Add to the party'}</KButton>}
+            {game.v14 && !isPartner && !inTeam && <KButton tone={onDesk ? 'neutral' : 'main'} onClick={() => { putOnDesk(game, m.uid, !onDesk); play('tap'); onClose() }}>{onDesk ? 'Off the research desk' : `On the research desk (+${studyValue(m)}/day)`}</KButton>}
           </div>
         </div>
       </div>
     </Sheet>
   )
+}
+
+// ── the Professor's research desk (version 14) ─────────────────────────────
+/** What one Pokemon adds to the day's research on the desk (studyPoints in rules.ts). */
+export const studyValue = (m: Mon): number => studyPoints(levelOf(m.xp), (SPECIES[m.form]?.r ?? 'C') as Rarity, m.shiny)
+/** Put someone on the desk (the newest choice first: a full desk gives up its last place) or take them off. One `study` event holds the whole desk. */
+function putOnDesk(game: Game, uid: string, on: boolean): void {
+  const rest = game.research.desk.map((x) => x.uid).filter((id) => id !== uid)
+  useItem('', '', 'study', (on ? [uid, ...rest].slice(0, RESEARCH_SLOTS) : rest).join(','))
 }
 
 // ── team ────────────────────────────────────────────────────────────────────
@@ -665,9 +698,9 @@ export function TeamTab({ game, partnerCard, choices, onShop }: { game: Game; pa
           </div>
           <div className="party-actions">
             <button type="button" className="k-btn main" disabled={free === 0} onClick={() => { setJoining(true); play('tap') }}>Add to the party</button>
-            <small>{free === 0 ? 'Nobody else is free to join yet.' : `${free} could join. A place nobody chose fills itself with the oldest in My Pokemon.`}</small>
+            <small>{free === 0 ? 'Nobody else is free to join yet.' : `${free} could join. A place nobody chose fills itself with the oldest ${game.v14 ? 'in the lab' : 'in My Pokemon'}.`}</small>
           </div>
-          {bench.length > 0 && (
+          {!game.v14 && bench.length > 0 && (
             <div className="bench">
               <span className="k-label">Fully trained, off the party · {bench.length}</span>
               <div className="bench-row" data-noswipe>
@@ -676,7 +709,7 @@ export function TeamTab({ game, partnerCard, choices, onShop }: { game: Game; pa
             </div>
           )}
         </Win>
-        <MyPokemon game={game} onOpen={setPage} />
+        {game.v14 ? <ProfessorLab game={game} onOpen={setPage} /> : <MyPokemon game={game} onOpen={setPage} />}
       </div>
       <div className="party-side">
         <Forge game={game} />
@@ -691,6 +724,40 @@ export function TeamTab({ game, partnerCard, choices, onShop }: { game: Game; pa
       {shown && <MonPage m={shown} game={game} onClose={() => setPage(null)} />}
       {joining && <Joiners game={game} onPick={(uid) => putOnTeam(game, uid, true)} onClose={() => setJoining(false)} />}
     </div>
+  )
+}
+
+/**
+ * Version 14: everyone not in the party lives with the Professor. Up to three sit on his research desk: on each day with a pillar he
+ * studies them, by level and rarity, and each research rank takes HP off every wild Pokemon to come and sends a gift. So a strong
+ * Pokemon is either fighting in the party (leaders and the boss) or helping you catch (the desk). Nobody is sold.
+ */
+function ProfessorLab({ game, onOpen }: { game: Game; onOpen: (uid: string) => void }) {
+  const r = game.research
+  const inTeam = new Set(game.team.map((m) => m.uid))
+  const onDesk = new Set(r.desk.map((m) => m.uid))
+  const box = [...game.graduates, ...game.queue].filter((m) => !inTeam.has(m.uid) && !onDesk.has(m.uid)).sort((a, b) => studyValue(b) - studyValue(a) || b.xp - a.xp)
+  const gift = researchReward(r.rank + 1)
+  return (
+    <Win title="The Professor's lab" tone="dark" aside={`Research rank ${r.rank}`}>
+      <p className="muted">Everyone not in your party stays here. The Professor studies up to {RESEARCH_SLOTS} on his desk: the higher their level and the rarer they are, the faster his research goes. Each rank takes {Math.round(RESEARCH_WILD * 100)}% more HP off every wild Pokemon (up to {Math.round(RESEARCH_WILD_MAX * 100)}%) and sends a gift. The party fights; the desk helps you catch.</p>
+      <KBar value={r.points} max={r.need} kind="gold" label={`${r.points.toLocaleString('en-IN')} / ${r.need.toLocaleString('en-IN')} to rank ${r.rank + 1} · +${r.perDay}/day with a pillar`} />
+      <small className="muted lab-line">Wild Pokemon come {Math.round(r.cut * 100)}% weaker now. Next gift: {[gift.coins ? `${gift.coins} coins` : '', gift.gems ? `${gift.gems} gems` : '', ...gift.items.map(([id, n]) => `${itemName(id)}${n > 1 ? ` ×${n}` : ''}`)].filter(Boolean).join(', ')}.</small>
+      <span className="k-label">Research desk · {r.chosen ? 'your choice' : 'the strongest here, until you choose'}</span>
+      <div className="party6 desk">
+        {Array.from({ length: RESEARCH_SLOTS }, (_, i) => {
+          const m = r.desk[i]
+          return m
+            ? <div key={m.uid} className="plat"><Standee m={m} note={`Lv ${levelOf(m.xp)} · +${studyValue(m)}/day`} onClick={() => onOpen(m.uid)} /></div>
+            : <div key={i} className="plat empty"><span className="plat-ball" aria-hidden /><small>{box.length ? 'Tap one below' : 'Empty'}</small></div>
+        })}
+      </div>
+      {r.chosen && <button type="button" className="k-btn" onClick={() => { useItem('', '', 'study', 'auto'); play('tap') }}>Let the Professor choose the strongest</button>}
+      <span className="k-label">In the lab · {box.length}</span>
+      {box.length === 0
+        ? <p className="muted">{game.queue.length + game.graduates.length ? 'Everyone else is in your party or on the desk.' : 'Empty. Catch the wild Pokemon and it comes here.'}</p>
+        : <div className="boxgrid">{box.map((m) => <Standee key={m.uid} m={m} size={52} note={m.uid === game.nextUp ? <em className="nextup">Next up</em> : `Lv ${levelOf(m.xp)}${m.graduated ? ' ★' : ''}`} onClick={() => onOpen(m.uid)} title={`${nameOf(m.form)} · +${studyValue(m)}/day on the desk`} />)}</div>}
+    </Win>
   )
 }
 

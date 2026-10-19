@@ -3,7 +3,7 @@
 //
 // An item's id is the name of its sprite file (public/sprites/items/<id>.png),
 // so a new item is one line here and one picture.
-import { REPEL_DAYS, STEPS_GOAL, V13_START, type Tag } from './rules.ts'
+import { REPEL_DAYS, STEPS_GOAL, V13_START, V14_START, type Tag } from './rules.ts'
 import { TYPE_DOMAIN } from './types.ts'
 
 /** seeded randomness: the same seed always gives the same run of numbers */
@@ -603,3 +603,77 @@ export const FEATS_V13: Feat[] = [
   { id: 'rank2', name: 'Rematch', text: 'Beat a Champion at Rematch rank ★2', group: 'league', key: 'rematch', n: 1, reward: { gems: 100, items: { 'azure-flute': 1 } } },
 ]
 FEATS.push(...FEATS_V13)
+
+// ══ version 14: every item asks a question (RULES-V14.md) ═══════════════════
+// An item is worth keeping only if keeping it can be worth more than using it now: another use, a better day, a better target.
+
+// ── berries: food or bait ──
+/**
+ * A berry is fed (hearts, to any Pokemon you own) or thrown with a ball as bait: `hp` more off a wild Pokemon, `catch` more on a throw at the
+ * boss. A friendship berry counts BAIT_MATCH times over against a Pokemon with a type of its domain (Hondew, the code berry, against Psychic,
+ * Electric or Ghost). Sweet Hearts and Heart Scales are treats: fed only.
+ */
+export const BAIT: Record<string, { hp: number; catch: number }> = {
+  'oran-berry': { hp: 30, catch: 0.05 },
+  'sitrus-berry': { hp: 60, catch: 0.1 },
+  ...Object.fromEntries(Object.keys(FRIEND_BERRY).map((id) => [id, { hp: 60, catch: 0.1 }])),
+}
+export const BAIT_MATCH = 2
+/** What a berry does as bait against a Pokemon of these types: nothing for an item that is not bait. */
+export function baitFor(berry: string | undefined, types: (string | undefined)[]): { hp: number; catch: number; match: boolean } {
+  const b = berry ? BAIT[berry] : undefined
+  if (!b) return { hp: 0, catch: 0, match: false }
+  const tag = FRIEND_BERRY[berry!]
+  const match = Boolean(tag) && types.some((t) => t && TYPE_DOMAIN[t] === tag)
+  const k = match ? BAIT_MATCH : 1
+  return { hp: b.hp * k, catch: Math.round(b.catch * k * 100) / 100, match }
+}
+const DOMAIN_TYPES = (tag: Tag): string => {
+  const ts = Object.entries(TYPE_DOMAIN).filter(([, d]) => d === tag).map(([t]) => t)
+  return ts.length > 1 ? `${ts.slice(0, -1).join(', ')} or ${ts[ts.length - 1]}` : ts[0]
+}
+ITEMS['oran-berry'] = { name: 'Oran Berry', kind: 'berry', text: 'Feed a Pokemon: one heart. Or throw it with a ball: +30 HP off a wild Pokemon, +5% on a throw at the boss.' }
+ITEMS['sitrus-berry'] = { name: 'Sitrus Berry', kind: 'berry', text: 'Feed a Pokemon: three hearts. Or throw it with a ball: +60 HP off a wild Pokemon, +10% on a throw at the boss.' }
+for (const [id, tag] of Object.entries(FRIEND_BERRY)) {
+  const name = id.split('-')[0]
+  ITEMS[id] = { name: `${name[0].toUpperCase()}${name.slice(1)} Berry`, kind: 'berry', text: `Feed a Pokemon: five hearts. Or throw it with a ball: +60 HP off a wild Pokemon, +10% at the boss, and double that against ${DOMAIN_TYPES(tag)} (the ${DOMAIN_NAME[tag]} berry).` }
+}
+ITEMS['sweet-heart'] = { name: 'Sweet Heart', kind: 'berry', text: 'A chocolate heart. Feed a Pokemon: three hearts.' }
+ITEMS['heart-scale'] = { name: 'Heart Scale', kind: 'berry', text: 'A pretty scale found by Pickup. Give it to a Pokemon: two hearts.' }
+
+// ── treasures: the Collector's wanted list ──
+/** Each day the Collector wants this many kinds of treasure and pays COLLECTOR_MULT for them. The same list on every device. */
+export const COLLECTOR_WANTS = 3
+export const COLLECTOR_MULT = 2
+export function collectorWants(day: string): string[] {
+  const r = rng(`collector:${day}`)
+  const pool = Object.keys(TREASURE)
+  const out: string[] = []
+  while (out.length < COLLECTOR_WANTS && pool.length) out.push(pool.splice(Math.floor(r() * pool.length), 1)[0])
+  return out
+}
+/** What the Collector pays for one of a treasure today. */
+export const treasurePrice = (id: string, day: string): number =>
+  (TREASURE[id]?.[1] ?? 0) * (day >= V14_START && collectorWants(day).includes(id) ? COLLECTOR_MULT : 1)
+for (const [id, [name, coins]] of Object.entries(TREASURE)) ITEMS[id] = { name, kind: 'treasure', text: `A treasure. The Collector pays ${coins.toLocaleString('en-IN')} coins for it, and twice that on a day it is on the wanted list.` }
+
+// ── vitamins: a party member's count too ──
+/** A party member's vitamins add this share of their worth to every strike (the partner's count in full). */
+export const PARTY_VITAMIN = 1 / 3
+for (const [id, tag] of Object.entries(VITAMINS)) ITEMS[id] = { name: VIT_NAME[id], kind: 'vitamin', text: `Give it to a Pokemon: its ${DOMAIN_NAME[tag]} work strikes 3% harder while it is your partner, and 1% while it stands in the party. For good (ten at most).` }
+
+// ── the Professor's research: what each rank hands over ──
+/** Every fifth rank a Mystery Egg; between them these come round in turn. The stone is seeded, so every device agrees. */
+export const RESEARCH_REWARDS: { coins?: number; gems?: number; items?: [string, number][] }[] = [
+  { items: [['rare-candy', 2]] },
+  { items: [['honey', 1]], gems: 10 },
+  { items: [['ultra-ball', 3]] },
+  { coins: 300, items: [['full-incense', 1]] },
+]
+const RESEARCH_STONES = ['fire-stone', 'water-stone', 'thunderstone', 'leaf-stone', 'moon-stone', 'sun-stone', 'dusk-stone', 'shiny-stone', 'dawn-stone', 'ice-stone']
+export function researchReward(rank: number): { coins?: number; gems?: number; items: [string, number][] } {
+  if (rank % 5 === 0) return { gems: 25, items: [['rare-egg', 1]] }
+  const r = RESEARCH_REWARDS[(rank - 1) % RESEARCH_REWARDS.length]
+  const stone = RESEARCH_STONES[Math.floor(rng(`research:${rank}`)() * RESEARCH_STONES.length)]
+  return { ...r, items: [...(r.items ?? []), ...(rank % 2 === 0 ? [[stone, 1] as [string, number]] : [])] }
+}

@@ -1098,7 +1098,7 @@ var require_websocket = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	0 && (module.exports = { experimental_upgradeWebSocket });
 }));
 //#endregion
-//#region bridge/model.ts
+//#region bridge/health.ts
 var import_functions = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	var __defProp = Object.defineProperty;
 	var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -1172,298 +1172,6 @@ var import_functions = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 		waitUntil
 	});
 })))();
-const NUMERIC = [
-	"sleepMin",
-	"awakeMin",
-	"deepMin",
-	"remMin",
-	"lightMin",
-	"steps",
-	"distanceM",
-	"kcal",
-	"zoneMin",
-	"restingHr",
-	"hrv",
-	"spo2",
-	"respRate",
-	"tempDev",
-	"vo2max",
-	"weightKg"
-];
-const TEXT = ["bed", "wake"];
-const emptyVitals = () => ({
-	days: {},
-	at: {}
-});
-/**
-* Fold `vitals` events into state. Idempotent and order-independent: each
-* field of each day keeps the newest write, so a manual weigh-in and a band
-* sync for the same day merge instead of overwriting each other. Returns the
-* same object when nothing changed.
-*/
-function foldVitals(state, events) {
-	let next = state;
-	for (const ev of events) {
-		if (ev.type !== "vitals" || !ev.day) continue;
-		for (const [k, v] of Object.entries(ev.payload ?? {})) {
-			const key = k;
-			const num = NUMERIC.includes(key) && typeof v === "number" && Number.isFinite(v);
-			const txt = TEXT.includes(key) && typeof v === "string" && v.length > 0;
-			if (!num && !txt && !(v === null && (NUMERIC.includes(key) || TEXT.includes(key)))) continue;
-			const seen = next.at[ev.day]?.[k];
-			if (seen && ev.at <= seen) continue;
-			if (next === state) next = {
-				days: { ...state.days },
-				at: { ...state.at }
-			};
-			const day = { ...next.days[ev.day] };
-			if (v === null) delete day[k];
-			else day[k] = v;
-			next.days[ev.day] = day;
-			next.at[ev.day] = {
-				...next.at[ev.day],
-				[k]: ev.at
-			};
-		}
-	}
-	return next;
-}
-function addDays$1(day, n) {
-	const d = /* @__PURE__ */ new Date(day + "T12:00:00");
-	d.setDate(d.getDate() + n);
-	const p = (x) => String(x).padStart(2, "0");
-	return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-}
-const SLEEP_GOAL = {
-	bedBy: "22:30",
-	minutes: 450
-};
-const clamp01 = (x) => Math.max(0, Math.min(1, x));
-/** What each part of the sleep score is worth. They add to 100. */
-const SLEEP_WEIGHTS = {
-	length: 40,
-	depth: 20,
-	unbroken: 20,
-	steady: 20
-};
-/** Minutes after 18:00 that a "YYYY-MM-DDTHH:MM" bedtime falls, so 02:00 is later than 23:00 and the evening never wraps. */
-const bedMinutes = (bed) => {
-	const m = /T(\d{2}):(\d{2})$/.exec(bed ?? "");
-	return m ? (Number(m[1]) * 60 + Number(m[2]) - 1080 + 1440) % 1440 : null;
-};
-/**
-* How close this night's bedtime was to your own usual (the median of the
-* last seven nights before it), 0-1. null until three earlier nights exist.
-* The clock is not judged: only whether it was the same night as the others.
-*/
-function steadiness(s, day) {
-	const mine = bedMinutes(s.days[day]?.bed);
-	if (mine === null) return null;
-	const xs = [];
-	for (let i = 1; i <= 7; i++) {
-		const b = bedMinutes(s.days[addDays$1(day, -i)]?.bed);
-		if (b !== null) xs.push(b);
-	}
-	if (xs.length < 3) return null;
-	xs.sort((a, b) => a - b);
-	const mid = Math.floor(xs.length / 2);
-	const usual = xs.length % 2 ? xs[mid] : (xs[mid - 1] + xs[mid]) / 2;
-	return clamp01(1 - (Math.abs(mine - usual) - 45) / 75);
-}
-function sleepParts(d, goal = SLEEP_GOAL, steady = null) {
-	if (!d || d.sleepMin === void 0) return null;
-	const length = clamp01(d.sleepMin / goal.minutes);
-	const depth = d.deepMin !== void 0 && d.remMin !== void 0 && d.sleepMin > 0 ? clamp01((d.deepMin + d.remMin) / d.sleepMin / .4) : null;
-	const inBed = d.sleepMin + (d.awakeMin ?? 0);
-	return {
-		length,
-		depth,
-		unbroken: d.awakeMin === void 0 || inBed === 0 ? null : clamp01((d.sleepMin / inBed - .75) / .15),
-		steady
-	};
-}
-/**
-* A 0-100 sleep score for the sleep filed under `day`, built only from what
-* the band reports (the API has no score of its own): how long (40), how much
-* of it was deep or REM (20), how unbroken (20), and how steady the bedtime
-* was against your own usual (20). `steady` comes from steadiness().
-*/
-function sleepScore(d, goal = SLEEP_GOAL, steady = null) {
-	const p = sleepParts(d, goal, steady);
-	if (!p) return null;
-	const w = SLEEP_WEIGHTS;
-	return Math.round(p.length * w.length + (p.depth ?? p.length) * w.depth + (p.unbroken ?? p.length) * w.unbroken + (p.steady ?? p.length) * w.steady);
-}
-/** The same, with the earlier nights known, so steadiness counts. */
-const sleepScoreOn = (s, day, goal = SLEEP_GOAL) => sleepScore(s.days[day], goal, steadiness(s, day));
-/** Your own normal for a reading: the median of up to four weeks before `day`. null until a week of data exists. */
-function baseline(s, field, day) {
-	const xs = [];
-	for (let i = 1; i <= 28; i++) {
-		const v = s.days[addDays$1(day, -i)]?.[field];
-		if (typeof v === "number") xs.push(v);
-	}
-	if (xs.length < 7) return null;
-	xs.sort((a, b) => a - b);
-	const m = Math.floor(xs.length / 2);
-	return xs.length % 2 ? xs[m] : (xs[m - 1] + xs[m]) / 2;
-}
-/**
-* A 0-100 recovery reading for the morning of `day`: variability above your
-* normal and resting heart rate below it are good, plus how you slept. Shown,
-* never paid for: it is an outcome, not something you do.
-*/
-function recovery(s, day) {
-	const d = s.days[day];
-	const hrv0 = baseline(s, "hrv", day);
-	const rhr0 = baseline(s, "restingHr", day);
-	if (!d || d.hrv === void 0 || d.restingHr === void 0 || hrv0 === null || rhr0 === null) return null;
-	const hrvPart = clamp01(.5 + (d.hrv - hrv0) / hrv0 / .4);
-	const rhrPart = clamp01(.5 + (rhr0 - d.restingHr) / rhr0 / .2);
-	const sleep = (sleepScoreOn(s, day) ?? 50) / 100;
-	return Math.round((hrvPart * .45 + rhrPart * .3 + sleep * .25) * 100);
-}
-//#endregion
-//#region bridge/map.ts
-const num = (v) => {
-	const n = typeof v === "string" && v.trim() !== "" ? Number(v) : v;
-	return typeof n === "number" && Number.isFinite(n) ? n : void 0;
-};
-const round = (v, places = 0) => v === void 0 ? void 0 : Math.round(v * 10 ** places) / 10 ** places;
-const points = (res) => Array.isArray(res?.dataPoints) ? res.dataPoints : [];
-/** "2026-03-29T16:33:07+01:00" → the wall-clock date and minute it shows */
-const civilDay = (stamp) => String(stamp ?? "").slice(0, 10);
-const civilMinute = (stamp) => String(stamp ?? "").slice(0, 16);
-/** First numeric value under any of these keys (the daily summary types differ in what they call it). */
-function pick(point, keys) {
-	for (const k of keys) {
-		const v = num(point?.[k]);
-		if (v !== void 0) return v;
-	}
-	for (const v of Object.values(point ?? {})) if (v && typeof v === "object") {
-		for (const k of keys) if (num(v[k]) !== void 0) return num(v[k]);
-	}
-}
-const put = (out, day, fields) => {
-	if (typeof day !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return;
-	const clean = Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== void 0 && v !== ""));
-	if (Object.keys(clean).length) out[day] = {
-		...out[day],
-		...clean
-	};
-};
-/** day → vitals payload. A day or field the band did not report is absent, never 0. */
-function toVitals(res) {
-	const out = {};
-	for (const p of points(res.steps)) put(out, p.date, { steps: num(p.countSum) });
-	for (const p of points(res.distance)) {
-		const mm = num(p.millimetersSum);
-		put(out, p.date, { distanceM: mm === void 0 ? void 0 : round(mm / 1e3) });
-	}
-	for (const p of points(res.calories)) put(out, p.date, { kcal: round(num(p.kcalSum)) });
-	for (const p of points(res.zoneMinutes)) put(out, p.date, { zoneMin: pick(p, ["activeZoneMinutesSum", "activeZoneMinutes"]) });
-	const best = {};
-	for (const p of points(res.sleep)) {
-		if (p.isNap) continue;
-		const day = civilDay(p.end);
-		const asleep = num(p.minutesAsleep);
-		if (asleep === void 0 || best[day] !== void 0 && best[day] >= asleep) continue;
-		best[day] = asleep;
-		const st = p.stageMinutes ?? {};
-		put(out, day, {
-			bed: civilMinute(p.start),
-			wake: civilMinute(p.end),
-			sleepMin: asleep,
-			awakeMin: num(p.minutesAwake),
-			deepMin: num(st.DEEP),
-			remMin: num(st.REM),
-			lightMin: num(st.LIGHT)
-		});
-	}
-	for (const p of points(res.restingHr)) put(out, p.date, { restingHr: pick(p, ["beatsPerMinute"]) });
-	for (const p of points(res.hrv)) put(out, p.date, { hrv: round(pick(p, [
-		"averageHeartRateVariabilityMilliseconds",
-		"rmssd",
-		"averageRmssd",
-		"dailyRmssd",
-		"rmssdMilliseconds"
-	]), 1) });
-	for (const p of points(res.spo2)) put(out, p.date, { spo2: round(pick(p, [
-		"averagePercentage",
-		"percentage",
-		"average"
-	]), 1) });
-	for (const p of points(res.respRate)) put(out, p.date, { respRate: round(pick(p, ["breathsPerMinute", "respiratoryRate"]), 1) });
-	for (const p of points(res.tempDev)) {
-		const night = num(p.nightlyTemperatureCelsius), base = num(p.baselineTemperatureCelsius);
-		const gap = night !== void 0 && base !== void 0 ? night - base : pick(p, [
-			"nightlyRelative",
-			"temperatureDeviationCelsius",
-			"deviationCelsius",
-			"relative"
-		]);
-		put(out, p.date, { tempDev: round(gap, 2) });
-	}
-	for (const p of points(res.vo2max)) put(out, p.date, { vo2max: round(pick(p, ["vo2Max", "value"]), 1) });
-	const lastAt = {};
-	for (const p of points(res.weight)) {
-		const time = String(p.time ?? ""), day = civilDay(time), g = num(p.weightGrams);
-		if (g === void 0 || lastAt[day] && lastAt[day] > time) continue;
-		lastAt[day] = time;
-		put(out, day, { weightKg: round(g / 1e3, 2) });
-	}
-	return out;
-}
-/**
-* The rows to write for a sync: each day's readings plus its sleep score and
-* recovery, limited to what differs from the ledger already (`known`), so a
-* daily sync of an unchanged week writes nothing.
-*/
-function rowsToWrite(days, known, knownScores = {}) {
-	const merged = {
-		days: { ...known.days },
-		at: known.at
-	};
-	for (const [day, p] of Object.entries(days)) merged.days[day] = {
-		...merged.days[day],
-		...p
-	};
-	const out = {};
-	for (const [day, p] of Object.entries(days)) {
-		const full = { ...p };
-		const s = sleepScoreOn(merged, day);
-		if (s !== null && p.sleepMin !== void 0) full.sleepScore = s;
-		const r = recovery(merged, day);
-		if (r !== null) full.recovery = r;
-		const before = {
-			...known.days[day],
-			...knownScores[day]
-		};
-		const changed = Object.fromEntries(Object.entries(full).filter(([k, v]) => before[k] !== v));
-		if (Object.keys(changed).length) out[day] = changed;
-	}
-	return out;
-}
-//#endregion
-//#region bridge/plan.ts
-const DEVICE = "health-sync";
-/** The `vitals` events to write, oldest day first. `known` is the ledger's own `vitals` events from LOOK_BACK days before the first day read. */
-function planWrites(read, known, at) {
-	const fresh = toVitals(read);
-	const state = foldVitals(emptyVitals(), known);
-	const scores = {};
-	for (const r of known) for (const k of ["sleepScore", "recovery"]) if (typeof r.payload?.[k] === "number") (scores[r.day] ??= {})[k] = r.payload[k];
-	const out = rowsToWrite(fresh, state, scores);
-	return Object.entries(out).sort(([a], [b]) => a < b ? -1 : 1).map(([day, payload]) => ({
-		device: DEVICE,
-		at,
-		day,
-		type: "vitals",
-		payload
-	}));
-}
-//#endregion
-//#region bridge/health.ts
 const HEALTH_BASE = "https://health.googleapis.com/v4";
 const SOURCES = {
 	steps: {
@@ -1525,7 +1233,7 @@ const SOURCES = {
 	}
 };
 const KINDS = Object.keys(SOURCES);
-function addDays(day, n) {
+function addDays$1(day, n) {
 	const d = /* @__PURE__ */ new Date(day + "T12:00:00Z");
 	d.setUTCDate(d.getUTCDate() + n);
 	return d.toISOString().slice(0, 10);
@@ -1546,8 +1254,8 @@ const civil = (day) => ({
 /** The request that reads `kind` for the days `from`..`to` (YYYY-MM-DD, both included). */
 function requestFor(kind, from, to, pageToken, base = HEALTH_BASE) {
 	const s = SOURCES[kind];
-	const start = s.maxDays && addDays(to, -(s.maxDays - 1)) > from ? addDays(to, -(s.maxDays - 1)) : from;
-	const end = addDays(to, 1);
+	const start = s.maxDays && addDays$1(to, -(s.maxDays - 1)) > from ? addDays$1(to, -(s.maxDays - 1)) : from;
+	const end = addDays$1(to, 1);
 	const parent = `${base}/users/me/dataTypes/${s.type}/dataPoints`;
 	if (s.how === "rollup") return {
 		url: `${parent}:dailyRollUp`,
@@ -1801,9 +1509,9 @@ const WATCHED = /* @__PURE__ */ new Set([
 function windowFor(touches, today, maxBack = 6) {
 	const hit = touches.filter((t) => WATCHED.has(t.dataType));
 	if (!hit.length) return null;
-	const floor = addDays(today, -maxBack);
+	const floor = addDays$1(today, -maxBack);
 	const days = hit.flatMap((t) => t.days).filter((d) => d <= today);
-	const from = days.length ? days.reduce((a, b) => a < b ? a : b) : addDays(today, -1);
+	const from = days.length ? days.reduce((a, b) => a < b ? a : b) : addDays$1(today, -1);
 	return {
 		from: from < floor ? floor : from,
 		to: today
@@ -1836,7 +1544,299 @@ async function receive(req, d) {
 	return reply(204);
 }
 //#endregion
-//#region server/health-webhook.ts
+//#region bridge/model.ts
+const NUMERIC = [
+	"sleepMin",
+	"awakeMin",
+	"deepMin",
+	"remMin",
+	"lightMin",
+	"steps",
+	"distanceM",
+	"kcal",
+	"zoneMin",
+	"restingHr",
+	"hrv",
+	"spo2",
+	"respRate",
+	"tempDev",
+	"vo2max",
+	"weightKg"
+];
+const TEXT = ["bed", "wake"];
+const emptyVitals = () => ({
+	days: {},
+	at: {}
+});
+/**
+* Fold `vitals` events into state. Idempotent and order-independent: each
+* field of each day keeps the newest write, so a manual weigh-in and a band
+* sync for the same day merge instead of overwriting each other. Returns the
+* same object when nothing changed.
+*/
+function foldVitals(state, events) {
+	let next = state;
+	for (const ev of events) {
+		if (ev.type !== "vitals" || !ev.day) continue;
+		for (const [k, v] of Object.entries(ev.payload ?? {})) {
+			const key = k;
+			const num = NUMERIC.includes(key) && typeof v === "number" && Number.isFinite(v);
+			const txt = TEXT.includes(key) && typeof v === "string" && v.length > 0;
+			if (!num && !txt && !(v === null && (NUMERIC.includes(key) || TEXT.includes(key)))) continue;
+			const seen = next.at[ev.day]?.[k];
+			if (seen && ev.at <= seen) continue;
+			if (next === state) next = {
+				days: { ...state.days },
+				at: { ...state.at }
+			};
+			const day = { ...next.days[ev.day] };
+			if (v === null) delete day[k];
+			else day[k] = v;
+			next.days[ev.day] = day;
+			next.at[ev.day] = {
+				...next.at[ev.day],
+				[k]: ev.at
+			};
+		}
+	}
+	return next;
+}
+function addDays(day, n) {
+	const d = /* @__PURE__ */ new Date(day + "T12:00:00");
+	d.setDate(d.getDate() + n);
+	const p = (x) => String(x).padStart(2, "0");
+	return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+const SLEEP_GOAL = {
+	bedBy: "22:30",
+	minutes: 450
+};
+const clamp01 = (x) => Math.max(0, Math.min(1, x));
+/** What each part of the sleep score is worth. They add to 100. */
+const SLEEP_WEIGHTS = {
+	length: 40,
+	depth: 20,
+	unbroken: 20,
+	steady: 20
+};
+/** Minutes after 18:00 that a "YYYY-MM-DDTHH:MM" bedtime falls, so 02:00 is later than 23:00 and the evening never wraps. */
+const bedMinutes = (bed) => {
+	const m = /T(\d{2}):(\d{2})$/.exec(bed ?? "");
+	return m ? (Number(m[1]) * 60 + Number(m[2]) - 1080 + 1440) % 1440 : null;
+};
+/**
+* How close this night's bedtime was to your own usual (the median of the
+* last seven nights before it), 0-1. null until three earlier nights exist.
+* The clock is not judged: only whether it was the same night as the others.
+*/
+function steadiness(s, day) {
+	const mine = bedMinutes(s.days[day]?.bed);
+	if (mine === null) return null;
+	const xs = [];
+	for (let i = 1; i <= 7; i++) {
+		const b = bedMinutes(s.days[addDays(day, -i)]?.bed);
+		if (b !== null) xs.push(b);
+	}
+	if (xs.length < 3) return null;
+	xs.sort((a, b) => a - b);
+	const mid = Math.floor(xs.length / 2);
+	const usual = xs.length % 2 ? xs[mid] : (xs[mid - 1] + xs[mid]) / 2;
+	return clamp01(1 - (Math.abs(mine - usual) - 45) / 75);
+}
+function sleepParts(d, goal = SLEEP_GOAL, steady = null) {
+	if (!d || d.sleepMin === void 0) return null;
+	const length = clamp01(d.sleepMin / goal.minutes);
+	const depth = d.deepMin !== void 0 && d.remMin !== void 0 && d.sleepMin > 0 ? clamp01((d.deepMin + d.remMin) / d.sleepMin / .4) : null;
+	const inBed = d.sleepMin + (d.awakeMin ?? 0);
+	return {
+		length,
+		depth,
+		unbroken: d.awakeMin === void 0 || inBed === 0 ? null : clamp01((d.sleepMin / inBed - .75) / .15),
+		steady
+	};
+}
+/**
+* A 0-100 sleep score for the sleep filed under `day`, built only from what
+* the band reports (the API has no score of its own): how long (40), how much
+* of it was deep or REM (20), how unbroken (20), and how steady the bedtime
+* was against your own usual (20). `steady` comes from steadiness().
+*/
+function sleepScore(d, goal = SLEEP_GOAL, steady = null) {
+	const p = sleepParts(d, goal, steady);
+	if (!p) return null;
+	const w = SLEEP_WEIGHTS;
+	return Math.round(p.length * w.length + (p.depth ?? p.length) * w.depth + (p.unbroken ?? p.length) * w.unbroken + (p.steady ?? p.length) * w.steady);
+}
+/** The same, with the earlier nights known, so steadiness counts. */
+const sleepScoreOn = (s, day, goal = SLEEP_GOAL) => sleepScore(s.days[day], goal, steadiness(s, day));
+/** Your own normal for a reading: the median of up to four weeks before `day`. null until a week of data exists. */
+function baseline(s, field, day) {
+	const xs = [];
+	for (let i = 1; i <= 28; i++) {
+		const v = s.days[addDays(day, -i)]?.[field];
+		if (typeof v === "number") xs.push(v);
+	}
+	if (xs.length < 7) return null;
+	xs.sort((a, b) => a - b);
+	const m = Math.floor(xs.length / 2);
+	return xs.length % 2 ? xs[m] : (xs[m - 1] + xs[m]) / 2;
+}
+/**
+* A 0-100 recovery reading for the morning of `day`: variability above your
+* normal and resting heart rate below it are good, plus how you slept. Shown,
+* never paid for: it is an outcome, not something you do.
+*/
+function recovery(s, day) {
+	const d = s.days[day];
+	const hrv0 = baseline(s, "hrv", day);
+	const rhr0 = baseline(s, "restingHr", day);
+	if (!d || d.hrv === void 0 || d.restingHr === void 0 || hrv0 === null || rhr0 === null) return null;
+	const hrvPart = clamp01(.5 + (d.hrv - hrv0) / hrv0 / .4);
+	const rhrPart = clamp01(.5 + (rhr0 - d.restingHr) / rhr0 / .2);
+	const sleep = (sleepScoreOn(s, day) ?? 50) / 100;
+	return Math.round((hrvPart * .45 + rhrPart * .3 + sleep * .25) * 100);
+}
+//#endregion
+//#region bridge/map.ts
+const num = (v) => {
+	const n = typeof v === "string" && v.trim() !== "" ? Number(v) : v;
+	return typeof n === "number" && Number.isFinite(n) ? n : void 0;
+};
+const round = (v, places = 0) => v === void 0 ? void 0 : Math.round(v * 10 ** places) / 10 ** places;
+const points = (res) => Array.isArray(res?.dataPoints) ? res.dataPoints : [];
+/** "2026-03-29T16:33:07+01:00" → the wall-clock date and minute it shows */
+const civilDay = (stamp) => String(stamp ?? "").slice(0, 10);
+const civilMinute = (stamp) => String(stamp ?? "").slice(0, 16);
+/** First numeric value under any of these keys (the daily summary types differ in what they call it). */
+function pick(point, keys) {
+	for (const k of keys) {
+		const v = num(point?.[k]);
+		if (v !== void 0) return v;
+	}
+	for (const v of Object.values(point ?? {})) if (v && typeof v === "object") {
+		for (const k of keys) if (num(v[k]) !== void 0) return num(v[k]);
+	}
+}
+const put = (out, day, fields) => {
+	if (typeof day !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return;
+	const clean = Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== void 0 && v !== ""));
+	if (Object.keys(clean).length) out[day] = {
+		...out[day],
+		...clean
+	};
+};
+/** day → vitals payload. A day or field the band did not report is absent, never 0. */
+function toVitals(res) {
+	const out = {};
+	for (const p of points(res.steps)) put(out, p.date, { steps: num(p.countSum) });
+	for (const p of points(res.distance)) {
+		const mm = num(p.millimetersSum);
+		put(out, p.date, { distanceM: mm === void 0 ? void 0 : round(mm / 1e3) });
+	}
+	for (const p of points(res.calories)) put(out, p.date, { kcal: round(num(p.kcalSum)) });
+	for (const p of points(res.zoneMinutes)) put(out, p.date, { zoneMin: pick(p, ["activeZoneMinutesSum", "activeZoneMinutes"]) });
+	const best = {};
+	for (const p of points(res.sleep)) {
+		if (p.isNap) continue;
+		const day = civilDay(p.end);
+		const asleep = num(p.minutesAsleep);
+		if (asleep === void 0 || best[day] !== void 0 && best[day] >= asleep) continue;
+		best[day] = asleep;
+		const st = p.stageMinutes ?? {};
+		put(out, day, {
+			bed: civilMinute(p.start),
+			wake: civilMinute(p.end),
+			sleepMin: asleep,
+			awakeMin: num(p.minutesAwake),
+			deepMin: num(st.DEEP),
+			remMin: num(st.REM),
+			lightMin: num(st.LIGHT)
+		});
+	}
+	for (const p of points(res.restingHr)) put(out, p.date, { restingHr: pick(p, ["beatsPerMinute"]) });
+	for (const p of points(res.hrv)) put(out, p.date, { hrv: round(pick(p, [
+		"averageHeartRateVariabilityMilliseconds",
+		"rmssd",
+		"averageRmssd",
+		"dailyRmssd",
+		"rmssdMilliseconds"
+	]), 1) });
+	for (const p of points(res.spo2)) put(out, p.date, { spo2: round(pick(p, [
+		"averagePercentage",
+		"percentage",
+		"average"
+	]), 1) });
+	for (const p of points(res.respRate)) put(out, p.date, { respRate: round(pick(p, ["breathsPerMinute", "respiratoryRate"]), 1) });
+	for (const p of points(res.tempDev)) {
+		const night = num(p.nightlyTemperatureCelsius), base = num(p.baselineTemperatureCelsius);
+		const gap = night !== void 0 && base !== void 0 ? night - base : pick(p, [
+			"nightlyRelative",
+			"temperatureDeviationCelsius",
+			"deviationCelsius",
+			"relative"
+		]);
+		put(out, p.date, { tempDev: round(gap, 2) });
+	}
+	for (const p of points(res.vo2max)) put(out, p.date, { vo2max: round(pick(p, ["vo2Max", "value"]), 1) });
+	const lastAt = {};
+	for (const p of points(res.weight)) {
+		const time = String(p.time ?? ""), day = civilDay(time), g = num(p.weightGrams);
+		if (g === void 0 || lastAt[day] && lastAt[day] > time) continue;
+		lastAt[day] = time;
+		put(out, day, { weightKg: round(g / 1e3, 2) });
+	}
+	return out;
+}
+/**
+* The rows to write for a sync: each day's readings plus its sleep score and
+* recovery, limited to what differs from the ledger already (`known`), so a
+* daily sync of an unchanged week writes nothing.
+*/
+function rowsToWrite(days, known, knownScores = {}) {
+	const merged = {
+		days: { ...known.days },
+		at: known.at
+	};
+	for (const [day, p] of Object.entries(days)) merged.days[day] = {
+		...merged.days[day],
+		...p
+	};
+	const out = {};
+	for (const [day, p] of Object.entries(days)) {
+		const full = { ...p };
+		const s = sleepScoreOn(merged, day);
+		if (s !== null && p.sleepMin !== void 0) full.sleepScore = s;
+		const r = recovery(merged, day);
+		if (r !== null) full.recovery = r;
+		const before = {
+			...known.days[day],
+			...knownScores[day]
+		};
+		const changed = Object.fromEntries(Object.entries(full).filter(([k, v]) => before[k] !== v));
+		if (Object.keys(changed).length) out[day] = changed;
+	}
+	return out;
+}
+//#endregion
+//#region bridge/plan.ts
+const DEVICE = "health-sync";
+/** The `vitals` events to write, oldest day first. `known` is the ledger's own `vitals` events from LOOK_BACK days before the first day read. */
+function planWrites(read, known, at) {
+	const fresh = toVitals(read);
+	const state = foldVitals(emptyVitals(), known);
+	const scores = {};
+	for (const r of known) for (const k of ["sleepScore", "recovery"]) if (typeof r.payload?.[k] === "number") (scores[r.day] ??= {})[k] = r.payload[k];
+	const out = rowsToWrite(fresh, state, scores);
+	return Object.entries(out).sort(([a], [b]) => a < b ? -1 : 1).map(([day, payload]) => ({
+		device: DEVICE,
+		at,
+		day,
+		type: "vitals",
+		payload
+	}));
+}
+//#endregion
+//#region server/health-shared.ts
 const E = process.env;
 const cfg = {
 	secret: E.WEBHOOK_SECRET ?? "",
@@ -1847,25 +1847,13 @@ const cfg = {
 	supabaseKey: E.SUPABASE_ANON_KEY ?? E.VITE_SUPABASE_ANON_KEY ?? "",
 	tz: E.HEALTH_TZ ?? "Asia/Kolkata"
 };
-const KEYSET_URL = "https://www.gstatic.com/googlehealthapi/webhooks/webhooks_public_keyset.json";
+/** The owner's calendar date. */
 const today = () => new Intl.DateTimeFormat("en-CA", {
 	timeZone: cfg.tz,
 	year: "numeric",
 	month: "2-digit",
 	day: "2-digit"
 }).format(/* @__PURE__ */ new Date()).slice(0, 10);
-let keys = null;
-async function keyset() {
-	if (keys && Date.now() - keys.at < 36e5) return keys.set;
-	try {
-		const res = await fetch(KEYSET_URL, { signal: AbortSignal.timeout(5e3) });
-		if (res.ok) keys = {
-			at: Date.now(),
-			set: await res.json()
-		};
-	} catch {}
-	return keys?.set ?? null;
-}
 let access = null;
 async function accessToken() {
 	if (access && Date.now() < access.until) return access.token;
@@ -1898,12 +1886,8 @@ const sb = (path, init = {}) => fetch(`${cfg.supabaseUrl}/rest/v1/${path}`, {
 	},
 	signal: AbortSignal.timeout(15e3)
 });
-async function sync(win) {
-	const read = await readHealth(await accessToken(), win.from, win.to, (url, init) => fetch(url, {
-		...init,
-		signal: AbortSignal.timeout(15e3)
-	}));
-	const since = addDays(win.from, -35);
+/** The ledger's `vitals` rows from `since` on, oldest first. */
+async function knownVitals(since) {
 	const known = [];
 	for (let offset = 0;; offset += 1e3) {
 		const res = await sb(`events?select=device,at,day,type,payload&type=eq.vitals&day=gte.${since}&order=at.asc&offset=${offset}&limit=1000`);
@@ -1912,6 +1896,15 @@ async function sync(win) {
 		known.push(...page);
 		if (page.length < 1e3) break;
 	}
+	return known;
+}
+/** Read these days from Google and write what is new to the ledger. */
+async function sync(win) {
+	const read = await readHealth(await accessToken(), win.from, win.to, (url, init) => fetch(url, {
+		...init,
+		signal: AbortSignal.timeout(15e3)
+	}));
+	const known = await knownVitals(addDays$1(win.from, -35));
 	const events = planWrites(read.data, known, (/* @__PURE__ */ new Date()).toISOString());
 	if (events.length) {
 		const res = await sb("events", {
@@ -1922,8 +1915,29 @@ async function sync(win) {
 		if (!res.ok) throw new Error(`ledger write ${res.status}`);
 	}
 	const failed = Object.keys(read.failed);
+	const days = toVitals(read.data);
+	const nights = Object.keys(days).filter((d) => typeof days[d].sleepMin === "number" && days[d].sleepMin > 0);
 	console.log(`sync ${win.from}..${win.to}: wrote ${events.length} day(s) as ${DEVICE}${failed.length ? `; could not read ${failed.join(", ")}` : ""}`);
-	return `${events.length}`;
+	return {
+		wrote: events.length,
+		nights,
+		failed
+	};
+}
+//#endregion
+//#region server/health-webhook.ts
+const KEYSET_URL = "https://www.gstatic.com/googlehealthapi/webhooks/webhooks_public_keyset.json";
+let keys = null;
+async function keyset() {
+	if (keys && Date.now() - keys.at < 36e5) return keys.set;
+	try {
+		const res = await fetch(KEYSET_URL, { signal: AbortSignal.timeout(5e3) });
+		if (res.ok) keys = {
+			at: Date.now(),
+			set: await res.json()
+		};
+	} catch {}
+	return keys?.set ?? null;
 }
 const handle = (req) => receive(req, {
 	secret: cfg.secret,

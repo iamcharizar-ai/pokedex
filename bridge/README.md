@@ -59,3 +59,17 @@ ghealth webhooks subscribers create --id lifeos-health --endpoint-uri <url> --se
 ```
 
 **Use the project number (815901456800), not the project ID**, in that config: with the ID the API answers 403 "caller does not have permission". The `cloud-platform` grant is only needed for this; revoke it at myaccount.google.com/permissions afterwards.
+
+## "Is last night in yet?": the check endpoint
+
+`server/health-check.ts` (built to `api/health-check.js`, served at `/api/health-check`) is what Life OS calls while the Sleep row waits for the band. It answers from the ledger when the night is already there; otherwise it reads Google itself (at most once a minute, shared by every caller) with the same sync as the webhook (`server/health-shared.ts`), so a night never depends on the webhook alone. The answer says what the hold-up is: `not-synced` (Google has no night ending today: the phone has not uploaded it, which only opening Google Health or the band app fixes), `scoring`, `measured`, or `error`. The decisions are in `bridge/check.ts`, tested without Google.
+
+## Ledger housekeeping
+
+On 9 and 10 Oct one Woodshed device wrote the same `guitar_plan` 27,096 times (6.4 MB of the 10 MB ledger every app downloads when it opens). Woodshed keeps only the earliest plan of a day, so the duplicates change nothing. The ledger refuses deletes from the apps' key (it only takes new rows), so they are removed by hand in the Supabase SQL editor. A copy of every row is in `archive/ledger-backups/guitar_plan-2026-10-19.json` next to this repo.
+
+```sql
+delete from events e using (
+  select id, row_number() over (partition by day order by at, id) as n from events where type = 'guitar_plan'
+) d where e.id = d.id and d.n > 1;
+```

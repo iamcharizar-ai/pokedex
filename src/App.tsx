@@ -7,7 +7,7 @@ import {
   CLAIM_AUTO, EGG_STEPS, SLEEP_HABIT, bondLevel, HEART_LEVELS, LEGENDARY_EVERY_WILD, PAY_STREAK, REGIONS, REPEL_DAYS, SHINY_ODDS, SHINY_ODDS_WORN, SLEEP_AFTER, SLIP, STAKES_FROM, STEPS_GOAL, TEAM_SIZE, WILD_STAY, TIER_XP, WEAK_MULT, evolveAt, graduateAt, xpForLevel,
 } from '../core/rules.ts'
 import { BERRY_HEARTS, MARKS, EGG_STEPS_OLD_CHARM, BOND_PARTY, BOND_STEP, MASTERY_MAX, MASTERY_STEP, SELL, itemName as econName, masteryCost } from '../core/economy.ts'
-import { CRIT_MULT, DYNAMAX, GIGANTAMAX, LEVEL_POWER, MEGA_BONUS, MEGA_BOND, TEAM_BONUS, TEAM_LEVEL, TEAM_NATURE, type Tag as TagKind } from '../core/rules.ts'
+import { CRIT_MULT, DYNAMAX, GIGANTAMAX, LEVEL_POWER, MAX_LEVEL, MEGA_BONUS, MEGA_BOND, RESEARCH_SLOTS, RESEARCH_WILD, RESEARCH_WILD_MAX, TEAM_BONUS, TEAM_LEVEL, TEAM_NATURE, type Tag as TagKind } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
 import { Ball, KeyStone } from './Ball.tsx'
 import { FeatsWin } from './Feats.tsx'
@@ -33,6 +33,7 @@ import { BOSS_HEAL, KILL_CAP, THROWS, THROW_AT } from '../core/boss.ts'
 import { KIT_SHARD_EVERY } from '../core/rules.ts'
 import { CollectButton } from './Claim.tsx'
 import { Toasts } from './Toasts.tsx'
+import { FeedSheet, treatsIn } from './Feed.tsx'
 import { aBall, badgeArt, badgeName, fmtDay, leagueName, still } from './lib/art.ts'
 import { play, setSoundOn, soundOn } from './lib/sfx.ts'
 import { LIFEOS_URL, start, useItem, useView } from './lib/store.ts'
@@ -261,7 +262,7 @@ function Pace({ game }: { game: Game }) {
         <b className="pace-big">×{momentum.mult}</b>
       </div>
       <div className="pace-cell">
-        <span className="k-label">{game.next.what === 'evolve' ? 'Evolves' : 'Fully trained'} at Lv {game.next.level}</span>
+        <span className="k-label">{game.next.what === 'evolve' ? 'Evolves' : game.next.what === 'master' ? 'Level 100' : 'Fully trained'} at Lv {game.next.level}</span>
         <b className="pace-big">{toLevel.toLocaleString('en-IN')}<small> XP to go</small></b>
       </div>
     </div>
@@ -276,7 +277,9 @@ function Summary({ game, onOpen }: { game: Game; onOpen?: () => void }) {
   const hearts = (partner.together ?? 0) + (partner.fed ?? 0)
   const bond = bondLevel(hearts)
   const nextAt = HEART_LEVELS[bond]
-  const berry = Object.keys(BERRY_HEARTS).find((b) => (game.inv[b] ?? 0) > 0)
+  // version 14: treats first, since a berry is also bait; and feeding opens a choice of who
+  const berry = game.v14 ? treatsIn(game)[0] : Object.keys(BERRY_HEARTS).find((b) => (game.inv[b] ?? 0) > 0)
+  const [feeding, setFeeding] = useState(false)
   // what it may become: by what you have done most, when that is known; else every form it can take
   const ahead = game.lean.length > 0 ? game.lean.slice(0, 3).map((x) => ({ form: x.form, note: `${x.pct}% ${TAG_NAME[x.tag] ?? x.tag}` })) : (rec.e ?? []).slice(0, 3).map((f) => ({ form: f, note: '' }))
   return (
@@ -316,13 +319,14 @@ function Summary({ game, onOpen }: { game: Game; onOpen?: () => void }) {
                 ))}
               </>
             )}
-            {ahead.length === 0 && <span className="hero-next">Fully trained at Lv {game.next.level}</span>}
+            {ahead.length === 0 && <span className="hero-next">{game.next.what === 'master' ? 'Level 100' : 'Fully trained'} at Lv {game.next.level}</span>}
           </div>
           <div className="hero-bond" title={`A heart for each pillar done while it is your partner, and more for each berry. At ${HEART_LEVELS.join(', ')} hearts the bond steps up: +${Math.round(BOND_STEP * 100)}% to every strike each, and a perk. It only ever counts up.`}>
             <span className="hero-hearts" aria-label={`Bond level ${bond} of ${HEART_LEVELS.length}`}>{HEART_LEVELS.map((_, i) => <img key={i} src="/sprites/items/heart-scale.png" width={22} height={22} alt="" className={`pix ${i < bond ? 'on' : ''}`} />)}</span>
             <span className="hero-bondtxt"><b>{hearts} ♥</b>{nextAt ? ` · ${nextAt - hearts} to bond ${bond + 1}` : ' · full bond'}</span>
-            <button type="button" className="hero-feed" disabled={!berry} onClick={() => { useItem(berry!, '', 'feed'); play('feed') }} title={berry ? `Feed it: ${econName(berry)}` : 'No berries: the Mart and the Garden sell them'}><ItemIcon id={berry ?? 'oran-berry'} size={24} />Feed{berry ? <i>{game.inv[berry]}</i> : null}</button>
+            <button type="button" className="hero-feed" disabled={!berry} onClick={() => { if (game.v14) setFeeding(true); else { useItem(berry!, '', 'feed'); play('feed') } }} title={berry ? (game.v14 ? 'Feed a Pokemon: choose who and what' : `Feed it: ${econName(berry)}`) : 'No berries: the Mart and the Garden sell them'}><ItemIcon id={berry ?? 'oran-berry'} size={24} />Feed{berry ? <i>{game.inv[berry]}</i> : null}</button>
           </div>
+          {feeding && <FeedSheet game={game} onClose={() => setFeeding(false)} />}
         </div>
       </section>
       {game.v13 && <BondPerks game={game} />}
@@ -703,7 +707,7 @@ function DexTab({ game }: { game: Game }) {
 }
 
 // ── Journey (the Trainer tab's old name in the code) ───────────────────────
-const KIND: Record<Moment['kind'], string> = { level: 'Level', evolve: 'Evolved', graduate: 'Trained', partner: 'Partner', catch: 'Caught', appear: 'Wild', form: 'Form', region: 'Region', gym: 'Gym', league: 'League', use: 'Choice', key: 'Key Stone', review: 'Review', boss: 'Boss', mega: 'Mega', transfer: 'Professor', quest: 'Quest', season: 'Season', hatch: 'Hatched', chest: 'Chest', feat: 'Feat', gear: 'Gear', kit: 'Kit', flee: 'Fled', slip: 'Slipped', pickup: 'Pickup', endure: 'Endured', symbol: 'Frontier', summon: 'Legend', fossil: 'Lab', itemevo: 'Evolved', lap: 'Rematch' }
+const KIND: Record<Moment['kind'], string> = { level: 'Level', evolve: 'Evolved', graduate: 'Trained', partner: 'Partner', catch: 'Caught', appear: 'Wild', form: 'Form', region: 'Region', gym: 'Gym', league: 'League', use: 'Choice', key: 'Key Stone', review: 'Review', boss: 'Boss', mega: 'Mega', transfer: 'Professor', quest: 'Quest', season: 'Season', hatch: 'Hatched', chest: 'Chest', feat: 'Feat', gear: 'Gear', kit: 'Kit', flee: 'Fled', slip: 'Slipped', pickup: 'Pickup', endure: 'Endured', symbol: 'Frontier', summon: 'Legend', fossil: 'Lab', itemevo: 'Evolved', lap: 'Rematch', research: 'Professor', master: 'Lv 100' }
 const aOrAn = (w: string): string => `${/^[AEIOU]/i.test(w) ? 'an' : 'a'} ${w}`
 function line(m: Moment): string {
   switch (m.kind) {
@@ -748,6 +752,8 @@ function line(m: Moment): string {
     case 'fossil': return `The Lab brought the ${itemName(m.item)} back: ${nameOf(m.form)}`
     case 'itemevo': return `${nameOf(m.from)} evolved into ${nameOf(m.form)} (${itemName(m.item)})`
     case 'lap': return `Every league beaten: the Rematch begins at rank ★${m.lap + 1}`
+    case 'research': return `The Professor's research reached rank ${m.rank}: wild Pokemon come weaker, and he sent a gift`
+    case 'master': return `${nameOf(m.form)} reached level 100 and stepped aside for the next partner`
     case 'feat': return `Feat: ${m.name}${[m.gems ? `+${m.gems} gems` : '', m.coins ? `+${m.coins} coins` : '', ...m.items.map(itemName)].filter(Boolean).map((x, i) => (i ? x : ` (${x}`)).join(', ')}${m.gems || m.coins || m.items.length ? ')' : ''}`
   }
 }
@@ -949,10 +955,10 @@ function RulesTab({ onTour }: { onTour: () => void }) {
             An X item, used any time in the day, makes one kind of work strike the leader harder for the whole day: +20%, +40% or +60% from the Mart, +120% from the Battle Frontier. A Guard Spec stands guard over the next empty day.
           </Rule>
           <Rule title="Pickup and treasures" tone="green" pic={<><ItemIcon id="itemfinder" size={30} /><ItemIcon id="nugget" size={30} /><ItemIcon id="helix-fossil" size={30} /></>}>
-            From bond level 1 your partner finds things on days with a pillar: berries, balls, treasures for the Collector, fossils the Lab brings back to life, evolution stones. The further you are in the leagues, the better the finds.
+            From bond level 1 your partner finds things on days with a pillar: berries, balls, treasures for the Collector, fossils the Lab brings back to life, evolution stones. The further you are in the leagues, the better the finds. The Collector wants three kinds of treasure each day and pays double for them, so a treasure can be worth keeping for its day.
           </Rule>
           <Rule title="Evolution items and vitamins" tone="green" pic={<><ItemIcon id="fire-stone" size={30} /><ItemIcon id="rare-candy" size={30} /><ItemIcon id="calcium" size={30} /></>}>
-            A stone or trade item evolves a Pokemon in My Pokemon by one stage when the form it becomes has the item's type. A Rare Candy is a level. A vitamin makes one kind of work strike 3% harder for the Pokemon it is given to, for good.
+            A stone or trade item evolves a Pokemon in My Pokemon by one stage when the form it becomes has the item's type. A Rare Candy is a level. A vitamin makes one kind of work strike 3% harder for the Pokemon it is given to, for good: in full while it is your partner, a third while it stands in the party.
           </Rule>
           <Rule title="The Battle Frontier" tone="purple" pic={<><ItemIcon id="rainbow-pass" size={30} /><ItemIcon id="point-card" size={30} /></>}>
             Seven facilities, each a run of one kind of day. Every win pays a Battle Point, every seventh in a row a bonus, and the Frontier Brains hand over Silver and Gold Symbols. BP buy held items, X items, fossils and Legend keys at the Exchange.
@@ -970,7 +976,13 @@ function RulesTab({ onTour }: { onTour: () => void }) {
             Kanto's gym leaders have {LEADER_HP.toLocaleString('en-IN')} HP, and each league further on more. Each is weak to two kinds of work (×{WEAK_MULT}). Beat one, keep the badge.
           </Rule>
           <Rule title="Your team" tone="blue" pic={<><img src="/sprites/ui/party-on.png" alt="" width={30} height={30} className="pix" /><img src="/sprites/ui/party-on.png" alt="" width={30} height={30} className="pix" /><img src="/sprites/ui/party-empty.png" alt="" width={30} height={30} className="pix" /><span className="rule-chip sm">+10%</span></>}>
-            The partner and up to {TEAM_SIZE} fully trained Pokemon stand together, a party of six. Each of the {TEAM_SIZE} adds {Math.round(TEAM_BONUS * 100)}% to every strike, and {Math.round(TEAM_NATURE * 100)}% more to the work its nature raised.
+            The partner and up to {TEAM_SIZE} more stand together, a party of six: they fight the leaders and the weekly boss. Each of the {TEAM_SIZE} adds {Math.round(TEAM_BONUS * 100)}% to every strike, more for its level and bond, and {Math.round(TEAM_NATURE * 100)}% more to the work its nature raised. With the bond's Exp. Share they keep growing, up to level {MAX_LEVEL}.
+          </Rule>
+          <Rule title="The Professor's lab" tone="purple" pic={<><ItemIcon id="journal" size={30} /><Arrow /><span className="rule-chip sm">−{Math.round(RESEARCH_WILD * 100)}% HP</span></>}>
+            Everyone not in the party lives with the Professor; nobody is sold. He studies up to {RESEARCH_SLOTS} of them on his desk, on every day with a pillar: ten plus its level, times its rarity, a shiny half again. Each research rank takes {Math.round(RESEARCH_WILD * 100)}% more HP off every wild Pokemon to come (up to {Math.round(RESEARCH_WILD_MAX * 100)}%) and sends a gift: Rare Candy, stones, Honey, balls, and every fifth rank a Mystery Egg. So a strong Pokemon either fights in the party or helps you catch on the desk.
+          </Rule>
+          <Rule title="Level 100" tone="gold" pic={<><span className="rule-chip sm">Lv 50</span><Arrow /><span className="rule-chip">Lv {MAX_LEVEL}</span></>}>
+            Fully trained (level 50, or 30 for a Pokemon that never evolves) is still the milestone: its nature is set, it counts toward new regions and the boss, and the next partner steps up. After that it can lead again to go on to level {MAX_LEVEL}; there it steps aside by itself, as it has nothing left to learn.
           </Rule>
           <Rule title="Gems" tone="green" pic={<><Gem size={34} /><span className="rule-chip sm">{GEMS.catch}</span><span className="rule-chip sm">{GEMS.evolve}</span><span className="rule-chip sm">{GEMS.gym}</span></>}>
             A catch, an evolution, a badge, a feat. They buy eggs, incense, chests and scenes, never a ball.
@@ -979,10 +991,10 @@ function RulesTab({ onTour }: { onTour: () => void }) {
             Every {SEASON_STEP.toLocaleString('en-IN')} XP of the month's work is a step, and each step hands something over.
           </Rule>
           <Rule title="Collect" tone="gold" pic={<><Coin size={28} /><Gem size={28} /><Arrow /><ItemIcon id="loot-sack" size={30} /></>}>
-            Showing-up pay, weekly quests, season steps, feats and a month reviewed wait in the Collect strip until you tap them. Left alone, each pays itself {CLAIM_AUTO} days later, so nothing is lost. A catch, a chest and selling a Pokemon pay at once.
+            Showing-up pay, weekly quests, season steps, feats and a month reviewed wait in the Collect strip until you tap them. Left alone, each pays itself {CLAIM_AUTO} days later, so nothing is lost. A catch and a chest pay at once.
           </Rule>
           <Rule title="Hearts and bond" tone="green" pic={<><ItemIcon id="heart-scale" size={28} /><ItemIcon id="oran-berry" size={28} /><ItemIcon id="sitrus-berry" size={28} /></>}>
-            A heart for every pillar you finish while this Pokemon is your partner, and more for the berries you feed it (Oran one, Sitrus three, a friendship berry five). Each bond level unlocks a perk: Pickup, Endure, Focus, Best friends, Exp. Share. At {HEART_LEVELS.join(', ')} hearts the bond steps up, and each step adds {Math.round(BOND_STEP * 100)}% to every strike. Hearts belong to the Pokemon and only count up. A new partner starts again, but a fully trained one keeps its hearts for the party: each of its bond levels adds {Math.round(BOND_PARTY * 100)}% to every strike on top of its place in the party.
+            A heart for every pillar you finish while this Pokemon is your partner, and more for the berries and treats you feed to any of your Pokemon (Oran one, Sitrus three, a friendship berry five). A berry can be kept instead and thrown with a ball as bait: more HP off a wild Pokemon, a better chance at the boss, and double for a friendship berry against the types of its domain. A Pokemon with every bond level ({HEART_LEVELS[HEART_LEVELS.length - 1]} hearts) takes nothing more. Each bond level unlocks a perk: Pickup, Endure, Focus, Best friends, Exp. Share. At {HEART_LEVELS.join(', ')} hearts the bond steps up, and each step adds {Math.round(BOND_STEP * 100)}% to every strike. Hearts belong to the Pokemon and only count up. A new partner starts again, but a fully trained one keeps its hearts for the party: each of its bond levels adds {Math.round(BOND_PARTY * 100)}% to every strike on top of its place in the party.
           </Rule>
           <Rule title="Momentum" tone="blue" pic={<><span className="rule-chip sm">×1.2</span><span className="rule-chip sm">×1.35</span><span className="rule-chip">×1.5</span></>}>
             Of the last seven days, three with two pillars make XP ×1.2, five ×1.35, seven ×1.5. It slides back one day at a time, never resets. {SLEEP_AFTER} days with no pillar at all and the partner dozes off until you finish one.

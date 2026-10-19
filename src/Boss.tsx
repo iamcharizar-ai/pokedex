@@ -8,7 +8,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { BOSS_PARTY, BOSS_WHERE, KILL_CAP, THROW_AT, catchChance, type BossKind } from '../core/boss.ts'
-import { BALLS, itemName, rng } from '../core/economy.ts'
+import { BAIT, BALLS, baitFor, itemName, rng } from '../core/economy.ts'
 import { nameOf, spritePath, type BossView, type Game } from '../core/fold.ts'
 import { SPECIES } from '../core/species.ts'
 import { Win } from './App.tsx'
@@ -67,6 +67,8 @@ function Fight({ boss, game }: { boss: BossView; game: Game }) {
   const stage = useRef<HTMLDivElement>(null)
   const sprite = useRef<HTMLImageElement>(null)
   const [busy, setBusy] = useState<string | null>(null)
+  /** version 14: a berry thrown with the ball as bait */
+  const [bait, setBait] = useState<string | null>(null)
   const was = useRef<{ taken: number; killed: boolean; week: string } | null>(null)
   // what just happened to it is played on it
   useEffect(() => {
@@ -77,7 +79,11 @@ function Fight({ boss, game }: { boss: BossView; game: Game }) {
     if (boss.killed && !prev.killed) { stamp(stage.current, 'BOSS DOWN', 'purple'); party(stage.current, 60) }
   }, [boss.taken, boss.killed, boss.week])
 
-  const odds = (item: string): number => catchChance(item, boss.trained, boss.allDone, boss.hpLeft, boss.strike)
+  const types = [SPECIES[boss.form]?.t, SPECIES[boss.form]?.t2]
+  const loaded = game.v14 && bait && (game.inv[bait] ?? 0) > 0 ? bait : null
+  const baits = game.v14 ? Object.keys(BAIT).filter((b) => (game.inv[b] ?? 0) > 0) : []
+  // the same sum the game makes: the throw, the Zoom Lens, the bait
+  const odds = (item: string): number => Math.min(1, catchChance(item, boss.trained, boss.allDone, boss.hpLeft, boss.strike) + (game.v13 && game.partner.held === 'zoom-lens' ? 0.05 : 0) + (loaded && BALLS[item] && item !== 'master-ball' ? baitFor(loaded, types).catch : 0))
   const balls = Object.keys(BALLS).filter((b) => (game.inv[b] ?? 0) > 0)
     .sort((a, b) => odds(b) - odds(a))
   const toss = async (item: string) => {
@@ -91,7 +97,8 @@ function Fight({ boss, game }: { boss: BossView; game: Game }) {
     stamp(stage.current, caught ? 'GOTCHA!' : 'BROKE FREE', caught ? 'gold' : 'red')
     if (caught) party(stage.current, 70)
     play(caught ? 'catch' : 'hit')
-    useItem(item, '', 'boss-throw')
+    useItem(item, '', 'boss-throw', loaded ?? undefined)
+    setBait(null)
     setBusy(null)
   }
 
@@ -138,6 +145,15 @@ function Fight({ boss, game }: { boss: BossView; game: Game }) {
         ? (
           <div className="boss-throws">
             <p className="muted">It is weak enough to throw at. {boss.throwsLeft} {boss.throwsLeft === 1 ? 'throw' : 'throws'} left. A finished card, less HP on it and a stronger party all raise the chance.</p>
+            {baits.length > 0 && (
+              <div className="kit-row boss-bait" role="group" aria-label="Bait">
+                <span className="k-label">Bait</span>
+                {baits.map((b) => {
+                  const k = baitFor(b, types)
+                  return <button key={b} type="button" className={`k-btn ${loaded === b ? 'ok' : ''}`} aria-pressed={loaded === b} onClick={() => setBait(loaded === b ? null : b)} title={`${itemName(b)} with the next ball: +${Math.round(k.catch * 100)}%${k.match ? ', double: its type likes it' : ''}`}><ItemIcon id={b} size={22} />+{Math.round(k.catch * 100)}%{k.match ? ' ×2' : ''} <small>{game.inv[b]}</small></button>
+                })}
+              </div>
+            )}
             <div className="actions">
               {balls.length === 0 && <p className="muted">You have no balls. The Mart sells them.</p>}
               {balls.map((b) => (
