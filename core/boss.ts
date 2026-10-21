@@ -79,7 +79,7 @@ export const BOSS_KINDS: BossKind[] = ['gym', 'arbor', 'shed', 'sleep', 'life']
 export const BOSS_SHARE: Record<BossKind, number> = { gym: 0.3, arbor: 0.25, shed: 0.2, sleep: 0.15, life: 0.1 }
 /** The game's own domain for each kind. */
 export const BOSS_TAG: Record<BossKind, Tag> = { gym: 'fitness', arbor: 'arbor', shed: 'guitar', sleep: 'sleep', life: 'routine' }
-export const BOSS_WHERE: Record<BossKind, string> = { gym: 'Strong', arbor: 'Arbor', shed: 'Woodshed', sleep: 'Vitals', life: 'Life OS' }
+export const BOSS_WHERE: Record<BossKind, string> = { gym: 'Strong', arbor: 'Arbor', shed: 'Woodshed', sleep: 'The band', life: 'Life OS' }
 
 export interface BossTask {
   kind: BossKind

@@ -29,7 +29,6 @@ export interface BodyDay {
 }
 /** Where the habits are ticked. */
 export const LIFEOS_URL: string = (env.VITE_LIFEOS_URL as string | undefined) ?? 'https://redesign-life-os-ui.vercel.app'
-export const VITALS_URL: string = (env.VITE_VITALS_URL as string | undefined) ?? 'https://vitals-theta-pied.vercel.app'
 
 export interface View {
   /** day → the night that ended on it, as the band reported it */

@@ -1021,7 +1021,7 @@ function RulesTab({ onTour }: { onTour: () => void }) {
             Max Repel keeps the wild Pokemon {REPEL_DAYS} days longer, once. A Revive takes back the HP a leader regained on empty days. Both are always on the Mart's shelf.
           </Rule>
           <Rule title="Ten thousand steps" tone="green" pic={<><span className="rule-chip sm">10k</span><Arrow /><ItemIcon id="iron" size={28} /></>}>
-            A day of {STEPS_GOAL.toLocaleString('en-IN')} steps from Vitals pays an extra Iron mark.
+            A day of {STEPS_GOAL.toLocaleString('en-IN')} steps on your band pays an extra Iron mark.
           </Rule>
           <Rule title="The weekly boss" tone="purple" pic={<><ItemIcon id="master-ball" size={30} /><span className="rule-chip sm">6</span><Arrow /><span className="rule-chip">5</span></>}>
             Once your party is six, a boss comes each Monday for the week. Its card has five tasks, from Strong, Arbor, Woodshed, your sleep and your days, each a share of its HP. It is levelled to your party, and how hard you hit depends on how strong the six are: their levels, how rare their lines are, their Megas, the bond, and whose type beats its type. Without every task done its last {Math.round((1 - KILL_CAP) * 100)}% never falls, and a day the card does not move heals it {Math.round(BOSS_HEAL * 100)}%. At {Math.round(THROW_AT * 100)}% HP or less you get {THROWS} throws: a chance, never a sure thing, and better the weaker it is.
