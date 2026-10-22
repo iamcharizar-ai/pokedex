@@ -279,7 +279,7 @@ function Summary({ game, onOpen }: { game: Game; onOpen?: () => void }) {
   const hearts = (partner.together ?? 0) + (partner.fed ?? 0)
   const bond = bondLevel(hearts)
   const nextAt = HEART_LEVELS[bond]
-  // version 14: treats first, since a berry is also bait; and feeding opens a choice of who
+  // version 14: the richest food first; and feeding opens a choice of who
   const berry = game.v14 ? treatsIn(game)[0] : Object.keys(BERRY_HEARTS).find((b) => (game.inv[b] ?? 0) > 0)
   const [feeding, setFeeding] = useState(false)
   // what it may become: by what you have done most, when that is known; else every form it can take
@@ -1012,7 +1012,7 @@ function RulesTab({ onTour }: { onTour: () => void }) {
             Showing-up pay, weekly quests, season steps, feats and a month reviewed wait in the Collect strip until you tap them. Left alone, each pays itself {CLAIM_AUTO} days later, so nothing is lost. A catch and a chest pay at once.
           </Rule>
           <Rule title="Hearts and bond" tone="green" pic={<><ItemIcon id="heart-scale" size={28} /><ItemIcon id="oran-berry" size={28} /><ItemIcon id="sitrus-berry" size={28} /></>}>
-            A heart for every pillar you finish while this Pokemon is your partner, and more for the berries and treats you feed to any of your Pokemon (Oran one, Sitrus three, a friendship berry five). A berry can be kept instead and thrown with a ball as bait: more HP off a wild Pokemon, a better chance at the boss, and double for a friendship berry against the types of its domain. A Pokemon with every bond level ({HEART_LEVELS[HEART_LEVELS.length - 1]} hearts) takes nothing more. Each bond level unlocks a perk: Pickup, Endure, Focus, Best friends, Exp. Share. At {HEART_LEVELS.join(', ')} hearts the bond steps up, and each step adds {Math.round(BOND_STEP * 100)}% to every strike. Hearts belong to the Pokemon and only count up. A new partner starts again, but a fully trained one keeps its hearts for the party: each of its bond levels adds {Math.round(BOND_PARTY * 100)}% to every strike on top of its place in the party.
+            A heart for every pillar you finish while this Pokemon is your partner, and more for the berries and treats you feed to any of your Pokemon (Oran one, Sitrus three, a friendship berry five). A Pokemon with every bond level ({HEART_LEVELS[HEART_LEVELS.length - 1]} hearts) takes nothing more. Each bond level unlocks a perk: Pickup, Endure, Focus, Best friends, Exp. Share. At {HEART_LEVELS.join(', ')} hearts the bond steps up, and each step adds {Math.round(BOND_STEP * 100)}% to every strike. Hearts belong to the Pokemon and only count up. A new partner starts again, but a fully trained one keeps its hearts for the party: each of its bond levels adds {Math.round(BOND_PARTY * 100)}% to every strike on top of its place in the party.
           </Rule>
           <Rule title="Momentum" tone="blue" pic={<><span className="rule-chip sm">×1.2</span><span className="rule-chip sm">×1.35</span><span className="rule-chip">×1.5</span></>}>
             Of the last seven days, three with two pillars make XP ×1.2, five ×1.35, seven ×1.5. It slides back one day at a time, never resets. {SLEEP_AFTER} days with no pillar at all and the partner dozes off until you finish one.

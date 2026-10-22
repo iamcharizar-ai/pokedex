@@ -202,7 +202,7 @@ export type ShopId = 'mart' | 'rare' | 'bp' | MarkTag
 /** The pool the Mart draws its daily deals from (coins). The chore types (Water, Ice, Bug, Poison) have no domain shop, so their ball and lure are here. */
 export const MART_POOL: Offer[] = [
   { item: 'great-ball', coins: 150 }, { item: 'ultra-ball', coins: 380 },
-  { item: 'repeat-ball', coins: 250 }, { item: 'net-ball', coins: 200 }, { item: 'oran-berry', coins: 50 }, { item: 'sitrus-berry', coins: 130 },
+  { item: 'repeat-ball', coins: 250 }, { item: 'net-ball', coins: 200 }, { item: 'oran-berry', coins: 50 }, { item: 'sitrus-berry', coins: 150 },
   { item: 'sea-incense', coins: 220 },
 ]
 /**
@@ -546,7 +546,7 @@ export function pickupFind(seed: string, tier: number): string {
 export const BATTLE_SHELF: Offer[] = [
   ...X_BASE.flatMap(([base]) => [{ item: base, coins: 120 }, { item: `${base}-2`, coins: 240 }, { item: `${base}-3`, coins: 380 }]),
   { item: 'dire-hit', coins: 150 }, { item: 'dire-hit-2', coins: 280 }, { item: 'dire-hit-3', coins: 420 }, { item: 'guard-spec', coins: 250 },
-  { item: 'honey', coins: 300 }, { item: 'tamato-berry', coins: 160 },
+  { item: 'honey', coins: 300 }, { item: 'tamato-berry', coins: 250 },
 ]
 /** More on the rare shelf (gems). */
 export const RARE_SHELF_V13: Offer[] = [{ item: 'rare-candy', gems: 25 }, { item: 'sweet-heart', gems: 10 }, { item: 'moon-stone', gems: 40 }, { item: 'sun-stone', gems: 40 }]
@@ -554,7 +554,7 @@ export const RARE_SHELF_V13: Offer[] = [{ item: 'rare-candy', gems: 25 }, { item
 const vit = (tag: MarkTag): string => Object.keys(VITAMINS).find((v) => VITAMINS[v] === tag)!
 const berryOf = (tag: MarkTag): string => Object.keys(FRIEND_BERRY).find((b) => FRIEND_BERRY[b] === tag)!
 const STONE: Record<MarkTag, string> = { code: 'thunderstone', fitness: 'fire-stone', guitar: 'shiny-stone', arbor: 'leaf-stone', sleep: 'dusk-stone' }
-export const DOMAIN_V13: Record<MarkTag, Offer[]> = Object.fromEntries(MARK_TAGS.map((t) => [t, [{ item: vit(t), marks: 10 }, { item: berryOf(t), marks: 2 }, { item: STONE[t], marks: 15 }]])) as Record<MarkTag, Offer[]>
+export const DOMAIN_V13: Record<MarkTag, Offer[]> = Object.fromEntries(MARK_TAGS.map((t) => [t, [{ item: vit(t), marks: 10 }, { item: berryOf(t), marks: 5 }, { item: STONE[t], marks: 15 }]])) as Record<MarkTag, Offer[]>
 /** What a Legend key costs at the BP Exchange. */
 export const LEGEND_KEY_BP = 250
 /** The BP Exchange at the Battle Frontier. Prices are in Battle Points (written as `marks`, the shop's own currency). */
@@ -609,36 +609,13 @@ FEATS.push(...FEATS_V13)
 // ══ version 14: every item asks a question (RULES-V14.md) ═══════════════════
 // An item is worth keeping only if keeping it can be worth more than using it now: another use, a better day, a better target.
 
-// ── berries: food or bait ──
-/**
- * A berry is fed (hearts, to any Pokemon you own) or thrown with a ball as bait: `hp` more off a wild Pokemon, `catch` more on a throw at the
- * boss. A friendship berry counts BAIT_MATCH times over against a Pokemon with a type of its domain (Hondew, the code berry, against Psychic,
- * Electric or Ghost). Sweet Hearts and Heart Scales are treats: fed only.
- */
-export const BAIT: Record<string, { hp: number; catch: number }> = {
-  'oran-berry': { hp: 30, catch: 0.05 },
-  'sitrus-berry': { hp: 60, catch: 0.1 },
-  ...Object.fromEntries(Object.keys(FRIEND_BERRY).map((id) => [id, { hp: 60, catch: 0.1 }])),
-}
-export const BAIT_MATCH = 2
-/** What a berry does as bait against a Pokemon of these types: nothing for an item that is not bait. */
-export function baitFor(berry: string | undefined, types: (string | undefined)[]): { hp: number; catch: number; match: boolean } {
-  const b = berry ? BAIT[berry] : undefined
-  if (!b) return { hp: 0, catch: 0, match: false }
-  const tag = FRIEND_BERRY[berry!]
-  const match = Boolean(tag) && types.some((t) => t && TYPE_DOMAIN[t] === tag)
-  const k = match ? BAIT_MATCH : 1
-  return { hp: b.hp * k, catch: Math.round(b.catch * k * 100) / 100, match }
-}
-const DOMAIN_TYPES = (tag: Tag): string => {
-  const ts = Object.entries(TYPE_DOMAIN).filter(([, d]) => d === tag).map(([t]) => t)
-  return ts.length > 1 ? `${ts.slice(0, -1).join(', ')} or ${ts[ts.length - 1]}` : ts[0]
-}
-ITEMS['oran-berry'] = { name: 'Oran Berry', kind: 'berry', text: 'Feed a Pokemon: one heart. Or throw it with a ball: +30 HP off a wild Pokemon, +5% on a throw at the boss.' }
-ITEMS['sitrus-berry'] = { name: 'Sitrus Berry', kind: 'berry', text: 'Feed a Pokemon: three hearts. Or throw it with a ball: +60 HP off a wild Pokemon, +10% on a throw at the boss.' }
+// ── berries: food ──
+/** A berry is fed, for hearts, to any Pokemon you own. Nothing else: a berry is food, not bait. */
+ITEMS['oran-berry'] = { name: 'Oran Berry', kind: 'berry', text: 'Feed a Pokemon: one heart.' }
+ITEMS['sitrus-berry'] = { name: 'Sitrus Berry', kind: 'berry', text: 'Feed a Pokemon: three hearts.' }
 for (const [id, tag] of Object.entries(FRIEND_BERRY)) {
   const name = id.split('-')[0]
-  ITEMS[id] = { name: `${name[0].toUpperCase()}${name.slice(1)} Berry`, kind: 'berry', text: `Feed a Pokemon: five hearts. Or throw it with a ball: +60 HP off a wild Pokemon, +10% at the boss, and double that against ${DOMAIN_TYPES(tag)} (the ${DOMAIN_NAME[tag]} berry).` }
+  ITEMS[id] = { name: `${name[0].toUpperCase()}${name.slice(1)} Berry`, kind: 'berry', text: `Feed a Pokemon: five hearts. The ${DOMAIN_NAME[tag]} berry.` }
 }
 ITEMS['sweet-heart'] = { name: 'Sweet Heart', kind: 'berry', text: 'A chocolate heart. Feed a Pokemon: three hearts.' }
 ITEMS['heart-scale'] = { name: 'Heart Scale', kind: 'berry', text: 'A pretty scale found by Pickup. Give it to a Pokemon: two hearts.' }

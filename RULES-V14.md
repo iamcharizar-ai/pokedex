@@ -41,22 +41,12 @@ If you don't report it, the night still isn't part of the day, so it's never a m
 
 ## 3. Items
 
-**Berries are food or bait.**
+**Berries are food.** (The bait idea was dropped on 2026-10-22: a throw takes only the ball.)
 
 - **Feed** any Pokemon you own, not only the partner:
   - The partner's bond unlocks its perks.
   - A party member's bond adds 1% to every strike per bond level.
-- **Throw** a berry with a ball as bait:
-
-  | Berry | Off a wild Pokemon | On a throw at the boss |
-  |---|---|---|
-  | Oran | +30 HP | +5% |
-  | Sitrus | +60 HP | +10% |
-  | Friendship berry | +60 HP | +10% |
-
-  - A friendship berry counts **double** against a Pokemon with a type of its domain. For example, Hondew (the code berry) against Psychic, Electric or Ghost.
-  - A Master Ball needs no bait, so none is spent with it.
-- Sweet Hearts and Heart Scales are treats: they can only be fed.
+- **Price follows hearts**: within a currency, a berry that costs less never feeds more. Oran 50 coins for 1 heart, Sitrus 150 for 3 (3 marks at the Garden), Tamato 250 for 5, the other friendship berries 5 marks for 5 hearts.
 - A Pokemon with all 150 hearts takes no more food, so nothing is wasted.
 
 **The Collector's wanted list.**

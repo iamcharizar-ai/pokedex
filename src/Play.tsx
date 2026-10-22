@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { nameOf, spritePath, type Game, type Mon, type Quest } from '../core/fold.ts'
 import {
-  BAIT, BALLS, BATTLE_SHELF, BERRY_HEARTS, baitFor, researchReward, treasurePrice, BOOST, BP_SHELF, DOMAIN_SHOPS, DOMAIN_V13, EVO_ITEMS, FOSSILS, GEAR_ITEMS, HELD, ITEMS, LEGEND_KEYS, LURES, MARKS, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, masteryCost, RARE_SHELF, RARE_SHELF_V13, REVIVE_COST, SELL, TM_SLOTS, TREASURE, itemName, throwHp, tmType,
+  BALLS, BATTLE_SHELF, BERRY_HEARTS, researchReward, treasurePrice, BOOST, BP_SHELF, DOMAIN_SHOPS, DOMAIN_V13, EVO_ITEMS, FOSSILS, GEAR_ITEMS, HELD, ITEMS, LEGEND_KEYS, LURES, MARKS, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, masteryCost, RARE_SHELF, RARE_SHELF_V13, REVIVE_COST, SELL, TM_SLOTS, TREASURE, itemName, throwHp, tmType,
   type MarkTag, type Offer, type ShopId,
 } from '../core/economy.ts'
 import { DAILY_PAY, MAX_LEVEL, REPEL_DAYS, RESEARCH_SLOTS, RESEARCH_WILD, RESEARCH_WILD_MAX, TEAM_BONUS, TEAM_NATURE, TEAM_OPEN_FROM, TEAM_SIZE, levelOf, studyPoints, xpForLevel, type Rarity } from '../core/rules.ts'
@@ -28,11 +28,11 @@ import { typeColor } from './screens/types.ts'
 export { Coin, EggIcon, Gem }
 
 /** What a thrown ball would take off the wild Pokemon in front of you today. */
-const hitOf = (game: Game, id: string, bait?: string | null): number => {
+const hitOf = (game: Game, id: string): number => {
   const w = game.wild
   if (!w || w.caught) return 0
   const r = SPECIES[w.form]
-  return Math.min(w.hp, throwHp(id, { types: [r.t, r.t2], from: w.from, owned: Boolean(game.dex[w.form]?.own) }, game.today.day) + (bait ? baitFor(bait, [r.t, r.t2]).hp : 0))
+  return Math.min(w.hp, throwHp(id, { types: [r.t, r.t2], from: w.from, owned: Boolean(game.dex[w.form]?.own) }, game.today.day))
 }
 
 /** A number that counts to its new value instead of jumping. */
@@ -87,27 +87,21 @@ function flyBall(img: Element | null | undefined, ms: number): void {
 /** Throw a ball at the wild Pokemon, or feed the partner. A thrown ball flies first, then lands. */
 export function Actions({ game, onShop }: { game: Game; onShop: () => void }) {
   const [flying, setFlying] = useState<string | null>(null)
-  /** version 14: a berry loaded as bait goes out with the next ball */
-  const [bait, setBait] = useState<string | null>(null)
   const [feeding, setFeeding] = useState(false)
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
   useEffect(() => () => clearTimeout(timer.current), [])
   const wild = game.wild && !game.wild.caught
-  const loaded = bait && (game.inv[bait] ?? 0) > 0 && wild ? bait : null
   const throwIt = (item: string, from?: Element) => {
     if (flying) return
     setFlying(item)
     flyBall(from?.querySelector('img'), 650)
     play('throw')
     // the outcome is read from the game as it is now; the ball is seen to fly, then the ledger is told and the HP falls
-    const sound = hitOf(game, item, loaded) >= (game.wild?.hp ?? 1) ? 'catch' : 'hit'
-    const with_ = loaded
-    timer.current = setTimeout(() => { useItem(item, '', 'throw', with_ ?? undefined); setFlying(null); setBait(null); play(sound) }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 650)
+    const sound = hitOf(game, item) >= (game.wild?.hp ?? 1) ? 'catch' : 'hit'
+    timer.current = setTimeout(() => { useItem(item, '', 'throw'); setFlying(null); play(sound) }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 650)
   }
-  const balls = Object.keys(BALLS).filter((b) => (game.inv[b] ?? 0) > 0).sort((a, b) => hitOf(game, b, loaded) - hitOf(game, a, loaded))
+  const balls = Object.keys(BALLS).filter((b) => (game.inv[b] ?? 0) > 0).sort((a, b) => hitOf(game, b) - hitOf(game, a))
   const berries = Object.keys(BERRY_HEARTS).filter((b) => (game.inv[b] ?? 0) > 0)
-  const wildTypes = game.wild ? [SPECIES[game.wild.form]?.t, SPECIES[game.wild.form]?.t2] : []
-  const baits = game.v14 && wild ? berries.filter((b) => BAIT[b]) : []
   const hearts = (game.partner.together ?? 0) + (game.partner.fed ?? 0)
   const socket = (key: string, icon: ReactNode, name: string, sub: string, o: { tone?: 'feed' | 'guard' | 'shop'; n?: number; disabled?: boolean; ready?: boolean; title?: string; onClick: (e: React.MouseEvent<HTMLButtonElement>) => void }) => (
     <button key={key} type="button" className={`socket ${o.tone ?? ''} ${o.ready ? 'ready' : ''}`} disabled={o.disabled} onClick={o.onClick} title={o.title} aria-label={`${name}: ${sub}`}>
@@ -119,15 +113,11 @@ export function Actions({ game, onShop }: { game: Game; onShop: () => void }) {
   return (
     <div className="belt" role="group" aria-label="Throw, feed and guard">
       {balls.map((b) => {
-        const hp = hitOf(game, b, loaded)
+        const hp = hitOf(game, b)
         const double = BALLS[b].vs && hp > 0 && hp >= (BALLS[b].hp * 2)
         return socket(b, <BallItem id={b} size={58} />, itemName(b), BALLS[b].hp >= 1_000_000 ? 'catches it' : `−${hp} HP${double ? ' ×2' : ''}`, { n: game.inv[b], disabled: !wild || Boolean(flying), ready: Boolean(wild), title: ITEMS[b]?.text, onClick: (e) => throwIt(b, e.currentTarget) })
       })}
       {balls.length === 0 && socket('shop', <ItemIcon id="great-ball" size={36} />, 'Get balls', 'at the Mart', { tone: 'shop', onClick: onShop })}
-      {game.v14 && baits.map((b) => {
-        const k = baitFor(b, wildTypes)
-        return socket(`bait-${b}`, <ItemIcon id={b} size={36} />, loaded === b ? 'Bait ready' : itemName(b).replace(' Berry', ''), `bait +${k.hp} HP${k.match ? ' ×2' : ''}`, { tone: 'feed', n: game.inv[b], ready: loaded === b, title: `Throw it with the next ball: +${k.hp} HP off ${nameOf(game.wild!.form)}${k.match ? ' (its type likes this berry: double)' : ''}. Tap again to keep it.`, onClick: () => { setBait(loaded === b ? null : b); play('tap') } })
-      })}
       {game.v14
         ? socket('feed', <ItemIcon id={treatsIn(game)[0] ?? 'oran-berry'} size={36} />, 'Feed', berries.length ? `${berries.reduce((n, b) => n + (game.inv[b] ?? 0), 0)} to give` : 'no berries', { tone: 'feed', disabled: berries.length === 0, title: 'Feed any of your Pokemon: berries and treats', onClick: () => setFeeding(true) })
         : berries.length > 0
@@ -403,7 +393,7 @@ export function ShopTab({ game }: { game: Game }) {
 /** Where each kind of thing is used, in a line: shown on its card. */
 const USED: Record<string, string> = {
   ball: 'Thrown at the wild Pokemon, or at the weekly boss once it is weak, from Today.',
-  berry: 'Fed to any of your Pokemon for hearts, or thrown with a ball as bait.',
+  berry: 'Fed to any of your Pokemon for hearts.',
   held: 'Held by your partner, one at a time: it adds to its kind of work.',
   tm: 'Carried by your partner: each counts as one of its types against a leader.',
   shard: 'Three of one colour forge a Mega Stone in the Forge on this tab.',
@@ -527,7 +517,6 @@ export function Bag({ game }: { game: Game }) {
             {kind === 'berry' && (game.v14
               ? <button type="button" className="k-btn ok big" onClick={() => { setFeedCard(card); setOpen(null) }}>Feed it to…</button>
               : <button type="button" className="k-btn ok big" onClick={() => { useItem(card, '', 'feed'); play('feed'); if (have(card) <= 1) setOpen(null) }}>Feed it now</button>)}
-            {kind === 'berry' && game.v14 && BAIT[card] && <p className="muted">Or keep it: thrown with a ball it is bait, worth more against the Pokemon whose type likes it.</p>}
             {kind === 'held' && (() => {
               const on = game.partner.held === card
               return <KButton tone={on ? 'neutral' : 'main'} big onClick={() => { useItem(on ? '' : card, '', 'hold', on ? '' : card); play('tap'); setOpen(null) }}>{on ? 'Take it off' : `Give it to ${nameOf(game.partner.form)}`}</KButton>

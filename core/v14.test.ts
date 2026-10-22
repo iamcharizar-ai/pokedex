@@ -5,7 +5,7 @@ import assert from 'node:assert/strict'
 import { addDays, buildFacts, type DayFacts, type HabitFact } from './facts.ts'
 import { foldGame } from './fold.ts'
 import { HEART_CAP, MAX_LEVEL, RESEARCH_SLOTS, V14_START, WILD_HP, levelOf, researchCut } from './rules.ts'
-import { BAIT, BAIT_MATCH, COLLECTOR_MULT, COLLECTOR_WANTS, PARTY_VITAMIN, TREASURE, baitFor, collectorWants, treasurePrice } from './economy.ts'
+import { BATTLE_SHELF, BERRY_HEARTS, COLLECTOR_MULT, COLLECTOR_WANTS, DOMAIN_SHOPS, DOMAIN_V13, MART_POOL, PARTY_VITAMIN, RARE_SHELF_V13, TREASURE, collectorWants, treasurePrice } from './economy.ts'
 import { VITAMIN_STEP } from './economy.ts'
 import { DAY_STARTS_DEFAULT, DAY_STARTS_EARLIEST, DAY_STARTS_LATEST, dayStartsAt, wakingDay } from './day.ts'
 
@@ -46,18 +46,20 @@ test('a berry is refused once a Pokemon has every bond level, so none is thrown 
   assert.ok((g.inv['sweet-heart'] ?? 0) > 0, 'the rest stay in the bag')
 })
 
-test('a berry thrown with a ball is bait: more HP off the wild Pokemon, double for a friendship berry of its type', () => {
-  // six perfect days pay a Premier Ball (the first perfect day's feat) and three Oran Berries (the first badge); then two-pillar days wear the next one down
+test('a berry is food, not bait: thrown with a ball it is neither spent nor adds HP', () => {
   const days = [...run(6), ...Array.from({ length: 3 }, (_, i) => day(6 + i, false))]
   const plain = fold(use(days, 7, { what: 'throw', item: 'premier-ball' }))
-  const baited = fold(use(days, 7, { what: 'throw', item: 'premier-ball', to: 'oran-berry' }))
-  assert.equal(plain.wild.form, baited.wild.form)
-  assert.equal(plain.wild.hp - baited.wild.hp, BAIT['oran-berry'].hp)
-  assert.equal((plain.inv['oran-berry'] ?? 0) - (baited.inv['oran-berry'] ?? 0), 1)
-  // the friendship berries' domains mean something
-  assert.deepEqual(baitFor('hondew-berry', ['Psychic']), { hp: BAIT['hondew-berry'].hp * BAIT_MATCH, catch: BAIT['hondew-berry'].catch * BAIT_MATCH, match: true })
-  assert.equal(baitFor('hondew-berry', ['Water']).match, false)
-  assert.equal(baitFor('sweet-heart', ['Psychic']).hp, 0, 'a treat is not bait')
+  const withBerry = fold(use(days, 7, { what: 'throw', item: 'premier-ball', to: 'oran-berry' }))
+  assert.equal(plain.wild.hp, withBerry.wild.hp)
+  assert.equal(plain.inv['oran-berry'] ?? 0, withBerry.inv['oran-berry'] ?? 0)
+})
+
+test('a berry that costs less never feeds more hearts, in any currency', () => {
+  const shelves = [MART_POOL, BATTLE_SHELF, RARE_SHELF_V13, ...Object.values(DOMAIN_SHOPS).map((s) => s.stock), ...Object.values(DOMAIN_V13)]
+  for (const cur of ['coins', 'gems', 'marks'] as const) {
+    const offers = shelves.flat().flatMap((o) => (BERRY_HEARTS[o.item] && o[cur] ? [{ item: o.item, price: o[cur] as number, hearts: BERRY_HEARTS[o.item] }] : []))
+    for (const a of offers) for (const b of offers) if (a.price < b.price) assert.ok(a.hearts <= b.hearts, `${a.item} (${a.price} ${cur}, ${a.hearts} hearts) vs ${b.item} (${b.price} ${cur}, ${b.hearts} hearts)`)
+  }
 })
 
 test('the Collector wants a few treasures a day and pays double for them', () => {

@@ -1,9 +1,8 @@
 // Feeding (version 14): a berry or a treat goes to any Pokemon you own. The
 // partner's bond unlocks its perks; a party member's bond adds to every strike.
 // A Pokemon with every bond level takes nothing more, so nothing is thrown away.
-// Berries can be kept instead, as bait for a throw (see the belt and the boss).
 import { nameOf, type Game, type Mon } from '../core/fold.ts'
-import { BAIT, BERRY_HEARTS, BOND_PARTY, itemName } from '../core/economy.ts'
+import { BERRY_HEARTS, BOND_PARTY, itemName } from '../core/economy.ts'
 import { BOND_PERKS, HEART_CAP, HEART_LEVELS, bondLevel } from '../core/rules.ts'
 import { ItemIcon } from './Item.tsx'
 import { Sheet } from './screens/Sheet.tsx'
@@ -14,9 +13,9 @@ import { useItem } from './lib/store.ts'
 export const heartsOf = (m: Mon): number => (m.together ?? 0) + (m.fed ?? 0)
 const PERK_NAME: Record<string, string> = { pickup: 'Pickup', endure: 'Endure', focus: 'Focus', friends: 'Best friends', share: 'Exp. Share' }
 
-/** Everything in the bag that can be fed, treats first (they are good for nothing else), then berries. */
+/** Everything in the bag that can be fed, the most hearts first. */
 export const treatsIn = (game: Game): string[] =>
-  Object.keys(BERRY_HEARTS).filter((b) => (game.inv[b] ?? 0) > 0).sort((a, b) => Number(Boolean(BAIT[a])) - Number(Boolean(BAIT[b])) || BERRY_HEARTS[b] - BERRY_HEARTS[a])
+  Object.keys(BERRY_HEARTS).filter((b) => (game.inv[b] ?? 0) > 0).sort((a, b) => BERRY_HEARTS[b] - BERRY_HEARTS[a])
 
 /** What the next bond level brings this Pokemon, as the one who leads or as one in the party. */
 function nextStep(m: Mon, partner: boolean): string {
@@ -39,7 +38,6 @@ export function FeedSheet({ game, only, onClose }: { game: Game; only?: string; 
     <Sheet title={only ? `Feed: ${itemName(only)}` : 'Feed a Pokemon'} onClose={onClose}>
       <p className="muted">
         Hearts stay with the Pokemon for good. Your partner's bond unlocks its perks; a party member's adds {Math.round(BOND_PARTY * 100)}% to every strike per bond level.
-        {treats.some((b) => BAIT[b]) ? ' A berry can also be kept as bait for a throw.' : ''}
       </p>
       {treats.length === 0 && <p className="muted">Nothing to feed. Berries are at the Mart and the Garden; Pickup finds them too.</p>}
       <ul className="feed-list">

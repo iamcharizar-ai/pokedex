@@ -27,7 +27,7 @@ import {
 } from './boss.ts'
 import { SPECIES, type SpeciesRec } from './species.ts'
 import {
-  AMULET_MULT, BAIT, BALLS, BERRY_HEARTS, PARTY_VITAMIN, baitFor, treasurePrice, MARKS, BOND_PARTY, BOND_STEP, CHEST, EGG_STEPS_OLD_CHARM, FEATS, FORGE_COST, GEAR, GEAR_ITEMS, HELD, LURES, MARK_OWNED, MARK_RECORD, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, SELL,
+  AMULET_MULT, BALLS, BERRY_HEARTS, PARTY_VITAMIN, treasurePrice, MARKS, BOND_PARTY, BOND_STEP, CHEST, EGG_STEPS_OLD_CHARM, FEATS, FORGE_COST, GEAR, GEAR_ITEMS, HELD, LURES, MARK_OWNED, MARK_RECORD, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, SELL,
   STANDING, TM_SLOTS, WEEKLY_QUESTS, ballClass, dayGap, dealsFor, forgeShard, heldBonus, heldCommon, isMarkTag, lureTypes, martDeals, masteryCost, offerFor, rng, seasonReward, throwHp, tmType,
   type MarkTag, type Offer, type Reward, type ShopId,
 } from './economy.ts'
@@ -382,7 +382,7 @@ export interface Game {
   endure: { ready: boolean; from: string | null }
   /** version 13 is in force on the last day */
   v13: boolean
-  /** version 14 is in force: berries are food or bait, the Collector keeps a wanted list, party vitamins count, any Pokemon can be fed */
+  /** version 14 is in force: berries are food, the Collector keeps a wanted list, party vitamins count, any Pokemon can be fed */
   v14: boolean
   /** version 14: the Professor's research: its rank, the points toward the next, who is on the desk and what they add a day, and what it takes off wild Pokemon */
   research: { rank: number; points: number; need: number; desk: Mon[]; chosen: boolean; perDay: number; today: number; cut: number }
@@ -772,11 +772,8 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
         const b = BALLS[item]
         if (!b || !inv[item] || !w) return
         const r = rec(w.form)
-        // version 14: a berry thrown with the ball is bait
-        const bait = v14On(day) && u.to && BAIT[u.to] && inv[u.to] ? baitFor(u.to, [r.t, r.t2]) : null
-        const hp = Math.round((throwHp(item, { types: [r.t, r.t2], from: w.from, owned: Boolean(dex[w.form]?.own) }, day) + (bait?.hp ?? 0)) * (v13On(day) && partner.held === 'wide-lens' ? 1.25 : 1))
+        const hp = Math.round(throwHp(item, { types: [r.t, r.t2], from: w.from, owned: Boolean(dex[w.form]?.own) }, day) * (v13On(day) && partner.held === 'wide-lens' ? 1.25 : 1))
         inv[item]--
-        if (bait) inv[u.to!]--
         const took = Math.min(w.hp, hp)
         w.hp -= took
         if (today) today.hit += took
@@ -891,11 +888,7 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
         if (hpLeft > THROW_AT + 1e-9) return
         inv[item]--
         b.throws++
-        // version 14: a berry thrown with the ball is bait (a Master Ball needs none, so none is spent)
-        const br = rec(b.card.form)
-        const bait = v14On(day) && item !== 'master-ball' && u.to && BAIT[u.to] && inv[u.to] ? baitFor(u.to, [br.t, br.t2]) : null
-        if (bait) inv[u.to!]--
-        const chance = catchChance(item, trainedTeam().length, cardDone(b.card, b.p), hpLeft, b.strike) + (v13On(day) && partner.held === 'zoom-lens' ? 0.05 : 0) + (bait?.catch ?? 0)
+        const chance = catchChance(item, trainedTeam().length, cardDone(b.card, b.p), hpLeft, b.strike) + (v13On(day) && partner.held === 'zoom-lens' ? 0.05 : 0)
         if (rng(`boss-catch:${b.card.week}:${b.throws}`)() < chance) {
           const shiny = rng(`boss-shiny:${b.card.week}`)() < 1 / BOSS_SHINY
           const mon = make(b.card.species, 'catch', day, shiny)
