@@ -196,7 +196,8 @@ function Talk({ game, pillars, sleepH }: { game: Game; pillars: HabitFact[]; sle
   const { today, wild } = game
   const me = nameOf(game.display)
   const left = today.total - today.done
-  const next = pillars.find((h) => h.frac < 1)
+  // the next thing you can still do: Sleep is the band's, never a next step
+  const next = pillars.find((h) => h.frac < 1 && h.tag !== 'sleep' && !h.measured)
   const say: ReactNode = wild?.caught ? <>Gotcha! {nameOf(wild.form)} was caught!</>
     : game.fled ? <>The wild {nameOf(game.fled)} got away. A new one is here.</>
     : game.asleep ? <>{me} is dozing.</>
