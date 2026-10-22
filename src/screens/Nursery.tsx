@@ -18,7 +18,7 @@ export function Nursery({ game, onShop }: { game: Game; onShop: () => void }) {
           <span className="nest empty"><span className="nursery-egg dim"><ItemIcon id="rare-egg" size={56} /></span></span>
           <span className="nursery-txt">
             <b>{held > 0 ? 'An egg is in your Bag' : 'No egg is warming'}</b>
-            <small>{held > 0 ? 'It starts warming at the next day it can.' : 'A boss you beat can drop one, or it is 150 gems in the Rare shop. Walking hatches it, into a rare Pokemon.'}</small>
+            <small>{held > 0 ? 'It is set to incubate: warming begins tomorrow, and its steps count from the next day.' : 'A boss you beat can drop one, or it is 150 gems in the Rare shop. Walking hatches it, into a rare Pokemon.'}</small>
             {held === 0 && <button type="button" className="k-btn" onClick={onShop}><Gem size={20} />Rare shop</button>}
           </span>
         </div>
@@ -40,6 +40,7 @@ export function Nursery({ game, onShop }: { game: Game; onShop: () => void }) {
         </span>
         <span className="nursery-txt">
           <b>{near ? 'It is about to hatch' : 'An egg is warming'}</b>
+          {egg.since === game.today.day && <small className="nest-note"><b>Incubation begins tomorrow.</b> The egg is set up today, so today's steps do not count; they start from the next day.</small>}
           <small>Walk to warm it: every step the band counts (up to {STEPS_GOAL.toLocaleString()} a day) goes in. {left.toLocaleString()} to go.</small>
           <span className="nest-count">{counted}</span>
         </span>

@@ -168,7 +168,7 @@ export const ITEMS: Record<string, ItemDef> = {
   'rose-incense': { name: 'Rose Incense', kind: 'lure', text: 'Pick the next wild Pokemon from three Grass types.' },
   'lax-incense': { name: 'Lax Incense', kind: 'lure', text: 'Pick the next wild Pokemon from three Dark types.' },
   'full-incense': { name: 'Full Incense', kind: 'incense', text: 'Pick the next wild Pokemon from three of any type.' },
-  'rare-egg': { name: 'Mystery Egg', kind: 'egg', text: 'Hatches into a rare Pokemon once the steps the band counts add up to 50,000 (five full days of walking).' },
+  'rare-egg': { name: 'Mystery Egg', kind: 'egg', text: 'Hatches into a rare Pokemon once the steps the band counts add up to 50,000 (five full days of walking). It is set to incubate the day you get it; its steps count from the next day.' },
   chest: { name: 'Chest', kind: 'chest', text: 'Open it for coins, balls, berries or, now and then, incense.' },
   'theme-beach': { name: 'Beach', kind: 'theme', text: 'A new place for the battle scene.' },
   'theme-cave': { name: 'Cave', kind: 'theme', text: 'A new place for the battle scene.' },

@@ -351,7 +351,7 @@ export interface Game {
   /** this month's ladder: steps reached, XP into the next one, and what the next one hands over */
   season: { month: string; step: number; into: number; need: number; next: { coins?: number; gems?: number; item?: string } }
   /** the egg being kept warm, if there is one: its steps so far and the steps it needs */
-  egg: { have: number; need: number } | null
+  egg: { have: number; need: number; /** the day it was put in the nursery: its steps count from the day after */ since: string } | null
   /** for each incense (Full Incense and the domain ones), the three the next wild Pokemon can be chosen from, and the one chosen */
   wish: { options: Record<string, string[]>; chosen: string | null }
   /** last night. `state`: measured by the band, a hand tick because there is no reading yet ('self'), or no band in use ('off') */
@@ -453,7 +453,7 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
   const paid = new Set<string>()
   const monthXp: Record<string, number> = {}, monthStep: Record<string, number> = {}
   const weekXp: Record<string, number> = {}, weekDays: Record<string, number> = {}, weekCatch: Record<string, number> = {}
-  let egg: { have: number } | null = null
+  let egg: { have: number; since: string } | null = null
   let chests = 0
   let fledToday: string | null = null
   let slipToday: Game['slip'] = null
@@ -1498,7 +1498,7 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
     }
 
     // an egg: one kept warm at a time, a day nearer on each day with two pillars
-    if (!egg && inv['rare-egg']) { inv['rare-egg']--; egg = { have: 0 } }
+    if (!egg && inv['rare-egg']) { inv['rare-egg']--; egg = { have: 0, since: f.day } }
     else if (egg) egg.have += Math.max(0, Math.min(STEPS_GOAL, f.body?.steps ?? 0))
     if (egg && egg.have >= (inv['old-charm'] ? EGG_STEPS_OLD_CHARM : EGG_STEPS)) {
       bump('hatched')
@@ -1645,7 +1645,7 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
       const xp = monthXp[ym] ?? 0, step = monthStep[ym] ?? 0
       return { month: ym, step, into: xp - step * SEASON_STEP, need: SEASON_STEP, next: seasonReward(step + 1) }
     })(),
-    egg: egg ? { have: Math.min((egg as { have: number }).have, inv['old-charm'] ? EGG_STEPS_OLD_CHARM : EGG_STEPS), need: inv['old-charm'] ? EGG_STEPS_OLD_CHARM : EGG_STEPS } : null,
+    egg: egg ? { since: (egg as { since: string }).since, have: Math.min((egg as { have: number }).have, inv['old-charm'] ? EGG_STEPS_OLD_CHARM : EGG_STEPS), need: inv['old-charm'] ? EGG_STEPS_OLD_CHARM : EGG_STEPS } : null,
     wish: { options: Object.fromEntries(['full-incense', ...Object.keys(LURES)].map((id) => [id, wishOptions(id === 'full-incense' ? null : LURES[id])])), chosen: wishFor },
     sleep: (() => {
       const h = lastFacts?.habits.find((x) => x.id === SLEEP_HABIT && x.tag === 'sleep')
