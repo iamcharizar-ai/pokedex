@@ -693,7 +693,7 @@ function DexTab({ game }: { game: Game }) {
             <button key={id} type="button" className={`dx ${e ? 'seen' : ''} ${e?.own ? 'own' : ''} ${(r.m ?? []).some((f) => game.dex[f]?.own) ? 'mg' : ''}`} onClick={() => setOpen(id)} title={e ? r.n : `#${r.d}`} aria-label={e ? `${r.n}, number ${r.d}${e.own ? ', caught' : ', seen'}` : `Not seen, number ${r.d}`}>
               <img src={still(id, e?.shiny)} alt="" loading="lazy" decoding="async" width={56} height={56} className={`sprite ${e ? '' : 'unseen'}`} style={fit(id)} />
               <span className="dx-no">{dexNo(r.d)}</span>
-              {e?.own && <i className="dx-ball" aria-hidden />}
+              {e?.own && (mon?.ball ? <Ball ball={mon.ball} size={16} className="dx-ball" /> : <i className="dx-ball plain" aria-hidden />)}
               {mon?.graduated && <i className="dx-star" title="Fully trained" aria-hidden>★</i>}
               {e?.shiny && <i className="dx-shine" title="Shiny" aria-hidden>✦</i>}
             </button>
@@ -860,36 +860,61 @@ function TrainerTab({ game }: { game: Game }) {
     else acc.push([m.day, [m]])
     return acc
   }, [])
+  const [view, setView] = useState<'roads' | 'days' | 'feats' | 'records'>('roads')
+  const menu: [typeof view, string, string, ReactNode][] = [
+    ['roads', 'Roads', 'town-map', `${badgesWon(game)}`],
+    ['days', 'Days', 'photo-album', null],
+    ['feats', 'Feats', 'star-piece', null],
+    ['records', 'Records', 'fame-checker', game.hall.length || null],
+  ]
   return (
     <div className="journeypage">
-      <div className="journey-a">
-        <Road game={game} />
-        <FrontierWin game={game} />
-        <SeasonRoad game={game} />
-        <Quests game={game} />
-      </div>
-      <div className="journey-b">
-        <Calendar game={game} />
-        <LegendWin game={game} />
-        <FeatsWin game={game} />
-        <BossLog game={game} />
-      </div>
-      <div className="journey-c">
-        {game.league.index > 0 && <BadgeCase game={game} />}
-        <HallOfFame game={game} />
-        <details className="sec drawer" data-tone="dark">
-          <summary className="sec-h"><i className="sec-mark" aria-hidden /><h2>Adventure log</h2><span className="sec-aside">{plural(events.length, 'thing')}</span><i className="chev" aria-hidden /></summary>
-          <div className="sec-b">
-            {grouped.length === 0 ? <p className="muted">Nothing yet. Tick a pillar in Life OS and it shows up here.</p> : (
-              <ul className="log">
-                {grouped.flatMap(([day, ms]) => [
-                  <li key={day} className="dayhead">{fmtDay(day)} · {weekday(day, 3)}</li>,
-                  ...ms.map((m, i) => <li className="ev" key={`${day}-${i}`}><span className={`kind k-${m.kind}`}>{KIND[m.kind]}</span><span>{line(m)}</span></li>),
-                ])}
-              </ul>
-            )}
-          </div>
-        </details>
+      <nav className="pmenu" style={{ ['--n' as string]: menu.length } as CSSProperties} role="tablist" aria-label="Journey" data-noswipe>
+        {menu.map(([id, name, icon, badge]) => (
+          <button key={id} type="button" role="tab" aria-selected={view === id} className={`pmenu-btn ${view === id ? 'on' : ''}`} onClick={() => { setView(id); play('tap') }}>
+            <span className="pmenu-icon"><ItemIcon id={icon} size={30} />{badge !== null && <i className="pmenu-badge">{badge}</i>}</span>
+            <b>{name}</b>
+          </button>
+        ))}
+      </nav>
+      <div className={`pview ${view === 'records' ? '' : 'two'}`} key={view}>
+        {view === 'roads' && (
+          <>
+            <div className="pcol"><Road game={game} /><SeasonRoad game={game} /></div>
+            <div className="pcol"><FrontierWin game={game} /></div>
+          </>
+        )}
+        {view === 'days' && (
+          <>
+            <div className="pcol"><Quests game={game} /></div>
+            <div className="pcol"><Calendar game={game} /></div>
+          </>
+        )}
+        {view === 'feats' && (
+          <>
+            <div className="pcol"><FeatsWin game={game} /></div>
+            <div className="pcol"><LegendWin game={game} /><BossLog game={game} /></div>
+          </>
+        )}
+        {view === 'records' && (
+          <>
+            {game.league.index > 0 && <BadgeCase game={game} />}
+            <HallOfFame game={game} />
+            <details className="sec drawer" data-tone="dark">
+              <summary className="sec-h"><i className="sec-mark" aria-hidden /><h2>Adventure log</h2><span className="sec-aside">{plural(events.length, 'thing')}</span><i className="chev" aria-hidden /></summary>
+              <div className="sec-b">
+                {grouped.length === 0 ? <p className="muted">Nothing yet. Tick a pillar in Life OS and it shows up here.</p> : (
+                  <ul className="log">
+                    {grouped.flatMap(([day, ms]) => [
+                      <li key={day} className="dayhead">{fmtDay(day)} · {weekday(day, 3)}</li>,
+                      ...ms.map((m, i) => <li className="ev" key={`${day}-${i}`}><span className={`kind k-${m.kind}`}>{KIND[m.kind]}</span><span>{line(m)}</span></li>),
+                    ])}
+                  </ul>
+                )}
+              </div>
+            </details>
+          </>
+        )}
       </div>
     </div>
   )

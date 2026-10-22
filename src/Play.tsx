@@ -9,7 +9,7 @@ import {
   type MarkTag, type Offer, type ShopId,
 } from '../core/economy.ts'
 import { KIT_SHARD_EVERY } from '../core/rules.ts'
-import { BALL_NAME, DAILY_PAY, MAX_LEVEL, REPEL_DAYS, RESEARCH_SLOTS, RESEARCH_WILD, RESEARCH_WILD_MAX, TEAM_BONUS, TEAM_NATURE, TEAM_OPEN_FROM, TEAM_SIZE, levelOf, studyPoints, type Rarity } from '../core/rules.ts'
+import { DAILY_PAY, MAX_LEVEL, REPEL_DAYS, RESEARCH_SLOTS, RESEARCH_WILD, RESEARCH_WILD_MAX, TEAM_BONUS, TEAM_NATURE, TEAM_OPEN_FROM, TEAM_SIZE, levelOf, studyPoints, xpForLevel, type Rarity } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
 import { TAG_NAME, Win, plural } from './App.tsx'
 import { Ball, BallItem, MegaStone, megaStoneName } from './Ball.tsx'
@@ -24,6 +24,7 @@ import { play } from './lib/sfx.ts'
 import { useItem } from './lib/store.ts'
 import { BpIcon, CollectorWin, LabWin, MonExtras, evolutionsFor } from './Champion.tsx'
 import { FeedSheet, treatsIn } from './Feed.tsx'
+import { typeColor } from './screens/types.ts'
 
 export { Coin, EggIcon, Gem }
 
@@ -339,16 +340,21 @@ export function ShopTab({ game, only }: { game: Game; only?: Place }) {
   const [which, setWhich] = useState<Place>('mart')
   const show = (s: Place) => (only ?? which) === s
   const chips: [Place, string, ReactNode][] = [
-    ['mart', 'Mart', <Coin key="m" size={18} />], ['rare', 'Rare', <Gem key="r" size={18} />],
-    ...(game.v13 ? [['bp', 'BP Exchange', <BpIcon key="bp" size={18} />], ['collector', 'Collector', <ItemIcon key="c" id="nugget" size={18} />], ['lab', 'Lab', <ItemIcon key="l" id="helix-fossil" size={18} />]] as [Place, string, ReactNode][] : []),
-    ...MARK_TAGS.map((t): [Place, string, ReactNode] => [t, DOMAIN_SHOPS[t].name, <MarkIcon key={t} tag={t} size={18} />]),
+    ['mart', 'Mart', <Coin key="m" size={30} />], ['rare', 'Rare', <Gem key="r" size={30} />],
+    ...(game.v13 ? [['bp', 'BP', <BpIcon key="bp" size={30} />], ['collector', 'Collector', <ItemIcon key="c" id="nugget" size={30} />], ['lab', 'Lab', <ItemIcon key="l" id="helix-fossil" size={30} />]] as [Place, string, ReactNode][] : []),
+    ...MARK_TAGS.map((t): [Place, string, ReactNode] => [t, DOMAIN_SHOPS[t].name, <MarkIcon key={t} tag={t} size={30} />]),
   ]
   return (
     <>
       {!only && (
-        <div className="shopchips" role="tablist" aria-label="Shops">
-          {chips.map(([id, name, icon]) => <button key={id} type="button" role="tab" aria-selected={which === id} className={`k-btn ${which === id ? 'main' : ''}`} onClick={() => { setWhich(id); play('tap') }}>{icon}{name}</button>)}
-        </div>
+        <nav className="pmenu scroll" role="tablist" aria-label="Shops" data-noswipe>
+          {chips.map(([id, name, icon]) => (
+            <button key={id} type="button" role="tab" aria-selected={which === id} className={`pmenu-btn ${which === id ? 'on' : ''}`} onClick={() => { setWhich(id); play('tap') }}>
+              <span className="pmenu-icon">{icon}</span>
+              <b>{name}</b>
+            </button>
+          ))}
+        </nav>
       )}
       {show('mart') && (
         <Win title="The Mart" tone="gold" aside={<><Coin size={22} /> <Count value={game.wallet.coins} /></>}>
@@ -446,8 +452,12 @@ const GROUPS: [string, (id: string) => boolean][] = [
   ['Keepsakes', (id) => ['shard', 'key', 'unique'].includes(ITEMS[id]?.kind)],
 ]
 
+/** A count as a slot shows it: 1.2k, 16k. */
+const short = (n: number): string => (n < 1000 ? String(n) : n < 10000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k` : `${Math.floor(n / 1000)}k`)
+
 export function Bag({ game }: { game: Game }) {
   const [open, setOpen] = useState<string | null>(null)
+  const [tab, setTab] = useState('Everything')
   const [feedCard, setFeedCard] = useState<string | null>(null)
   const have = (id: string) => game.inv[id] ?? 0
   const equipped = game.partner.moves ?? []
@@ -469,43 +479,56 @@ export function Bag({ game }: { game: Game }) {
     useItem('', '', 'move', next.join(','))
     play('tap')
   }
-  const tile = (id: string) => {
+  const tabs: [string, string[]][] = [['Everything', owned], ...groups.map(([n, ids]) => [n, ids] as [string, string[]]), ...(rest.length ? [['Everything else', rest] as [string, string[]]] : [])]
+  const at = tabs.find(([n]) => n === tab) ?? tabs[0]
+  const slot = (id: string) => {
     const on = game.partner.held === id || equipped.includes(id) || game.theme === id
+    const n = have(id)
     return (
-      <button key={id} type="button" className={`bagtile ${on ? 'on' : ''}`} onClick={() => { setOpen(id); play('tap') }} title={ITEMS[id].text} aria-label={`${itemName(id)}, ${have(id) || 'held'}. Open`}>
-        <ItemIcon id={id} size={40} />
-        <b>{itemName(id)}</b>
-        <small>{on ? (game.theme === id ? 'In use' : 'Equipped') : have(id) > 0 ? `×${have(id)}` : 'Held'}</small>
+      <button key={id} type="button" className={`mc-slot ${on ? 'on' : ''}`} onClick={() => { setOpen(id); play('tap') }} aria-label={`${itemName(id)}, ${n || 'held'}${on ? ', in use' : ''}. Open`}>
+        <ItemIcon id={id} size={32} />
+        {n > 1 && <b className="mc-n">{short(n)}</b>}
+        {on && <i className="mc-on" aria-hidden>E</i>}
+        <span className="mc-tip" aria-hidden><b>{itemName(id)}</b><small>{on ? (game.theme === id ? 'In use' : 'Equipped') : `×${n}`} · {ITEMS[id].text}</small></span>
       </button>
     )
   }
   const card = open && ITEMS[open] ? open : null
   const kind = card ? ITEMS[card].kind : null
+  const fill = (n: number, min: number) => Array.from({ length: Math.max(min, Math.ceil(n / 9) * 9) - n }, (_, i) => <span key={`f${i}`} className="mc-slot blank" aria-hidden />)
+  const purse: [ReactNode, string, number, number][] = [
+    [<Coin size={30} />, 'Coins', game.wallet.coins, game.wallet.coinsToday],
+    [<Gem size={30} />, 'Gems', game.wallet.gems, game.wallet.gemsToday],
+    ...MARK_TAGS.map((t) => [<MarkIcon tag={t} size={30} />, `${MARKS[t].name} · spent in ${DOMAIN_SHOPS[t].name}`, game.wallet.marks[t], game.wallet.marksToday[t]] as [ReactNode, string, number, number]),
+  ]
   return (
-    <Win title="Bag" tone="purple" fold aside={balls || berries ? <>{balls > 0 && `${balls} ${balls === 1 ? 'ball' : 'balls'}`}{balls > 0 && berries > 0 && ' · '}{berries > 0 && `${berries} ${berries === 1 ? 'berry' : 'berries'}`}</> : game.keyStone ? <><ItemIcon id="key-stone" size={22} /> Key Stone</> : undefined}>
-      <span className="k-label">Money and marks</span>
-      <div className="baggrid wallet">
-        <div className="bagtile" title="Coins: for showing up, quests, the season, chests and the Professor"><Coin size={40} /><b>Coins</b><small>{game.wallet.coins.toLocaleString('en-IN')}{game.wallet.coinsToday > 0 ? ` · +${game.wallet.coinsToday} today` : ''}</small></div>
-        <div className="bagtile" title="Gems: catches, evolutions, badges and feats"><Gem size={40} /><b>Gems</b><small>{game.wallet.gems.toLocaleString('en-IN')}{game.wallet.gemsToday > 0 ? ` · +${game.wallet.gemsToday} today` : ''}</small></div>
-        {MARK_TAGS.map((t) => (
-          <div key={t} className="bagtile" title={`${MARKS[t].name}: a ${TAG_NAME[t].toLowerCase()} day pays one. Spent in ${DOMAIN_SHOPS[t].name}`}>
-            <MarkIcon tag={t} size={40} /><b>{MARKS[t].name}</b><small>{game.wallet.marks[t]}{game.wallet.marksToday[t] > 0 ? ` · +${game.wallet.marksToday[t]} today` : ''}</small>
+    <Win title="Bag" tone="purple" aside={balls || berries ? <>{balls > 0 && `${balls} ${balls === 1 ? 'ball' : 'balls'}`}{balls > 0 && berries > 0 && ' · '}{berries > 0 && `${berries} ${berries === 1 ? 'berry' : 'berries'}`}</> : game.keyStone ? <><ItemIcon id="key-stone" size={22} /> Key Stone</> : undefined}>
+      <div className="mc">
+        {owned.length > 0 && (
+          <div className="mc-tabs" role="tablist" aria-label="Bag pockets" data-noswipe>
+            {tabs.map(([name, ids]) => (
+              <button key={name} type="button" role="tab" aria-selected={at[0] === name} className={`mc-tab ${at[0] === name ? 'on' : ''}`} onClick={() => { setTab(name); play('click') }} title={`${name} · ${ids.length}`}>
+                <ItemIcon id={name === 'Everything' ? 'seal-bag' : ids[0]} size={26} />
+              </button>
+            ))}
           </div>
-        ))}
+        )}
+        <div className="mc-panel">
+          <span className="mc-title">{owned.length ? (at[0] === 'TMs' ? `TMs · ${equipped.length} of ${TM_SLOTS} on ${nameOf(game.partner.form)}` : at[0] === 'Held items' ? `Held items · ${nameOf(game.partner.form)} holds one` : at[0]) : 'Inventory'}</span>
+          {owned.length === 0 && <p className="mc-empty">No items yet. The Mart opens each morning, and feats hand out the rest.</p>}
+          <div className="mc-grid">{at[1].map(slot)}{fill(at[1].length, 18)}</div>
+          <span className="mc-title">Money and marks</span>
+          <div className="mc-grid mc-hotbar">
+            {purse.map(([icon, name, n, today], i) => (
+              <span key={i} className="mc-slot" tabIndex={0} aria-label={`${name}: ${n.toLocaleString('en-IN')}${today > 0 ? `, +${today} today` : ''}`}>
+                {icon}<b className="mc-n">{short(n)}</b>
+                <span className="mc-tip" aria-hidden><b>{name}</b><small>{n.toLocaleString('en-IN')}{today > 0 ? ` · +${today} today` : ''}</small></span>
+              </span>
+            ))}
+            {fill(purse.length, 9)}
+          </div>
+        </div>
       </div>
-      {owned.length === 0 && <p className="muted">No items yet. The Mart opens each morning, and feats hand out the rest.</p>}
-      {groups.map(([name, ids]) => (
-        <section key={name} className="bag-group">
-          <span className="k-label">{name === 'TMs' ? `TMs · ${equipped.length} of ${TM_SLOTS} on ${nameOf(game.partner.form)}` : name === 'Held items' ? `Held items · ${nameOf(game.partner.form)} holds one` : name}</span>
-          <div className="baggrid">{ids.map(tile)}</div>
-        </section>
-      ))}
-      {rest.length > 0 && (
-        <section className="bag-group">
-          <span className="k-label">Everything else</span>
-          <div className="baggrid">{rest.map(tile)}</div>
-        </section>
-      )}
       {card && kind && (
         <Sheet title={itemName(card)} onClose={() => setOpen(null)}>
           <div className="ware-sheet">
@@ -671,10 +694,90 @@ function Standee({ m, size = 64, note, onClick, title }: { m: Mon; size?: number
   )
 }
 
-/** Party: what you have, and what you can do with it. The partner, the six who stand together, My Pokemon, the Forge, and the rest of what you own under its own heading. */
+/** One Pokemon as a slot on the party screen: its sprite in a round well, its name and level, and how far into the level it is. */
+function Slot({ m, tag, lead, onClick, title }: { m: Mon; tag?: ReactNode; lead?: boolean; onClick: () => void; title?: string }) {
+  const rec = SPECIES[m.form]
+  const lv = levelOf(m.xp)
+  const into = lv >= MAX_LEVEL || m.graduated ? 1 : (m.xp - xpForLevel(lv)) / Math.max(1, xpForLevel(lv + 1) - xpForLevel(lv))
+  return (
+    <button type="button" className={`pslot ${lead ? 'lead' : ''} ${m.megas?.length ? 'mega' : ''}`} style={{ ['--tc' as string]: typeColor(rec.t) } as CSSProperties} onClick={onClick} title={title ?? `${nameOf(m.form)}: open its page`}>
+      <span className="pslot-art"><img src={still(m.form, m.shiny)} alt="" width={64} height={64} className="sprite" loading="lazy" decoding="async" /></span>
+      <span className="pslot-info">
+        <b className="pslot-name">{nameOf(m.form)}{m.shiny && <i className="pslot-shiny" title="Shiny">★</i>}</b>
+        <span className="pslot-lv">Lv {lv}{tag && <em>{tag}</em>}</span>
+        <span className={`pslot-bar ${m.graduated ? 'full' : ''}`} aria-hidden><i style={{ width: `${Math.max(0, Math.min(1, into)) * 100}%` }} /></span>
+      </span>
+      {m.nature?.up && <i className="pslot-gem" data-tag={m.nature.up} title={`${m.nature.name}: raised most on ${TAG_NAME[m.nature.up]}`} />}
+      {m.thrown ? <BallItem id={m.thrown} size={18} className="pslot-ball" /> : m.ball ? <Ball ball={m.ball} size={18} className="pslot-ball" /> : null}
+    </button>
+  )
+}
+
+/** The ball a Pokemon came in: what the box shows until it is opened. */
+const BallOf = ({ m, size }: { m: Mon; size: number }) => (m.thrown ? <BallItem id={m.thrown} size={size} className="bbox-ball" /> : <Ball ball={m.ball ?? 'poke'} size={size} className="bbox-ball" />)
+
+const PER_BOX = 30
+
+/**
+ * A storage box of Poke Balls: each Pokemon sits in the ball it was caught in. Tap a ball and it opens (the Pokemon pops out and
+ * the panel under the box says who it is and what can be done); tap it again for its page. Thirty to a box, paged with the arrows.
+ */
+function BallBox({ mons, onOpen, note, actions, empty }: { mons: Mon[]; onOpen: (uid: string) => void; note?: (m: Mon) => ReactNode; actions?: (m: Mon) => ReactNode; empty: ReactNode }) {
+  const boxes = Math.max(1, Math.ceil(mons.length / PER_BOX))
+  const [page, setPage] = useState(0)
+  const [sel, setSel] = useState<string | null>(null)
+  const at = Math.min(page, boxes - 1)
+  const shown = mons.slice(at * PER_BOX, (at + 1) * PER_BOX)
+  const picked = mons.find((m) => m.uid === sel) ?? null
+  const turn = (d: number) => { setPage((at + d + boxes) % boxes); setSel(null); play('click') }
+  if (mons.length === 0) return <p className="muted">{empty}</p>
+  const said = picked && note ? note(picked) : null
+  return (
+    <div className="bbox">
+      {boxes > 1 && (
+        <div className="bbox-head">
+          <button type="button" className="bbox-arrow" onClick={() => turn(-1)} aria-label="Previous box">‹</button>
+          <span>Box {at + 1} of {boxes}</span>
+          <button type="button" className="bbox-arrow" onClick={() => turn(1)} aria-label="Next box">›</button>
+        </div>
+      )}
+      <div className="bbox-grid" key={at} data-noswipe>
+        {shown.map((m) => {
+          const open = m.uid === sel
+          return (
+            <button key={m.uid} type="button" className={`bbox-cell ${open ? 'open' : ''}`} aria-pressed={open} onClick={() => { if (open) onOpen(m.uid); else { setSel(m.uid); play('click') } }} title={open ? `${nameOf(m.form)}: open its page` : 'Tap to see who is inside'} aria-label={open ? `${nameOf(m.form)}, Lv ${levelOf(m.xp)}. Open its page` : `A ball: ${nameOf(m.form)}, Lv ${levelOf(m.xp)}`}>
+              <BallOf m={m} size={34} />
+              {open && <img src={still(m.form, m.shiny)} alt="" width={56} height={56} className="sprite bbox-mon" />}
+            </button>
+          )
+        })}
+      </div>
+      <div className={`bbox-panel ${picked ? '' : 'idle'}`} aria-live="polite">
+        {picked ? (
+          <>
+            <button type="button" className="bbox-panel-art" onClick={() => onOpen(picked.uid)} aria-label={`Open the page of ${nameOf(picked.form)}`}><img src={still(picked.form, picked.shiny)} alt="" width={72} height={72} className="sprite" /></button>
+            <span className="bbox-panel-info">
+              <b>{nameOf(picked.form)}{picked.shiny && <i className="pslot-shiny">★</i>}</b>
+              <small>Lv {levelOf(picked.xp)} · {[SPECIES[picked.form].t, SPECIES[picked.form].t2].filter(Boolean).join(' / ')}{said ? <> · {said}</> : null}</small>
+              <span className="bbox-panel-acts">
+                <button type="button" className="k-btn" onClick={() => onOpen(picked.uid)}>Its page</button>
+                {actions?.(picked)}
+              </span>
+            </span>
+          </>
+        ) : <small>Tap a ball to see who is inside.</small>}
+      </div>
+    </div>
+  )
+}
+
+type PartyView = 'team' | 'lab' | 'forge' | 'bag' | 'nursery' | 'extras'
+
+/** Party: what you have, and what you can do with it, one screen at a time: the team, the lab (or the box), the Forge, the Bag, the Nursery, and the rest. */
 export function TeamTab({ game, partnerCard, choices, onShop }: { game: Game; partnerCard: (open: () => void) => ReactNode; choices: ReactNode; onShop: () => void }) {
   const [page, setPage] = useState<string | null>(null)
   const [joining, setJoining] = useState(false)
+  const [view, setView] = useState<PartyView>('team')
   const inTeam = new Set(game.team.map((m) => m.uid))
   const shown = [game.partner, ...game.queue, ...game.graduates].find((m) => m.uid === page)
   const cap = TEAM_SIZE
@@ -682,44 +785,56 @@ export function TeamTab({ game, partnerCard, choices, onShop }: { game: Game; pa
   // who could still join: the fully trained, and from the day the team opened, everyone in My Pokemon
   const free = game.graduates.filter((m) => !inTeam.has(m.uid)).length + (open ? game.queue.filter((m) => !inTeam.has(m.uid)).length : 0)
   const bench = game.graduates.filter((m) => !inTeam.has(m.uid))
+  const items = Object.keys(game.inv).filter((id) => (game.inv[id] ?? 0) > 0 && ITEMS[id]).length
+  const menu: [PartyView, string, string, ReactNode][] = [
+    ['team', 'Team', 'poke-ball', `${1 + game.team.length}/${cap + 1}`],
+    ['lab', game.v14 ? 'Lab' : 'Box', game.v14 ? 'journal' : 'poke-ball', game.v14 ? `R${game.research.rank}` : game.queue.length || null],
+    ['forge', 'Forge', 'key-stone', null],
+    ['bag', 'Bag', 'seal-bag', items || null],
+    ['nursery', 'Nursery', 'mystery-egg', game.egg ? `${Math.round(Math.min(1, game.egg.have / Math.max(1, game.egg.need)) * 100)}%` : null],
+    ['extras', 'Extras', 'full-incense', null],
+  ]
   return (
     <div className="partypage">
-      <div className="party-main">
-        {partnerCard(() => setPage(game.partner.uid))}
-        <Win title="Your party" tone="gold" aside={game.team.length ? `+${Math.round(game.power.team * 100)}% to every strike` : `${1 + game.team.length} of ${cap + 1}`}>
-          <div className="party6">
-            <div className="plat lead"><Standee m={game.partner} note="Partner" onClick={() => setPage(game.partner.uid)} /></div>
-            {Array.from({ length: cap }, (_, i) => {
-              const m = game.team[i]
-              return m
-                ? <div key={m.uid} className="plat"><Standee m={m} note={m.graduated ? `Lv ${levelOf(m.xp)}` : `Lv ${levelOf(m.xp)} · ${m.uid === game.nextUp ? "next up" : "raising"}`} onClick={() => setPage(m.uid)} title={`${nameOf(m.form)}${m.nature ? ` · ${m.nature.name}` : ''}`} /></div>
-                : <button key={i} type="button" className="plat empty" disabled={free === 0} onClick={() => setJoining(true)} aria-label={free ? 'Add someone to the party' : 'Empty place in the party'}><span className="plat-ball" aria-hidden /><small>{free ? 'Add' : 'Open'}</small></button>
-            })}
-          </div>
-          <div className="party-actions">
-            <button type="button" className="k-btn main" disabled={free === 0} onClick={() => { setJoining(true); play('tap') }}>Add to the party</button>
-            <small>{free === 0 ? 'Nobody else is free to join yet.' : `${free} could join. A place nobody chose fills itself with the oldest ${game.v14 ? 'in the lab' : 'in My Pokemon'}.`}</small>
-          </div>
-          {!game.v14 && bench.length > 0 && (
-            <div className="bench">
-              <span className="k-label">Fully trained, off the party · {bench.length}</span>
-              <div className="bench-row" data-noswipe>
-                {bench.map((m) => <Standee key={m.uid} m={m} size={48} onClick={() => setPage(m.uid)} title={`${nameOf(m.form)} · ${SPECIES[m.form].t}${SPECIES[m.form].t2 ? ` / ${SPECIES[m.form].t2}` : ''}${m.nature ? ` · ${m.nature.name}` : ''}`} />)}
+      <nav className="pmenu" role="tablist" aria-label="Party" data-noswipe>
+        {menu.map(([id, name, icon, badge]) => (
+          <button key={id} type="button" role="tab" aria-selected={view === id} className={`pmenu-btn ${view === id ? 'on' : ''}`} onClick={() => { setView(id); play('tap') }}>
+            <span className="pmenu-icon"><ItemIcon id={icon} size={30} />{badge !== null && <i className="pmenu-badge">{badge}</i>}</span>
+            <b>{name}</b>
+          </button>
+        ))}
+      </nav>
+      <div className="pview" key={view}>
+        {view === 'team' && (
+          <>
+            <Win title="Your party" tone="gold" aside={game.team.length ? `+${Math.round(game.power.team * 100)}% to every strike` : `${1 + game.team.length} of ${cap + 1}`}>
+              <div className="pslots">
+                <Slot m={game.partner} lead tag="Partner" onClick={() => setPage(game.partner.uid)} />
+                {Array.from({ length: cap }, (_, i) => {
+                  const m = game.team[i]
+                  return m
+                    ? <Slot key={m.uid} m={m} tag={m.graduated ? undefined : m.uid === game.nextUp ? 'next up' : 'raising'} onClick={() => setPage(m.uid)} title={`${nameOf(m.form)}${m.nature ? ` · ${m.nature.name}` : ''}`} />
+                    : <button key={i} type="button" className="pslot empty" disabled={free === 0} onClick={() => { setJoining(true); play('tap') }} aria-label={free ? 'Add someone to the party' : 'Empty place in the party'}><span className="pslot-art" aria-hidden /><b>{free ? '+ Add' : 'Empty'}</b></button>
+                })}
               </div>
-            </div>
-          )}
-        </Win>
-        {game.v14 ? <ProfessorLab game={game} onOpen={setPage} /> : <MyPokemon game={game} onOpen={setPage} />}
-      </div>
-      <div className="party-side">
-        <Forge game={game} />
-      </div>
-      <div className="party-stores">
-        <h2 className="extras-h">Items and extras</h2>
-        <Nursery game={game} onShop={onShop} />
-        <Bag game={game} />
-        <IncenseWin game={game} />
-        {choices}
+              <div className="party-actions">
+                <button type="button" className="k-btn main" disabled={free === 0} onClick={() => { setJoining(true); play('tap') }}>Add to the party</button>
+                <small>{free === 0 ? 'Nobody else is free to join yet.' : `${free} could join. A place nobody chose fills itself with the oldest ${game.v14 ? 'in the lab' : 'in My Pokemon'}.`}</small>
+              </div>
+            </Win>
+            {partnerCard(() => setPage(game.partner.uid))}
+            {!game.v14 && bench.length > 0 && (
+              <Win title="Fully trained, off the party" tone="dark" aside={String(bench.length)}>
+                <BallBox mons={bench} onOpen={setPage} empty="" />
+              </Win>
+            )}
+          </>
+        )}
+        {view === 'lab' && (game.v14 ? <ProfessorLab game={game} onOpen={setPage} /> : <MyPokemon game={game} onOpen={setPage} />)}
+        {view === 'forge' && <Forge game={game} />}
+        {view === 'bag' && <Bag game={game} />}
+        {view === 'nursery' && <Nursery game={game} onShop={onShop} />}
+        {view === 'extras' && <><IncenseWin game={game} />{choices}</>}
       </div>
       {shown && <MonPage m={shown} game={game} onClose={() => setPage(null)} />}
       {joining && <Joiners game={game} onPick={(uid) => putOnTeam(game, uid, true)} onClose={() => setJoining(false)} />}
@@ -739,49 +854,58 @@ function ProfessorLab({ game, onOpen }: { game: Game; onOpen: (uid: string) => v
   const box = [...game.graduates, ...game.queue].filter((m) => !inTeam.has(m.uid) && !onDesk.has(m.uid)).sort((a, b) => studyValue(b) - studyValue(a) || b.xp - a.xp)
   const gift = researchReward(r.rank + 1)
   return (
-    <Win title="The Professor's lab" tone="dark" aside={`Research rank ${r.rank}`}>
-      <p className="muted">Everyone not in your party stays here. The Professor studies up to {RESEARCH_SLOTS} on his desk: the higher their level and the rarer they are, the faster his research goes. Each rank takes {Math.round(RESEARCH_WILD * 100)}% more HP off every wild Pokemon (up to {Math.round(RESEARCH_WILD_MAX * 100)}%) and sends a gift. The party fights; the desk helps you catch.</p>
-      <KBar value={r.points} max={r.need} kind="gold" label={`${r.points.toLocaleString('en-IN')} / ${r.need.toLocaleString('en-IN')} to rank ${r.rank + 1} · +${r.perDay}/day with a pillar`} />
-      <small className="muted lab-line">Wild Pokemon come {Math.round(r.cut * 100)}% weaker now. Next gift: {[gift.coins ? `${gift.coins} coins` : '', gift.gems ? `${gift.gems} gems` : '', ...gift.items.map(([id, n]) => `${itemName(id)}${n > 1 ? ` ×${n}` : ''}`)].filter(Boolean).join(', ')}.</small>
-      <span className="k-label">Research desk · {r.chosen ? 'your choice' : 'the strongest here, until you choose'}</span>
-      <div className="party6 desk">
-        {Array.from({ length: RESEARCH_SLOTS }, (_, i) => {
-          const m = r.desk[i]
-          return m
-            ? <div key={m.uid} className="plat"><Standee m={m} note={`Lv ${levelOf(m.xp)} · +${studyValue(m)}/day`} onClick={() => onOpen(m.uid)} /></div>
-            : <div key={i} className="plat empty"><span className="plat-ball" aria-hidden /><small>{box.length ? 'Tap one below' : 'Empty'}</small></div>
-        })}
-      </div>
-      {r.chosen && <button type="button" className="k-btn" onClick={() => { useItem('', '', 'study', 'auto'); play('tap') }}>Let the Professor choose the strongest</button>}
-      <span className="k-label">In the lab · {box.length}</span>
-      {box.length === 0
-        ? <p className="muted">{game.queue.length + game.graduates.length ? 'Everyone else is in your party or on the desk.' : 'Empty. Catch the wild Pokemon and it comes here.'}</p>
-        : <div className="boxgrid">{box.map((m) => <Standee key={m.uid} m={m} size={52} note={m.uid === game.nextUp ? <em className="nextup">Next up</em> : `Lv ${levelOf(m.xp)}${m.graduated ? ' ★' : ''}`} onClick={() => onOpen(m.uid)} title={`${nameOf(m.form)} · +${studyValue(m)}/day on the desk`} />)}</div>}
-    </Win>
+    <>
+      <Win title="The Professor's research" tone="dark" aside={`+${r.perDay}/day`}>
+        <div className="rank">
+          <span className="rank-badge"><small>Rank</small><b>{r.rank}</b></span>
+          <div className="rank-body">
+            <KBar value={r.points} max={r.need} kind="gold" label={`${r.points.toLocaleString('en-IN')} / ${r.need.toLocaleString('en-IN')}`} />
+            <div className="rank-stats">
+              <span><b>{(r.need - r.points).toLocaleString('en-IN')}</b> to rank {r.rank + 1}</span>
+              <span><b>−{Math.round(r.cut * 100)}%</b> wild HP now</span>
+              <span><b>+{Math.round(RESEARCH_WILD * 100)}%</b> a rank, up to {Math.round(RESEARCH_WILD_MAX * 100)}%</span>
+            </div>
+          </div>
+        </div>
+        <div className="rank-gift">
+          <span className="k-label">Gift at rank {r.rank + 1}</span>
+          <span className="rank-gift-row">
+            {gift.coins ? <span className="rank-chip"><Coin size={22} />{gift.coins}</span> : null}
+            {gift.gems ? <span className="rank-chip"><Gem size={22} />{gift.gems}</span> : null}
+            {gift.items.map(([id, n]) => <span key={id} className="rank-chip" title={itemName(id)}><ItemIcon id={id} size={22} />{itemName(id)}{n > 1 ? ` ×${n}` : ''}</span>)}
+          </span>
+        </div>
+        <span className="k-label">On the desk · {r.chosen ? 'your choice' : 'the strongest, until you choose'}</span>
+        <div className="pslots desk">
+          {Array.from({ length: RESEARCH_SLOTS }, (_, i) => {
+            const m = r.desk[i]
+            return m
+              ? <Slot key={m.uid} m={m} tag={`+${studyValue(m)}/day`} onClick={() => onOpen(m.uid)} />
+              : <span key={i} className="pslot empty"><span className="pslot-art" aria-hidden /><b>{box.length ? 'Pick from the box' : 'Empty'}</b></span>
+          })}
+        </div>
+        {r.chosen && <button type="button" className="k-btn" onClick={() => { useItem('', '', 'study', 'auto'); play('tap') }}>Let the Professor choose the strongest</button>}
+      </Win>
+      <Win title="Lab box" tone="dark" aside={plural(box.length, 'Pokemon', 'Pokemon')}>
+        <BallBox mons={box} onOpen={onOpen} note={(m) => `+${studyValue(m)}/day on the desk${m.uid === game.nextUp ? ' · next up' : ''}`}
+          actions={(m) => <button type="button" className="k-btn main" onClick={() => { putOnDesk(game, m.uid, true); play('tap') }}>On the desk</button>}
+          empty={game.queue.length + game.graduates.length ? 'Everyone else is in your party or on the desk.' : 'Empty. Catch the wild Pokemon and it comes here.'} />
+      </Win>
+    </>
   )
 }
 
-/** Everything caught and not yet raised, oldest first. Open when there are few, folded when it grows. */
+/** Everything caught and not yet raised, oldest first, as balls in a box. */
 function MyPokemon({ game, onOpen }: { game: Game; onOpen: (uid: string) => void }) {
   // whoever stands in the party is shown there, not here as well
   const inTeam = new Set(game.team.map((m) => m.uid))
   const waiting = game.queue.filter((m) => !inTeam.has(m.uid))
-  const body = waiting.length === 0
-    ? <p className="muted">{game.queue.length ? 'Everyone you have caught is in your party.' : 'Empty. Catch the wild Pokemon and it comes here.'}</p>
-    : (
-      <div className="boxgrid">
-        {waiting.map((m) => (
-          <Standee key={m.uid} m={m} size={52} note={m.uid === game.nextUp ? <em className="nextup">Next up</em> : undefined} onClick={() => onOpen(m.uid)} title={`${nameOf(m.form)}${m.ball ? ` · ${m.thrown ? itemName(m.thrown) : BALL_NAME[m.ball]}` : ''}`} />
-        ))}
-      </div>
-    )
-  return <MyPokemonWin n={waiting.length}>{body}</MyPokemonWin>
-}
-function MyPokemonWin({ n, children }: { n: number; children: ReactNode }) {
-  // open by default while it holds eight or fewer; the details element keeps the choice the reader makes
-  return n <= 8
-    ? <Win title="My Pokemon" tone="dark" aside={plural(n, 'Pokemon', 'Pokemon')}>{children}</Win>
-    : <Win title="My Pokemon" tone="dark" fold aside={plural(n, 'Pokemon', 'Pokemon')}>{children}</Win>
+  return (
+    <Win title="My Pokemon" tone="dark" aside={plural(waiting.length, 'Pokemon', 'Pokemon')}>
+      <BallBox mons={waiting} onOpen={onOpen} note={(m) => (m.uid === game.nextUp ? 'next up' : null)}
+        empty={game.queue.length ? 'Everyone you have caught is in your party.' : 'Empty. Catch the wild Pokemon and it comes here.'} />
+    </Win>
+  )
 }
 
 /** A number that pops up and floats away: what today did to something. */
