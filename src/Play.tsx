@@ -8,7 +8,6 @@ import {
   BAIT, BALLS, BATTLE_SHELF, BERRY_HEARTS, baitFor, researchReward, treasurePrice, BOOST, BP_SHELF, DOMAIN_SHOPS, DOMAIN_V13, EVO_ITEMS, FOSSILS, GEAR_ITEMS, HELD, ITEMS, LEGEND_KEYS, LURES, MARKS, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, masteryCost, RARE_SHELF, RARE_SHELF_V13, REVIVE_COST, SELL, TM_SLOTS, TREASURE, itemName, throwHp, tmType,
   type MarkTag, type Offer, type ShopId,
 } from '../core/economy.ts'
-import { KIT_SHARD_EVERY } from '../core/rules.ts'
 import { DAILY_PAY, MAX_LEVEL, REPEL_DAYS, RESEARCH_SLOTS, RESEARCH_WILD, RESEARCH_WILD_MAX, TEAM_BONUS, TEAM_NATURE, TEAM_OPEN_FROM, TEAM_SIZE, levelOf, studyPoints, xpForLevel, type Rarity } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
 import { TAG_NAME, Win, plural } from './App.tsx'
@@ -284,7 +283,6 @@ function Shelf({ game, offers, shop }: { game: Game; offers: Offer[]; shop: Shop
 /** Strong's seven pieces of gear, and how close the next full set (and the next Red Shard) is. */
 function TrainingKit({ game }: { game: Game }) {
   const have = GEAR_ITEMS.filter((g) => (game.inv[g] ?? 0) > 0).length
-  const sets = game.counters.sets ?? 0
   return (
     <div className="kit">
       <span className="k-label">Strong's training kit: {have} of {GEAR_ITEMS.length}</span>
@@ -298,7 +296,6 @@ function TrainingKit({ game }: { game: Game }) {
           )
         })}
       </div>
-      <p className="muted">Each workout in Strong's split drops its own piece. A full set of seven pays gems and Iron, and every {KIT_SHARD_EVERY}rd set a Red Shard too{sets > 0 ? `. ${sets} so far, ${KIT_SHARD_EVERY - (sets % KIT_SHARD_EVERY)} to the next shard.` : '.'}</p>
     </div>
   )
 }
@@ -310,8 +307,7 @@ export function DomainShop({ game, tag }: { game: Game; tag: MarkTag }) {
   const tms = shop.stock.filter((o) => ITEMS[o.item]?.kind === 'tm')
   const lv = game.mastery[tag]
   return (
-    <Win title={shop.name} tone={tag === 'sleep' ? 'purple' : tag === 'code' ? 'blue' : tag === 'fitness' ? 'red' : tag === 'guitar' ? 'gold' : 'green'} aside={<><MarkIcon tag={tag} size={22} /> {game.wallet.marks[tag]} {MARKS[tag].name}</>}>
-      <p className="muted">{TAG_NAME[tag]} days pay {MARKS[tag].name}, and only this shop takes them.{tag === 'sleep' && !game.sleep.band ? ' Bells come only from nights your band measures, so this house stays quiet until the first one.' : ''}</p>
+    <Win title={shop.name} tone={tag === 'sleep' ? 'purple' : tag === 'code' ? 'blue' : tag === 'fitness' ? 'red' : tag === 'guitar' ? 'gold' : 'green'} fold aside={<><MarkIcon tag={tag} size={22} /> {game.wallet.marks[tag]} {MARKS[tag].name}</>}>
       <div className="mastery">
         <span className="mastery-mark"><MarkIcon tag={tag} size={34} /></span>
         <span className="mastery-txt">
@@ -336,18 +332,21 @@ export function DomainShop({ game, tag }: { game: Game; tag: MarkTag }) {
 }
 
 type Place = ShopId | 'collector' | 'lab'
-export function ShopTab({ game, only }: { game: Game; only?: Place }) {
-  const [which, setWhich] = useState<Place>('mart')
-  const show = (s: Place) => (only ?? which) === s
-  const chips: [Place, string, ReactNode][] = [
-    ['mart', 'Mart', <Coin key="m" size={30} />], ['rare', 'Rare', <Gem key="r" size={30} />],
-    ...(game.v13 ? [['bp', 'BP', <BpIcon key="bp" size={30} />], ['collector', 'Collector', <ItemIcon key="c" id="nugget" size={30} />], ['lab', 'Lab', <ItemIcon key="l" id="helix-fossil" size={30} />]] as [Place, string, ReactNode][] : []),
-    ...MARK_TAGS.map((t): [Place, string, ReactNode] => [t, DOMAIN_SHOPS[t].name, <MarkIcon key={t} tag={t} size={30} />]),
+/** The Shop is three counters, by what you pay with: coins (the Mart, and the Collector who pays coins), gems and BP (rare things, the BP Exchange, the fossil Lab), and marks (each kind of work's own shop). */
+type Counter = 'coins' | 'gems' | 'marks'
+const COUNTER: Record<Counter, Place[]> = { coins: ['mart', 'collector'], gems: ['rare', 'bp', 'lab'], marks: [...MARK_TAGS] }
+export function ShopTab({ game }: { game: Game }) {
+  const [which, setWhich] = useState<Counter>('coins')
+  const show = (s: Place) => COUNTER[which].includes(s) && (game.v13 || !['bp', 'collector', 'lab'].includes(s))
+  const chips: [Counter, string, ReactNode][] = [
+    ['coins', 'Coins', <Coin key="m" size={30} />],
+    ['gems', game.v13 ? 'Gems & BP' : 'Gems', <Gem key="r" size={30} />],
+    ['marks', 'Marks', <MarkIcon key="k" tag="fitness" size={30} />],
   ]
   return (
     <>
-      {!only && (
-        <nav className="pmenu scroll" role="tablist" aria-label="Shops" data-noswipe>
+      {(
+        <nav className="pmenu" style={{ ['--n' as string]: chips.length } as CSSProperties} role="tablist" aria-label="Shops" data-noswipe>
           {chips.map(([id, name, icon]) => (
             <button key={id} type="button" role="tab" aria-selected={which === id} className={`pmenu-btn ${which === id ? 'on' : ''}`} onClick={() => { setWhich(id); play('tap') }}>
               <span className="pmenu-icon">{icon}</span>
@@ -383,7 +382,6 @@ export function ShopTab({ game, only }: { game: Game; only?: Place }) {
       {show('rare') && <IncenseWin game={game} />}
       {show('bp') && (
         <Win title="BP Exchange" tone="purple" aside={<><BpIcon size={22} /> {game.wallet.bp.toLocaleString('en-IN')} BP</>}>
-          <p className="muted">Battle Points come from the Battle Frontier (Journey tab): a point for every win, more for every seventh in a row, and each Symbol. Here they buy what no other shop sells.</p>
           <span className="k-label shelf-label">Held items · each one does something of its own</span>
           <Shelf game={game} offers={BP_SHELF.filter((o) => ITEMS[o.item]?.kind === 'held')} shop="bp" />
           <span className="k-label shelf-label">Battle items, evolution items and a Rare Candy</span>
@@ -397,17 +395,6 @@ export function ShopTab({ game, only }: { game: Game; only?: Place }) {
       {show('collector') && <CollectorWin game={game} />}
       {show('lab') && <LabWin game={game} />}
       {MARK_TAGS.filter((t) => show(t)).map((t) => <DomainShop key={t} game={game} tag={t} />)}
-      {!only && (
-        <Win title="Where it all comes from" tone="dark" fold>
-          <ul className="earn">
-            <li><Coin size={22} /> daily and weekly quests, the season, chests, and selling a Pokemon from My Pokemon to the Professor</li>
-            <li><Gem size={22} /> feats, a catch, an evolution, a badge, weekly quests</li>
-            <li>{MARK_TAGS.map((t) => <MarkIcon key={t} tag={t} size={22} />)} one a day for each kind of work done: coding, gym, guitar, Arbor, sleep</li>
-            <li><ItemIcon id="red-shard" size={22} /><ItemIcon id="blue-shard" size={22} /><ItemIcon id="yellow-shard" size={22} /><ItemIcon id="green-shard" size={22} /> shards come from feats (a month running, a hundred days), every third set of Strong gear and a boss</li>
-            <li><ItemIcon id="comet-shard" size={22} /> a Comet Shard for every month-end review done in Life OS; it fits any Mega</li>
-          </ul>
-        </Win>
-      )}
     </>
   )
 }
@@ -771,9 +758,9 @@ function BallBox({ mons, onOpen, note, actions, empty }: { mons: Mon[]; onOpen: 
   )
 }
 
-type PartyView = 'team' | 'lab' | 'forge' | 'bag' | 'nursery' | 'extras'
+type PartyView = 'team' | 'lab' | 'items'
 
-/** Party: what you have, and what you can do with it, one screen at a time: the team, the lab (or the box), the Forge, the Bag, the Nursery, and the rest. */
+/** Party: three screens: the team (and the partner), the lab (or the box), and items (the Bag, the Forge, the Nursery, incense and choices). */
 export function TeamTab({ game, partnerCard, choices, onShop }: { game: Game; partnerCard: (open: () => void) => ReactNode; choices: ReactNode; onShop: () => void }) {
   const [page, setPage] = useState<string | null>(null)
   const [joining, setJoining] = useState(false)
@@ -789,14 +776,11 @@ export function TeamTab({ game, partnerCard, choices, onShop }: { game: Game; pa
   const menu: [PartyView, string, string, ReactNode][] = [
     ['team', 'Team', 'poke-ball', `${1 + game.team.length}/${cap + 1}`],
     ['lab', game.v14 ? 'Lab' : 'Box', game.v14 ? 'journal' : 'poke-ball', game.v14 ? `R${game.research.rank}` : game.queue.length || null],
-    ['forge', 'Forge', 'key-stone', null],
-    ['bag', 'Bag', 'seal-bag', items || null],
-    ['nursery', 'Nursery', 'mystery-egg', game.egg ? `${Math.round(Math.min(1, game.egg.have / Math.max(1, game.egg.need)) * 100)}%` : null],
-    ['extras', 'Extras', 'full-incense', null],
+    ['items', 'Items', 'seal-bag', items || null],
   ]
   return (
     <div className="partypage">
-      <nav className="pmenu" role="tablist" aria-label="Party" data-noswipe>
+      <nav className="pmenu" style={{ ['--n' as string]: menu.length } as CSSProperties} role="tablist" aria-label="Party" data-noswipe>
         {menu.map(([id, name, icon, badge]) => (
           <button key={id} type="button" role="tab" aria-selected={view === id} className={`pmenu-btn ${view === id ? 'on' : ''}`} onClick={() => { setView(id); play('tap') }}>
             <span className="pmenu-icon"><ItemIcon id={icon} size={30} />{badge !== null && <i className="pmenu-badge">{badge}</i>}</span>
@@ -831,10 +815,7 @@ export function TeamTab({ game, partnerCard, choices, onShop }: { game: Game; pa
           </>
         )}
         {view === 'lab' && (game.v14 ? <ProfessorLab game={game} onOpen={setPage} /> : <MyPokemon game={game} onOpen={setPage} />)}
-        {view === 'forge' && <Forge game={game} />}
-        {view === 'bag' && <Bag game={game} />}
-        {view === 'nursery' && <Nursery game={game} onShop={onShop} />}
-        {view === 'extras' && <><IncenseWin game={game} />{choices}</>}
+        {view === 'items' && <><Bag game={game} /><Nursery game={game} onShop={onShop} /><Forge game={game} /><IncenseWin game={game} />{choices}</>}
       </div>
       {shown && <MonPage m={shown} game={game} onClose={() => setPage(null)} />}
       {joining && <Joiners game={game} onPick={(uid) => putOnTeam(game, uid, true)} onClose={() => setJoining(false)} />}

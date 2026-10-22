@@ -7,7 +7,7 @@
 import { useState, type ReactNode } from 'react'
 import { nameOf, type Game, type Mon } from '../core/fold.ts'
 import { BERRY_HEARTS, BOOST, DIRE_HIT, EVO_ITEMS, FOSSILS, ITEMS, LEGEND_KEYS, LEGEND_KEY_BP, COLLECTOR_MULT, REVIVE_COST, TREASURE, collectorWants, treasurePrice, VITAMINS, VITAMIN_MAX, VITAMIN_STEP, itemName, type MarkTag } from '../core/economy.ts'
-import { FACILITIES, GOLD_BP, SILVER_BP, type Facility } from '../core/frontier.ts'
+import { FACILITIES, type Facility } from '../core/frontier.ts'
 import { BOND_PERKS, CRIT_BASE, DYNAMAX, ENDURE_DAYS, FRIENDS_XP, GIGANTAMAX, HEART_CAP, HEART_LEVELS, PICKUP_BASE, PICKUP_STEP, SHARE_XP, V13_START, bondLevel, hasPerk, levelOf, type BondPerk } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
 import { TAG_NAME, Win } from './App.tsx'
@@ -59,7 +59,6 @@ export function BondPerks({ game }: { game: Game }) {
         })}
       </ol>
       {bond < HEART_LEVELS.length && <KBar value={hearts} max={HEART_LEVELS[bond]} kind="gold" label={`${hearts} / ${HEART_LEVELS[bond]} hearts`} />}
-      <p className="muted">A heart for every pillar done while it is your partner, and more from berries: Oran 1, Sitrus 3, Sweet Heart 3, the six friendship berries 5. Hearts stay with the Pokemon for good. Feed whoever needs them most: a party member's bond adds to every strike, and a berry kept back is bait for a throw.</p>
     </section>
   )
 }
@@ -142,7 +141,6 @@ export function FrontierWin({ game }: { game: Game }) {
     <Win title="Battle Frontier" tone="purple" aside={<><BpIcon size={22} /> {game.wallet.bp.toLocaleString('en-IN')} BP · {symbols} / 14 Symbols</>}>
       {!game.v13 ? <p className="muted">{opens}</p> : (
         <>
-          <p className="muted">Seven facilities, each a run of one kind of day. Every win pays a Battle Point, and every seventh in a row a bonus (7, then 14, up to 35); a Silver Symbol pays {SILVER_BP} BP, a Gold one {GOLD_BP} BP and a Legend key. Spend BP at the Exchange in the Shop.</p>
           <div className="facilities">{FACILITIES.map((f) => <FacilityCard key={f.id} f={f} game={game} />)}</div>
         </>
       )}
@@ -164,7 +162,6 @@ export function LegendWin({ game }: { game: Game }) {
     <Win title="Legend quests" tone="gold" aside={`${have} / ${legends.length} legends`}>
       {!game.v13 ? <p className="muted">{opens}</p> : (
         <>
-          <p className="muted">Each Legend key calls one legend as the next wild Pokemon, to be caught by your work like any other. Keys come from Gold Symbols, Rematch Champions and the BP Exchange.{game.wish.chosen ? ` ${nameOf(game.wish.chosen)} is already coming next.` : ''}</p>
           <div className="legends">
             {shown.map(([id, k]) => {
               const n = game.inv[id] ?? 0
@@ -198,7 +195,7 @@ export function CollectorWin({ game }: { game: Game }) {
   const sellAll = () => { for (const id of loot) useItem(id, '', 'sell', String(game.inv[id])); play('buy') }
   return (
     <Win title="The Collector" tone="gold" aside={<><Coin size={22} /> {game.wallet.coins.toLocaleString('en-IN')}</>}>
-      <p className="muted">An old man who buys whatever your partner finds on its walks: mushrooms, pearls, nuggets, and the relics of an older age.{wants.length ? ` Each day he wants a few things in particular and pays ×${COLLECTOR_MULT} for them, so a treasure can be worth keeping for its day.` : ''}</p>
+      {wants.length > 0 && <p className="muted">Today he pays ×{COLLECTOR_MULT} for the marked ones.</p>}
       {wants.length > 0 && (
         <div className="wanted" aria-label="Wanted today">
           <span className="k-label">Wanted today</span>
@@ -226,7 +223,6 @@ export function LabWin({ game }: { game: Game }) {
   const fossils = Object.keys(FOSSILS)
   return (
     <Win title="The Lab" tone="blue" aside={`${REVIVE_COST} coins a revival`}>
-      <p className="muted">Bring a fossil and the scientists bring it back to life. The Pokemon comes to My Pokemon.</p>
       <div className="trade-list">
         {fossils.map((id) => {
           const n = game.inv[id] ?? 0
@@ -241,7 +237,6 @@ export function LabWin({ game }: { game: Game }) {
           )
         })}
       </div>
-      <p className="muted">Fossils are found by Pickup, and sold at the BP Exchange.</p>
     </Win>
   )
 }

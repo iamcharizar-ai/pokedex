@@ -14,7 +14,7 @@ import { FeatsWin } from './Feats.tsx'
 import { SleepWin } from './Sleep.tsx'
 import type { SleepNight } from '../core/events.ts'
 import { ItemIcon } from './Item.tsx'
-import { KBar, KPill, KRibbon } from './Kit.tsx'
+import { KPill, KRibbon } from './Kit.tsx'
 import { Actions, Coin, Count, Gem, Pop, Quests, ShopTab, TeamTab } from './Play.tsx'
 import { Recap } from './Recap.tsx'
 import { BossLog, BossTile } from './Boss.tsx'
@@ -276,7 +276,6 @@ function Pace({ game }: { game: Game }) {
 function Summary({ game, onOpen }: { game: Game; onOpen?: () => void }) {
   const { partner } = game
   const rec = SPECIES[partner.form]
-  const toGo = Math.max(0, xpForLevel(game.next.level) - Math.round(partner.xp))
   const hearts = (partner.together ?? 0) + (partner.fed ?? 0)
   const bond = bondLevel(hearts)
   const nextAt = HEART_LEVELS[bond]
@@ -307,7 +306,6 @@ function Summary({ game, onOpen }: { game: Game; onOpen?: () => void }) {
           </div>
           <div className="hero-lv">
             <b>Lv {game.level}</b>
-            <KBar value={Math.round(game.into)} max={game.need} ready={toGo === 0} label={`${Math.round(game.into)} / ${game.need}`} />
           </div>
           <div className="hero-line" aria-label="Its line">
             {partner.path.map((f) => <img key={f} src={still(f, partner.shiny)} alt={nameOf(f)} title={nameOf(f)} width={40} height={40} className={`sprite ${f === partner.form ? 'now' : 'past'}`} />)}
@@ -801,13 +799,8 @@ export function Road({ game }: { game: Game }) {
 }
 
 function HallOfFame({ game }: { game: Game }) {
-  if (game.hall.length === 0) {
-    return (
-      <Win title="Hall of Fame" tone="gold" fold aside="Empty">
-        <p className="muted">Beat every leader of a league, up to its Champion, and your partner and team are kept here for good.</p>
-      </Win>
-    )
-  }
+  // nothing to show until a league is beaten
+  if (game.hall.length === 0) return null
   return (
     <Win title="Hall of Fame" tone="gold" fold aside={plural(game.hall.length, 'league')}>
       <ul className="hall">
@@ -863,12 +856,12 @@ function TrainerTab({ game }: { game: Game }) {
     else acc.push([m.day, [m]])
     return acc
   }, [])
-  const [view, setView] = useState<'roads' | 'days' | 'feats' | 'records'>('roads')
+  // three screens: where you are going, what there is to earn, and what has happened
+  const [view, setView] = useState<'roads' | 'goals' | 'history'>('roads')
   const menu: [typeof view, string, string, ReactNode][] = [
     ['roads', 'Roads', 'town-map', `${badgesWon(game)}`],
-    ['days', 'Days', 'photo-album', null],
-    ['feats', 'Feats', 'star-piece', null],
-    ['records', 'Records', 'fame-checker', game.hall.length || null],
+    ['goals', 'Goals', 'star-piece', null],
+    ['history', 'History', 'photo-album', game.hall.length || null],
   ]
   return (
     <div className="journeypage">
@@ -880,27 +873,23 @@ function TrainerTab({ game }: { game: Game }) {
           </button>
         ))}
       </nav>
-      <div className={`pview ${view === 'records' ? '' : 'two'}`} key={view}>
+      <div className="pview two" key={view}>
         {view === 'roads' && (
           <>
             <div className="pcol"><Road game={game} /><SeasonRoad game={game} /></div>
             <div className="pcol"><FrontierWin game={game} /></div>
           </>
         )}
-        {view === 'days' && (
+        {view === 'goals' && (
           <>
-            <div className="pcol"><Quests game={game} /></div>
-            <div className="pcol"><Calendar game={game} /></div>
-          </>
-        )}
-        {view === 'feats' && (
-          <>
-            <div className="pcol"><FeatsWin game={game} /></div>
+            <div className="pcol"><Quests game={game} /><FeatsWin game={game} /></div>
             <div className="pcol"><LegendWin game={game} /><BossLog game={game} /></div>
           </>
         )}
-        {view === 'records' && (
+        {view === 'history' && (
           <>
+            <div className="pcol"><Calendar game={game} /></div>
+            <div className="pcol">
             {game.league.index > 0 && <BadgeCase game={game} />}
             <HallOfFame game={game} />
             <details className="sec drawer" data-tone="dark">
@@ -916,6 +905,7 @@ function TrainerTab({ game }: { game: Game }) {
                 )}
               </div>
             </details>
+            </div>
           </>
         )}
       </div>

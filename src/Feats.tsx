@@ -40,7 +40,6 @@ export function FeatsWin({ game }: { game: Game }) {
   return (
     <>
       <Win title="Feats" tone="gold" aside={`${earned.size} / ${FEATS.length}`}>
-        <p className="muted">Each one pays once. The big ones pay something no shop sells.</p>
         {next.length > 0 && (
           <>
             <span className="k-label">Closest to done</span>
@@ -74,7 +73,7 @@ export function FeatsWin({ game }: { game: Game }) {
             )
           })}
         </details>
-        <p className="muted">{plural(game.feats.length, 'feat')} reached. The Key Stone, the Master Ball and the held items that strike ×1.3 are all here and nowhere else.</p>
+        <p className="muted">{plural(game.feats.length, 'feat')} reached.</p>
       </Win>
     </>
   )
