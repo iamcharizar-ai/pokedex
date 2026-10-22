@@ -25,7 +25,7 @@ export function SleepWin({ game, nights }: { game: Game; nights: Record<string, 
   const recent = Array.from({ length: 14 }, (_, i) => addDays(today, i - 13))
   const stageTotal = night ? STAGES.reduce((a, [k]) => a + ((night[k] as number | undefined) ?? 0), 0) : 0
   return (
-    <Win title="Last night" tone="blue" aside={sleep.state === 'measured' ? `${sleep.score} of 100` : sleep.state === 'self' || sleep.band ? 'Waiting' : 'No band'}>
+    <Win title="Last night" tone="blue" aside={sleep.state === 'measured' ? undefined : sleep.state === 'self' || sleep.band ? 'Waiting' : 'No band'}>
       {sleep.state === 'measured' ? (
         <>
           <div className="sleephead">
@@ -36,9 +36,8 @@ export function SleepWin({ game, nights }: { game: Game; nights: Record<string, 
               <small>Paid <b>+{sleep.xp} XP</b>{(sleep.score ?? 0) >= SLEEP_DONE ? ' · the Sleep pillar is full' : ` · ${SLEEP_DONE} fills the pillar`}</small>
             </div>
           </div>
-          {/* the bar that pays Bells: it fills to last night's score, and a Bell hangs at each mark it passed */}
+          {/* the Bells the night paid: two from the score, one from deep sleep */}
           <div className="bellbar" role="img" aria-label={`Last night scored ${sleep.score}. ${bells} ${bells === 1 ? 'Bell' : 'Bells'} paid: one at ${SLEEP_DONE}, two at ${SLEEP_DEEP}, and one more for ${DEEP_SLEEP_MIN} minutes of deep sleep.`}>
-            <span className="bellbar-track"><i style={{ width: `${Math.max(0, Math.min(100, sleep.score ?? 0))}%` }} />{BELLS.map(([at]) => <b key={at} className="bellmark" style={{ left: `${at}%` }} />)}</span>
             <span className="bellchips">
               {BELLS.map(([at, n]) => {
                 const got = (sleep.score ?? 0) >= at
@@ -72,7 +71,6 @@ export function SleepWin({ game, nights }: { game: Game; nights: Record<string, 
       ) : (
         <p className="muted">No band yet. Sleep is a habit you tick by hand, worth {TIER_XP.core} XP. From the first night your band reports, it becomes a pillar of 100 XP paid by the night's score.</p>
       )}
-      {sleep.state === 'measured' && <p className="muted">The sky behind your partner follows it: clear after {SLEEP_DEEP} or more, fair from {SLEEP_DONE}, then cloudy, overcast and rain.</p>}
       {sleep.band && (
         <details className="nights fold-row">
           <summary>Last 14 nights</summary>

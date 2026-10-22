@@ -85,13 +85,13 @@ export function BattlePrep({ game }: { game: Game }) {
   const bond = bondLevel(heartsOf(game.partner))
   const crit = (hasPerk(bond, 'focus') ? CRIT_BASE : 0) + (game.partner.held === 'scope-lens' ? 0.1 : 0)
   const today = game.today.boost ?? {}
-  const gmax = Boolean(SPECIES[game.partner.form]?.gm)
   const items = [...boosts, ...dires, ...(have('guard-spec') ? ['guard-spec'] : []), ...(have('honey') ? ['honey'] : [])]
   const use = (id: string) => {
     const what = BOOST[id] || DIRE_HIT[id] ? 'boost' : id === 'guard-spec' ? 'guard' : 'honey'
     useItem(id, '', what)
     play('tap')
   }
+  if (!items.length && crit === 0 && !game.today.max && !game.today.crit && !game.guard && !game.today.find && !Object.keys(today).length) return null
   return (
     <Win title="Battle prep" tone="red" aside={crit > 0 ? `Critical ${pct(crit)}` : undefined}>
       <TodayEffects game={game} />
@@ -110,8 +110,7 @@ export function BattlePrep({ game }: { game: Game }) {
             )
           })}
         </div>
-      ) : <p className="muted">No battle items. X items, Dire Hits and the Guard Spec are on the Mart's battle shelf; Pickup finds some too.</p>}
-      <p className="muted">An X item counts for all of today's work, whenever it is used. A perfect day Dynamaxes {nameOf(game.partner.form)}: its strike ×{gmax ? GIGANTAMAX : DYNAMAX}{gmax ? ' (it has a Gigantamax form)' : ''}.</p>
+      ) : null}
     </Win>
   )
 }

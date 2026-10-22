@@ -196,10 +196,12 @@ function Talk({ game, pillars, sleepH }: { game: Game; pillars: HabitFact[]; sle
   const { today, wild } = game
   const me = nameOf(game.display)
   const left = today.total - today.done
+  const next = pillars.find((h) => h.frac < 1)
   const say: ReactNode = wild?.caught ? <>Gotcha! {nameOf(wild.form)} was caught!</>
     : game.fled ? <>The wild {nameOf(game.fled)} got away. A new one is here.</>
     : game.asleep ? <>{me} is dozing.</>
-    : today.xp > 0 ? <>{me} gained <em>{today.xp} XP</em> today!</>
+    : next ? <>Next: <em>{label(next)}</em> · {Math.round(next.worth * (1 - next.frac))} XP</>
+    : pillars.length ? <>Every pillar is done today!</>
     : <>What will {me} do today?</>
   const share = today.total > 0 ? today.done / today.total : 0
   // Sleep as a ring: a measured night is one of the pillars already; otherwise its habit gets a ring of its own
@@ -468,7 +470,7 @@ function PartnerTab({ game, facts, nights, onShop }: { game: Game; facts: DayFac
       <Win title="Challenges" tone="red">
         <div className="duels">
           <LeaderTile game={game} />
-          <BossTile game={game} />
+          {game.boss && <BossTile game={game} />}
         </div>
       </Win>
       {game.sleep.state === 'measured' && <SleepWin game={game} nights={nights} />}
@@ -1087,17 +1089,18 @@ function TopBar({ game, today, status, loading, onHelp }: { game: Game; today: s
   const seen = Object.keys(game.dex).filter((id) => !SPECIES[id]?.f).length
   const v5 = !loading
   const nx = game.season.next
-  const into = clamp01(game.into / game.need)
+  const into = clamp01(game.season.into / game.season.need)
+  const prize = nx.coins ? `${nx.coins} coins` : nx.gems ? `${nx.gems} gems` : nx.item ? itemName(nx.item) : 'a prize'
   const R = 27, C = 2 * Math.PI * R
   return (
     <header className="topbar tb">
-      <span className="tb-ring" title={`${nameOf(game.display)}, level ${game.level}: ${Math.round(game.into).toLocaleString('en-IN')} of ${game.need.toLocaleString('en-IN')} XP to the next`} role="img" aria-label={`Level ${game.level}, ${Math.round(into * 100)} percent to the next`}>
+      <span className="tb-ring" title={`Season step ${game.season.step}: ${game.season.into.toLocaleString('en-IN')} of ${game.season.need.toLocaleString('en-IN')} XP of the month's work, then ${prize}`} role="img" aria-label={`Season step ${game.season.step}, ${Math.round(into * 100)} percent to the next, which pays ${prize}`}>
         <svg viewBox="0 0 64 64" aria-hidden>
           <circle cx="32" cy="32" r={R} className="track" />
           <circle cx="32" cy="32" r={R} className="fill" strokeDasharray={`${C * into} ${C}`} transform="rotate(-90 32 32)" />
         </svg>
-        {v5 ? <img src={still(game.display, game.partner.shiny)} alt="" width={40} height={40} className="sprite" /> : <Ball ball="poke" size={32} />}
-        {v5 && <b className="tb-lv">Lv {game.level}</b>}
+        {v5 ? (nx.coins ? <Coin size={30} /> : nx.gems ? <Gem size={30} /> : nx.item ? <ItemIcon id={nx.item} size={34} /> : <Ball ball="poke" size={32} />) : <Ball ball="poke" size={32} />}
+        {v5 && <b className="tb-lv">Season {game.season.step}</b>}
       </span>
       <div className="tb-main">
         <div className="tb-row">
@@ -1108,15 +1111,6 @@ function TopBar({ game, today, status, loading, onHelp }: { game: Game; today: s
           <button type="button" className="k-btn help" aria-label="How it works" onClick={onHelp}>?</button>
           <span className={`sync s-${status[0]}`} role="status" aria-label={status[1]} title={status[1]} />
         </div>
-        {v5 && (
-          <div className="tb-season" title={`Season step ${game.season.step}. Every ${game.season.need.toLocaleString('en-IN')} XP of the month's work is a step.`}>
-            <span className="k-label">Season {game.season.step}</span>
-            <div className="k-bar gold" role="progressbar" aria-valuemin={0} aria-valuemax={game.season.need} aria-valuenow={game.season.into} aria-label="Progress to the next season step">
-              <i style={{ width: `${clamp01(game.season.into / game.season.need) * 100}%` }} />
-              <span className="nextprize">{game.season.into.toLocaleString('en-IN')} / {game.season.need.toLocaleString('en-IN')} · next {nx.coins ? <><Coin size={14} />{nx.coins}</> : nx.gems ? <><Gem size={14} />{nx.gems}</> : (nx.item ? itemName(nx.item) : '')}</span>
-            </div>
-          </div>
-        )}
       </div>
     </header>
   )
