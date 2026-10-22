@@ -27,6 +27,8 @@ export interface BodyFacts {
   steps?: number
   /** 0-100 */
   recovery?: number
+  /** minutes of deep sleep in the night that ended on this day */
+  deepMin?: number
 }
 /** A stone spent from the Bag on one Pokemon. */
 export interface ItemUse {

@@ -18,7 +18,7 @@ export const USE_EVENT = 'item_use'
 /** Written by Life OS for today only: `{ habits: JSON [{ id, tier, tag }] }`, the list as it stood that day. See listsOf for which one stands. */
 export const LIST_EVENT = 'day_list'
 
-const BODY_FIELDS = ['sleepScore', 'steps', 'recovery'] as const
+const BODY_FIELDS = ['sleepScore', 'steps', 'recovery', 'deepMin'] as const
 
 /** day → what the band measured. Pass events oldest first: a later reading replaces an earlier one, and null takes it back. */
 export function bodyOf(events: GameEvent[]): Record<string, BodyFacts> {

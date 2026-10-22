@@ -349,6 +349,8 @@ export const FEATS: Feat[] = [
   ...domainFeats(),
   { id: 'walk30', name: 'Thirty long walks', text: 'Thirty days of 10,000 steps', group: 'total', key: 'walk', n: 30, reward: { gems: 25 } },
   { id: 'walk100', name: 'A hundred long walks', text: 'A hundred days of 10,000 steps', group: 'total', key: 'walk', n: 100, reward: { gems: 70 } },
+  { id: 'deep10', name: 'Ten deep nights', text: 'Ten nights with 90 minutes of deep sleep', group: 'total', key: 'deep', n: 10, reward: { gems: 15 } },
+  { id: 'deep50', name: 'Fifty deep nights', text: 'Fifty nights with 90 minutes of deep sleep', group: 'total', key: 'deep', n: 50, reward: { gems: 50 } },
   { id: 'workouts10', name: 'Ten workouts', text: 'Ten workouts logged in Strong', group: 'total', key: 'workouts', n: 10, reward: { gems: 15 } },
   { id: 'workouts50', name: 'Fifty workouts', text: 'Fifty workouts logged in Strong', group: 'total', key: 'workouts', n: 50, reward: { gems: 40 } },
   { id: 'records1', name: 'A record', text: 'Your first personal record', group: 'total', key: 'records', n: 1, reward: { gems: 10 } },

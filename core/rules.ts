@@ -40,6 +40,9 @@ export const SLEEP_HABIT = 'sleep-before-10'
 export const SLEEP_DONE = 80
 /** A measured night at this score or more pays two Bells instead of one. */
 export const SLEEP_DEEP = 90
+/** A measured night with this many minutes of deep sleep pays a Bell of its own, on top of the score's, from DEEP_SLEEP_FROM. */
+export const DEEP_SLEEP_MIN = 90
+export const DEEP_SLEEP_FROM = '2026-10-22'
 
 /** Habits that open into a block of items and pay for the share that was done. */
 export const ARBOR_HABIT = 'arbor-morning'

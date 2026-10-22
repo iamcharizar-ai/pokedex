@@ -12,6 +12,7 @@ import { beats, weakDomains } from './types.ts'
 import {
   BALL_MULT, CLAIM_AUTO, DAILY_PAY, PAY_STREAK, REVIEW_GEMS, EGG_STEPS, STEPS_GOAL, GAME_START, GEMS, KIT_IRON, LEADER_HP, MEGA_BONUS, REPEL_DAYS, SEASON_STEP, SLEEP_DEEP, SLIP, STAKES_FROM, TEAM_BONUS, TEAM_NATURE, TEAM_OPEN_FROM, TEAM_LEVEL, TEAM_SIZE, WEAK_MULT, WILD_HP, WILD_STAY,
   V13_START, ballFor, bondLevel, evolveAt, graduateAt, levelOf, momentumMult, regionsOpen, wildHit, xpForLevel,
+  DEEP_SLEEP_FROM, DEEP_SLEEP_MIN,
 } from './rules.ts'
 import { forgeFair, BALLS, BOND_PARTY, CHEST, rng, DOMAIN_SHOPS, FEATS, FORGE_COST, GEAR, GEAR_ITEMS, LURES, MART_POOL, SELL, STANDING, forgeShard, lureTypes, martDeals, throwHp } from './economy.ts'
 import { SPECIES } from './species.ts'
@@ -1098,4 +1099,21 @@ test('a boss week ends: an uncaught one leaves and is logged, and the card and i
   assert.equal(bossDayChanged(undefined, [0, 0, 0, 0, 0]), false)
   assert.equal(bossDayChanged([0.5, 0.2, 0, 0, 0], [0.5, 0.2, 0, 0, 0]), false)
   assert.equal(bossDayChanged([0.5, 0.2, 0, 0, 0], [0.6, 0.2, 0, 0, 0]), true)
+})
+
+test('sleep: 90 minutes of deep sleep pays a Bell of its own, from DEEP_SLEEP_FROM on', () => {
+  const habits: FactsInput['habits'] = [{ id: 'leetcode-coding', tier: 'pillar', spans: [{ from: '1970-01-01', to: null }] }]
+  const at = (body: FactsInput['body'], today: string) => fold(buildFacts({ today, habits, ticks: {}, body }))
+  const d = DEEP_SLEEP_FROM, before = addDays(DEEP_SLEEP_FROM, -1)
+  // a 70 pays no score Bell, but its deep sleep still pays one
+  assert.equal(at({ [d]: { sleepScore: 70, deepMin: DEEP_SLEEP_MIN } }, d).wallet.marks.sleep, 1)
+  assert.equal(at({ [d]: { sleepScore: 70, deepMin: DEEP_SLEEP_MIN - 1 } }, d).wallet.marks.sleep, 0)
+  // it stacks with the score's Bells: a 92 with 97 deep minutes pays three
+  const g = at({ [d]: { sleepScore: 92, deepMin: 97 } }, d)
+  assert.equal(g.wallet.marks.sleep, 3)
+  assert.equal(g.counters.deep, 1)
+  // nights before the rule began change nothing
+  assert.equal(at({ [before]: { sleepScore: 70, deepMin: 120 } }, d).wallet.marks.sleep, 0)
+  // deep minutes without a measured night pay nothing
+  assert.equal(at({ [d]: { deepMin: 120 } }, d).wallet.marks.sleep, 0)
 })

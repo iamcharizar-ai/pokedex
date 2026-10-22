@@ -4,7 +4,7 @@
 import { addDays } from '../core/facts.ts'
 import type { SleepNight } from '../core/events.ts'
 import type { Game } from '../core/fold.ts'
-import { SLEEP_DEEP, SLEEP_DONE, TIER_XP } from '../core/rules.ts'
+import { DEEP_SLEEP_FROM, DEEP_SLEEP_MIN, SLEEP_DEEP, SLEEP_DONE, TIER_XP } from '../core/rules.ts'
 import { Win } from './App.tsx'
 import { MarkIcon } from './Item.tsx'
 
@@ -21,6 +21,7 @@ export function SleepWin({ game, nights }: { game: Game; nights: Record<string, 
   const today = game.today.day
   const night = nights[today]
   const bells = game.wallet.marksToday.sleep
+  const deep = today >= DEEP_SLEEP_FROM && (night?.deepMin ?? 0) >= DEEP_SLEEP_MIN
   const recent = Array.from({ length: 14 }, (_, i) => addDays(today, i - 13))
   const stageTotal = night ? STAGES.reduce((a, [k]) => a + ((night[k] as number | undefined) ?? 0), 0) : 0
   return (
@@ -36,7 +37,7 @@ export function SleepWin({ game, nights }: { game: Game; nights: Record<string, 
             </div>
           </div>
           {/* the bar that pays Bells: it fills to last night's score, and a Bell hangs at each mark it passed */}
-          <div className="bellbar" role="img" aria-label={`Last night scored ${sleep.score}. ${bells} ${bells === 1 ? 'Bell' : 'Bells'} paid: one at ${SLEEP_DONE}, two at ${SLEEP_DEEP}.`}>
+          <div className="bellbar" role="img" aria-label={`Last night scored ${sleep.score}. ${bells} ${bells === 1 ? 'Bell' : 'Bells'} paid: one at ${SLEEP_DONE}, two at ${SLEEP_DEEP}, and one more for ${DEEP_SLEEP_MIN} minutes of deep sleep.`}>
             <span className="bellbar-track"><i style={{ width: `${Math.max(0, Math.min(100, sleep.score ?? 0))}%` }} />{BELLS.map(([at]) => <b key={at} className="bellmark" style={{ left: `${at}%` }} />)}</span>
             <span className="bellchips">
               {BELLS.map(([at, n]) => {
@@ -49,9 +50,14 @@ export function SleepWin({ game, nights }: { game: Game; nights: Record<string, 
                   </span>
                 )
               })}
+              <span className={`bell ${deep ? 'got' : ''}`}>
+                <span className="bell-ico"><MarkIcon tag="sleep" size={26} /></span>
+                <span className="bell-txt"><b>{DEEP_SLEEP_MIN}m deep</b><small>+1 Bell</small></span>
+                {deep && <i className="bell-n" aria-hidden>✓</i>}
+              </span>
             </span>
           </div>
-          <p className="bellnote">{bells > 0 ? <><b>+{bells} {bells === 1 ? 'Bell' : 'Bells'}</b> paid this morning. Spend them in the Dream House.</> : <>A night of {SLEEP_DONE} or more pays a Bell, {SLEEP_DEEP} or more two.</>}</p>
+          <p className="bellnote">{bells > 0 ? <><b>+{bells} {bells === 1 ? 'Bell' : 'Bells'}</b> paid this morning. Spend them in the Dream House.</> : <>A night of {SLEEP_DONE} or more pays a Bell, {SLEEP_DEEP} or more two, and {DEEP_SLEEP_MIN} minutes of deep sleep one more.</>}</p>
           {stageTotal > 0 && (
             <>
               <div className="stagebar" role="img" aria-label={STAGES.map(([k, n]) => `${n} ${hm((night?.[k] as number | undefined) ?? 0)}`).join(', ')}>

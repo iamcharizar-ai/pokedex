@@ -956,7 +956,7 @@ function RulesTab({ onTour }: { onTour: () => void }) {
             A day of coding, gym, guitar, Arbor or good sleep pays one mark, spent only in that kind's own shop.
           </Rule>
           <Rule title="Sleep" tone="blue" pic={<><ItemIcon id="lunar-wing" size={30} /><span className="rule-chip sm">80</span><span className="rule-chip sm">90</span></>}>
-            A night your band measures is a pillar: its score is the XP, 80 fills it, 80 pays a Bell and 90 two. No reading is never a zero: tick it by hand for less.
+            A night your band measures is a pillar: its score is the XP, 80 fills it, 80 pays a Bell and 90 two, and 90 minutes of deep sleep one more. No reading is never a zero: tick it by hand for less.
           </Rule>
           <Rule title="Balls have conditions" tone="red" pic={<><ItemIcon id="net-ball" size={30} /><ItemIcon id="quick-ball" size={30} /><ItemIcon id="timer-ball" size={30} /></>}>
             A Net Ball hits Water and Bug double. A Quick Ball is best the day it appears. A Timer Ball grows each day it waits.
