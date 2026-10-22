@@ -1498,7 +1498,11 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
 
     payQuests()
     evalFeats(f.day)
-    for (const u of f.uses ?? []) spend(u, f.day)
+    for (const u of f.uses ?? []) {
+      spend(u, f.day)
+      payQuests()
+      evalFeats(f.day)
+    }
 
     // an egg: one kept warm at a time, a day nearer on each day with two pillars
     if (!egg && inv['rare-egg']) { inv['rare-egg']--; egg = { have: 0 } }

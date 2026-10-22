@@ -179,6 +179,21 @@ test('the Lab brings a fossil back, an evolution item evolves someone in My Poke
   assert.equal(wrong.queue.find((m) => m.uid === omanyte.uid)!.form, 'omanyte')
 })
 
+test('reviving a first fossil unlocks feat fossil1, allowing Old Amber to be claimed and revived on the same day', () => {
+  const days = run(45, ALL)
+  const g = fold(use(days, 44,
+    { what: 'buy', item: 'helix-fossil', to: 'bp' },
+    { what: 'fossil', item: 'helix-fossil' },
+    { what: 'claim', to: 'feat:fossil1' },
+    { what: 'fossil', item: 'old-amber' },
+  ))
+  const fossils = g.queue.filter((m) => m.origin === 'fossil')
+  assert.equal(fossils.length, 2)
+  assert.equal(fossils[0].base, 'omanyte')
+  assert.equal(fossils[1].base, 'aerodactyl')
+  assert.equal(g.inv['old-amber'], 0)
+})
+
 test('vitamins: one domain of one Pokemon strikes harder, for good; the Collector buys treasures', () => {
   for (const [id] of Object.entries(VITAMINS)) assert.ok(id)
   const days = run(14, PILLARS)
