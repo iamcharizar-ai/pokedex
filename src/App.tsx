@@ -34,7 +34,7 @@ import { KIT_SHARD_EVERY } from '../core/rules.ts'
 import { CollectButton } from './Claim.tsx'
 import { Toasts } from './Toasts.tsx'
 import { FeedSheet, treatsIn } from './Feed.tsx'
-import { aBall, badgeArt, badgeName, fmtDay, leagueName, still } from './lib/art.ts'
+import { aBall, badgeArt, badgeWon, badgeName, fmtDay, leagueName, still } from './lib/art.ts'
 import { play, setSoundOn, soundOn } from './lib/sfx.ts'
 import { LIFEOS_URL, start, useItem, useView } from './lib/store.ts'
 import { FIXTURE } from './lib/fixture-boot.ts'
@@ -52,8 +52,8 @@ const dexNo = (n: number) => String(n).padStart(3, '0')
 const itemName = (item: string): string => econName(item)
 const RARITY: Record<string, string> = { C: 'Common', U: 'Uncommon', R: 'Rare', L: 'Legendary' }
 /** Badges won so far, across every league. */
-const badgesWon = (game: Game): number =>
-  LEAGUES.reduce((n, l, i) => n + (i < game.league.index ? l.gyms.length : i === game.league.index ? Math.min(game.league.slot, l.gyms.length) : 0), 0)
+export const badgesWon = (game: Game): number =>
+  LEAGUES.reduce((n, l, i) => n + l.gyms.filter((_, s) => badgeWon(game.league, i, s)).length, 0)
 
 function Sprite({ form, shiny, size, className = '' }: { form: string; shiny?: boolean; size: number; className?: string }) {
   return <img src={spritePath(form, shiny)} alt="" width={size} height={size} className={`sprite ${className}`} style={{ width: size, height: size }} />
@@ -818,32 +818,25 @@ function HallOfFame({ game }: { game: Game }) {
   )
 }
 
-/** Every badge won, league by league, with the open league's empty places. */
-function BadgeCase({ game }: { game: Game }) {
-  const upTo = Math.min(game.league.index, LEAGUES.length - 1)
+/** Every badge won, league by league, with the open league's empty places. It lives in the Bag, as the Badges pocket. */
+export function BadgeCase({ game }: { game: Game }) {
+  const shown = LEAGUES.map((l, index) => [l, index] as const).filter(([, index]) => game.league.lap > 0 || index <= game.league.index)
   return (
-    <Win title="Badge case" tone="dark" fold aside={plural(badgesWon(game), 'badge')}>
-      {LEAGUES.slice(0, upTo).map((l, index) => (
+    <>
+      {shown.map(([l, index]) => (
         <div key={l.name} className="caserow">
-          <KRibbon metal={index < game.league.index ? 'gold' : 'silver'}>{l.name}</KRibbon>
+          <KRibbon metal={game.league.lap > 0 || index < game.league.index ? 'gold' : 'silver'}>{l.name}</KRibbon>
           <div className="casemedals">
             {l.gyms.map((t, i) => {
-              const on = index < game.league.index || i < game.league.slot
+              const on = badgeWon(game.league, index, i)
               const title = `${badgeName(t)}: ${on ? `won from ${t.name}` : `beat ${t.name}`}`
-              const art = badgeArt(index, i)
               // the real badge where there is a picture of it; an empty numbered place for the regions without one
-              return <GymBadge key={i} art={art} on={on} n={i + 1} title={title} />
+              return <GymBadge key={i} art={badgeArt(index, i)} on={on} n={i + 1} title={title} />
             })}
           </div>
         </div>
       ))}
-      <div className="keyrow">
-        <KeyStone size={32} held={Boolean(game.keyStone)} />
-        <p className="muted">
-          {game.keyStone ? `Key Stone, held since ${fmtDay(game.keyStone)}. A Mega Stone is forged from three shards, in the Forge on the Party tab.` : 'The Key Stone is a feat: any one kind of work, seven days running. Then shards forge Mega Stones.'}
-        </p>
-      </div>
-    </Win>
+    </>
   )
 }
 
@@ -890,7 +883,6 @@ function TrainerTab({ game }: { game: Game }) {
           <>
             <div className="pcol"><Calendar game={game} /></div>
             <div className="pcol">
-            {game.league.index > 0 && <BadgeCase game={game} />}
             <HallOfFame game={game} />
             <details className="sec drawer" data-tone="dark">
               <summary className="sec-h"><i className="sec-mark" aria-hidden /><h2>Adventure log</h2><span className="sec-aside">{plural(events.length, 'thing')}</span><i className="chev" aria-hidden /></summary>
@@ -991,7 +983,7 @@ function RulesTab({ onTour }: { onTour: () => void }) {
             Each workout in Strong's split drops its own piece of gear. A full set of seven pays gems and Iron, and every {KIT_SHARD_EVERY}rd set a Red Shard as well.
           </Rule>
           <Rule title="Leaders and badges" tone="purple" pic={<><span className="rule-chip">{(LEADER_HP / 1000).toFixed(0)}k</span><Arrow /><img src="/sprites/badges/1-1.png" alt="" width={32} height={32} className="gymbadge pix" /></>}>
-            Kanto's gym leaders have {LEADER_HP.toLocaleString('en-IN')} HP, and each league further on more. Each is weak to two kinds of work (×{WEAK_MULT}). Beat one, keep the badge.
+            Kanto's gym leaders have {LEADER_HP.toLocaleString('en-IN')} HP, and each league further on more. Each is weak to two kinds of work (×{WEAK_MULT}). Beat one, keep the badge. The Elite Four and the Champions give no badge: each hands over a random Type Plate you do not have yet (hold it for +35% against a leader of its type).
           </Rule>
           <Rule title="Your team" tone="blue" pic={<><img src="/sprites/ui/party-on.png" alt="" width={30} height={30} className="pix" /><img src="/sprites/ui/party-on.png" alt="" width={30} height={30} className="pix" /><img src="/sprites/ui/party-empty.png" alt="" width={30} height={30} className="pix" /><span className="rule-chip sm">+10%</span></>}>
             The partner and up to {TEAM_SIZE} more stand together, a party of six: they fight the leaders and the weekly boss. Each of the {TEAM_SIZE} adds {Math.round(TEAM_BONUS * 100)}% to every strike, more for its level and bond, and {Math.round(TEAM_NATURE * 100)}% more to the work its nature raised. With the bond's Exp. Share they keep growing, up to level {MAX_LEVEL}.

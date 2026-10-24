@@ -13,7 +13,10 @@ export const badgeArt = (league: number, slot: number): string | null => {
   if (l.region === null) return `/sprites/badges/orange-${slot + 1}.png`
   return l.region <= 6 ? `/sprites/badges/${l.region}-${slot + 1}.png` : null
 }
-export const badgeName = (t: Leader): string => `${t.badge}${/ Z$/.test(t.badge) ? '' : ' Badge'}`
+/** Is this gym's badge won? Once the Rematch laps begin `index` starts over, but every first-lap badge is kept. */
+export const badgeWon = (lg: { index: number; slot: number; lap: number }, league: number, slot: number): boolean =>
+  lg.lap > 0 || league < lg.index || (league === lg.index && slot < lg.slot)
+export const badgeName =(t: Leader): string => `${t.badge}${/ Z$/.test(t.badge) ? '' : ' Badge'}`
 export const leagueName = (i: number): string => LEAGUES[i]?.name ?? ''
 /** 'a Poke Ball', 'an Ultra Ball'. */
 export const aBall = (b: Ball): string => `${/^[aeiou]/i.test(BALL_NAME[b]) ? 'an' : 'a'} ${BALL_NAME[b]}`

@@ -10,7 +10,7 @@ import {
 } from '../core/economy.ts'
 import { DAILY_PAY, MAX_LEVEL, REPEL_DAYS, RESEARCH_SLOTS, RESEARCH_WILD, RESEARCH_WILD_MAX, TEAM_BONUS, TEAM_NATURE, TEAM_OPEN_FROM, TEAM_SIZE, levelOf, studyPoints, xpForLevel, type Rarity } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
-import { TAG_NAME, Win, plural } from './App.tsx'
+import { BadgeCase, TAG_NAME, Win, badgesWon, plural } from './App.tsx'
 import { Ball, BallItem, MegaStone, megaStoneName } from './Ball.tsx'
 import { Forge } from './screens/Forge.tsx'
 import { Sheet } from './screens/Sheet.tsx'
@@ -456,8 +456,11 @@ export function Bag({ game }: { game: Game }) {
     useItem('', '', 'move', next.join(','))
     play('tap')
   }
-  const tabs: [string, string[]][] = [['Everything', owned], ...groups.map(([n, ids]) => [n, ids] as [string, string[]]), ...(rest.length ? [['Everything else', rest] as [string, string[]]] : [])]
+  const badges = badgesWon(game)
+  // Badges are not items: their pocket draws the badge case instead of a grid of slots
+  const tabs: [string, string[]][] = [['Everything', owned], ...groups.map(([n, ids]) => [n, ids] as [string, string[]]), ...(rest.length ? [['Everything else', rest] as [string, string[]]] : []), ...(badges > 0 ? [['Badges', []] as [string, string[]]] : [])]
   const at = tabs.find(([n]) => n === tab) ?? tabs[0]
+  const onBadges = at[0] === 'Badges'
   const slot = (id: string) => {
     const on = game.partner.held === id || equipped.includes(id) || game.theme === id
     const n = have(id)
@@ -481,19 +484,19 @@ export function Bag({ game }: { game: Game }) {
   return (
     <Win title="Bag" tone="purple" aside={balls || berries ? <>{balls > 0 && `${balls} ${balls === 1 ? 'ball' : 'balls'}`}{balls > 0 && berries > 0 && ' · '}{berries > 0 && `${berries} ${berries === 1 ? 'berry' : 'berries'}`}</> : game.keyStone ? <><ItemIcon id="key-stone" size={22} /> Key Stone</> : undefined}>
       <div className="mc">
-        {owned.length > 0 && (
+        {(owned.length > 0 || badges > 0) && (
           <div className="mc-tabs" role="tablist" aria-label="Bag pockets" data-noswipe>
             {tabs.map(([name, ids]) => (
               <button key={name} type="button" role="tab" aria-selected={at[0] === name} className={`mc-tab ${at[0] === name ? 'on' : ''}`} onClick={() => { setTab(name); play('click') }} title={`${name} · ${ids.length}`}>
-                <ItemIcon id={name === 'Everything' ? 'seal-bag' : ids[0]} size={26} />
+                {name === 'Badges' ? <ItemIcon id="town-map" size={26} /> : <ItemIcon id={name === 'Everything' ? 'seal-bag' : ids[0]} size={26} />}
               </button>
             ))}
           </div>
         )}
         <div className="mc-panel">
-          <span className="mc-title">{owned.length ? (at[0] === 'TMs' ? `TMs · ${equipped.length} of ${TM_SLOTS} on ${nameOf(game.partner.form)}` : at[0] === 'Held items' ? `Held items · ${nameOf(game.partner.form)} holds one` : at[0]) : 'Inventory'}</span>
-          {owned.length === 0 && <p className="mc-empty">No items yet. The Mart opens each morning, and feats hand out the rest.</p>}
-          <div className="mc-grid">{at[1].map(slot)}{fill(at[1].length, 18)}</div>
+          <span className="mc-title">{onBadges ? `Badges · ${badges}` : owned.length ? (at[0] === 'TMs' ? `TMs · ${equipped.length} of ${TM_SLOTS} on ${nameOf(game.partner.form)}` : at[0] === 'Held items' ? `Held items · ${nameOf(game.partner.form)} holds one` : at[0]) : 'Inventory'}</span>
+          {owned.length === 0 && !onBadges && <p className="mc-empty">No items yet. The Mart opens each morning, and feats hand out the rest.</p>}
+          {onBadges ? <BadgeCase game={game} /> : <div className="mc-grid">{at[1].map(slot)}{fill(at[1].length, 18)}</div>}
           <span className="mc-title">Money and marks</span>
           <div className="mc-grid mc-hotbar">
             {purse.map(([icon, name, n, today], i) => (

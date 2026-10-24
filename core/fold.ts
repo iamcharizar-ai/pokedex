@@ -19,7 +19,7 @@ import {
   V13_START, V14_START, HEART_CAP, MAX_LEVEL, RESEARCH_SLOTS, researchCost, researchCut, studyPoints, leaderHp, LEVEL_POWER, TEAM_LEVEL, MEGA_BOND, MEGA_DAY, hasPerk, PICKUP_BASE, PICKUP_STEP, ENDURE_DAYS, CRIT_BASE, CRIT_MULT, FRIENDS_XP, SHARE_XP, DYNAMAX, GIGANTAMAX,
   type Ball, type NatureStat, type Rarity, type Tag,
 } from './rules.ts'
-import { BOOST, COMET_SHARD, DIRE_HIT, EVO_ITEMS, FOSSILS, LEGEND_KEYS, PICKUP_TIERS, REMATCH_KEYS, REVIVE_COST, TREASURE, VITAMINS, VITAMIN_MAX, VITAMIN_STEP, forgeFair, legendFor, pickupFind, researchReward } from './economy.ts'
+import { BOOST, COMET_SHARD, DIRE_HIT, EVO_ITEMS, FOSSILS, LEGEND_KEYS, PICKUP_TIERS, PLATES, PLATE_BONUS, REMATCH_KEYS, plateFor, REVIVE_COST, TREASURE, VITAMINS, VITAMIN_MAX, VITAMIN_STEP, forgeFair, legendFor, pickupFind, researchReward } from './economy.ts'
 import { FACILITIES, GOLD_BP, GOLD_GEMS, REMATCH_BP, SILVER_BP, SILVER_GEMS, bpFor } from './frontier.ts'
 import {
   BOSS_CATCH_GEMS, BOSS_HEAL, BOSS_HP_PER_LEVEL, BOSS_KILL_GEMS, BOSS_MILESTONES, BOSS_SHINY, BOSS_TAG, BOSS_TASK_COINS, BOSS_TASK_MARKS, KILL_CAP, THROWS, THROW_AT, TYPE_EDGE,
@@ -475,6 +475,8 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
   const bossWeeks = new Set<string>()
   // ── rewards that wait to be collected ──
   const held = new Map<string, Held>()
+  /** the Type Plates already dropped (claimed or not), so no win drops one twice */
+  const platesGot = new Set<string>()
   /** a claim made before its reward existed (a quest or feat won later the same day): it pays the moment the reward appears */
   const claimedEarly = new Set<string>()
   /** pay it into the wallet and the bag (not today's tally: that counted when it was earned) */
@@ -1316,7 +1318,7 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
       // the team, the bond, a Mega, the held item, mastery and natures are all added, then applied once (see Power)
       const pw = powerOf(v13, v14On(f.day))
       // version 13: the partner's level, a Mega for the day, and an Expert Belt against a leader its type beats
-      const common = pw.team + pw.bond + pw.mega + pw.item + pw.level + (v13 && megaDay ? MEGA_DAY : 0) + (v13 && edge && partner.held === 'expert-belt' ? 0.2 : 0)
+      const common = pw.team + pw.bond + pw.mega + pw.item + pw.level + (v13 && megaDay ? MEGA_DAY : 0) + (v13 && edge && partner.held === 'expert-belt' ? 0.2 : 0) + (partner.held && PLATES[partner.held]?.type === leader.type ? PLATE_BONUS : 0)
       let strike = 0
       for (const h of f.habits) {
         const d = pw.domain[h.tag]
@@ -1343,6 +1345,14 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
         earn(0, gym ? GEMS.gym : GEMS.elite)
         // a badge is won once; a Rematch win pays Battle Points instead, and a Rematch Champion a Legend key
         if (gym && lg.lap === 0) bump('badges')
+        // the Elite Four and the Champions hand over a Type Plate, once each, never a badge
+        if (!gym && lg.lap === 0) {
+          const plate = plateFor(`${lg.index}:${lg.slot}`, platesGot)
+          if (plate) {
+            platesGot.add(plate)
+            hold(`elite:${lg.index}:${lg.slot}`, f.day, `${lineup(l)[lg.slot].name}: ${PLATES[plate].name}`, 0, 0, [[plate, 1]])
+          }
+        }
         if (lg.lap > 0) {
           bpEarn(REMATCH_BP * (champ ? 5 : 1))
           if (champ) {

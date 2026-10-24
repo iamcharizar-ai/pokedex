@@ -494,6 +494,24 @@ export const SPECIAL_HELD: Record<string, string> = {
 const SPECIAL_NAME: Record<string, string> = { 'expert-belt': 'Expert Belt', 'focus-sash': 'Focus Sash', 'rocky-helmet': 'Rocky Helmet', 'scope-lens': 'Scope Lens', 'quick-claw': 'Quick Claw', 'shell-bell': 'Shell Bell', 'wide-lens': 'Wide Lens', 'zoom-lens': 'Zoom Lens', 'exp-share': 'Exp. Share', everstone: 'Everstone', 'lucky-punch': 'Lucky Punch' }
 for (const [id, text] of Object.entries(SPECIAL_HELD)) { HELD[id] = { mult: 1 }; ITEMS[id] = { name: SPECIAL_NAME[id], kind: 'held', text }; ONCE.add(id) }
 
+// ── Type Plates: what the Elite Four and the Champions hand over ──
+/** Sixteen plates, one per type but Normal. A win over an Elite Four member or a Champion (never a gym) drops one at random that you do not have yet, once for each. Held, one at a time like any held item: a leader of its type takes PLATE_BONUS more from every strike, so the plate you carry is a choice made leader by leader. */
+export const PLATES: Record<string, { name: string; type: string }> = {
+  'draco-plate': { name: 'Draco Plate', type: 'Dragon' }, 'dread-plate': { name: 'Dread Plate', type: 'Dark' }, 'earth-plate': { name: 'Earth Plate', type: 'Ground' },
+  'fist-plate': { name: 'Fist Plate', type: 'Fighting' }, 'flame-plate': { name: 'Flame Plate', type: 'Fire' }, 'icicle-plate': { name: 'Icicle Plate', type: 'Ice' },
+  'insect-plate': { name: 'Insect Plate', type: 'Bug' }, 'iron-plate': { name: 'Iron Plate', type: 'Steel' }, 'meadow-plate': { name: 'Meadow Plate', type: 'Grass' },
+  'mind-plate': { name: 'Mind Plate', type: 'Psychic' }, 'sky-plate': { name: 'Sky Plate', type: 'Flying' }, 'splash-plate': { name: 'Splash Plate', type: 'Water' },
+  'spooky-plate': { name: 'Spooky Plate', type: 'Ghost' }, 'stone-plate': { name: 'Stone Plate', type: 'Rock' }, 'toxic-plate': { name: 'Toxic Plate', type: 'Poison' },
+  'zap-plate': { name: 'Zap Plate', type: 'Electric' },
+}
+export const PLATE_BONUS = 0.35
+for (const [id, p] of Object.entries(PLATES)) { HELD[id] = { mult: 1 }; ITEMS[id] = { name: p.name, kind: 'held', text: `Hold: every strike +${Math.round(PLATE_BONUS * 100)}% against a ${p.type} leader. Dropped by the Elite Four and the Champions, never sold.` }; ONCE.add(id) }
+/** The plate a win drops: random, the same on every device, and never one already got. Null once all sixteen are yours. */
+export const plateFor = (seed: string, got: ReadonlySet<string>): string | null => {
+  const left = Object.keys(PLATES).filter((id) => !got.has(id))
+  return left.length ? left[Math.floor(rng(`plate:${seed}`)() * left.length)] : null
+}
+
 // ── Legend keys: each one summons a legendary as the next wild Pokemon ──
 export const LEGEND_KEYS: Record<string, { name: string; forms: string[] }> = {
   'red-orb': { name: 'Red Orb', forms: ['groudon'] }, 'blue-orb': { name: 'Blue Orb', forms: ['kyogre'] }, 'jade-orb': { name: 'Jade Orb', forms: ['rayquaza'] },

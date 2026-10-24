@@ -14,7 +14,7 @@ import {
   V13_START, ballFor, bondLevel, evolveAt, graduateAt, levelOf, momentumMult, regionsOpen, wildHit, xpForLevel,
   DEEP_SLEEP_FROM, DEEP_SLEEP_MIN,
 } from './rules.ts'
-import { forgeFair, BALLS, BOND_PARTY, CHEST, rng, DOMAIN_SHOPS, FEATS, FORGE_COST, GEAR, GEAR_ITEMS, LURES, MART_POOL, SELL, STANDING, forgeShard, lureTypes, martDeals, throwHp } from './economy.ts'
+import { PLATES, plateFor, forgeFair, BALLS, BOND_PARTY, CHEST, rng, DOMAIN_SHOPS, FEATS, FORGE_COST, GEAR, GEAR_ITEMS, LURES, MART_POOL, SELL, STANDING, forgeShard, lureTypes, martDeals, throwHp } from './economy.ts'
 import { SPECIES } from './species.ts'
 
 const H = (id: string, tag: HabitFact['tag'], worth: number, frac: number): HabitFact =>
@@ -863,6 +863,19 @@ test('a feat pays once, and the Key Stone is one of them', () => {
   assert.equal(new Set(FEATS.map((f) => f.id)).size, FEATS.length)
   // the eighth badge no longer hands over a Key Stone: there is still one, and it came from the feat
   assert.equal(fold(run(120, THREE)).moments.filter((m) => m.kind === 'key').length, 1)
+})
+
+test('the Elite Four and the Champions hand over Type Plates, never badges, and never the same plate twice', () => {
+  const g = fold(run(900, THREE))
+  const done = g.moments.filter((m) => m.kind === 'gym') as { league: number; slot: number }[]
+  const elite = done.filter((m) => !isGym(m.league, m.slot))
+  assert.ok(elite.length >= 2, 'the Elite Four were reached')
+  const plates = Object.keys(g.inv).filter((id) => PLATES[id])
+  assert.equal(plates.length, Math.min(elite.length, Object.keys(PLATES).length))
+  assert.ok(plates.every((id) => g.inv[id] === 1))
+  // the same on every run, and exhausted once all sixteen are got
+  assert.deepEqual(Object.keys(fold(run(900, THREE)).inv).filter((id) => PLATES[id]), plates)
+  assert.equal(plateFor('x', new Set(Object.keys(PLATES))), null)
 })
 
 test('a held item makes its domain strike harder, and nothing else', () => {
