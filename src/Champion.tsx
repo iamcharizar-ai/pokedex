@@ -111,33 +111,43 @@ export function BattlePrep({ game }: { game: Game }) {
 }
 
 // ── the Battle Frontier ─────────────────────────────────────────────────────
+/** What a win is, and how many days off a run survives, in one line. */
+const winLine = (f: Facility): string => `${f.what[0].toUpperCase()}${f.what.slice(1)}${f.gap > 1 ? ` · ${f.gap - 1} rest ${f.gap === 2 ? 'day' : 'days'} ok` : ''}`
 function FacilityCard({ f, game }: { f: Facility; game: Game }) {
   const r = game.frontier.find((x) => x.id === f.id)!
   const reach = f.gap === 0 ? r.wins : r.cur
-  const target = r.gold ? null : r.silver ? f.gold : f.silver
+  const target = r.silver ? f.gold : f.silver
   return (
-    <div className={`facility ${r.gold ? 'gold' : r.silver ? 'silver' : ''}`}>
+    <div className={`facility ${r.silver ? 'silver' : ''}`} title={`${f.brain}, the ${f.name}'s Brain`}>
       <span className="facility-ico"><ItemIcon id={f.icon} size={40} /></span>
       <div className="facility-txt">
         <b>{f.name}</b>
-        <small>{f.brain} · a win is {f.what}{f.gap > 1 ? ` · ${f.gap - 1} rest ${f.gap === 2 ? 'day' : 'days'} forgiven` : ''}</small>
-        {target ? <KBar value={Math.min(reach, target)} max={target} kind={r.silver ? 'gold' : ''} label={`${f.gap === 0 ? 'Perfect days' : 'Run'} ${reach} / ${target} for ${r.silver ? 'Gold' : 'Silver'}`} /> : <small className="facility-done">Both Symbols won</small>}
-        <small className="facility-best">Best run {r.best}{f.gap === 0 ? ` · ${r.wins} in all` : ''}</small>
+        <small>{winLine(f)}</small>
+        <KBar value={Math.min(reach, target)} max={target} kind={r.silver ? 'gold' : ''} label={`${reach} / ${target} for ${r.silver ? 'Gold' : 'Silver'} · best ${r.best}`} />
       </div>
-      <span className="symbols" aria-label={`${r.silver ? 'Silver won' : 'Silver not yet'}, ${r.gold ? 'Gold won' : 'Gold not yet'}`}>
+      <span className="symbols" aria-label={`${r.silver ? 'Silver won' : 'Silver not yet'}, Gold not yet`}>
         <i className={`symbol s ${r.silver ? 'on' : ''}`} title={r.silver ? `Silver Symbol, ${fmtDay(r.silver)}` : `Silver at ${f.silver}`} />
-        <i className={`symbol g ${r.gold ? 'on' : ''}`} title={r.gold ? `Gold Symbol, ${fmtDay(r.gold)}` : `Gold at ${f.gold}: the ${itemName(f.goldKey)}`} />
+        <i className="symbol g" title={`Gold at ${f.gold}: the ${itemName(f.goldKey)}`} />
       </span>
     </div>
   )
 }
 export function FrontierWin({ game }: { game: Game }) {
   const symbols = game.frontier.reduce((n, r) => n + (r.silver ? 1 : 0) + (r.gold ? 1 : 0), 0)
+  const won = (f: Facility) => Boolean(game.frontier.find((x) => x.id === f.id)?.gold)
+  // a facility with both Symbols has nothing left to chase: it steps down to a chip at the end
+  const going = FACILITIES.filter((f) => !won(f)), done = FACILITIES.filter(won)
   return (
     <Win title="Battle Frontier" tone="purple" aside={<><BpIcon size={22} /> {game.wallet.bp.toLocaleString('en-IN')} BP · {symbols} / 14 Symbols</>}>
       {!game.v13 ? <p className="muted">{opens}</p> : (
         <>
-          <div className="facilities">{FACILITIES.map((f) => <FacilityCard key={f.id} f={f} game={game} />)}</div>
+          {going.length > 0 && <div className="facilities">{going.map((f) => <FacilityCard key={f.id} f={f} game={game} />)}</div>}
+          {done.length > 0 && (
+            <div className="facility-done-row" aria-label="Both Symbols won">
+              <span className="k-label">Both Symbols won</span>
+              {done.map((f) => <span key={f.id} className="facility-chip" title={`${f.name}: best run ${game.frontier.find((x) => x.id === f.id)!.best}`}><ItemIcon id={f.icon} size={22} />{f.name.replace('Battle ', '')}</span>)}
+            </div>
+          )}
         </>
       )}
     </Win>
