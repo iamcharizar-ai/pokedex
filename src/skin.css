@@ -186,8 +186,6 @@ main .queue.pick button.on img { background: none; outline: 0; }
 .swatch { display: inline-block; border: 3px solid var(--k-edge); border-radius: 10px; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.4); }
 
 /* a tab arrives rather than cuts in */
-.tabin { animation: tab-in 0.22s cubic-bezier(0.2, 0.9, 0.3, 1); }
-@keyframes tab-in { from { opacity: 0; transform: translateY(10px); } }
 
 /* ── the scene: places, things that breathe, numbers that pop ── */
 .scene.theme-beach { --sky-1: #58c8e8; --sky-2: #d8f6ff; --far: #3aa6d0; --ground: #f1dc9a; --ground-2: #e6cc80; --pad: #e9d08a; --pad-2: #cdb066; }
@@ -338,7 +336,7 @@ main .queue.pick button.on img { background: none; outline: 0; }
   .thrown { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .monpage, .mp-art img, .tabin, .foe-pad > img, .foe img, .pop, .k-btn.main.act, .thrown { animation: none !important; }
+  .monpage, .mp-art img, .foe-pad > img, .foe img, .pop, .k-btn.main.act, .thrown { animation: none !important; }
   .pop { display: none; }
   .navbar button, .navbar button .tabicon, .go, .plain { transition: none; }
 }

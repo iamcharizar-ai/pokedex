@@ -20,7 +20,7 @@ import type { LedgerEvent } from '../linked/arbor-model.ts'
 import { ITEMS } from '../linked/woodshed/course.ts'
 
 /** A card is only drawn in the first days of a week, so a party filled on a Friday does not get a two-day boss. */
-const PLAN_BY = 2
+export const PLAN_BY = 2
 /** How far back "what you have been doing" looks. */
 const LOOK_BACK = 21
 

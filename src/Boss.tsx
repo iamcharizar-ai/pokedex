@@ -11,6 +11,8 @@ import { BOSS_WHERE, bossNeed, KILL_CAP, THROW_AT, catchChance, type BossKind } 
 import { BALLS, itemName, rng } from '../core/economy.ts'
 import { nameOf, spritePath, type BossView, type Game } from '../core/fold.ts'
 import { SPECIES } from '../core/species.ts'
+import { addDays, mondayOf } from '../core/facts.ts'
+import { PLAN_BY } from './lib/boss.ts'
 import { Win } from './App.tsx'
 import { BallItem } from './Ball.tsx'
 import { ItemIcon } from './Item.tsx'
@@ -30,12 +32,15 @@ const pct = (x: number): string => `${Math.round(x * 100)}%`
 function Locked({ game }: { game: Game }) {
   const need = bossNeed(game.today.day || '9999-99-99')
   const have = Math.min(need, game.bossParty)
+  // a card is drawn only in the first PLAN_BY days of a week (lib/boss.ts)
+  const today = game.today.day
+  const soon = Boolean(today) && today <= addDays(mondayOf(today), PLAN_BY)
   return (
     <div className="duel static bosslock" title={`A boss is a week-long fight. It comes once your party is ${need}: the partner and ${need - 1} more. A bigger party hits it harder.`}>
       <ItemIcon id="master-ball" size={30} />
       <span>
-        <b>{have >= need ? 'A boss comes on Monday' : `A boss comes once your party is ${need}`}</b>
-        <small>{have >= need ? 'Your party is ready. Open the Pokedex on Monday to meet it. A fuller party hits it harder.' : `${have} of ${need} in your party: add ${need - have} more to bring one out. Fully trained members make a throw at it likelier.`}</small>
+        <b>{have < need ? `A boss comes once your party is ${need}` : soon ? 'A boss arrives this week' : 'A boss comes on Monday'}</b>
+        <small>{have < need ? `${have} of ${need} in your party: add ${need - have} more to bring one out. Fully trained members make a throw at it likelier.` : soon ? 'Your party is ready: it is drawn the next time the Pokedex syncs. A fuller party hits it harder.' : 'Your party is ready. A boss is drawn in the first days of each week. A fuller party hits it harder.'}</small>
       </span>
       <span className="bosslock-pips" aria-hidden>{Array.from({ length: need }, (_, i) => <i key={i} className={i < have ? 'on' : ''} />)}</span>
     </div>

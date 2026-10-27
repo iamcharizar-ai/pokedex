@@ -19,6 +19,13 @@ body {
 .shell { max-width: 1040px; padding: 0 var(--gutter) 128px; }
 main { display: grid; gap: var(--s-6); }
 main > * { margin: 0; }
+/* the screens side by side (App.tsx): the one in view is in the page, the one sliding in sits beside it at the same height on screen.
+   Clipped at the edge of the shell, not the content, so it slides in from the very edge; upright scrolling stays the browser's. */
+main.pager { display: block; overflow-x: clip; margin-inline: calc(var(--gutter) * -1); padding-inline: var(--gutter); touch-action: pan-y; }
+.pager-track { position: relative; }
+.pane { display: grid; gap: var(--s-6); min-width: 0; }
+.pane > * { margin: 0; }
+.pane.peek { position: absolute; top: var(--sy); left: calc(var(--side) * (100% + 24px)); width: 100%; pointer-events: none; }
 main .muted { color: var(--text-2); font-size: 14px; line-height: 1.45; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 

@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode, type TouchEvent } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from 'react'
+import { flushSync } from 'react-dom'
 import { isGym, leaderOf, nameOf, spritePath, type Game, type Mon, type Moment } from '../core/fold.ts'
 import type { DayFacts, HabitFact } from '../core/facts.ts'
 import { LEAGUES, lineup } from '../core/gyms.ts'
@@ -44,7 +45,10 @@ import { Sky, skyVars, sleepFor, useClock } from './screens/Sky.tsx'
 import { ChestOpener, HatchOpener } from './Reveal.tsx'
 
 type Tab = 'partner' | 'team' | 'shop' | 'dex' | 'trainer'
-const TABS: [Tab, string][] = [['partner', 'Today'], ['team', 'Party'], ['shop', 'Shop'], ['dex', 'Pokedex'], ['trainer', 'Journey']]
+/** The tab bar, left to right. Today sits in the middle, the screen you open on, with two either side to slide to. */
+/** Space between two screens while one slides in beside the other. */
+const SLIDE_GAP = 24
+const TABS: [Tab, string][] = [['team', 'Party'], ['shop', 'Shop'], ['partner', 'Today'], ['dex', 'Pokedex'], ['trainer', 'Journey']]
 export const TAG_NAME: Record<string, string> = { code: 'Code', fitness: 'Gym', guitar: 'Guitar', arbor: 'Arbor', sleep: 'Sleep', routine: 'Routine', balanced: 'Balance', health: 'Health tracker' }
 const weekday = (day: string, len: 1 | 3 = 1) => new Date(day + 'T12:00:00').toLocaleDateString('en-US', { weekday: len === 1 ? 'narrow' : 'short' })
 const clamp01 = (n: number) => Math.max(0, Math.min(1, n))
@@ -473,7 +477,7 @@ function PartnerTab({ game, facts, nights, onShop }: { game: Game; facts: DayFac
       <Win title="Challenges" tone="red">
         <div className="duels">
           <LeaderTile game={game} />
-          {game.boss && <BossTile game={game} />}
+          <BossTile game={game} />
         </div>
       </Win>
       </div>
@@ -1126,25 +1130,89 @@ export default function App() {
   const [help, setHelp] = useState(false)
   const [tourOpen, setTourOpen] = useState<boolean | null>(null)
   useEffect(() => start(), [])
-  // swipe sideways to change tab: a long, mostly horizontal, quick drag that did not start on something scrolling
-  const touch = useRef<{ x: number; y: number; t: number } | null>(null)
-  const go = (dir: -1 | 1) => {
-    const i = TABS.findIndex(([id]) => id === tab) + dir
-    if (i < 0 || i >= TABS.length) return
-    setTab(TABS[i][0]); play('tap'); window.scrollTo({ top: 0 })
+  // ── the screens are side by side: a drag pulls the next one in under the finger, a tap on the tab bar slides to it ──
+  const track = useRef<HTMLDivElement>(null)
+  /** the screen being pulled in: which, from which side, and how far down the page it is drawn (so it arrives at its own top) */
+  const [peek, setPeek] = useState<{ id: Tab; side: 1 | -1; sy: number; auto: boolean } | null>(null)
+  const drag = useRef<{ x: number; y: number; t: number; id: number; dir: 0 | 1 | -1; dx: number } | null>(null)
+  const sliding = useRef(false)
+  const indexOf = (id: Tab) => TABS.findIndex(([t]) => t === id)
+  const width = () => (track.current?.offsetWidth ?? window.innerWidth) + SLIDE_GAP
+  const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches
+  /** the slide is over: the screen that came in is the tab now, at the top of the page, with nothing seen to jump */
+  const settle = (to: Tab | null) => {
+    const el = track.current
+    flushSync(() => { if (to) setTab(to); setPeek(null) })
+    if (el) { el.style.transition = ''; el.style.transform = '' }
+    if (to) window.scrollTo({ top: 0 })
+    sliding.current = false
   }
-  const swipeStart = (e: TouchEvent<HTMLElement>) => {
-    const t = e.touches[0]
-    touch.current = e.touches.length === 1 && swipeable(e.target) && !document.querySelector('.sheet, .capsule, .recap') ? { x: t.clientX, y: t.clientY, t: Date.now() } : null
+  /** glide the track to rest: onto the screen that came in, or back */
+  const glide = (commit: boolean, p = peek) => {
+    const el = track.current
+    if (!el || !p) return settle(null)
+    sliding.current = true
+    el.style.transition = `transform ${commit ? 280 : 220}ms cubic-bezier(0.2, 0.8, 0.2, 1)`
+    el.style.transform = commit ? `translateX(${-p.side * width()}px)` : 'translateX(0px)'
+    const done = () => { el.removeEventListener('transitionend', done); window.clearTimeout(t); settle(commit ? p.id : null) }
+    const t = window.setTimeout(done, 450)
+    el.addEventListener('transitionend', done)
   }
-  const swipeEnd = (e: TouchEvent<HTMLElement>) => {
-    const s0 = touch.current
-    touch.current = null
-    if (!s0) return
-    const t = e.changedTouches[0], dx = t.clientX - s0.x, dy = t.clientY - s0.y
-    if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 2 || Date.now() - s0.t > 600) return
-    go(dx < 0 ? 1 : -1)
+  /** a tab tapped: slide to it from its side */
+  const slideTo = (id: Tab) => {
+    if (id === tab || sliding.current || peek) return
+    play('tap')
+    if (reduced()) { setTab(id); window.scrollTo({ top: 0 }); return }
+    setPeek({ id, side: indexOf(id) > indexOf(tab) ? 1 : -1, sy: window.scrollY, auto: true })
   }
+  // a tapped tab's screen is drawn first, then the track glides
+  useLayoutEffect(() => {
+    if (!peek?.auto || !track.current) return
+    void track.current.offsetWidth
+    glide(true, peek)
+  }, [peek])
+  const dragStart = (e: PointerEvent<HTMLElement>) => {
+    if (e.pointerType === 'mouse' || sliding.current || peek || !swipeable(e.target) || document.querySelector('.sheet, .capsule, .recap')) return
+    drag.current = { x: e.clientX, y: e.clientY, t: e.timeStamp, id: e.pointerId, dir: 0, dx: 0 }
+  }
+  const dragMove = (e: PointerEvent<HTMLElement>) => {
+    const d = drag.current
+    if (!d || e.pointerId !== d.id) return
+    const dx = e.clientX - d.x, dy = e.clientY - d.y
+    if (d.dir === 0) {
+      // a mostly upright drag is a scroll, and the page keeps it
+      if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { drag.current = null; return }
+      if (Math.abs(dx) < 10) return
+      d.dir = dx < 0 ? 1 : -1
+      const next = TABS[indexOf(tab) + d.dir]?.[0]
+      if (next) setPeek({ id: next, side: d.dir, sy: window.scrollY, auto: false })
+      e.currentTarget.setPointerCapture(e.pointerId)
+    }
+    // past the last screen it gives a little and no more; otherwise it follows the finger, one way only
+    const edge = !TABS[indexOf(tab) + d.dir]
+    d.dx = edge ? dx * 0.25 : d.dir === 1 ? Math.min(0, dx) : Math.max(0, dx)
+    const el = track.current
+    if (el) { el.style.transition = 'none'; el.style.transform = `translateX(${d.dx}px)` }
+  }
+  const dragEnd = (e: PointerEvent<HTMLElement>) => {
+    const d = drag.current
+    drag.current = null
+    if (!d || d.dir === 0 || e.pointerId !== d.id) return
+    // far enough, or flicked: it goes; otherwise it springs back
+    const fast = Math.abs(d.dx) / Math.max(1, e.timeStamp - d.t) > 0.5
+    const far = Math.abs(d.dx) > width() * 0.3
+    if (peek) { if ((far || fast) && Math.abs(d.dx) > 24) { play('tap'); glide(true) } else glide(false) }
+    else { const el = track.current; if (el) { el.style.transition = 'transform 200ms ease-out'; el.style.transform = '' } }
+  }
+  const screen = (id: Tab) => (
+    <>
+      {id === 'partner' && <PartnerTab game={view.game} facts={view.facts} nights={view.nights} onShop={() => slideTo('shop')} />}
+      {id === 'team' && <TeamTab game={view.game} partnerCard={(open: () => void) => <Summary game={view.game} onOpen={open} />} choices={<Choices game={view.game} />} onShop={() => slideTo('shop')} />}
+      {id === 'shop' && <ShopTab game={view.game} />}
+      {id === 'dex' && <DexTab game={view.game} />}
+      {id === 'trainer' && <TrainerTab game={view.game} />}
+    </>
+  )
   const { game } = view
   const todo = useMemo(() => tabTodo(game), [game])
   // the first-run tour: for a game that has not started, once on this device (or when asked for, from the help window)
@@ -1163,17 +1231,24 @@ export default function App() {
       {!loading && <ChestOpener game={game} />}
       {!loading && <HatchOpener game={game} />}
       {!loading && tour && <Tour onClose={closeTour} />}
-      <main key={tab} className="tabin" onTouchStart={swipeStart} onTouchEnd={swipeEnd}>
+      <main className="pager" onPointerDown={dragStart} onPointerMove={dragMove} onPointerUp={dragEnd} onPointerCancel={dragEnd}>
         {loading && (
           <Win title="Loading" tone="dark">
             <div className="care"><Egg /><p>Reading your Life OS ledger...<span className="muted" style={{ display: 'block' }}>Your partner appears as soon as it arrives.</span></p></div>
           </Win>
         )}
-        {!loading && tab === 'partner' && <PartnerTab game={game} facts={view.facts} nights={view.nights} onShop={() => setTab('shop')} />}
-        {!loading && tab === 'team' && <TeamTab game={game} partnerCard={(open: () => void) => <Summary game={game} onOpen={open} />} choices={<Choices game={game} />} onShop={() => setTab('shop')} />}
-        {!loading && tab === 'shop' && <ShopTab game={game} />}
-        {!loading && tab === 'dex' && <DexTab game={game} />}
-        {!loading && tab === 'trainer' && <TrainerTab game={game} />}
+        {!loading && (
+          <div className="pager-track" ref={track}>
+            {[tab, ...(peek ? [peek.id] : [])].map((id) => {
+              const away = peek !== null && id === peek.id
+              return (
+                <div key={id} className={`pane ${away ? 'peek' : ''}`} style={away ? { ['--side' as string]: peek.side, ['--sy' as string]: `${peek.sy}px` } as CSSProperties : undefined} aria-hidden={away || undefined} inert={away || undefined}>
+                  {screen(id)}
+                </div>
+              )
+            })}
+          </div>
+        )}
       </main>
       {help && (
         <div className="recap helpwin" role="dialog" aria-modal="true" aria-label="How it works" onClick={() => setHelp(false)}>
@@ -1187,7 +1262,7 @@ export default function App() {
         {TABS.map(([id, text]) => {
           // a dot when another tab has something waiting on you (screens/Today.tsx)
           const why = loading || tab === id ? null : (todo as Record<string, string | null>)[id] ?? null
-          return <button key={id} role="tab" aria-selected={tab === id} aria-label={text} aria-description={why ?? undefined} title={why ?? undefined} data-reward-target={id === 'team' ? 'bag' : undefined} className={`${tab === id ? 'on' : ''} ${why ? 'todo' : ''}`} onClick={(e) => { setTab(id); play('tap'); tapPop(e.currentTarget.querySelector('.tabicon')); window.scrollTo({ top: 0 }) }}>{ICON[id]}{text}</button>
+          return <button key={id} role="tab" aria-selected={tab === id} aria-label={text} aria-description={why ?? undefined} title={why ?? undefined} data-reward-target={id === 'team' ? 'bag' : undefined} className={`${tab === id ? 'on' : ''} ${why ? 'todo' : ''}`} onClick={(e) => { tapPop(e.currentTarget.querySelector('.tabicon')); slideTo(id) }}>{ICON[id]}{text}</button>
         })}
       </nav>
       {!loading && <Recap game={game} today={view.today} />}
