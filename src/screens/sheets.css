@@ -55,3 +55,11 @@
 .rc-list { gap: 0; }
 .rc-list li { padding: var(--s-2) 0; background: none; border: 0; border-bottom: 1px solid var(--hair); border-radius: 0; }
 .rc-list li.more { border: 0; padding-top: var(--s-3); }
+/* version 15: a level milestone, a choice of two */
+.claim-choice { display: grid; gap: 4px; padding: var(--s-3); border-radius: var(--r-2); background: linear-gradient(135deg, color-mix(in srgb, var(--tone-gold) 18%, transparent), var(--surface-1) 75%); border: 1px solid color-mix(in srgb, var(--tone-gold) 45%, var(--hair)); }
+.claim-choice > b { font-family: var(--k-face); font-weight: 400; font-size: 17px; color: var(--text); }
+.claim-choice > small { color: var(--text-3); font-size: 12.5px; }
+.claim-sides { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-2); margin-top: var(--s-2); }
+.claim-side { display: grid; justify-items: center; gap: 6px; min-height: 92px; padding: var(--s-3) var(--s-2); font-family: var(--k-face); font-size: 14px; color: var(--text); background: var(--well); border: 1px solid var(--hair-hi); border-radius: 14px; cursor: pointer; }
+.claim-side:hover, .claim-side:focus-visible { background: var(--surface-2); outline: none; box-shadow: 0 0 0 2px var(--tone-gold), 0 0 14px var(--gold-glow); }
+.claim-side .claim-ico { display: flex; gap: 2px; align-items: center; }

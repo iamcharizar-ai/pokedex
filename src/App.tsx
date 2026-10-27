@@ -7,7 +7,7 @@ import {
   CLAIM_AUTO, EGG_STEPS, SLEEP_HABIT, bondLevel, HEART_LEVELS, LEGENDARY_EVERY_WILD, PAY_STREAK, REGIONS, REPEL_DAYS, SHINY_ODDS, SHINY_ODDS_WORN, SLEEP_AFTER, SLIP, STAKES_FROM, STEPS_GOAL, TEAM_SIZE, WILD_STAY, TIER_XP, WEAK_MULT, evolveAt, graduateAt, xpForLevel,
 } from '../core/rules.ts'
 import { BERRY_HEARTS, MARKS, EGG_STEPS_OLD_CHARM, BOND_PARTY, BOND_STEP, MASTERY_MAX, MASTERY_STEP, SELL, itemName as econName, masteryCost } from '../core/economy.ts'
-import { CRIT_MULT, DYNAMAX, GIGANTAMAX, LEVEL_POWER, MAX_LEVEL, MEGA_BONUS, MEGA_BOND, RESEARCH_SLOTS, RESEARCH_WILD, RESEARCH_WILD_MAX, TEAM_BONUS, TEAM_LEVEL, TEAM_NATURE, type Tag as TagKind } from '../core/rules.ts'
+import { MILESTONE_EVERY, CRIT_MULT, DYNAMAX, GIGANTAMAX, LEVEL_POWER, MAX_LEVEL, MEGA_BONUS, MEGA_BOND, RESEARCH_SLOTS, RESEARCH_WILD, RESEARCH_WILD_MAX, TEAM_BONUS, TEAM_LEVEL, TEAM_NATURE, type Tag as TagKind } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
 import { Ball, KeyStone } from './Ball.tsx'
 import { FeatsWin } from './Feats.tsx'
@@ -947,7 +947,7 @@ function RulesTab({ onTour }: { onTour: () => void }) {
             A day of coding, gym, guitar, Arbor or good sleep pays one mark, spent only in that kind's own shop.
           </Rule>
           <Rule title="Sleep" tone="blue" pic={<><ItemIcon id="lunar-wing" size={30} /><span className="rule-chip sm">80</span><span className="rule-chip sm">90</span></>}>
-            A night your band measures is a pillar: its score is the XP, 80 fills it, 80 pays a Bell and 90 two, and 90 minutes of deep sleep one more. No reading is never a zero: tick it by hand for less.
+            A night your band measures is a pillar: its score is the XP, 80 fills it, 80 pays a Bell and 90 two, and 90 minutes of deep sleep one more. No reading is never a zero: tick it by hand for less. Sleep alone does not make a day: it counts as a pillar only next to another one.
           </Rule>
           <Rule title="Balls have conditions" tone="red" pic={<><ItemIcon id="net-ball" size={30} /><ItemIcon id="quick-ball" size={30} /><ItemIcon id="timer-ball" size={30} /></>}>
             A Net Ball hits Water and Bug double. A Quick Ball is best the day it appears. A Timer Ball grows each day it waits.
@@ -1008,6 +1008,9 @@ function RulesTab({ onTour }: { onTour: () => void }) {
           </Rule>
           <Rule title="Collect" tone="gold" pic={<><Coin size={28} /><Gem size={28} /><Arrow /><ItemIcon id="loot-sack" size={30} /></>}>
             Showing-up pay, weekly quests, season steps, feats and a month reviewed wait in the Collect strip until you tap them. Left alone, each pays itself {CLAIM_AUTO} days later, so nothing is lost. A catch and a chest pay at once.
+          </Rule>
+          <Rule title="Milestones" tone="gold" pic={<><span className="rule-chip sm">Lv {MILESTONE_EVERY}</span><Arrow /><ItemIcon id="great-ball" size={28} /><span className="rule-chip sm">or</span><ItemIcon id="red-shard" size={26} /></>}>
+            Every {MILESTONE_EVERY} levels your partner reaches, Collect offers two rewards and you keep one: balls, a shard in the colour you hold least of, a Rare Candy, coins or gems. Left alone, the first pays itself.
           </Rule>
           <Rule title="Hearts and bond" tone="green" pic={<><ItemIcon id="heart-scale" size={28} /><ItemIcon id="oran-berry" size={28} /><ItemIcon id="sitrus-berry" size={28} /></>}>
             A heart for every pillar you finish while this Pokemon is your partner, and more for the berries and treats you feed to any of your Pokemon (Oran one, Sitrus three, a friendship berry five). A Pokemon with every bond level ({HEART_LEVELS[HEART_LEVELS.length - 1]} hearts) takes nothing more. Each bond level unlocks a perk: Pickup, Endure, Focus, Best friends, Exp. Share. At {HEART_LEVELS.join(', ')} hearts the bond steps up, and each step adds {Math.round(BOND_STEP * 100)}% to every strike. Hearts belong to the Pokemon and only count up. A new partner starts again, but a fully trained one keeps its hearts for the party: each of its bond levels adds {Math.round(BOND_PARTY * 100)}% to every strike on top of its place in the party.

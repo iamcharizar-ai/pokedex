@@ -8,8 +8,11 @@
 // and opens as a sheet. A claim is one `claim` event in the ledger, so it is the
 // same on every device. Tapping sends the coins, gems and items flying into the
 // pill or tab they are kept in.
+//
+// From version 15 a level milestone is a choice of two: it is drawn as a card
+// with a button for each side, and "Collect all" leaves it for you to choose.
 import { useEffect, useRef, useState } from 'react'
-import { itemName } from '../core/economy.ts'
+import { itemName, type Option } from '../core/economy.ts'
 import { CLAIM_AUTO } from '../core/rules.ts'
 import type { Game, Held } from '../core/fold.ts'
 import { Coin, Gem, ItemIcon } from './Item.tsx'
@@ -19,7 +22,7 @@ import { useItem } from './lib/store.ts'
 import { Sheet } from './screens/Sheet.tsx'
 
 interface Part { pocket: Pocket; n: number; item?: string }
-const partsOf = (h: Held): Part[] => [
+const partsOf = (h: Held | Option): Part[] => [
   ...(h.coins > 0 ? [{ pocket: 'coins' as const, n: h.coins }] : []),
   ...(h.gems > 0 ? [{ pocket: 'gems' as const, n: h.gems }] : []),
   ...h.items.map(([item, n]) => ({ pocket: 'bag' as const, n, item })),
@@ -42,6 +45,15 @@ export function CollectButton({ game, today }: { game: Game; today: string }) {
     return () => window.clearTimeout(t)
   }, [open, held.length])
 
+  const plain = held.filter((h) => !h.choice)
+  /** One side of a choice: the button names it, and its pay flies from the button pressed. */
+  const choose = (h: Held, i: 0 | 1, el: HTMLElement) => {
+    const parts = partsOf(h.choice![i])
+    parts.forEach((p, j) => flyReward(el, p.item ? `+${p.n} ${itemName(p.item)}` : `+${p.n}`, p.pocket, j * 90))
+    play('collect')
+    setSaid(`Chose ${h.choice![i].name}`)
+    useItem(String(i), '', 'claim', h.key)
+  }
   const claim = (list: Held[]) => {
     // the chips leave as soon as the game updates, so read where they are first
     list.forEach((h, i) => {
@@ -73,11 +85,25 @@ export function CollectButton({ game, today }: { game: Game; today: string }) {
           <div className="collect">
             <div className="collect-head">
               <h2 className="k-type">Collect</h2>
-              {held.length > 1 && <button type="button" className="k-btn main" onClick={() => claim(held)}>Collect all {held.length}</button>}
+              {plain.length > 1 && <button type="button" className="k-btn main" onClick={() => claim(plain)}>Collect all {plain.length}</button>}
             </div>
             {held.length === 0 && <p className="muted">Nothing is waiting. Pay, quests, season steps, feats and boss prizes arrive here.</p>}
             <div className="collect-list">
-              {held.map((h) => {
+              {held.filter((h) => h.choice).map((h) => (
+                <div key={h.key} className="claim-choice">
+                  <b>{h.title}</b>
+                  <small>Choose one{daysLeft(h, today) <= 1 ? ` · left alone, ${h.choice![0].name} pays itself soon` : ''}</small>
+                  <div className="claim-sides">
+                    {h.choice!.map((o, i) => (
+                      <button key={i} type="button" className="claim-side" onClick={(e) => choose(h, i as 0 | 1, e.currentTarget)}>
+                        <span className="claim-ico">{partsOf(o).map((p, j) => (p.pocket === 'coins' ? <Coin key={j} size={30} /> : p.pocket === 'gems' ? <Gem key={j} size={30} /> : <ItemIcon key={j} id={p.item ?? ''} size={32} />))}</span>
+                        <span>{o.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              {plain.map((h) => {
                 const parts = partsOf(h)
                 const left = daysLeft(h, today)
                 return (
