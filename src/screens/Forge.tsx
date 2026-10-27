@@ -12,7 +12,9 @@
 // they go back to the ring.
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useHold } from './overlay.ts'
-import { COMET_SHARD, FORGE_COST, SHARDS, forgeFair, forgeShard, itemName } from '../../core/economy.ts'
+import { COMET_SHARD, FEATS, FORGE_COST, GEAR_ITEMS, SHARDS, forgeFair, forgeShard, itemName } from '../../core/economy.ts'
+import { KIT_SHARD_EVERY } from '../../core/rules.ts'
+import { KBar } from '../Kit.tsx'
 import { nameOf, spritePath, type Game, type Mon } from '../../core/fold.ts'
 import { SPECIES } from '../../core/species.ts'
 import { Win } from '../App.tsx'
@@ -81,6 +83,17 @@ export function Forge({ game }: { game: Game }) {
   const st = sel ? state(sel) : null
   const shard = sel && st === 'ready' ? shardOf(sel) : null
   const forgeable = slots.filter((s) => state(s) === 'ready').length
+  // with no Mega yet: the nearest of yours that will have one, further along its line
+  const later = useMemo(() => {
+    const ahead = (form: string, depth = 0): string | null => {
+      if (depth > 3) return null
+      for (const f of SPECIES[form]?.e ?? []) if (SPECIES[f]?.m?.length) return f
+      for (const f of SPECIES[form]?.e ?? []) { const g = ahead(f, depth + 1); if (g) return g }
+      return null
+    }
+    for (const m of [game.partner, ...game.queue, ...game.graduates]) { const into = ahead(m.form); if (into) return { m, into } }
+    return null
+  }, [game])
 
   /** Shards that flew keep their flight (it fills forwards): a shard back on the ring sheds it. */
   const settle = () => altar.current?.querySelectorAll('.orb').forEach((el) => el.getAnimations().forEach((a) => a.cancel()))
@@ -156,13 +169,19 @@ export function Forge({ game }: { game: Game }) {
     }
   }
 
+  /** Version 13: the shards that would go in now, best first: one of each colour held, then Comets. Fewer than three is how far you are. */
+  const toward = useMemo(() => {
+    const out: string[] = [...SHARDS].filter((k) => (game.inv[k] ?? 0) > 0).sort((a, b) => (game.inv[b] ?? 0) - (game.inv[a] ?? 0)).slice(0, FORGE_COST)
+    for (let c = game.inv[COMET_SHARD] ?? 0; out.length < FORGE_COST && c > 0; c--) out.push(COMET_SHARD)
+    return out
+  }, [game.inv])
+  const waitingFair = fair && game.keyStone && sel && st === 'waiting'
   const say = !game.keyStone ? 'The altar is cold until the Key Stone is yours: any one kind of work, seven days running.'
-    : !sel ? 'None of your Pokemon has a Mega form yet. Train one that does and it appears here.'
+    : !sel ? (later ? `None of yours has a Mega form yet. ${nameOf(later.m.form)} will, once it evolves into ${nameOf(later.into)}.` : 'None of your Pokemon has a Mega form yet. Catch or raise one that does and it appears here.')
       : lit ? 'The stone wakes...'
       : st === 'done' ? `Forged: ${megaStoneName(sel.mega)}. ${nameOf(sel.m.form)} keeps it for good.`
         : st === 'ready' ? (placed.length === 0 ? (fair ? 'Tap three shards of three different colours into the stone.' : `Tap three ${itemName(shard!)}s into the stone.`) : `${FORGE_COST - placed.length} more.`)
-          : fair ? `${shortName(sel.mega)} needs three shards of three different colours. A Comet Shard fills any socket.` : `${shortName(sel.mega)} needs ${wantText(sel)}, or three Comet Shards.`
-  const total = KINDS.reduce((n, k) => n + (game.inv[k] ?? 0), 0)
+          : fair ? `${shortName(sel.mega)}: ${toward.length} of ${FORGE_COST} sockets filled by what you hold. ${FORGE_COST - toward.length} more ${FORGE_COST - toward.length === 1 ? 'shard' : 'shards'} of a colour you don't have, or a Comet.` : `${shortName(sel.mega)} needs ${wantText(sel)}, or three Comet Shards.`
 
   return (
     <Win title="The Forge" tone="purple" aside={game.keyStone ? (forgeable ? `${forgeable} ready to forge` : `${slots.filter((s) => state(s) === 'done').length} forged`) : 'Key Stone needed'}>
@@ -175,9 +194,10 @@ export function Forge({ game }: { game: Game }) {
           </span>
           {SOCKETS.map((a, i) => {
             const full = st === 'done' || i < placed.length
-            const ghost = fair ? (i < placed.length ? kindOf(placed[i]) : SHARDS[i]) : shard ?? (sel ? wants(sel)[0] : 'red-shard')
+            const have = waitingFair && i < toward.length
+            const ghost = fair ? (i < placed.length ? kindOf(placed[i]) : have ? toward[i] : SHARDS[i]) : shard ?? (sel ? wants(sel)[0] : 'red-shard')
             return (
-              <span key={a} ref={(el) => { sockets.current[i] = el }} className={`socket3 ${full ? 'full' : ''}`} style={{ ['--a' as string]: `${a}deg` } as CSSProperties}>
+              <span key={a} ref={(el) => { sockets.current[i] = el }} className={`socket3 ${full ? 'full' : ''} ${have ? 'have' : ''}`} style={{ ['--a' as string]: `${a}deg` } as CSSProperties}>
                 {st === 'done' ? <i className="socket3-glow" /> : <ItemIcon id={fair ? ghost : i < placed.length && shard ? shard : ghost} size={30} />}
               </span>
             )
@@ -224,10 +244,8 @@ export function Forge({ game }: { game: Game }) {
             })}
           </div>
         )}
-        <p className="forge-where">
-          {total === 0 ? 'No shards yet. ' : `${total} ${total === 1 ? 'shard' : 'shards'} held. `}
-          Shards come from feats, every third set of Strong gear, a month reviewed and a boss. {fair ? 'Any three of three different colours forge a Mega Stone, and for a Pokemon with two Megas the X or Y is yours to choose above; a Comet fills any socket.' : 'Red forges an X, blue or yellow a Y; a Comet fits any.'}
-        </p>
+        {st !== 'ready' && st !== 'done' && <NextShards game={game} />}
+        {fair && sorted.some((s) => s.count > 1) && <p className="forge-where">A Pokemon with two Megas: the X or Y is yours to choose above.</p>}
       </div>
 
       {reveal && (
@@ -244,3 +262,35 @@ export function Forge({ game }: { game: Game }) {
   )
 }
 
+/**
+ * Where the next shards come from, nearest first, each with how far it is:
+ * the feats that pay one, Strong's training kit (every KIT_SHARD_EVERY-th full
+ * set), a month reviewed (a Comet) and a boss beaten.
+ */
+function NextShards({ game }: { game: Game }) {
+  const earned = new Set(game.feats.map((f) => f.id))
+  const feats = FEATS.filter((f) => !earned.has(f.id) && Object.keys(f.reward.items ?? {}).some((id) => KINDS.includes(id)))
+    .map((f) => ({ f, have: Math.min(f.n, game.counters[f.key] ?? 0) }))
+    .sort((a, b) => b.have / b.f.n - a.have / a.f.n)
+    .slice(0, 2)
+  const sets = game.counters.sets ?? 0
+  const setsToShard = KIT_SHARD_EVERY - (sets % KIT_SHARD_EVERY)
+  const pieces = GEAR_ITEMS.filter((g) => (game.inv[g] ?? 0) > 0).length
+  const rows: { icon: string; name: string; note: string; bar?: [number, number] }[] = [
+    ...feats.map(({ f, have }) => ({ icon: Object.keys(f.reward.items ?? {}).find((id) => KINDS.includes(id))!, name: f.name, note: f.text, bar: [have, f.n] as [number, number] })),
+    { icon: 'red-shard', name: "Strong's training kit", note: `${pieces} of ${GEAR_ITEMS.length} pieces toward a set · ${setsToShard === 1 ? 'the next set pays a Red Shard' : `a Red Shard in ${setsToShard} sets`}`, bar: [pieces, GEAR_ITEMS.length] },
+    { icon: COMET_SHARD, name: 'A month reviewed', note: 'The month review in Life OS pays a Comet Shard' },
+    { icon: 'blue-shard', name: 'A weekly boss beaten', note: 'Pays a shard in the colour of its hardest task' },
+  ]
+  return (
+    <div className="nextshards">
+      <span className="k-label">Where the next shards come from</span>
+      {rows.map((r) => (
+        <div key={r.name} className="nextshard">
+          <ItemIcon id={r.icon} size={28} />
+          <span><b>{r.name}</b><small>{r.note}</small>{r.bar && <KBar value={r.bar[0]} max={r.bar[1]} label={`${r.bar[0]} / ${r.bar[1]}`} />}</span>
+        </div>
+      ))}
+    </div>
+  )
+}

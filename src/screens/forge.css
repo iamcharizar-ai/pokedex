@@ -37,6 +37,8 @@
 .socket3 img { opacity: 0.22; filter: grayscale(1) brightness(1.4); transition: opacity var(--t-pop) linear, filter var(--t-pop) linear; }
 .socket3.full { box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.5), 0 0 0 2px #d9b8ff, 0 0 18px rgba(190, 140, 255, 0.8); }
 .socket3.full img { opacity: 1; filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.7)); }
+.socket3.have { box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.6), 0 0 0 2px rgba(255, 230, 140, 0.55); }
+.socket3.have img { opacity: 0.75; filter: drop-shadow(0 0 4px rgba(255, 230, 140, 0.6)); }
 .socket3-glow { width: 22px; height: 22px; border-radius: 50%; background: radial-gradient(circle, #fff, #c9a8ff 60%, transparent 70%); box-shadow: 0 0 14px #c9a8ff; }
 
 /* the shards you hold, floating on the outer ring */
@@ -79,6 +81,15 @@
 .fp:focus-visible { outline: none; }
 .fp:focus-visible .fp-face { outline: 3px solid #fff; outline-offset: 3px; }
 .forge-where { margin: 0; max-width: 46ch; text-align: center; font-size: 13px; color: var(--text-3); }
+/* while the stone is only a goal the altar is smaller, and what brings it nearer is listed under it */
+.forge2.waiting, .forge2.locked, .forge2.none { --S: min(260px, calc(100vw - 96px)); }
+.nextshards { width: 100%; display: grid; gap: var(--s-2); }
+.nextshard { display: grid; grid-template-columns: 36px 1fr; align-items: center; gap: var(--s-2); padding: 8px 10px; border-radius: 12px; background: var(--well); border: 1px solid var(--hair); }
+.nextshard img { justify-self: center; image-rendering: pixelated; }
+.nextshard span { display: grid; gap: 3px; min-width: 0; }
+.nextshard b { font-family: var(--k-face); font-weight: 400; font-size: 14.5px; color: var(--text); }
+.nextshard small { font-size: 12.5px; line-height: 1.25; color: var(--text-3); }
+.nextshard .k-bar { height: 16px; } .nextshard .k-bar > span { font-size: 11px; }
 
 @keyframes altar-turn { to { rotate: 360deg; } }
 @keyframes orb-bob { 50% { translate: 0 -5px; } }
