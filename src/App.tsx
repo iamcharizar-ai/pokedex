@@ -22,7 +22,7 @@ import { BossLog, BossTile } from './Boss.tsx'
 import { fitOf, useBoxes } from './Fit.tsx'
 import { Calendar } from './screens/Calendar.tsx'
 import { SigLine } from './Bond.tsx'
-import { SIG_CAP, TRAINER_LEVELS } from '../core/bond.ts'
+import { SIG_CAP, STAR_EVERY, TRAINER_LEVELS } from '../core/bond.ts'
 import { EggCell, reachNote, tabTodo } from './screens/Today.tsx'
 import { HpBar } from './screens/HpBar.tsx'
 import { hpTone } from './screens/hp.ts'
@@ -50,7 +50,7 @@ type Tab = 'partner' | 'team' | 'shop' | 'dex' | 'trainer'
 /** The tab bar, left to right. Today sits in the middle, the screen you open on, with two either side to slide to. */
 /** Space between two screens while one slides in beside the other. */
 const SLIDE_GAP = 24
-const TABS: [Tab, string][] = [['team', 'Party'], ['shop', 'Shop'], ['partner', 'Today'], ['dex', 'Pokedex'], ['trainer', 'Journey']]
+const TABS: [Tab, string][] = [['shop', 'Shop'], ['team', 'Party'], ['partner', 'Today'], ['dex', 'Pokedex'], ['trainer', 'Journey']]
 export const TAG_NAME: Record<string, string> = { code: 'Code', fitness: 'Gym', guitar: 'Guitar', arbor: 'Arbor', sleep: 'Sleep', routine: 'Routine', balanced: 'Balance', health: 'Health tracker' }
 const weekday = (day: string, len: 1 | 3 = 1) => new Date(day + 'T12:00:00').toLocaleDateString('en-US', { weekday: len === 1 ? 'narrow' : 'short' })
 const clamp01 = (n: number) => Math.max(0, Math.min(1, n))
@@ -1025,7 +1025,7 @@ function RulesTab({ onTour }: { onTour: () => void }) {
             Your partner gets a heart for every pillar you finish. A party member gets one on each day you do its kind of work. Berries add more to anyone (Oran one, Sitrus three, a friendship berry five), and twice that on a day you did that Pokemon's kind of work. Hearts belong to the Pokemon and only count up, to {HEART_LEVELS[HEART_LEVELS.length - 1]}. At {HEART_LEVELS.join(', ')} hearts a Pokemon's bond steps up: as partner each step adds {Math.round(BOND_STEP * 100)}% to every strike, and its signature grows.
           </Rule>
           <Rule title="Trainer perks" tone="gold" pic={<><ItemIcon id="itemfinder" size={28} /><ItemIcon id="scope-lens" size={28} /><ItemIcon id="exp-share" size={28} /></>}>
-            Pickup, Endure, Focus, Best friends and Exp. Share are yours, not one Pokemon's. They unlock from every heart across every Pokemon you own, at {TRAINER_LEVELS.join(', ')} hearts, and stay whoever leads.
+            Pickup, Endure, Focus, Best friends and Exp. Share are yours, not one Pokemon's. They unlock from every heart across every Pokemon you own, at {TRAINER_LEVELS.join(', ')} hearts, and stay whoever leads. After that, every {STAR_EVERY} hearts is a Trainer star: Collect offers two perks, and you rank one up (from I to VI).
           </Rule>
           <Rule title="Signatures" tone="purple" pic={<><ItemIcon id="charcoal" size={26} /><ItemIcon id="twistedspoon" size={26} /><ItemIcon id="miracle-seed" size={26} /><ItemIcon id="blackglasses" size={26} /></>}>
             Every Pokemon has a signature from its first type, in one of six families, one for each kind of work. Power (gym) makes gym work strike harder; Insight (code) studies for the Professor; Charm (guitar) wears the wild Pokemon down; Forage (Arbor) finds berries; Dream (sleep) turns a good night into hearts for the party; Flow (routine) pays routine habits more. Its strength is its bond level as partner and half that in the party, and one family adds up to {SIG_CAP}. A party is a deck: mix the families you want behind you.

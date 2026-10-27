@@ -1,0 +1,60 @@
+/* THE PROFESSOR'S LAB (screens/Lab.tsx): an instrument, as the Forge is an altar.
+   A dial that fills toward the next rank, three specimen jars, a ledger, the pips
+   of what the ranks take off wild Pokemon, and the next gift on a pedestal. */
+.lab { display: grid; justify-items: center; gap: var(--s-3); }
+
+/* the dial */
+.lab-dial { position: relative; width: min(220px, 62vw); aspect-ratio: 1; display: grid; place-items: center; }
+.lab-dial svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.lab-tick { fill: none; stroke: rgba(126, 240, 208, 0.25); stroke-width: 2; stroke-dasharray: 2 7; }
+.lab-track { fill: rgba(8, 14, 34, 0.55); stroke: rgba(255, 255, 255, 0.08); stroke-width: 12; }
+.lab-fill { fill: none; stroke: url(#labfill); stroke-width: 12; stroke-linecap: round; filter: drop-shadow(0 0 6px rgba(126, 240, 208, 0.6)); transition: stroke-dasharray 0.8s var(--ease-out); }
+.lab-core { position: relative; display: grid; justify-items: center; gap: 0; }
+.lab-core img { image-rendering: pixelated; margin-bottom: 2px; }
+.lab-core b { font: normal 54px/0.9 var(--k-face); color: #fff; text-shadow: 0 3px 0 rgba(0, 0, 0, 0.35), 0 0 22px rgba(126, 240, 208, 0.45); }
+.lab-core small { font: normal 11px/1 var(--k-face); letter-spacing: 0.18em; text-transform: uppercase; color: #9ff3dc; }
+.lab-pts { position: absolute; bottom: 4%; padding: 2px 10px; font: normal 12px/1.4 var(--k-face); color: var(--text); background: rgba(8, 14, 34, 0.8); border: 1px solid rgba(126, 240, 208, 0.35); border-radius: 99px; }
+.lab-say { margin: 0; text-align: center; font-family: var(--k-face); font-size: 16px; color: var(--text); }
+
+/* the desk: three jars of glowing liquid */
+.lab-desk { width: 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-2); padding: var(--s-3) var(--s-2) var(--s-2); border-radius: 18px; background: linear-gradient(transparent 62%, rgba(126, 240, 208, 0.08) 62%), linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent); border-bottom: 3px solid rgba(126, 240, 208, 0.25); }
+.jar { display: grid; justify-items: center; gap: 2px; min-width: 0; padding: 0; color: var(--text-3); background: none; border: 0; text-align: center; }
+button.jar { cursor: pointer; color: var(--text); }
+.jar-glass { position: relative; display: grid; place-items: end center; width: 74px; height: 92px; margin-bottom: 6px; overflow: hidden; border-radius: 26px 26px 18px 18px; border: 2px solid rgba(200, 240, 255, 0.35); background: linear-gradient(90deg, rgba(255, 255, 255, 0.1), transparent 30%, transparent 70%, rgba(255, 255, 255, 0.06)), rgba(8, 14, 34, 0.5); box-shadow: inset 0 6px 0 rgba(255, 255, 255, 0.06); }
+.jar-glass::before { content: ''; position: absolute; left: -4px; right: -4px; top: -6px; height: 10px; border-radius: 6px; background: #4b5878; box-shadow: 0 2px 0 rgba(0, 0, 0, 0.3); }
+.jar.full .jar-glass { border-color: rgba(126, 240, 208, 0.6); background: linear-gradient(90deg, rgba(255, 255, 255, 0.16), transparent 30%, transparent 70%, rgba(255, 255, 255, 0.08)), linear-gradient(transparent 26%, rgba(126, 240, 208, 0.35) 26%, rgba(60, 170, 150, 0.55)); box-shadow: 0 0 18px rgba(126, 240, 208, 0.25); }
+.jar-glass img { position: relative; margin-bottom: 8px; image-rendering: pixelated; animation: jar-float 3.4s ease-in-out infinite; animation-delay: calc(var(--i, 0) * -1.1s); }
+.jar-glass i { margin-bottom: 26px; font: normal 28px/1 var(--k-face); font-style: normal; color: rgba(200, 240, 255, 0.25); }
+.jar b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--k-face); font-weight: 400; font-size: 13.5px; }
+.jar small { font-size: 12px; color: #9ff3dc; }
+.jar:not(.full) small { color: var(--text-3); }
+button.jar:focus-visible .jar-glass { outline: 3px solid #fff; outline-offset: 3px; }
+.lab-auto { justify-self: center; }
+
+/* the ledger: where a day's study comes from */
+.lab-ledger { width: 100%; margin: 0; display: grid; gap: 0; }
+.lab-ledger div { display: flex; justify-content: space-between; gap: var(--s-2); padding: 7px 2px; border-bottom: 1px dashed var(--hair-hi); font-size: 14px; }
+.lab-ledger dt { color: var(--text-2); }
+.lab-ledger dd { margin: 0; font-family: var(--k-face); color: var(--text); }
+.lab-ledger div.off dd { color: var(--text-3); font-family: inherit; font-size: 13px; }
+.lab-ledger div.sum { border-bottom: 0; }
+.lab-ledger div.sum dt { color: var(--text); font-weight: 700; }
+.lab-ledger div.sum dd { color: #9ff3dc; font-size: 16px; }
+
+/* the ranks' pips: what wild Pokemon lose */
+.lab-cut { width: 100%; display: grid; gap: 6px; }
+.lab-pips { display: grid; grid-template-columns: repeat(15, 1fr); gap: 4px; }
+.lab-pips i { height: 10px; border-radius: 3px; background: var(--well); box-shadow: inset 0 0 0 1px var(--hair); }
+.lab-pips i.on { background: linear-gradient(#9ff3dc, #3fbf9c); box-shadow: 0 0 6px rgba(126, 240, 208, 0.5); }
+.lab-pips i.next { box-shadow: inset 0 0 0 1.5px rgba(126, 240, 208, 0.7); }
+
+/* the gift, on a pedestal */
+.lab-gift { width: 100%; display: grid; grid-template-columns: 70px 1fr; align-items: center; gap: var(--s-3); }
+.lab-pedestal { position: relative; display: grid; place-items: center; width: 70px; height: 62px; }
+.lab-pedestal::after { content: ''; position: absolute; left: 6px; right: 6px; bottom: 0; height: 14px; border-radius: 50%; background: radial-gradient(ellipse, rgba(255, 210, 90, 0.5), rgba(255, 210, 90, 0.05) 70%); }
+.lab-pedestal img { position: relative; z-index: 1; margin-bottom: 10px; image-rendering: pixelated; animation: jar-float 3s ease-in-out infinite; filter: drop-shadow(0 0 8px rgba(255, 210, 90, 0.55)); }
+.lab-gift-txt { display: grid; gap: 2px; }
+.lab-gift-txt b { font-family: var(--k-face); font-weight: 400; font-size: 16px; color: var(--text); }
+
+@keyframes jar-float { 50% { translate: 0 -4px; } }
+@media (prefers-reduced-motion: reduce) { .jar-glass img, .lab-pedestal img { animation: none; } .lab-fill { transition: none; } }

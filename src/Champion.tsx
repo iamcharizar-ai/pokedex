@@ -5,7 +5,7 @@
 // Every action here is one small ledger event (store.useItem), the same as a
 // ball thrown or a berry fed; the game is still the ledger, folded.
 import { useState, type ReactNode } from 'react'
-import { TRAINER_LEVELS } from '../core/bond.ts'
+import { STAR_ENDURE_MIN, STAR_EVERY, STAR_FOCUS, STAR_FRIENDS, STAR_MAX, STAR_PICKUP, STAR_SHARE, TRAINER_LEVELS, rankName } from '../core/bond.ts'
 import { nameOf, type Game, type Mon } from '../core/fold.ts'
 import { BERRY_HEARTS, BOOST, DIRE_HIT, EVO_ITEMS, FOSSILS, ITEMS, LEGEND_KEYS, LEGEND_KEY_BP, COLLECTOR_MULT, REVIVE_COST, TREASURE, collectorWants, treasurePrice, VITAMINS, VITAMIN_MAX, VITAMIN_STEP, itemName, type MarkTag } from '../core/economy.ts'
 import { FACILITIES, type Facility } from '../core/frontier.ts'
@@ -25,12 +25,13 @@ const pct = (x: number) => `${Math.round(x * 100)}%`
 const opens = <>Opens with version 13, on {fmtDay(V13_START)}.</>
 
 // ── the bond's five perks ───────────────────────────────────────────────────
-const PERK: Record<BondPerk, { name: string; icon: string; text: (bond: number) => string }> = {
-  pickup: { name: 'Pickup', icon: 'itemfinder', text: (b) => `On a day with a pillar it may find something on the walk: ${pct(Math.min(0.95, PICKUP_BASE + PICKUP_STEP * Math.max(0, b - 1)))} at this bond.` },
-  endure: { name: 'Endure', icon: 'guard-spec', text: () => `One empty day in ${ENDURE_DAYS} costs nothing.` },
-  focus: { name: 'Focus', icon: 'scope-lens', text: () => `Critical hits: about one day in eight (${pct(CRIT_BASE)}), the day's strike ×1.5.` },
-  friends: { name: 'Best friends', icon: 'soothe-bell', text: () => `+${pct(FRIENDS_XP - 1)} XP every day.` },
-  share: { name: 'Exp. Share', icon: 'exp-share', text: () => `Everyone in the party below level 100 gets ${pct(SHARE_XP)} of its XP, the fully trained as well.` },
+// `k`: its rank from Trainer stars (version 16), 0 as it unlocked
+const PERK: Record<BondPerk, { name: string; icon: string; text: (bond: number, k?: number) => string }> = {
+  pickup: { name: 'Pickup', icon: 'itemfinder', text: (b, k = 0) => `On a day with a pillar it may find something on the walk: ${pct(Math.min(0.95, PICKUP_BASE + PICKUP_STEP * Math.max(0, b - 1) + STAR_PICKUP * k))} at this bond.` },
+  endure: { name: 'Endure', icon: 'guard-spec', text: (_, k = 0) => `One empty day in ${Math.max(STAR_ENDURE_MIN, ENDURE_DAYS - k)} costs nothing.` },
+  focus: { name: 'Focus', icon: 'scope-lens', text: (_, k = 0) => `Critical hits on ${pct(CRIT_BASE + STAR_FOCUS * k)} of days, the day's strike ×1.5.` },
+  friends: { name: 'Best friends', icon: 'soothe-bell', text: (_, k = 0) => `+${pct(FRIENDS_XP - 1 + STAR_FRIENDS * k)} XP every day.` },
+  share: { name: 'Exp. Share', icon: 'exp-share', text: (_, k = 0) => `Everyone in the party below level 100 gets ${pct(SHARE_XP + STAR_SHARE * k)} of its XP, the fully trained as well.` },
 }
 
 /** The partner's hearts as five steps, each unlocking something. */
@@ -44,6 +45,10 @@ export function BondPerks({ game }: { game: Game }) {
   const shown = pick ?? Math.min(bond, BOND_PERKS.length - 1)
   const p = BOND_PERKS[shown]
   const on = hasPerk(bond, p)
+  const rank = (q: BondPerk) => (v16 ? game.trainer.ranks[q] : 0)
+  // every perk open: the road goes on in Trainer stars
+  const starred = v16 && bond >= BOND_PERKS.length
+  const fromLast = TRAINER_LEVELS[TRAINER_LEVELS.length - 1] + game.trainer.stars * STAR_EVERY
   return (
     <section className="perks" aria-label="Bond perks">
       <span className="k-label">{v16 ? `Trainer perks · ${game.trainer.hearts} ♥ across all your Pokemon` : `Bond perks with ${nameOf(game.partner.form)}`}</span>
@@ -52,12 +57,22 @@ export function BondPerks({ game }: { game: Game }) {
           <li key={q}>
             <button type="button" className={`perk-node ${hasPerk(bond, q) ? 'on' : ''} ${i === shown ? 'sel' : ''}`} aria-pressed={i === shown} aria-label={`${PERK[q].name}, at ${steps[i]} hearts${hasPerk(bond, q) ? ', earned' : ''}`} onClick={() => setPick(i)}>
               <span className="perk-ico"><ItemIcon id={PERK[q].icon} size={30} /></span>
-              <small>{hasPerk(bond, q) ? '✓' : `${steps[i]}♥`}</small>
+              <small>{hasPerk(bond, q) ? (rank(q) > 0 ? rankName(q, rank(q)).split(' ').pop() : '✓') : `${steps[i]}♥`}</small>
             </button>
           </li>
         ))}
       </ol>
-      <p className="perk-say"><b>{PERK[p].name}</b> {on ? PERK[p].text(bond) : `At ${steps[shown]} hearts${v16 ? ' in all' : ''}: ${PERK[p].text(shown + 1)}`}{v16 && on ? ' Yours for good, whoever leads.' : ''}</p>
+      <p className="perk-say"><b>{v16 ? rankName(p, rank(p)) : PERK[p].name}</b> {on ? PERK[p].text(bond, rank(p)) : `At ${steps[shown]} hearts${v16 ? ' in all' : ''}: ${PERK[p].text(shown + 1)}`}</p>
+      {starred && (
+        <div className="perk-stars">
+          <span className="perk-star-ico" aria-hidden>★<i>{game.trainer.stars}</i></span>
+          <span className="perk-star-txt">
+            <b>Trainer star {game.trainer.stars + 1}</b>
+            <KBar value={game.trainer.hearts - fromLast} max={STAR_EVERY} kind="gold" label={`${game.trainer.hearts - fromLast} / ${STAR_EVERY} hearts`} />
+            <small>Every {STAR_EVERY} hearts past {TRAINER_LEVELS[TRAINER_LEVELS.length - 1]}: Collect offers two perks, and you rank one up (to {['', 'I', 'II', 'III', 'IV', 'V', 'VI'][STAR_MAX + 1]}).</small>
+          </span>
+        </div>
+      )}
     </section>
   )
 }

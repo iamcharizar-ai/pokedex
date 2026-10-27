@@ -5,7 +5,7 @@ import assert from 'node:assert/strict'
 import { addDays, type DayFacts, type HabitFact } from './facts.ts'
 import { foldGame } from './fold.ts'
 import { HEART_LEVELS, V16_START, bondLevel } from './rules.ts'
-import { SIG_CAP, SIG_PARTY, TRAINER_LEVELS, didWork, signatureOf, trainerLevel } from './bond.ts'
+import { SIG_CAP, SIG_PARTY, STAR_EVERY, STAR_MAX, TRAINER_LEVELS, didWork, nextStarAt, signatureOf, starOptions, starsFor, trainerLevel } from './bond.ts'
 import { BATTLE_SHELF_V16, PRICED_BY_HEARTS, battleShelf, martDeals, offerFor } from './economy.ts'
 
 const H = (id: string, tag: HabitFact['tag'], worth: number, frac: number, extra: Partial<HabitFact> = {}): HabitFact => ({ id, tag, worth, pillar: worth === 100, frac, done: frac >= 1, ...extra })
@@ -112,4 +112,25 @@ test('a purchase replays at the price it was made at: friendship berries before 
   assert.equal(offerFor('fitness', 'kelpsy-berry', PRICED_BY_HEARTS, 3)?.offer.marks, 5)
   // the same currency only: the Garden's Sitrus is marks, before and after
   assert.equal(offerFor('arbor', 'sitrus-berry', addDays(PRICED_BY_HEARTS, -1), 3)?.offer.coins, undefined)
+})
+
+test('past the last trainer level, every STAR_EVERY hearts is a Trainer star: a choice of two perks to rank up', () => {
+  const g = fold(run(V16_START, 220))
+  assert.ok(g.trainer.hearts > TRAINER_LEVELS[TRAINER_LEVELS.length - 1] + STAR_EVERY, `${g.trainer.hearts} hearts`)
+  assert.equal(g.trainer.stars, starsFor(g.trainer.hearts))
+  // folded instantly, each star pays its first side: one rank each
+  assert.equal(Object.values(g.trainer.ranks).reduce((a, b) => a + b, 0), g.trainer.stars)
+  assert.ok(Object.values(g.trainer.ranks).every((r) => r <= STAR_MAX))
+  assert.equal(g.trainer.nextStar, nextStarAt(g.trainer.hearts))
+})
+
+test('a Trainer star offers two different perks below the top rank, and gems once every perk is full', () => {
+  const none = { pickup: 0, endure: 0, focus: 0, friends: 0, share: 0 }
+  const [a, b] = starOptions(1, none)
+  assert.ok(a.perk && b.perk && a.perk !== b.perk)
+  const full = { pickup: STAR_MAX, endure: STAR_MAX, focus: STAR_MAX, friends: STAR_MAX, share: STAR_MAX - 1 }
+  const [c, d] = starOptions(2, full)
+  assert.equal(c.perk, 'share')
+  assert.equal(d.perk, undefined)
+  assert.ok(d.gems > 0)
 })

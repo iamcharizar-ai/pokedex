@@ -10,12 +10,12 @@ week-shop	972
 week-pokedex	4993
 week-journey	1286
 late-today	1822
-late-party	1995
+late-party	2078
 late-shop	2748
 late-pokedex	4997
 late-journey	1631
 boss-today	1879
-boss-party	1938
+boss-party	2006
 boss-shop	3471
 boss-pokedex	4997
-boss-journey	1257
+boss-journey	1476

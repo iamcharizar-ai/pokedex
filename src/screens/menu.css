@@ -55,16 +55,6 @@ span.pslot.empty, button.pslot.empty:disabled { cursor: default; }
 .party-actions { margin-top: var(--s-3); }
 
 /* ── the research: a rank medal, the bar, what the next rank brings ── */
-.rank { display: flex; align-items: center; gap: var(--s-3); }
-.rank-badge { flex: none; display: grid; place-items: center; align-content: center; width: 76px; height: 76px; color: var(--k-edge); border-radius: 50%; background: radial-gradient(circle at 50% 30%, #ffe27a, #f5b800 70%); box-shadow: 0 0 0 4px rgba(255, 201, 58, 0.25), 0 0 22px var(--gold-glow), inset 0 -4px 0 rgba(0, 0, 0, 0.2); }
-.rank-badge small { font: normal 11px/1 var(--k-face); letter-spacing: 0.1em; text-transform: uppercase; }
-.rank-badge b { font: normal 34px/1 var(--k-face); }
-.rank-body { flex: 1; display: grid; gap: var(--s-2); min-width: 0; }
-.rank-stats { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--text-2); }
-.rank-stats b { font-family: var(--k-face); font-weight: 400; font-size: 15px; color: var(--text); }
-.rank-gift { display: grid; gap: 6px; margin: var(--s-3) 0 var(--s-2); padding: var(--s-2) var(--s-3); background: var(--surface-1); border-radius: var(--r-2); }
-.rank-gift-row { display: flex; flex-wrap: wrap; gap: 6px; }
-.rank-chip { display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 0 10px 0 5px; font-family: var(--k-face); font-size: 13px; background: var(--surface-2); border-radius: 99px; }
 .pslots.desk { margin: var(--s-2) 0 var(--s-3); }
 
 /* ── a box of Poke Balls: tap one and the Pokemon pops out ── */
@@ -174,3 +164,18 @@ span.pslot.empty, button.pslot.empty:disabled { cursor: default; }
 /* something on that screen is waiting on you (screens/Today.tsx tabTodo) */
 .pmenu-btn { position: relative; }
 .pmenu-btn.todo::after { content: ''; position: absolute; top: 6px; left: calc(50% - 26px); width: 10px; height: 10px; border-radius: 50%; background: var(--k-gold); box-shadow: 0 0 0 2px var(--surface-2, #1b2448), 0 0 10px var(--gold-glow); }
+
+/* ── a strip like the tab bar, for moving between places of one kind (the shops paid in marks) ── */
+.substrip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; padding: 6px; background: var(--glass); border: 1px solid var(--hair-hi); border-radius: 26px; box-shadow: var(--shadow-float); }
+.substrip button { display: grid; justify-items: center; gap: 2px; min-width: 0; min-height: 66px; padding: 6px 2px; color: var(--text-3); background: none; border: 0; border-radius: 20px; cursor: pointer; transition: background var(--t-fade) linear, color var(--t-fade) linear; }
+.substrip-ico { position: relative; display: grid; place-items: center; width: 40px; height: 40px; }
+.substrip-ico img { opacity: 0.6; filter: grayscale(0.5) drop-shadow(0 2px 0 rgba(0, 0, 0, 0.4)); transition: transform var(--t-pop) var(--ease-out), opacity var(--t-fade) linear, filter var(--t-fade) linear; }
+.substrip-ico i { position: absolute; right: -6px; top: -2px; min-width: 18px; padding: 1px 5px 2px; font: normal 10.5px/1.2 var(--k-face); color: var(--k-edge); background: var(--text-2); border-radius: 99px; box-shadow: 0 0 0 2px #0b1029; }
+.substrip b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--k-face); font-weight: 400; font-size: 11px; letter-spacing: 0; }
+.substrip button.on { color: var(--text); background: radial-gradient(60px 44px at 50% 34%, color-mix(in srgb, var(--fc, var(--tone-gold)) 30%, transparent), transparent 70%), var(--surface-2); box-shadow: inset 0 1px 0 var(--hair-hi); }
+.substrip button.on .substrip-ico img { opacity: 1; filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.45)); transform: translateY(-2px) scale(1.12); }
+.substrip button.on .substrip-ico i { background: var(--fc, var(--tone-gold)); }
+.substrip button[data-tag='code'] { --fc: var(--tag-code); } .substrip button[data-tag='fitness'] { --fc: var(--tag-fitness); }
+.substrip button[data-tag='guitar'] { --fc: var(--tag-guitar); } .substrip button[data-tag='arbor'] { --fc: var(--tag-arbor); } .substrip button[data-tag='sleep'] { --fc: var(--tag-sleep); }
+.substrip button:focus-visible { outline: 3px solid var(--tone-blue); outline-offset: -3px; }
+@media (prefers-reduced-motion: reduce) { .substrip-ico img { transition: none; } }

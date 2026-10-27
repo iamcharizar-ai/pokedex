@@ -161,3 +161,9 @@ button.bagtile:hover { transform: translateY(-2px); }
 button.bagtile:focus-visible { outline: none; }
 button.bagtile:focus-visible > img:first-child { outline: 3px solid #fff; outline-offset: 2px; }
 .bagtile.on small { color: var(--tone-gold); font-weight: 700; }
+/* how the egg is going: today's steps, your pace, and when that hatches it */
+.nest-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.nest-chip { display: inline-flex; align-items: baseline; gap: 4px; padding: 3px 10px; font-size: 12.5px; color: var(--text-2); background: var(--well); border: 1px solid var(--hair); border-radius: 99px; }
+.nest-chip b { font-family: var(--k-face); font-weight: 400; font-size: 14px; color: var(--text); }
+.nest-chip.hatch { border-color: rgba(255, 200, 80, 0.5); background: rgba(255, 200, 80, 0.1); }
+.nest-chip.hatch b { color: var(--tone-gold); }

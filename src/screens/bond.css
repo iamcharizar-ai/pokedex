@@ -40,3 +40,10 @@
 .feed-twice { margin-left: 6px; padding: 1px 7px; font: normal 11px/1.4 var(--k-face); color: #0b1029; background: var(--tone-gold); border-radius: 99px; }
 .fxchip.sig { background: linear-gradient(90deg, rgba(123, 92, 240, 0.45), rgba(8, 12, 30, 0.5)); border-color: rgba(190, 160, 255, 0.4); }
 .joinsig { display: inline-flex; align-items: center; gap: 3px; } .joinsig img { image-rendering: pixelated; }
+/* past the last trainer level: the road on to the next Trainer star */
+.perk-stars { display: grid; grid-template-columns: 52px 1fr; align-items: center; gap: var(--s-3); padding-top: var(--s-2); border-top: 1px dashed rgba(255, 160, 200, 0.3); }
+.perk-star-ico { position: relative; display: grid; place-items: center; width: 52px; height: 52px; font-size: 40px; line-height: 1; color: #ffd45c; text-shadow: 0 0 14px rgba(255, 212, 92, 0.6), 0 3px 0 rgba(0, 0, 0, 0.35); }
+.perk-star-ico i { position: absolute; font: normal 14px/1 var(--k-face); font-style: normal; color: #2a1b00; }
+.perk-star-txt { display: grid; gap: 4px; min-width: 0; }
+.perk-star-txt b { font-family: var(--k-face); font-weight: 400; font-size: 15px; color: #fff; }
+.perk-star-txt small { font-size: 12px; color: var(--text-3); line-height: 1.3; }

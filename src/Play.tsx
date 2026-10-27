@@ -5,10 +5,10 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { nameOf, spritePath, type Game, type Mon, type Quest } from '../core/fold.ts'
 import {
-  BALLS, battleShelf, BERRY_HEARTS, researchReward, treasurePrice, BOOST, BP_SHELF, DOMAIN_SHOPS, DOMAIN_V13, EVO_ITEMS, FOSSILS, GEAR_ITEMS, HELD, ITEMS, LEGEND_KEYS, LURES, MARKS, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, masteryCost, RARE_SHELF, RARE_SHELF_V13, REVIVE_COST, SELL, TM_SLOTS, TREASURE, itemName, throwHp, tmType,
+  BALLS, battleShelf, BERRY_HEARTS, treasurePrice, BOOST, BP_SHELF, DOMAIN_SHOPS, DOMAIN_V13, EVO_ITEMS, FOSSILS, GEAR_ITEMS, HELD, ITEMS, LEGEND_KEYS, LURES, MARKS, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, masteryCost, RARE_SHELF, RARE_SHELF_V13, REVIVE_COST, SELL, TM_SLOTS, TREASURE, itemName, throwHp, tmType,
   type MarkTag, type Offer, type ShopId,
 } from '../core/economy.ts'
-import { DAILY_PAY, MAX_LEVEL, REPEL_DAYS, RESEARCH_SLOTS, RESEARCH_WILD, RESEARCH_WILD_MAX, TEAM_BONUS, TEAM_NATURE, TEAM_OPEN_FROM, TEAM_SIZE, levelOf, studyPoints, xpForLevel, type Rarity } from '../core/rules.ts'
+import { DAILY_PAY, MAX_LEVEL, REPEL_DAYS, RESEARCH_SLOTS, TEAM_BONUS, TEAM_NATURE, TEAM_OPEN_FROM, TEAM_SIZE, levelOf, studyPoints, xpForLevel, type Rarity } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
 import { BadgeCase, TAG_NAME, Win, badgesWon, plural } from './App.tsx'
 import { Ball, BallItem, MegaStone, megaStoneName } from './Ball.tsx'
@@ -17,6 +17,7 @@ import { Sheet } from './screens/Sheet.tsx'
 import { Nursery } from './screens/Nursery.tsx'
 import { tabTodo } from './screens/Today.tsx'
 import { Deck, SigBadge, SigLine } from './Bond.tsx'
+import { ResearchLab } from './screens/Lab.tsx'
 import { FAMILY_NAME, signatureOf } from '../core/bond.ts'
 import { bondLevel } from '../core/rules.ts'
 import { Coin, EggIcon, Gem, ItemIcon, MarkIcon } from './Item.tsx'
@@ -299,13 +300,13 @@ function TrainingKit({ game }: { game: Game }) {
 }
 
 /** One domain's shop: its mastery, what its marks buy, and its TMs. */
-export function DomainShop({ game, tag }: { game: Game; tag: MarkTag }) {
+export function DomainShop({ game, tag, open }: { game: Game; tag: MarkTag; /** shown on its own (a tab of its own), so it does not fold */ open?: boolean }) {
   const shop = DOMAIN_SHOPS[tag]
   const goods = [...shop.stock.filter((o) => ITEMS[o.item]?.kind !== 'tm'), ...(game.v13 ? DOMAIN_V13[tag] : [])]
   const tms = shop.stock.filter((o) => ITEMS[o.item]?.kind === 'tm')
   const lv = game.mastery[tag]
   return (
-    <Win title={shop.name} tone={tag === 'sleep' ? 'purple' : tag === 'code' ? 'blue' : tag === 'fitness' ? 'red' : tag === 'guitar' ? 'gold' : 'green'} fold aside={<><MarkIcon tag={tag} size={22} /> {game.wallet.marks[tag]} {MARKS[tag].name}</>}>
+    <Win title={shop.name} tone={tag === 'sleep' ? 'purple' : tag === 'code' ? 'blue' : tag === 'fitness' ? 'red' : tag === 'guitar' ? 'gold' : 'green'} fold={!open} aside={<><MarkIcon tag={tag} size={22} /> {game.wallet.marks[tag]} {MARKS[tag].name}</>}>
       <div className="mastery">
         <span className="mastery-mark"><MarkIcon tag={tag} size={34} /></span>
         <span className="mastery-txt">
@@ -326,6 +327,28 @@ export function DomainShop({ game, tag }: { game: Game; tag: MarkTag }) {
         </>
       )}
     </Win>
+  )
+}
+
+/**
+ * The five shops paid in marks, one at a time: a strip like the tab bar to move between them (its own mark and
+ * how many you hold on each), and the shop chosen under it, open. It opens on the one whose marks you hold most of.
+ */
+function MarkShops({ game }: { game: Game }) {
+  const richest = [...MARK_TAGS].sort((a, b) => game.wallet.marks[b] - game.wallet.marks[a])[0]
+  const [tag, setTag] = useState<MarkTag>(richest)
+  return (
+    <>
+      <nav className="substrip" role="tablist" aria-label="Shops paid in marks" data-noswipe>
+        {MARK_TAGS.map((t) => (
+          <button key={t} type="button" role="tab" aria-selected={tag === t} className={tag === t ? 'on' : ''} data-tag={t} onClick={() => { setTag(t); play('tap') }}>
+            <span className="substrip-ico"><MarkIcon tag={t} size={30} /><i>{game.wallet.marks[t]}</i></span>
+            <b>{DOMAIN_SHOPS[t].name.replace(/^The /, '')}</b>
+          </button>
+        ))}
+      </nav>
+      <DomainShop key={tag} game={game} tag={tag} open />
+    </>
   )
 }
 
@@ -394,7 +417,7 @@ export function ShopTab({ game }: { game: Game }) {
       )}
       {show('collector') && <CollectorWin game={game} />}
       {show('lab') && <LabWin game={game} />}
-      {MARK_TAGS.filter((t) => show(t)).map((t) => <DomainShop key={t} game={game} tag={t} />)}
+      {which === 'marks' && <MarkShops game={game} />}
     </>
   )
 }
@@ -844,40 +867,9 @@ function ProfessorLab({ game, onOpen }: { game: Game; onOpen: (uid: string) => v
   const inTeam = new Set(game.team.map((m) => m.uid))
   const onDesk = new Set(r.desk.map((m) => m.uid))
   const box = [...game.graduates, ...game.queue].filter((m) => !inTeam.has(m.uid) && !onDesk.has(m.uid)).sort((a, b) => studyValue(b) - studyValue(a) || b.xp - a.xp)
-  const gift = researchReward(r.rank + 1)
   return (
     <>
-      <Win title="The Professor's research" tone="dark" aside={`+${r.perDay}/day`}>
-        <div className="rank">
-          <span className="rank-badge"><small>Rank</small><b>{r.rank}</b></span>
-          <div className="rank-body">
-            <KBar value={r.points} max={r.need} kind="gold" label={`${r.points.toLocaleString('en-IN')} / ${r.need.toLocaleString('en-IN')}`} />
-            <div className="rank-stats">
-              <span><b>{(r.need - r.points).toLocaleString('en-IN')}</b> to rank {r.rank + 1}</span>
-              <span><b>−{Math.round(r.cut * 100)}%</b> wild HP now</span>
-              <span><b>+{Math.round(RESEARCH_WILD * 100)}%</b> a rank, up to {Math.round(RESEARCH_WILD_MAX * 100)}%</span>
-            </div>
-          </div>
-        </div>
-        <div className="rank-gift">
-          <span className="k-label">Gift at rank {r.rank + 1}</span>
-          <span className="rank-gift-row">
-            {gift.coins ? <span className="rank-chip"><Coin size={22} />{gift.coins}</span> : null}
-            {gift.gems ? <span className="rank-chip"><Gem size={22} />{gift.gems}</span> : null}
-            {gift.items.map(([id, n]) => <span key={id} className="rank-chip" title={itemName(id)}><ItemIcon id={id} size={22} />{itemName(id)}{n > 1 ? ` ×${n}` : ''}</span>)}
-          </span>
-        </div>
-        <span className="k-label">On the desk · {r.chosen ? 'your choice' : 'the strongest, until you choose'}</span>
-        <div className="pslots desk">
-          {Array.from({ length: RESEARCH_SLOTS }, (_, i) => {
-            const m = r.desk[i]
-            return m
-              ? <Slot key={m.uid} m={m} tag={`+${studyValue(m)}/day`} onClick={() => onOpen(m.uid)} />
-              : <span key={i} className="pslot empty"><span className="pslot-art" aria-hidden /><b>{box.length ? 'Pick from the box' : 'Empty'}</b></span>
-          })}
-        </div>
-        {r.chosen && <button type="button" className="k-btn" onClick={() => { useItem('', '', 'study', 'auto'); play('tap') }}>Let the Professor choose the strongest</button>}
-      </Win>
+      <ResearchLab game={game} onOpen={onOpen} studyValue={studyValue} />
       <Win title="Lab box" tone="dark" aside={plural(box.length, 'Pokemon', 'Pokemon')}>
         <BallBox mons={box} onOpen={onOpen} note={(m) => `+${studyValue(m)}/day on the desk${m.uid === game.nextUp ? ' · next up' : ''}`}
           actions={(m) => <button type="button" className="k-btn main" onClick={() => { putOnDesk(game, m.uid, true); play('tap') }}>On the desk</button>}

@@ -7,6 +7,15 @@ Under version 14 a bond only counted for the partner, the partner changed at gra
 ## 1. Trainer perks: yours for good
 Pickup, Endure, Focus, Best friends and Exp. Share now unlock from your **Trainer bond**: every heart across every Pokemon you own (`TRAINER_LEVELS`: 10, 40, 100, 200, 350). The count never goes down, even if a Pokemon is sent to the Professor. A new partner keeps every perk you have. The partner's own bond still adds +5% to every strike per level, and powers a Mega.
 
+**Past 350 hearts: Trainer stars.** Every 150 hearts after the last level is a star (`STAR_EVERY`). Each star waits in Collect as a choice of two perks to rank up. A perk starts at I and a star takes it up one, to VI (`STAR_MAX` ranks):
+- Pickup: +5% find chance
+- Endure: back a day sooner, down to every 3 days
+- Focus: +3% critical hits
+- Best friends: +3% XP
+- Exp. Share: +3% shared XP
+
+Left alone, the first side pays itself. With every perk at V, a star pays 25 gems.
+
 ## 2. Signatures: each Pokemon plays differently
 Each Pokemon has a signature, from its first type, in one of six families (the domain that type stands for, as in a gym's weaknesses):
 
