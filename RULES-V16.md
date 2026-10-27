@@ -44,3 +44,6 @@ Each Pokemon has a signature, from its first type, in one of six families (the d
 
 ## 5. The Mart's battle shelf
 The X items came in three strengths for the same price per point, so there was nothing to choose between them. From version 16 the Mart sells one of each: X items at the third strength, and Dire Hit 3, beside Guard Spec, Honey and the Tamato Berry. Items already in the Bag still work.
+
+## Version 17: the day's list is the live list (from 27 Oct 2026)
+Before, a day's habit list was frozen at its first writing and a later one could only add habits, so a habit taken off in Life OS stayed on the game's day until tomorrow. From version 17 (`V17_START`) the latest list written for a day stands: Life OS writes a new one whenever the list differs from the one standing (once per change from a device, so two devices with different libraries cannot overwrite each other for ever), and the game counts it at once. A list marked `fix` still replaces the day's, as before. Earlier days fold as they did.
