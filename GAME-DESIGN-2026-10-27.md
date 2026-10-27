@@ -1,6 +1,8 @@
 # Game design review, 27 Oct 2026: bond, berries and the partner
 
-You asked three questions about bond perks. All three point at real flaws, and the same test turns up a few more. Nothing here is built yet.
+You asked three questions about bond perks. All three point at real flaws, and the same test turns up a few more.
+
+**Built the same day as version 16 (A, B and C below): `RULES-V16.md`.** It also cut the Mart's battle shelf to one of each kind. Still open: momentum, the gem shelf, and the fix for the research change.
 
 ## How it works today (from the code)
 

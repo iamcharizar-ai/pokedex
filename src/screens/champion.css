@@ -99,6 +99,15 @@
 .feed-who b small { color: var(--k-dim); font-family: inherit; font-size: 12px; margin-left: 4px; }
 .feed-who > small { color: var(--k-dim); font-size: 12.5px; }
 .feed-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+/* the berry, chosen once at the top of the sheet; one button on each Pokemon */
+.feed-pick { display: flex; gap: 6px; overflow-x: auto; padding: 4px 2px; scrollbar-width: none; }
+.feed-pick::-webkit-scrollbar { display: none; }
+.feed-berry { position: relative; flex: none; display: grid; justify-items: center; gap: 2px; width: 60px; padding: 6px 0 4px; color: var(--text-2); background: var(--well); border: 1px solid var(--hair); border-radius: 12px; cursor: pointer; }
+.feed-berry img { image-rendering: pixelated; }
+.feed-berry i { position: absolute; right: 4px; top: 2px; font: normal 10.5px/1.2 var(--k-face); color: var(--text); }
+.feed-berry small { font-family: var(--k-face); font-size: 12px; }
+.feed-berry.on { color: #fff; border-color: var(--tone-gold); box-shadow: 0 0 0 1px var(--tone-gold), 0 0 12px var(--gold-glow); }
+.feed-go { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; margin-left: auto; }
 .feed-btns .k-btn, .boss-bait .k-btn { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; }
 .boss-bait { align-items: center; margin-bottom: var(--s-2); }
 .boss-bait .k-btn small { color: var(--k-dim); }

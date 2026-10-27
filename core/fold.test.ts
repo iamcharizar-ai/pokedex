@@ -238,7 +238,7 @@ test('a party of six: the partner and five trained Pokemon behind it, each addin
   assert.ok(g.team.length > 0 && g.team.length <= 5)
   // each member adds TEAM_BONUS, plus BOND_PARTY for every bond level its hearts reached, and (version 13) TEAM_LEVEL for every level
   const hearts = (m: (typeof g.team)[number]) => (m.together ?? 0) + (m.fed ?? 0)
-  assert.ok(Math.abs(g.power.team - g.team.reduce((sum, m) => sum + TEAM_BONUS + BOND_PARTY * bondLevel(hearts(m)) + TEAM_LEVEL * levelOf(m.xp), 0)) < 1e-9)
+  assert.ok(Math.abs(g.power.team - g.team.reduce((sum, m) => sum + TEAM_BONUS + (g.v16 ? 0 : BOND_PARTY * bondLevel(hearts(m))) + TEAM_LEVEL * levelOf(m.xp), 0)) < 1e-9) // version 16: a member's bond works through its signature
   assert.ok(g.team.some((m) => bondLevel(hearts(m)) > 0), 'a trained Pokemon keeps its bond for the party')
   for (const t of ['code', 'fitness', 'guitar', 'arbor', 'sleep', 'routine'] as const)
     assert.equal(g.power.domain[t].nature, TEAM_NATURE * g.team.filter((m) => m.nature?.up === t).length, t)

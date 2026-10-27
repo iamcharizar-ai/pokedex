@@ -1,0 +1,42 @@
+/* VERSION 16 on the screens (Bond.tsx): each Pokemon's signature, and the party's together as a deck.
+   A family's colour is its kind of work's (--tag-*), passed in as --fc. */
+
+/* ── a signature on a party slot: its picture and its bond level ── */
+.sigbadge { position: absolute; right: -6px; bottom: -4px; display: inline-flex; align-items: center; gap: 1px; padding: 1px 5px 1px 2px; border-radius: 99px; background: #121838; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.18); }
+.sigbadge img { width: 18px; height: 18px; margin: 0; image-rendering: pixelated; filter: none; }
+.sigbadge i { font: normal 11px/1 var(--k-face); color: #fff; }
+.sigbadge.dim { opacity: 0.55; }
+
+/* ── one Pokemon's signature, in a line (the partner card, its page) ── */
+.sigline { display: grid; grid-template-columns: 44px 1fr; align-items: center; gap: var(--s-2); margin-top: var(--s-2); padding: 8px 10px; border-radius: 14px; background: linear-gradient(90deg, color-mix(in srgb, var(--fc) 20%, transparent), rgba(8, 12, 30, 0.35) 80%); border: 1px solid color-mix(in srgb, var(--fc) 45%, transparent); }
+.sigline-ico { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: rgba(8, 12, 30, 0.5); }
+.sigline-ico img { image-rendering: pixelated; }
+.sigline-txt { display: grid; gap: 2px; min-width: 0; }
+.sigline-txt b { font-family: var(--k-face); font-weight: 400; font-size: 16px; color: #fff; }
+.sigline-txt b small { font-family: var(--body, inherit); font-size: 12px; color: var(--text-3); margin-left: 4px; }
+.sigline-txt > small { font-size: 13px; line-height: 1.3; color: var(--text-2); }
+.sigline-txt .sigline-next { color: var(--text-3); font-size: 12px; }
+
+/* ── the deck: each family's strength, who gives it ── */
+.deck { display: grid; gap: var(--s-2); }
+.deck-row { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: var(--s-2); padding: 8px 10px; border-radius: 14px; background: var(--well); border: 1px solid var(--hair); border-left: 3px solid var(--fc); }
+.deck-ico { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: color-mix(in srgb, var(--fc) 22%, transparent); }
+.deck-ico img { image-rendering: pixelated; }
+.deck-txt { display: grid; gap: 3px; min-width: 0; }
+.deck-txt b { font-family: var(--k-face); font-weight: 400; font-size: 15px; color: #fff; }
+.deck-txt b small { font-size: 12px; color: var(--text-3); margin-left: 4px; }
+.deck-txt > small { font-size: 12.5px; line-height: 1.25; color: var(--text-2); }
+.deck-bar { display: block; height: 6px; border-radius: 99px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.deck-bar i { display: block; height: 100%; border-radius: inherit; background: var(--fc); box-shadow: 0 0 8px var(--fc); }
+.deck-who { display: flex; }
+.deck-who img { margin-left: -8px; image-rendering: pixelated; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.4)); }
+.deck-who img.lead { filter: drop-shadow(0 0 4px var(--tone-gold)); }
+.deck-missing { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: var(--s-1) 0 0; }
+.deck-missing .k-label { width: 100%; }
+.deck-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px 3px 4px; font-family: var(--k-face); font-size: 13px; color: var(--text-2); background: var(--well); border: 1px dashed var(--hair-hi); border-radius: 99px; }
+.deck-chip small { font-family: inherit; font-size: 11px; color: var(--text-3); }
+
+/* ── feeding: who pays double today; today's signature chips ── */
+.feed-twice { margin-left: 6px; padding: 1px 7px; font: normal 11px/1.4 var(--k-face); color: #0b1029; background: var(--tone-gold); border-radius: 99px; }
+.fxchip.sig { background: linear-gradient(90deg, rgba(123, 92, 240, 0.45), rgba(8, 12, 30, 0.5)); border-color: rgba(190, 160, 255, 0.4); }
+.joinsig { display: inline-flex; align-items: center; gap: 3px; } .joinsig img { image-rendering: pixelated; }

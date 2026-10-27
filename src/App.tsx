@@ -7,7 +7,7 @@ import {
   ADVANTAGE_MULT, GEMS, SEASON_STEP, BALL_MULT, BALL_NAME, GAME_START, GRADUATES_PER_REGION, LEADER_HP, MOMENTUM_WINDOW,
   CLAIM_AUTO, EGG_STEPS, SLEEP_HABIT, bondLevel, HEART_LEVELS, LEGENDARY_EVERY_WILD, PAY_STREAK, REGIONS, REPEL_DAYS, SHINY_ODDS, SHINY_ODDS_WORN, SLEEP_AFTER, SLIP, STAKES_FROM, STEPS_GOAL, TEAM_SIZE, WILD_STAY, TIER_XP, WEAK_MULT, evolveAt, graduateAt, xpForLevel,
 } from '../core/rules.ts'
-import { BERRY_HEARTS, MARKS, EGG_STEPS_OLD_CHARM, BOND_PARTY, BOND_STEP, MASTERY_MAX, MASTERY_STEP, SELL, itemName as econName, masteryCost } from '../core/economy.ts'
+import { BERRY_HEARTS, MARKS, EGG_STEPS_OLD_CHARM, BOND_STEP, MASTERY_MAX, MASTERY_STEP, SELL, itemName as econName, masteryCost } from '../core/economy.ts'
 import { MILESTONE_EVERY, CRIT_MULT, DYNAMAX, GIGANTAMAX, LEVEL_POWER, MAX_LEVEL, MEGA_BONUS, MEGA_BOND, RESEARCH_SLOTS, RESEARCH_WILD, RESEARCH_WILD_MAX, TEAM_BONUS, TEAM_LEVEL, TEAM_NATURE, type Tag as TagKind } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
 import { Ball, KeyStone } from './Ball.tsx'
@@ -21,6 +21,8 @@ import { Recap } from './Recap.tsx'
 import { BossLog, BossTile } from './Boss.tsx'
 import { fitOf, useBoxes } from './Fit.tsx'
 import { Calendar } from './screens/Calendar.tsx'
+import { SigLine } from './Bond.tsx'
+import { SIG_CAP, TRAINER_LEVELS } from '../core/bond.ts'
 import { EggCell, reachNote, tabTodo } from './screens/Today.tsx'
 import { HpBar } from './screens/HpBar.tsx'
 import { hpTone } from './screens/hp.ts'
@@ -328,11 +330,12 @@ function Summary({ game, onOpen }: { game: Game; onOpen?: () => void }) {
             )}
             {ahead.length === 0 && <span className="hero-next">{game.next.what === 'master' ? 'Level 100' : 'Fully trained'} at Lv {game.next.level}</span>}
           </div>
-          <div className="hero-bond" title={`A heart for each pillar done while it is your partner, and more for each berry. At ${HEART_LEVELS.join(', ')} hearts the bond steps up: +${Math.round(BOND_STEP * 100)}% to every strike each, and a perk. It only ever counts up.`}>
+          <div className="hero-bond" title={game.v16 ? `Its own bond: a heart for each pillar done while it is your partner, and more for each berry. At ${HEART_LEVELS.join(', ')} hearts it steps up: +${Math.round(BOND_STEP * 100)}% to every strike each, and its signature grows. It only ever counts up.` : `A heart for each pillar done while it is your partner, and more for each berry. At ${HEART_LEVELS.join(', ')} hearts the bond steps up: +${Math.round(BOND_STEP * 100)}% to every strike each, and a perk. It only ever counts up.`}>
             <span className="hero-hearts" aria-label={`Bond level ${bond} of ${HEART_LEVELS.length}`}>{HEART_LEVELS.map((_, i) => <img key={i} src="/sprites/items/heart-scale.png" width={22} height={22} alt="" className={`pix ${i < bond ? 'on' : ''}`} />)}</span>
             <span className="hero-bondtxt"><b>{hearts} ♥</b>{nextAt ? ` · ${nextAt - hearts} to bond ${bond + 1}` : ' · full bond'}</span>
             <button type="button" className="hero-feed" disabled={!berry} onClick={() => { if (game.v14) setFeeding(true); else { useItem(berry!, '', 'feed'); play('feed') } }} title={berry ? (game.v14 ? 'Feed a Pokemon: choose who and what' : `Feed it: ${econName(berry)}`) : 'No berries: the Mart and the Garden sell them'}><ItemIcon id={berry ?? 'oran-berry'} size={24} />Feed{berry ? <i>{game.inv[berry]}</i> : null}</button>
           </div>
+          {game.v16 && <SigLine m={partner} game={game} />}
           {feeding && <FeedSheet game={game} onClose={() => setFeeding(false)} />}
         </div>
       </section>
@@ -350,12 +353,12 @@ function PowerLine({ game }: { game: Game }) {
   const { power } = game
   const common = power.team + power.bond + power.mega + power.item + power.level
   const parts: [string, number][] = [['Level', power.level], ['Team', power.team], ['Bond', power.bond], ['Mega', power.mega], ['Life Orb', power.item]]
-  const kinds = (Object.keys(power.domain) as TagKind[]).map((t) => [t, power.domain[t]] as const).filter(([, d]) => d.held + d.mastery + d.nature + d.vitamin > 0)
+  const kinds = (Object.keys(power.domain) as TagKind[]).map((t) => [t, power.domain[t]] as const).filter(([, d]) => d.held + d.mastery + d.nature + d.vitamin + d.sig > 0)
   return (
     <div className="power" aria-label="What raises a strike">
       <span className="chip" title={parts.filter(([, v]) => v > 0).map(([n, v]) => `${n} +${pct(v)}`).join(' · ') || 'Nothing yet: a team, a bond level or a Mega adds here'}>All work +{pct(common)}</span>
       {kinds.map(([t, d]) => (
-        <span key={t} className="chip" data-tag={t} title={[['Held item', d.held], ['Mastery', d.mastery], ['Natures on the team', d.nature], ['Vitamins', d.vitamin]].filter(([, v]) => (v as number) > 0).map(([n, v]) => `${n} +${pct(v as number)}`).join(' · ')}>{TAG_NAME[t]} +{pct(d.held + d.mastery + d.nature + d.vitamin)}</span>
+        <span key={t} className="chip" data-tag={t} title={[['Held item', d.held], ['Mastery', d.mastery], ['Natures on the team', d.nature], ['Vitamins', d.vitamin], ['Signatures', d.sig]].filter(([, v]) => (v as number) > 0).map(([n, v]) => `${n} +${pct(v as number)}`).join(' · ')}>{TAG_NAME[t]} +{pct(d.held + d.mastery + d.nature + d.vitamin + d.sig)}</span>
       ))}
       <small className="muted">all added together, once</small>
     </div>
@@ -718,7 +721,7 @@ function DexTab({ game }: { game: Game }) {
 }
 
 // ── Journey (the Trainer tab's old name in the code) ───────────────────────
-const KIND: Record<Moment['kind'], string> = { level: 'Level', evolve: 'Evolved', graduate: 'Trained', partner: 'Partner', catch: 'Caught', appear: 'Wild', form: 'Form', region: 'Region', gym: 'Gym', league: 'League', use: 'Choice', key: 'Key Stone', review: 'Review', boss: 'Boss', mega: 'Mega', transfer: 'Professor', quest: 'Quest', season: 'Season', hatch: 'Hatched', chest: 'Chest', feat: 'Feat', gear: 'Gear', kit: 'Kit', flee: 'Fled', slip: 'Slipped', pickup: 'Pickup', endure: 'Endured', symbol: 'Frontier', summon: 'Legend', fossil: 'Lab', itemevo: 'Evolved', lap: 'Rematch', research: 'Professor', master: 'Lv 100' }
+const KIND: Record<Moment['kind'], string> = { level: 'Level', evolve: 'Evolved', graduate: 'Trained', partner: 'Partner', catch: 'Caught', appear: 'Wild', form: 'Form', region: 'Region', gym: 'Gym', league: 'League', use: 'Choice', key: 'Key Stone', review: 'Review', boss: 'Boss', mega: 'Mega', transfer: 'Professor', quest: 'Quest', season: 'Season', hatch: 'Hatched', chest: 'Chest', feat: 'Feat', gear: 'Gear', kit: 'Kit', flee: 'Fled', slip: 'Slipped', pickup: 'Pickup', forage: 'Forage', dream: 'Dream', endure: 'Endured', symbol: 'Frontier', summon: 'Legend', fossil: 'Lab', itemevo: 'Evolved', lap: 'Rematch', research: 'Professor', master: 'Lv 100' }
 const aOrAn = (w: string): string => `${/^[AEIOU]/i.test(w) ? 'an' : 'a'} ${w}`
 function line(m: Moment): string {
   switch (m.kind) {
@@ -754,6 +757,8 @@ function line(m: Moment): string {
     case 'gear': return `${itemName(m.item)} dropped by a Strong workout`
     case 'kit': return m.shard ? `A full set of gear (set ${m.n}) became a Red Shard` : `A full set of gear (set ${m.n}) paid gems and Iron`
     case 'pickup': return `${nameOf(m.form)} found ${aOrAn(itemName(m.item))} on the day's walk`
+    case 'forage': return `Forage: ${aOrAn(itemName(m.item))} found on the Arbor morning`
+    case 'dream': return `Dream: after a good night, ${m.n} of your party ${m.n === 1 ? 'is' : 'are'} a heart closer`
     case 'endure': return `An empty day (${fmtDay(m.empty)}) cost nothing: ${m.how === 'endure' ? 'the bond held (Endure)' : m.how === 'sash' ? 'the Focus Sash held' : 'the Guard Spec stood guard'}`
     case 'symbol': {
       const f = FACILITIES.find((x) => x.id === m.facility)
@@ -1017,7 +1022,13 @@ function RulesTab({ onTour }: { onTour: () => void }) {
             Every {MILESTONE_EVERY} levels your partner reaches, Collect offers two rewards and you keep one: balls, a shard in the colour you hold least of, a Rare Candy, coins or gems. Left alone, the first pays itself.
           </Rule>
           <Rule title="Hearts and bond" tone="green" pic={<><ItemIcon id="heart-scale" size={28} /><ItemIcon id="oran-berry" size={28} /><ItemIcon id="sitrus-berry" size={28} /></>}>
-            A heart for every pillar you finish while this Pokemon is your partner, and more for the berries and treats you feed to any of your Pokemon (Oran one, Sitrus three, a friendship berry five). A Pokemon with every bond level ({HEART_LEVELS[HEART_LEVELS.length - 1]} hearts) takes nothing more. Each bond level unlocks a perk: Pickup, Endure, Focus, Best friends, Exp. Share. At {HEART_LEVELS.join(', ')} hearts the bond steps up, and each step adds {Math.round(BOND_STEP * 100)}% to every strike. Hearts belong to the Pokemon and only count up. A new partner starts again, but a fully trained one keeps its hearts for the party: each of its bond levels adds {Math.round(BOND_PARTY * 100)}% to every strike on top of its place in the party.
+            Your partner gets a heart for every pillar you finish. A party member gets one on each day you do its kind of work. Berries add more to anyone (Oran one, Sitrus three, a friendship berry five), and twice that on a day you did that Pokemon's kind of work. Hearts belong to the Pokemon and only count up, to {HEART_LEVELS[HEART_LEVELS.length - 1]}. At {HEART_LEVELS.join(', ')} hearts a Pokemon's bond steps up: as partner each step adds {Math.round(BOND_STEP * 100)}% to every strike, and its signature grows.
+          </Rule>
+          <Rule title="Trainer perks" tone="gold" pic={<><ItemIcon id="itemfinder" size={28} /><ItemIcon id="scope-lens" size={28} /><ItemIcon id="exp-share" size={28} /></>}>
+            Pickup, Endure, Focus, Best friends and Exp. Share are yours, not one Pokemon's. They unlock from every heart across every Pokemon you own, at {TRAINER_LEVELS.join(', ')} hearts, and stay whoever leads.
+          </Rule>
+          <Rule title="Signatures" tone="purple" pic={<><ItemIcon id="charcoal" size={26} /><ItemIcon id="twistedspoon" size={26} /><ItemIcon id="miracle-seed" size={26} /><ItemIcon id="blackglasses" size={26} /></>}>
+            Every Pokemon has a signature from its first type, in one of six families, one for each kind of work. Power (gym) makes gym work strike harder; Insight (code) studies for the Professor; Charm (guitar) wears the wild Pokemon down; Forage (Arbor) finds berries; Dream (sleep) turns a good night into hearts for the party; Flow (routine) pays routine habits more. Its strength is its bond level as partner and half that in the party, and one family adds up to {SIG_CAP}. A party is a deck: mix the families you want behind you.
           </Rule>
           <Rule title="Momentum" tone="blue" pic={<><span className="rule-chip sm">×1.2</span><span className="rule-chip sm">×1.35</span><span className="rule-chip">×1.5</span></>}>
             Of the last seven days, three with two pillars make XP ×1.2, five ×1.35, seven ×1.5. It slides back one day at a time, never resets. {SLEEP_AFTER} days with no pillar at all and the partner dozes off until you finish one.

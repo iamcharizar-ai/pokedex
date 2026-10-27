@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { nameOf, spritePath, type Game, type Mon, type Quest } from '../core/fold.ts'
 import {
-  BALLS, BATTLE_SHELF, BERRY_HEARTS, researchReward, treasurePrice, BOOST, BP_SHELF, DOMAIN_SHOPS, DOMAIN_V13, EVO_ITEMS, FOSSILS, GEAR_ITEMS, HELD, ITEMS, LEGEND_KEYS, LURES, MARKS, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, masteryCost, RARE_SHELF, RARE_SHELF_V13, REVIVE_COST, SELL, TM_SLOTS, TREASURE, itemName, throwHp, tmType,
+  BALLS, battleShelf, BERRY_HEARTS, researchReward, treasurePrice, BOOST, BP_SHELF, DOMAIN_SHOPS, DOMAIN_V13, EVO_ITEMS, FOSSILS, GEAR_ITEMS, HELD, ITEMS, LEGEND_KEYS, LURES, MARKS, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, masteryCost, RARE_SHELF, RARE_SHELF_V13, REVIVE_COST, SELL, TM_SLOTS, TREASURE, itemName, throwHp, tmType,
   type MarkTag, type Offer, type ShopId,
 } from '../core/economy.ts'
 import { DAILY_PAY, MAX_LEVEL, REPEL_DAYS, RESEARCH_SLOTS, RESEARCH_WILD, RESEARCH_WILD_MAX, TEAM_BONUS, TEAM_NATURE, TEAM_OPEN_FROM, TEAM_SIZE, levelOf, studyPoints, xpForLevel, type Rarity } from '../core/rules.ts'
@@ -16,6 +16,9 @@ import { Forge } from './screens/Forge.tsx'
 import { Sheet } from './screens/Sheet.tsx'
 import { Nursery } from './screens/Nursery.tsx'
 import { tabTodo } from './screens/Today.tsx'
+import { Deck, SigBadge, SigLine } from './Bond.tsx'
+import { FAMILY_NAME, signatureOf } from '../core/bond.ts'
+import { bondLevel } from '../core/rules.ts'
 import { Coin, EggIcon, Gem, ItemIcon, MarkIcon } from './Item.tsx'
 import { KBar, KButton } from './Kit.tsx'
 import { aBall, fmtDay, still } from './lib/art.ts'
@@ -366,7 +369,7 @@ export function ShopTab({ game }: { game: Game }) {
           {game.v13 && (
             <>
               <span className="k-label shelf-label">Battle items · X items boost one kind of work for a day; Dire Hit, Guard Spec, Honey</span>
-              <Shelf game={game} offers={BATTLE_SHELF} shop="mart" fold={3} what="battle items" />
+              <Shelf game={game} offers={battleShelf(game.today.day)} shop="mart" fold={game.v16 ? 6 : 3} what="battle items" />
             </>
           )}
         </Win>
@@ -595,6 +598,7 @@ export function MonPage({ m, game, onClose }: { m: Mon; game: Game; onClose: () 
             <div className="k-tile"><span className="k-label">{m.origin === 'egg' ? 'Hatched' : m.origin === 'starter' ? 'Starter' : m.origin === 'fossil' ? 'Revived' : 'Caught'}</span><b>{fmtDay(m.from)}</b></div>
             {m.held && <div className="k-tile"><span className="k-label">Holding</span><b className="holdline"><ItemIcon id={m.held} size={22} />{itemName(m.held)}</b></div>}
           </div>
+          {game.v16 && <SigLine m={m} game={game} />}
           {m.nature?.up && m.nature.down && <p className="muted">Raised most on {TAG_NAME[m.nature.up]}, least on {TAG_NAME[m.nature.down]}.</p>}
           {m.nature?.up && trained && <p className="muted">On the team it adds {Math.round(TEAM_BONUS * 100)}% to every strike and {Math.round(TEAM_NATURE * 100)}% more to {TAG_NAME[m.nature.up]} work.</p>}
           {m.ball && <p className="muted ballname">{m.thrown ? <BallItem id={m.thrown} size={20} /> : <Ball ball={m.ball} size={18} />}Caught in {m.thrown ? `a ${itemName(m.thrown)}` : aBall(m.ball)}.</p>}
@@ -641,21 +645,27 @@ function Joiners({ game, onPick, onClose }: { game: Game; onPick: (uid: string) 
   const inTeam = new Set(game.team.map((m) => m.uid))
   const trained = game.graduates.filter((m) => !inTeam.has(m.uid))
   const waiting = open ? game.queue.filter((m) => !inTeam.has(m.uid)) : []
+  // version 16: what each would bring to the party's signatures
+  const sigNote = (m: Mon): ReactNode | undefined => {
+    if (!game.v16) return undefined
+    const s = signatureOf(m.form)
+    return <span className="joinsig"><ItemIcon id={s.icon} size={16} />{FAMILY_NAME[s.family]} · bond {bondLevel((m.together ?? 0) + (m.fed ?? 0))}</span>
+  }
   return (
     <Sheet title="Add to the party" onClose={onClose}>
       <div className="joiners">
         <h2 className="k-type">Add to the party</h2>
-        <p className="muted">{game.team.length >= TEAM_SIZE ? 'The party is full: the one you add comes first and the last place is given up.' : `${TEAM_SIZE - game.team.length} ${TEAM_SIZE - game.team.length === 1 ? 'place is' : 'places are'} open.`} Each one adds {Math.round(TEAM_BONUS * 100)}% to every strike.</p>
+        <p className="muted">{game.team.length >= TEAM_SIZE ? 'The party is full: the one you add comes first and the last place is given up.' : `${TEAM_SIZE - game.team.length} ${TEAM_SIZE - game.team.length === 1 ? 'place is' : 'places are'} open.`} Each one adds {Math.round(TEAM_BONUS * 100)}% to every strike{game.v16 ? ', and its signature at half strength' : ''}.</p>
         {trained.length > 0 && (
           <>
             <span className="k-label">Fully trained</span>
-            <div className="boxgrid">{trained.map((m) => <Standee key={m.uid} m={m} size={52} onClick={() => { onPick(m.uid); onClose() }} />)}</div>
+            <div className="boxgrid">{trained.map((m) => <Standee key={m.uid} m={m} size={52} note={sigNote(m)} onClick={() => { onPick(m.uid); onClose() }} />)}</div>
           </>
         )}
         {waiting.length > 0 && (
           <>
             <span className="k-label">In My Pokemon</span>
-            <div className="boxgrid">{waiting.map((m) => <Standee key={m.uid} m={m} size={52} onClick={() => { onPick(m.uid); onClose() }} />)}</div>
+            <div className="boxgrid">{waiting.map((m) => <Standee key={m.uid} m={m} size={52} note={sigNote(m)} onClick={() => { onPick(m.uid); onClose() }} />)}</div>
           </>
         )}
         {trained.length === 0 && waiting.length === 0 && <p className="muted">Nobody else is free to join. Catch more Pokemon, or finish training one.</p>}
@@ -681,13 +691,13 @@ function Standee({ m, size = 64, note, onClick, title }: { m: Mon; size?: number
 }
 
 /** One Pokemon as a slot on the party screen: its sprite in a round well, its name and level, and how far into the level it is. */
-function Slot({ m, tag, lead, onClick, title }: { m: Mon; tag?: ReactNode; lead?: boolean; onClick: () => void; title?: string }) {
+function Slot({ m, tag, lead, onClick, title, sig }: { m: Mon; tag?: ReactNode; lead?: boolean; onClick: () => void; title?: string; /** version 16: show its signature */ sig?: boolean }) {
   const rec = SPECIES[m.form]
   const lv = levelOf(m.xp)
   const into = lv >= MAX_LEVEL || m.graduated ? 1 : (m.xp - xpForLevel(lv)) / Math.max(1, xpForLevel(lv + 1) - xpForLevel(lv))
   return (
     <button type="button" className={`pslot ${lead ? 'lead' : ''} ${m.megas?.length ? 'mega' : ''}`} style={{ ['--tc' as string]: typeColor(rec.t) } as CSSProperties} onClick={onClick} title={title ?? `${nameOf(m.form)}: open its page`}>
-      <span className="pslot-art"><img src={still(m.form, m.shiny)} alt="" width={64} height={64} className="sprite" loading="lazy" decoding="async" /></span>
+      <span className="pslot-art"><img src={still(m.form, m.shiny)} alt="" width={64} height={64} className="sprite" loading="lazy" decoding="async" />{sig && <SigBadge m={m} />}</span>
       <span className="pslot-info">
         <b className="pslot-name">{nameOf(m.form)}{m.shiny && <i className="pslot-shiny" title="Shiny">★</i>}</b>
         <span className="pslot-lv">Lv {lv}{tag && <em>{tag}</em>}</span>
@@ -793,11 +803,11 @@ export function TeamTab({ game, partnerCard, choices, onShop }: { game: Game; pa
           <>
             <Win title="Your party" tone="gold" aside={game.team.length ? `+${Math.round(game.power.team * 100)}% to every strike` : `${1 + game.team.length} of ${cap + 1}`}>
               <div className="pslots">
-                <Slot m={game.partner} lead tag="Partner" onClick={() => setPage(game.partner.uid)} />
+                <Slot m={game.partner} lead tag="Partner" sig={game.v16} onClick={() => setPage(game.partner.uid)} />
                 {Array.from({ length: cap }, (_, i) => {
                   const m = game.team[i]
                   return m
-                    ? <Slot key={m.uid} m={m} tag={m.graduated ? undefined : m.uid === game.nextUp ? 'next up' : 'raising'} onClick={() => setPage(m.uid)} title={`${nameOf(m.form)}${m.nature ? ` · ${m.nature.name}` : ''}`} />
+                    ? <Slot key={m.uid} m={m} sig={game.v16} tag={m.graduated ? undefined : m.uid === game.nextUp ? 'next up' : 'raising'} onClick={() => setPage(m.uid)} title={`${nameOf(m.form)}${m.nature ? ` · ${m.nature.name}` : ''}`} />
                     : <button key={i} type="button" className="pslot empty" disabled={free === 0} onClick={() => { setJoining(true); play('tap') }} aria-label={free ? 'Add someone to the party' : 'Empty place in the party'}><span className="pslot-art" aria-hidden /><b>{free ? '+ Add' : 'Empty'}</b></button>
                 })}
               </div>
@@ -806,6 +816,7 @@ export function TeamTab({ game, partnerCard, choices, onShop }: { game: Game; pa
                 <small>{free === 0 ? 'Nobody else is free to join yet.' : `${free} could join. A place nobody chose fills itself with the oldest ${game.v14 ? 'in the lab' : 'in My Pokemon'}.`}</small>
               </div>
             </Win>
+            <Deck game={game} />
             {partnerCard(() => setPage(game.partner.uid))}
             {!game.v14 && bench.length > 0 && (
               <Win title="Fully trained, off the party" tone="dark" aside={String(bench.length)}>

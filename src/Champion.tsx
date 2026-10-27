@@ -5,6 +5,7 @@
 // Every action here is one small ledger event (store.useItem), the same as a
 // ball thrown or a berry fed; the game is still the ledger, folded.
 import { useState, type ReactNode } from 'react'
+import { TRAINER_LEVELS } from '../core/bond.ts'
 import { nameOf, type Game, type Mon } from '../core/fold.ts'
 import { BERRY_HEARTS, BOOST, DIRE_HIT, EVO_ITEMS, FOSSILS, ITEMS, LEGEND_KEYS, LEGEND_KEY_BP, COLLECTOR_MULT, REVIVE_COST, TREASURE, collectorWants, treasurePrice, VITAMINS, VITAMIN_MAX, VITAMIN_STEP, itemName, type MarkTag } from '../core/economy.ts'
 import { FACILITIES, type Facility } from '../core/frontier.ts'
@@ -34,8 +35,10 @@ const PERK: Record<BondPerk, { name: string; icon: string; text: (bond: number) 
 
 /** The partner's hearts as five steps, each unlocking something. */
 export function BondPerks({ game }: { game: Game }) {
-  const hearts = heartsOf(game.partner)
-  const bond = bondLevel(hearts)
+  // version 16: the five perks are the trainer's, from every heart across every Pokemon; before it, the partner's
+  const v16 = game.v16
+  const bond = v16 ? game.trainer.level : bondLevel(heartsOf(game.partner))
+  const steps: readonly number[] = v16 ? TRAINER_LEVELS : HEART_LEVELS
   // the hearts themselves are on the partner card above; here, one perk is told at a time: the next one, or the one tapped
   const [pick, setPick] = useState<number | null>(null)
   const shown = pick ?? Math.min(bond, BOND_PERKS.length - 1)
@@ -43,18 +46,18 @@ export function BondPerks({ game }: { game: Game }) {
   const on = hasPerk(bond, p)
   return (
     <section className="perks" aria-label="Bond perks">
-      <span className="k-label">Bond perks with {nameOf(game.partner.form)}</span>
+      <span className="k-label">{v16 ? `Trainer perks · ${game.trainer.hearts} ♥ across all your Pokemon` : `Bond perks with ${nameOf(game.partner.form)}`}</span>
       <ol className="perk-track">
         {BOND_PERKS.map((q, i) => (
           <li key={q}>
-            <button type="button" className={`perk-node ${hasPerk(bond, q) ? 'on' : ''} ${i === shown ? 'sel' : ''}`} aria-pressed={i === shown} aria-label={`${PERK[q].name}, at ${HEART_LEVELS[i]} hearts${hasPerk(bond, q) ? ', earned' : ''}`} onClick={() => setPick(i)}>
+            <button type="button" className={`perk-node ${hasPerk(bond, q) ? 'on' : ''} ${i === shown ? 'sel' : ''}`} aria-pressed={i === shown} aria-label={`${PERK[q].name}, at ${steps[i]} hearts${hasPerk(bond, q) ? ', earned' : ''}`} onClick={() => setPick(i)}>
               <span className="perk-ico"><ItemIcon id={PERK[q].icon} size={30} /></span>
-              <small>{hasPerk(bond, q) ? '✓' : `${HEART_LEVELS[i]}♥`}</small>
+              <small>{hasPerk(bond, q) ? '✓' : `${steps[i]}♥`}</small>
             </button>
           </li>
         ))}
       </ol>
-      <p className="perk-say"><b>{PERK[p].name}</b> {on ? PERK[p].text(bond) : `At ${HEART_LEVELS[shown]} hearts: ${PERK[p].text(shown + 1)}`}</p>
+      <p className="perk-say"><b>{PERK[p].name}</b> {on ? PERK[p].text(bond) : `At ${steps[shown]} hearts${v16 ? ' in all' : ''}: ${PERK[p].text(shown + 1)}`}{v16 && on ? ' Yours for good, whoever leads.' : ''}</p>
     </section>
   )
 }
@@ -68,6 +71,12 @@ export function TodayEffects({ game }: { game: Game }) {
   for (const [tag, add] of Object.entries(t.boost ?? {})) chips.push(<span key={tag} className="fxchip boost" data-tag={tag}>{TAG_NAME[tag] ?? tag} +{pct(add ?? 0)}</span>)
   if (t.find) chips.push(<span key="find" className="fxchip find"><ItemIcon id={t.find} size={18} />Found {itemName(t.find)}</span>)
   if (game.guard) chips.push(<span key="guard" className="fxchip guard"><ItemIcon id="guard-spec" size={18} />On guard</span>)
+  // version 16: what the signatures did today
+  const st = game.sigToday
+  if (game.v16 && st.charm > 0) chips.push(<span key="charm" className="fxchip sig"><ItemIcon id="pink-scarf" size={18} />Charm −{st.charm} HP</span>)
+  if (game.v16 && st.insight > 0) chips.push(<span key="insight" className="fxchip sig"><ItemIcon id="twistedspoon" size={18} />Insight +{st.insight} research</span>)
+  if (game.v16 && st.forage) chips.push(<span key="forage" className="fxchip sig"><ItemIcon id={st.forage} size={18} />Forage: {itemName(st.forage)}</span>)
+  if (game.v16 && st.dream > 0) chips.push(<span key="dream" className="fxchip sig"><ItemIcon id="blackglasses" size={18} />Dream: {st.dream} ♥</span>)
   return chips.length ? <div className="fxchips">{chips}</div> : null
 }
 
@@ -77,7 +86,7 @@ export function BattlePrep({ game }: { game: Game }) {
   const have = (id: string) => game.inv[id] ?? 0
   const boosts = Object.keys(BOOST).filter((id) => have(id) > 0)
   const dires = Object.keys(DIRE_HIT).filter((id) => have(id) > 0)
-  const bond = bondLevel(heartsOf(game.partner))
+  const bond = game.v16 ? game.trainer.level : bondLevel(heartsOf(game.partner))
   const crit = (hasPerk(bond, 'focus') ? CRIT_BASE : 0) + (game.partner.held === 'scope-lens' ? 0.1 : 0)
   const today = game.today.boost ?? {}
   const items = [...boosts, ...dires, ...(have('guard-spec') ? ['guard-spec'] : []), ...(have('honey') ? ['honey'] : [])]
