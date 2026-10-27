@@ -20,6 +20,7 @@ import { Recap } from './Recap.tsx'
 import { BossLog, BossTile } from './Boss.tsx'
 import { fitOf, useBoxes } from './Fit.tsx'
 import { Calendar } from './screens/Calendar.tsx'
+import { TodayWin } from './screens/Today.tsx'
 import { HpBar } from './screens/HpBar.tsx'
 import { hpTone } from './screens/hp.ts'
 import { typeColor } from './screens/types.ts'
@@ -461,6 +462,7 @@ function PartnerTab({ game, facts, nights, onShop }: { game: Game; facts: DayFac
         <Talk game={game} pillars={habits.filter((h) => h.pillar)} sleepH={habits.find((h) => h.id === SLEEP_HABIT && !h.measured)} />
       </div>
       <div className="day-side">
+      <TodayWin game={game} />
       <Pace game={game} />
       <Win title="Throw and feed" tone="gold" aside={game.wild && !game.wild.caught ? `${nameOf(game.wild.form)} · ${game.wild.hp} HP` : undefined}>
         <Actions game={game} onShop={onShop} />

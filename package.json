@@ -10,7 +10,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "test": "node --test core/fold.test.ts core/v13.test.ts core/v14.test.ts tools/fixtures.test.mjs tools/styles.test.mjs tools/sky.test.mjs tools/screens.test.mjs",
+    "test": "node --test core/fold.test.ts core/v13.test.ts core/v14.test.ts core/v15.test.ts tools/fixtures.test.mjs tools/styles.test.mjs tools/sky.test.mjs tools/screens.test.mjs",
     "core": "node tools/build-core.mjs",
     "species": "node tools/build-species.mjs",
     "shots": "node tools/shots.mjs",

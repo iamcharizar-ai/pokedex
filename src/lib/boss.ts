@@ -8,7 +8,7 @@
 // Nothing here is random at run time: every draw is seeded by the week, so two
 // devices opened at the same moment write the same card.
 import {
-  BOSS_KINDS, BOSS_PARTY, BOSS_SHARE, LEGENDARY_EVERY_BOSS, bossLevel,
+  BOSS_KINDS, BOSS_SHARE, bossNeed, LEGENDARY_EVERY_BOSS, bossLevel,
   type BossCard, type BossKind, type BossTask,
 } from '../../core/boss.ts'
 import { rng } from '../../core/economy.ts'
@@ -75,7 +75,7 @@ function lastForm(base: string, r: () => number, mega: boolean): { form: string;
  * the week is already too far gone. `force` skips both (the dev preview).
  */
 export function planCard(week: string, today: string, game: Game, input: FactsInput, events: LedgerEvent[], bossesSoFar: number, force = false): BossCard | null {
-  if (!force && (game.bossParty < BOSS_PARTY || today > addDays(week, PLAN_BY))) return null
+  if (!force && (game.bossParty < bossNeed(today) || today > addDays(week, PLAN_BY))) return null
   const r = rng(`boss:${week}`)
   // who it is: a rare line from an open region, and every eighth one a legendary
   const legendary = (bossesSoFar + 1) % LEGENDARY_EVERY_BOSS === 0
