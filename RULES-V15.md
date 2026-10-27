@@ -1,6 +1,6 @@
 # Rules version 15: the first weeks of play, read back
 
-In force from **28 Oct 2026** (`V15_START` in `core/rules.ts`). Every day before it folds exactly as it did. Why: `AUDIT-2026-10-27.md`, from the real ledger.
+In force from **27 Oct 2026** (`V15_START` in `core/rules.ts`). Every day before it folds exactly as it did. Why: `AUDIT-2026-10-27.md`, from the real ledger.
 
 ## 1. Sleep alone does not make a day
 Last night's Sleep counts as a pillar only on a day with another pillar done. On a day with nothing else, the night still pays its XP, but the day has no pillar: the partner can doze, and no heart, research or "day with a pillar" comes from it. The bedtime itself is not checked.

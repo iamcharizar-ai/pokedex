@@ -1,6 +1,6 @@
 # Rules version 16: bonds that travel
 
-In force from **28 Oct 2026** (`V16_START` in `core/rules.ts`), the same day as version 15. Every day before it folds exactly as it did. Why: `GAME-DESIGN-2026-10-27.md`.
+In force from **27 Oct 2026** (`V16_START` in `core/rules.ts`), the same day as version 15. Every day before it folds exactly as it did. Why: `GAME-DESIGN-2026-10-27.md`.
 
 Under version 14 a bond only counted for the partner, the partner changed at graduation, and every partner climbed the same five perks. So feeding anyone but the partner was a waste, and graduating (the thing the game is built on) threw the bond away. Version 16 splits the bond in two: perks that are **yours**, and a signature that is **each Pokemon's own**.
 

@@ -6,7 +6,7 @@ import { addDays, type DayFacts, type HabitFact } from './facts.ts'
 import { foldGame } from './fold.ts'
 import { HEART_LEVELS, V16_START, bondLevel } from './rules.ts'
 import { SIG_CAP, SIG_PARTY, TRAINER_LEVELS, didWork, signatureOf, trainerLevel } from './bond.ts'
-import { BATTLE_SHELF_V16, battleShelf, martDeals } from './economy.ts'
+import { BATTLE_SHELF_V16, PRICED_BY_HEARTS, battleShelf, martDeals, offerFor } from './economy.ts'
 
 const H = (id: string, tag: HabitFact['tag'], worth: number, frac: number, extra: Partial<HabitFact> = {}): HabitFact => ({ id, tag, worth, pillar: worth === 100, frac, done: frac >= 1, ...extra })
 type Kinds = Partial<Record<'code' | 'gym' | 'guitar' | 'arbor' | 'sleep' | 'routine', boolean>>
@@ -105,4 +105,11 @@ test('kinds of work: a pillar done, a night of 80+, or half the routine', () => 
   assert.ok(didWork('sleep', d.habits))
   assert.ok(!didWork('routine', d.habits))
   assert.ok(didWork('routine', dayOf(V16_START, { routine: true }).habits))
+})
+
+test('a purchase replays at the price it was made at: friendship berries before PRICED_BY_HEARTS cost 2 marks', () => {
+  assert.equal(offerFor('fitness', 'kelpsy-berry', addDays(PRICED_BY_HEARTS, -1), 3)?.offer.marks, 2)
+  assert.equal(offerFor('fitness', 'kelpsy-berry', PRICED_BY_HEARTS, 3)?.offer.marks, 5)
+  // the same currency only: the Garden's Sitrus is marks, before and after
+  assert.equal(offerFor('arbor', 'sitrus-berry', addDays(PRICED_BY_HEARTS, -1), 3)?.offer.coins, undefined)
 })
