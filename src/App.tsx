@@ -20,7 +20,7 @@ import { Recap } from './Recap.tsx'
 import { BossLog, BossTile } from './Boss.tsx'
 import { fitOf, useBoxes } from './Fit.tsx'
 import { Calendar } from './screens/Calendar.tsx'
-import { TodayWin } from './screens/Today.tsx'
+import { EggCell, reachNote, tabTodo } from './screens/Today.tsx'
 import { HpBar } from './screens/HpBar.tsx'
 import { hpTone } from './screens/hp.ts'
 import { typeColor } from './screens/types.ts'
@@ -145,8 +145,8 @@ function Scene({ game }: { game: Game }) {
         <>
           <div className="hpbox foe-box">
             <div className="hp-top">
-              <span className="hp-name">{wild.caught ? nameOf(wild.form) : `Wild ${nameOf(wild.form)}`}{wild.shiny && <span className="chip">shiny</span>}{wild.rarity !== 'C' && <span className={`chip r-${wild.rarity}`}>{RARITY[wild.rarity]}</span>}</span>
-              <span className="hp-lv ballname"><Ball ball={today.ball} size={18} />{wild.caught ? 'Caught' : BALL_NAME[today.ball]}</span>
+              <span className="hp-name">{!wild.caught && <span className="hp-wild">Wild </span>}{nameOf(wild.form)}{wild.shiny && <span className="chip">shiny</span>}{wild.rarity !== 'C' && <span className={`chip r-${wild.rarity}`}>{RARITY[wild.rarity]}</span>}</span>
+              <span className="hp-lv ballname" title={wild.caught ? 'Caught' : BALL_NAME[today.ball]}><Ball ball={today.ball} size={18} /><span className="ballname-txt">{wild.caught ? 'Caught' : BALL_NAME[today.ball]}</span></span>
             </div>
             <HpBar variant="game" value={wild.hp} max={wild.max} name="The wild Pokemon" />
             <div className="hp-sub"><span>{wild.caught ? 'In My Pokemon' : today.hit > 0 ? `Today −${today.hit}` : ''}{!wild.caught && wild.leavesIn !== undefined && wild.leavesIn <= 3 && <b className="leaving"> {wild.leavesIn === 0 ? 'Gets away tomorrow' : `Gets away in ${wild.leavesIn + 1} days`}</b>}</span><b>{wild.hp} / {wild.max}</b></div>
@@ -253,7 +253,7 @@ function Pace({ game }: { game: Game }) {
   const missing = MOMENTUM_WINDOW - prev.length
   const toLevel = Math.max(0, Math.ceil(xpForLevel(game.next.level) - game.partner.xp))
   return (
-    <div className="pace">
+    <div className={`pace ${game.egg ? 'has-egg' : ''}`}>
       <div className="pace-cell" title="Days with two pillars in the last seven: 3 make XP x1.2, 5 x1.35, 7 x1.5. It slides back a day at a time, never resets.">
         <span className="k-label">Momentum</span>
         <span className="pace-week" aria-label={`${momentum.days} of the last 7 days counted`}>
@@ -269,6 +269,7 @@ function Pace({ game }: { game: Game }) {
         <span className="k-label">{game.next.what === 'evolve' ? 'Evolves' : game.next.what === 'master' ? 'Level 100' : 'Fully trained'} at Lv {game.next.level}</span>
         <b className="pace-big">{toLevel.toLocaleString('en-IN')}<small> XP to go</small></b>
       </div>
+      {game.egg && <EggCell game={game} />}
     </div>
   )
 }
@@ -460,11 +461,12 @@ function PartnerTab({ game, facts, nights, onShop }: { game: Game; facts: DayFac
         <SlipNote game={game} />
         {game.warnings.map((w) => <p key={w} className="notice warn">{w}</p>)}
         <Talk game={game} pillars={habits.filter((h) => h.pillar)} sleepH={habits.find((h) => h.id === SLEEP_HABIT && !h.measured)} />
+        {/* on a wide screen Last night stays with the day; on a phone it comes last (today.css) */}
+        {game.sleep.state === 'measured' && <div className="day-late"><SleepWin game={game} nights={nights} /></div>}
       </div>
       <div className="day-side">
-      <TodayWin game={game} />
       <Pace game={game} />
-      <Win title="Throw and feed" tone="gold" aside={game.wild && !game.wild.caught ? `${nameOf(game.wild.form)} · ${game.wild.hp} HP` : undefined}>
+      <Win title="Throw and feed" tone="gold" aside={reachNote(game)}>
         <Actions game={game} onShop={onShop} />
       </Win>
       <BattlePrep game={game} />
@@ -474,7 +476,6 @@ function PartnerTab({ game, facts, nights, onShop }: { game: Game; facts: DayFac
           {game.boss && <BossTile game={game} />}
         </div>
       </Win>
-      {game.sleep.state === 'measured' && <SleepWin game={game} nights={nights} />}
       </div>
     </div>
   )
@@ -626,10 +627,13 @@ function DexEntry({ game, id, owned, onClose }: { game: Game; id: string; owned:
   )
 }
 
+const DEX_SHOW_KEY = 'pokedex.dexshow.v1'
 function DexTab({ game }: { game: Game }) {
   const [region, setRegion] = useState(1)
   const [open, setOpen] = useState<string | null>(null)
-  const [show, setShow] = useState<Show>('all')
+  // the filter is remembered on this device, so a Pokedex of mostly silhouettes can stay on what you have
+  const [show, setShowNow] = useState<Show>(() => { try { const v = localStorage.getItem(DEX_SHOW_KEY); return v === 'own' || v === 'seen' || v === 'unseen' || v === 'all' ? v : 'all' } catch { return 'all' } })
+  const setShow = (v: Show) => { setShowNow(v); try { localStorage.setItem(DEX_SHOW_KEY, v) } catch { /* only forgotten */ } }
   const owned = useMemo(() => {
     const m = new Map<string, Mon>()
     for (const x of [...game.graduates, game.partner, ...game.queue]) for (const f of x.path) m.set(f, x)
@@ -1069,6 +1073,9 @@ const ICON: Record<Tab, ReactNode> = Object.fromEntries(
   (Object.keys(TAB_SPRITE) as Tab[]).map((t) => [t, <img key={t} src={`/sprites/items/${TAB_SPRITE[t]}.png`} width={48} height={48} alt="" className="tabicon pix" draggable={false} />]),
 ) as Record<Tab, ReactNode>
 
+/** 16,510 → 16.5k: for a pill on a narrow screen. Below 10,000 the number is shown as it is. */
+const short = (n: number): string => (n < 10_000 ? n.toLocaleString('en-IN') : n < 1_000_000 ? `${(n / 1000).toFixed(n < 100_000 ? 1 : 0).replace(/\.0$/, '')}k` : `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`)
+
 /** Always in view: the partner's face in a ring that fills with its level, the two things you spend, Collect, and the season. */
 function TopBar({ game, today, status, loading, onHelp }: { game: Game; today: string; status: string[]; loading: boolean; onHelp: () => void }) {
   const seen = Object.keys(game.dex).filter((id) => !SPECIES[id]?.f).length
@@ -1090,7 +1097,7 @@ function TopBar({ game, today, status, loading, onHelp }: { game: Game; today: s
       <div className="tb-main">
         <div className="tb-row">
           {v5
-            ? <><KPill icon={<Coin size={28} />}><span data-reward-target="coins" title="Coins: for showing up, quests, the season, chests and the Professor"><Count value={game.wallet.coins} /></span></KPill><KPill icon={<Gem size={28} />}><span data-reward-target="gems" title="Gems: from feats, milestones and weekly quests"><Count value={game.wallet.gems} /></span></KPill><CollectButton game={game} today={today} /></>
+            ? <><KPill icon={<Coin size={28} />}><span data-reward-target="coins" title={`${game.wallet.coins.toLocaleString('en-IN')} coins: for showing up, quests, the season, chests and the Professor`}><span className="num-full"><Count value={game.wallet.coins} /></span><span className="num-short">{short(game.wallet.coins)}</span></span></KPill><KPill icon={<Gem size={28} />}><span data-reward-target="gems" title={`${game.wallet.gems.toLocaleString('en-IN')} gems: from feats, milestones and weekly quests`}><span className="num-full"><Count value={game.wallet.gems} /></span><span className="num-short">{short(game.wallet.gems)}</span></span></KPill><CollectButton game={game} today={today} /></>
             : <KPill icon={<Ball ball="poke" size={28} />}><span title="Pokemon seen">{seen}</span></KPill>}
           <span className="tb-gap" />
           <button type="button" className="k-btn help" aria-label="How it works" onClick={onHelp}>?</button>
@@ -1136,6 +1143,7 @@ export default function App() {
     go(dx < 0 ? 1 : -1)
   }
   const { game } = view
+  const todo = useMemo(() => tabTodo(game), [game])
   // the first-run tour: for a game that has not started, once on this device (or when asked for, from the help window)
   const fresh = !game.days.some((d) => d.xp > 0 || d.ticked > 0)
   const tourDone = (() => { try { return localStorage.getItem(TOUR_KEY) === '1' } catch { return false } })()
@@ -1173,7 +1181,11 @@ export default function App() {
         </div>
       )}
       <nav className="navbar" role="tablist" aria-label="Sections">
-        {TABS.map(([id, text]) => <button key={id} role="tab" aria-selected={tab === id} aria-label={text} data-reward-target={id === 'team' ? 'bag' : undefined} className={tab === id ? 'on' : ''} onClick={(e) => { setTab(id); play('tap'); tapPop(e.currentTarget.querySelector('.tabicon')); window.scrollTo({ top: 0 }) }}>{ICON[id]}{text}</button>)}
+        {TABS.map(([id, text]) => {
+          // a dot when another tab has something waiting on you (screens/Today.tsx)
+          const why = loading || tab === id ? null : (todo as Record<string, string | null>)[id] ?? null
+          return <button key={id} role="tab" aria-selected={tab === id} aria-label={text} aria-description={why ?? undefined} title={why ?? undefined} data-reward-target={id === 'team' ? 'bag' : undefined} className={`${tab === id ? 'on' : ''} ${why ? 'todo' : ''}`} onClick={(e) => { setTab(id); play('tap'); tapPop(e.currentTarget.querySelector('.tabicon')); window.scrollTo({ top: 0 }) }}>{ICON[id]}{text}</button>
+        })}
       </nav>
       {!loading && <Recap game={game} today={view.today} />}
     </div>

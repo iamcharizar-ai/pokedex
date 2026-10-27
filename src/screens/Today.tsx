@@ -1,17 +1,14 @@
-// Today (home): the few things worth doing now, picked from the game, so the
-// front page answers "what is there to do?" without opening anything. Each row
-// is a fact the game already knows and the page does not already show: a catch
-// within reach, the egg's steps. The leader and the rewards have their own
-// places on this page, so they are not repeated here. Nothing here is a new rule.
-import { Win } from '../App.tsx'
+// Small things the page did not already say:
+// - whether the balls in the bag can finish the wild Pokemon (the heading of
+//   Throw and feed; its HP is already on the scene, so it is not repeated),
+// - the egg's steps, as a tile beside Momentum and Evolves,
+// - and for the tab bar, which other tab has something you can do right now.
+// Nothing here is a new rule: all of it is read from the game as it stands.
 import { ItemIcon } from '../Item.tsx'
-import { KBar } from '../Kit.tsx'
-import { BALLS, itemName, throwHp } from '../../core/economy.ts'
-import { nameOf, type Game } from '../../core/fold.ts'
+import { BALLS, EVO_ITEMS, FOSSILS, REVIVE_COST, collectorWants, itemName, throwHp } from '../../core/economy.ts'
+import type { Game } from '../../core/fold.ts'
 import { SPECIES } from '../../core/species.ts'
-import { STEPS_GOAL } from '../../core/rules.ts'
-
-interface Row { key: string; icon: string; head: string; sub: string; bar?: { value: number; max: number } }
+import { STEPS_GOAL, V14_START } from '../../core/rules.ts'
 
 /** What a ball would take off the wild Pokemon today. */
 const hitOf = (game: Game, ball: string): number => {
@@ -21,40 +18,49 @@ const hitOf = (game: Game, ball: string): number => {
   return Math.min(w.hp, throwHp(ball, { types: [r.t, r.t2], from: w.from, owned: Boolean(game.dex[w.form]?.own) }, game.today.day))
 }
 
-export function todayRows(game: Game): Row[] {
-  const rows: Row[] = []
+/** "A Great Ball catches it" / "Your balls can catch it", or nothing when they cannot. A Master Ball always can, so it is left out: it is not spent lightly. */
+export function reachNote(game: Game): string | undefined {
   const w = game.wild
-  if (w && !w.caught) {
-    const balls = Object.keys(BALLS).filter((b) => (game.inv[b] ?? 0) > 0 && BALLS[b].hp < 1_000_000)
-    const best = balls.sort((a, b) => hitOf(game, b) - hitOf(game, a))[0]
-    const reach = balls.reduce((n, b) => n + hitOf(game, b) * (game.inv[b] ?? 0), 0)
-    const name = nameOf(w.form)
-    const leaving = w.leavesIn !== undefined && w.leavesIn <= 3 ? ` It gets away in ${w.leavesIn + 1} day${w.leavesIn ? 's' : ''}.` : ''
-    if (best && hitOf(game, best) >= w.hp) rows.push({ key: 'wild', icon: best, head: `Catch ${name} now`, sub: `A ${itemName(best)} finishes it (${w.hp} HP left).${leaving}` })
-    else if (best && reach >= w.hp) rows.push({ key: 'wild', icon: best, head: `${name} is within reach`, sub: `${w.hp} HP left and the balls in your bag can take it, ${hitOf(game, best)} at a time.${leaving}` })
-    else rows.push({ key: 'wild', icon: 'poke-ball', head: `${name}: ${w.hp} HP left`, sub: `Today's work wears it down; a ball finishes it.${leaving}` })
-  }
-  if (game.egg) {
-    const left = Math.max(0, game.egg.need - game.egg.have)
-    const set = game.egg.since === game.today.day
-    rows.push({ key: 'egg', icon: 'rare-egg', head: left <= STEPS_GOAL ? 'The egg hatches soon' : 'The egg is warming', sub: set ? 'Set up today: its steps count from tomorrow.' : `${left.toLocaleString()} steps to go (up to ${STEPS_GOAL.toLocaleString()} a day count).`, bar: { value: game.egg.have, max: game.egg.need } })
-  }
-  return rows
+  if (!w || w.caught) return undefined
+  const balls = Object.keys(BALLS).filter((b) => (game.inv[b] ?? 0) > 0 && BALLS[b].hp < 1_000_000).sort((a, b) => hitOf(game, b) - hitOf(game, a))
+  if (!balls.length) return undefined
+  if (hitOf(game, balls[0]) >= w.hp) return `A ${itemName(balls[0])} catches it`
+  const reach = balls.reduce((n, b) => n + hitOf(game, b) * (game.inv[b] ?? 0), 0)
+  return reach >= w.hp ? 'Your balls can catch it' : undefined
 }
 
-export function TodayWin({ game }: { game: Game }) {
-  const rows = todayRows(game)
-  if (rows.length === 0) return null
+/** The egg as a pace tile: how far it is, and what is left. */
+export function EggCell({ game }: { game: Game }) {
+  const egg = game.egg
+  if (!egg) return null
+  const left = Math.max(0, egg.need - egg.have)
+  const pct = egg.need > 0 ? Math.min(1, egg.have / egg.need) : 0
+  const set = egg.since === game.today.day
   return (
-    <Win title="Today" tone="green" aside={`${rows.length} thing${rows.length > 1 ? 's' : ''}`}>
-      <ul className="todaylist">
-        {rows.map((r) => (
-          <li key={r.key} className="todayrow">
-            <ItemIcon id={r.icon} size={32} />
-            <span className="todaytxt"><b>{r.head}</b><small>{r.sub}</small>{r.bar && <KBar value={r.bar.value} max={r.bar.max} kind={r.key === 'egg' ? 'gold' : 'hp'} label={r.key === 'egg' ? `${r.bar.value.toLocaleString()} / ${r.bar.max.toLocaleString()} steps` : `${Math.round((r.bar.value / r.bar.max) * 100)}% down`} />}</span>
-          </li>
-        ))}
-      </ul>
-    </Win>
+    <div className="pace-cell pace-egg" title={`Every step the band counts warms it, up to ${STEPS_GOAL.toLocaleString()} a day. ${egg.have.toLocaleString()} of ${egg.need.toLocaleString()}.`}>
+      <span className="k-label">{left <= STEPS_GOAL ? 'Egg hatches soon' : 'Egg'}</span>
+      <span className="pace-eggrow">
+        <ItemIcon id="rare-egg" size={28} />
+        <b className="pace-big">{set ? 'From tomorrow' : <>{left.toLocaleString()}<small> steps</small></>}</b>
+      </span>
+      <span className="pace-eggbar" role="progressbar" aria-valuemin={0} aria-valuemax={egg.need} aria-valuenow={egg.have} aria-label="How warm the egg is"><i style={{ width: `${pct * 100}%` }} /></span>
+    </div>
   )
+}
+
+/**
+ * Which tabs have something you can do now, and what, for a dot on the tab bar.
+ * Only things that are waiting on you and would be missed: a fossil you can
+ * afford to bring back, a treasure the Collector pays double for today, a stone
+ * that evolves one of your Pokemon. Collect has its own place in the top bar.
+ */
+export function tabTodo(game: Game): { shop: string | null; shopAt: 'coins' | 'gems' | null; team: string | null } {
+  const has = (id: string) => (game.inv[id] ?? 0) > 0
+  const fossil = Object.keys(FOSSILS).find(has)
+  const wanted = game.today.day >= V14_START ? collectorWants(game.today.day).find(has) : undefined
+  const shop = fossil && game.wallet.coins >= REVIVE_COST ? `The Lab can bring your ${itemName(fossil)} back` : wanted ? `The Collector pays double for your ${itemName(wanted)} today` : null
+  const stone = Object.entries(EVO_ITEMS).find(([id, e]) => has(id) && game.queue.some((m) => (SPECIES[m.form]?.e ?? []).some((f) => SPECIES[f] && (e.types.includes(SPECIES[f].t) || (SPECIES[f].t2 !== undefined && e.types.includes(SPECIES[f].t2!))))))
+  const team = stone ? `A ${itemName(stone[0])} can evolve one of your Pokemon` : null
+  // which Shop counter it is at: the Lab is with the gems, the Collector with the coins
+  return { shop, shopAt: !shop ? null : fossil && game.wallet.coins >= REVIVE_COST ? 'gems' : 'coins', team }
 }

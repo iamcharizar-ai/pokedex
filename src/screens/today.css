@@ -137,6 +137,11 @@
 
 /* ── two columns where there is room: the scene and the day on the left, everything you can act on at the right ── */
 .day-main, .day-side { display: grid; gap: var(--s-5); align-content: start; min-width: 0; }
+/* on a phone the two columns melt into one list, and Last night goes to the end of it */
+@media (max-width: 899px) {
+  .day-main, .day-side { display: contents; }
+  .day-late { order: 1; }
+}
 .day-main > .dayboard { margin-top: calc(var(--s-5) * -1 + var(--s-2)); }
 @media (min-width: 900px) {
   .daypage { grid-template-columns: minmax(0, 1.55fr) minmax(320px, 1fr); align-items: start; gap: var(--s-6); }
@@ -173,3 +178,17 @@
 .pillar.waiting .pillar-ring > img { opacity: 0.5; }
 .pillar.waiting small { color: var(--text-3); white-space: normal; }
 @media (max-width: 560px) { .pillar b { font-size: 13.5px; letter-spacing: -0.01em; } .pillar small { font-size: 11px; } }
+
+/* ── the egg, as a third pace tile ── */
+.pace.has-egg { grid-template-columns: 1.3fr 1fr 1fr; }
+.pace-eggrow { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.pace-eggrow .pace-big { white-space: nowrap; }
+.pace-egg .pace-big { font-size: 20px; }
+.pace-eggbar { display: block; height: 6px; border-radius: 99px; background: var(--well); overflow: hidden; }
+.pace-eggbar i { display: block; height: 100%; border-radius: inherit; background: var(--tone-gold); box-shadow: 0 0 8px var(--gold-glow); }
+@media (max-width: 560px) {
+  .pace.has-egg { grid-template-columns: 1fr 1fr; row-gap: var(--s-3); }
+  .pace.has-egg .pace-cell:first-child { grid-column: 1 / -1; padding-bottom: var(--s-3); border-bottom: 1px solid var(--hair); }
+  .pace.has-egg .pace-cell:nth-child(2) { border-left: 0; }
+}
+@media (min-width: 900px) { .pace.has-egg { grid-template-columns: 1fr; } }

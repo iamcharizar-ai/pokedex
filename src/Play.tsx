@@ -15,6 +15,7 @@ import { Ball, BallItem, MegaStone, megaStoneName } from './Ball.tsx'
 import { Forge } from './screens/Forge.tsx'
 import { Sheet } from './screens/Sheet.tsx'
 import { Nursery } from './screens/Nursery.tsx'
+import { tabTodo } from './screens/Today.tsx'
 import { Coin, EggIcon, Gem, ItemIcon, MarkIcon } from './Item.tsx'
 import { KBar, KButton } from './Kit.tsx'
 import { aBall, fmtDay, still } from './lib/art.ts'
@@ -218,8 +219,11 @@ function whyNot(game: Game, o: Offer, shop: ShopId): string | null {
 
 /** A shelf of goods: each one standing on a plank with its price tag hanging under it. Tap one to see what it does and buy it.
     `shop` is told to the game so a price is taken from the right purse. */
-function Shelf({ game, offers, shop }: { game: Game; offers: Offer[]; shop: ShopId }) {
+/** `fold`: a long shelf shows this many until it is opened, so one shelf does not bury the ones under it. */
+function Shelf({ game, offers: all, shop, fold, what = 'items' }: { game: Game; offers: Offer[]; shop: ShopId; fold?: number; what?: string }) {
   const [open, setOpen] = useState<string | null>(null)
+  const [more, setMore] = useState(false)
+  const offers = fold && !more ? all.slice(0, fold) : all
   const [bump, setBump] = useState<string | null>(null)
   const tag = MARK_TAGS.includes(shop as MarkTag) ? (shop as MarkTag) : undefined
   const buy = (item: string) => {
@@ -227,7 +231,7 @@ function Shelf({ game, offers, shop }: { game: Game; offers: Offer[]; shop: Shop
     buyPop(document.querySelector(`[data-ware="${shop}:${item}"] .ware-art`))
     setBump(item); setTimeout(() => setBump(null), 350)
   }
-  const o = offers.find((x) => x.item === open)
+  const o = all.find((x) => x.item === open)
   return (
     <>
       <div className="shelf2">
@@ -248,6 +252,7 @@ function Shelf({ game, offers, shop }: { game: Game; offers: Offer[]; shop: Shop
           )
         })}
       </div>
+      {fold !== undefined && all.length > fold && <button type="button" className="k-btn shelf-more" aria-expanded={more} onClick={() => { setMore(!more); play('tap') }}>{more ? 'Fewer' : `All ${all.length} ${what}`}</button>}
       {o && (
         <Sheet title={itemName(o.item)} onClose={() => setOpen(null)}>
           <div className="ware-sheet">
@@ -328,6 +333,9 @@ const COUNTER: Record<Counter, Place[]> = { coins: ['mart', 'collector'], gems: 
 export function ShopTab({ game }: { game: Game }) {
   const [which, setWhich] = useState<Counter>('coins')
   const show = (s: Place) => COUNTER[which].includes(s) && (game.v13 || !['bp', 'collector', 'lab'].includes(s))
+  // a dot on the counter where something is waiting (screens/Today.tsx)
+  const { shop: waiting, shopAt } = tabTodo(game)
+  const dot: Record<Counter, string | null> = { coins: shopAt === 'coins' ? waiting : null, gems: shopAt === 'gems' ? waiting : null, marks: null }
   const chips: [Counter, string, ReactNode][] = [
     ['coins', 'Coins', <Coin key="m" size={30} />],
     ['gems', game.v13 ? 'Gems & BP' : 'Gems', <Gem key="r" size={30} />],
@@ -338,7 +346,7 @@ export function ShopTab({ game }: { game: Game }) {
       {(
         <nav className="pmenu" style={{ ['--n' as string]: chips.length } as CSSProperties} role="tablist" aria-label="Shops" data-noswipe>
           {chips.map(([id, name, icon]) => (
-            <button key={id} type="button" role="tab" aria-selected={which === id} className={`pmenu-btn ${which === id ? 'on' : ''}`} onClick={() => { setWhich(id); play('tap') }}>
+            <button key={id} type="button" role="tab" aria-selected={which === id} title={dot[id] ?? undefined} className={`pmenu-btn ${which === id ? 'on' : ''} ${dot[id] && which !== id ? 'todo' : ''}`} onClick={() => { setWhich(id); play('tap') }}>
               <span className="pmenu-icon">{icon}</span>
               <b>{name}</b>
             </button>
@@ -358,7 +366,7 @@ export function ShopTab({ game }: { game: Game }) {
           {game.v13 && (
             <>
               <span className="k-label shelf-label">Battle items · X items boost one kind of work for a day; Dire Hit, Guard Spec, Honey</span>
-              <Shelf game={game} offers={BATTLE_SHELF} shop="mart" />
+              <Shelf game={game} offers={BATTLE_SHELF} shop="mart" fold={3} what="battle items" />
             </>
           )}
         </Win>
@@ -366,7 +374,6 @@ export function ShopTab({ game }: { game: Game }) {
       {show('rare') && (
         <Win title="Rare things" tone="blue" aside={<><Gem size={22} /> <Count value={game.wallet.gems} /></>}>
           <Shelf game={game} offers={game.v13 ? [...RARE_SHELF, ...RARE_SHELF_V13] : RARE_SHELF} shop="rare" />
-          {game.egg && <div className="eggrow"><span className="warm"><EggIcon size={44} /></span><div style={{ flex: 1 }}><span className="k-label">An egg is being kept warm</span><KBar value={game.egg.have} max={game.egg.need} kind="gold" label={`${game.egg.have.toLocaleString()} / ${game.egg.need.toLocaleString()} steps`} /></div></div>}
         </Win>
       )}
       {show('rare') && <IncenseWin game={game} />}
@@ -375,11 +382,11 @@ export function ShopTab({ game }: { game: Game }) {
           <span className="k-label shelf-label">Held items · each one does something of its own</span>
           <Shelf game={game} offers={BP_SHELF.filter((o) => ITEMS[o.item]?.kind === 'held')} shop="bp" />
           <span className="k-label shelf-label">Battle items, evolution items and a Rare Candy</span>
-          <Shelf game={game} offers={BP_SHELF.filter((o) => ['battle', 'evo', 'candy'].includes(ITEMS[o.item]?.kind))} shop="bp" />
+          <Shelf game={game} offers={BP_SHELF.filter((o) => ['battle', 'evo', 'candy'].includes(ITEMS[o.item]?.kind))} shop="bp" fold={6} what="of them" />
           <span className="k-label shelf-label">Fossils · the Lab brings them back</span>
           <Shelf game={game} offers={BP_SHELF.filter((o) => ITEMS[o.item]?.kind === 'fossil')} shop="bp" />
           <span className="k-label shelf-label">Legend keys · each calls a legend as the next wild Pokemon</span>
-          <Shelf game={game} offers={BP_SHELF.filter((o) => ITEMS[o.item]?.kind === 'legend' || o.item === 'master-ball')} shop="bp" />
+          <Shelf game={game} offers={BP_SHELF.filter((o) => ITEMS[o.item]?.kind === 'legend' || o.item === 'master-ball')} shop="bp" fold={6} what="legend keys" />
         </Win>
       )}
       {show('collector') && <CollectorWin game={game} />}
@@ -765,6 +772,7 @@ export function TeamTab({ game, partnerCard, choices, onShop }: { game: Game; pa
   const free = game.graduates.filter((m) => !inTeam.has(m.uid)).length + (open ? game.queue.filter((m) => !inTeam.has(m.uid)).length : 0)
   const bench = game.graduates.filter((m) => !inTeam.has(m.uid))
   const items = Object.keys(game.inv).filter((id) => (game.inv[id] ?? 0) > 0 && ITEMS[id]).length
+  const todo = tabTodo(game).team
   const menu: [PartyView, string, string, ReactNode][] = [
     ['team', 'Team', 'poke-ball', `${1 + game.team.length}/${cap + 1}`],
     ['lab', game.v14 ? 'Lab' : 'Box', game.v14 ? 'journal' : 'poke-ball', game.v14 ? `R${game.research.rank}` : game.queue.length || null],
@@ -774,7 +782,7 @@ export function TeamTab({ game, partnerCard, choices, onShop }: { game: Game; pa
     <div className="partypage">
       <nav className="pmenu" style={{ ['--n' as string]: menu.length } as CSSProperties} role="tablist" aria-label="Party" data-noswipe>
         {menu.map(([id, name, icon, badge]) => (
-          <button key={id} type="button" role="tab" aria-selected={view === id} className={`pmenu-btn ${view === id ? 'on' : ''}`} onClick={() => { setView(id); play('tap') }}>
+          <button key={id} type="button" role="tab" aria-selected={view === id} title={id === 'items' && todo ? todo : undefined} className={`pmenu-btn ${view === id ? 'on' : ''} ${id === 'items' && todo && view !== id ? 'todo' : ''}`} onClick={() => { setView(id); play('tap') }}>
             <span className="pmenu-icon"><ItemIcon id={icon} size={30} />{badge !== null && <i className="pmenu-badge">{badge}</i>}</span>
             <b>{name}</b>
           </button>

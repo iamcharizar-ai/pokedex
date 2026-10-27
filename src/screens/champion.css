@@ -3,20 +3,18 @@
 
 /* ── bond perks (Party, under the partner) ── */
 .perks { display: grid; gap: var(--s-2); margin: var(--s-3) 0; padding: var(--s-3); border-radius: 16px; background: linear-gradient(160deg, rgba(255, 120, 170, 0.12), rgba(8, 12, 30, 0.35)); border: 1px solid rgba(255, 160, 200, 0.25); }
-.perks-h { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s-2); flex-wrap: wrap; }
-.perks-h b { font-family: var(--k-face); font-weight: 400; font-size: 16px; color: #ffc4dc; }
-.perk-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.perk { display: grid; grid-template-columns: 40px 1fr auto; align-items: center; gap: var(--s-2); padding: 6px 10px; border-radius: 12px; background: rgba(8, 12, 30, 0.35); opacity: 0.55; }
-.perk.on { opacity: 1; background: rgba(255, 120, 170, 0.16); box-shadow: inset 0 0 0 1px rgba(255, 160, 200, 0.4); }
-.perk.next { opacity: 0.9; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18); }
 .perk-ico { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: rgba(255, 255, 255, 0.06); }
 .perk-ico img { image-rendering: pixelated; }
-.perk:not(.on) .perk-ico img { filter: grayscale(1) brightness(0.7); }
-.perk-txt { display: grid; line-height: 1.2; min-width: 0; }
-.perk-txt b { font-family: var(--k-face); font-weight: 400; font-size: 15px; color: #fff; }
-.perk-txt small { color: var(--k-dim); font-size: 12.5px; }
-.perk-at { font-family: var(--k-face); font-size: 14px; color: #ffc4dc; }
-.perk.on .perk-at { color: #9dffc4; }
+/* the perks as a track of five: tap one to read it; the next to earn is read by default */
+.perk-track { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+.perk-node { display: grid; justify-items: center; gap: 2px; width: 100%; padding: 6px 0; color: var(--text-3); background: none; border: 0; border-radius: 12px; cursor: pointer; }
+.perk-node small { font-family: var(--k-face); font-size: 12px; }
+.perk-node.on { color: #ffc4dc; }
+.perk-node.sel { background: rgba(255, 255, 255, 0.07); box-shadow: inset 0 0 0 1px rgba(255, 160, 200, 0.4); }
+.perk-node:not(.on) .perk-ico img { filter: grayscale(1) brightness(0.7); }
+.perk-node.on .perk-ico { background: rgba(255, 120, 170, 0.2); }
+.perk-say { margin: 0; font-size: 13.5px; color: var(--text-2); line-height: 1.35; min-height: 2.7em; }
+.perk-say b { font-family: var(--k-face); font-weight: 400; color: #fff; margin-right: 4px; }
 
 /* ── what today did ── */
 .fxchips { display: flex; flex-wrap: wrap; gap: 6px; margin: var(--s-2) 0; }

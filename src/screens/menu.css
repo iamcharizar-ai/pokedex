@@ -171,3 +171,6 @@ span.pslot.empty, button.pslot.empty:disabled { cursor: default; }
 @media (prefers-reduced-motion: reduce) {
   .pview, .bbox-grid, .bbox-mon, .bbox-panel-art img, .bbox-cell:hover .bbox-ball { animation: none; }
 }
+/* something on that screen is waiting on you (screens/Today.tsx tabTodo) */
+.pmenu-btn { position: relative; }
+.pmenu-btn.todo::after { content: ''; position: absolute; top: 6px; left: calc(50% - 26px); width: 10px; height: 10px; border-radius: 50%; background: var(--k-gold); box-shadow: 0 0 0 2px var(--surface-2, #1b2448), 0 0 10px var(--gold-glow); }

@@ -36,29 +36,25 @@ const PERK: Record<BondPerk, { name: string; icon: string; text: (bond: number) 
 export function BondPerks({ game }: { game: Game }) {
   const hearts = heartsOf(game.partner)
   const bond = bondLevel(hearts)
+  // the hearts themselves are on the partner card above; here, one perk is told at a time: the next one, or the one tapped
+  const [pick, setPick] = useState<number | null>(null)
+  const shown = pick ?? Math.min(bond, BOND_PERKS.length - 1)
+  const p = BOND_PERKS[shown]
+  const on = hasPerk(bond, p)
   return (
     <section className="perks" aria-label="Bond perks">
-      <div className="perks-h">
-        <span className="k-label">Bond with {nameOf(game.partner.form)}</span>
-        <b>{hearts} ♥ · level {bond} of {HEART_LEVELS.length}</b>
-      </div>
-      <ol className="perk-list">
-        {BOND_PERKS.map((p, i) => {
-          const on = hasPerk(bond, p)
-          const at = HEART_LEVELS[i]
-          return (
-            <li key={p} className={`perk ${on ? 'on' : ''} ${i === bond ? 'next' : ''}`} title={PERK[p].text(Math.max(bond, i + 1))}>
-              <span className="perk-ico"><ItemIcon id={PERK[p].icon} size={30} /></span>
-              <span className="perk-txt">
-                <b>{PERK[p].name}</b>
-                <small>{on ? PERK[p].text(bond) : `At ${at} hearts: ${PERK[p].text(i + 1)}`}</small>
-              </span>
-              <span className="perk-at">{on ? '✓' : `${at}♥`}</span>
-            </li>
-          )
-        })}
+      <span className="k-label">Bond perks with {nameOf(game.partner.form)}</span>
+      <ol className="perk-track">
+        {BOND_PERKS.map((q, i) => (
+          <li key={q}>
+            <button type="button" className={`perk-node ${hasPerk(bond, q) ? 'on' : ''} ${i === shown ? 'sel' : ''}`} aria-pressed={i === shown} aria-label={`${PERK[q].name}, at ${HEART_LEVELS[i]} hearts${hasPerk(bond, q) ? ', earned' : ''}`} onClick={() => setPick(i)}>
+              <span className="perk-ico"><ItemIcon id={PERK[q].icon} size={30} /></span>
+              <small>{hasPerk(bond, q) ? '✓' : `${HEART_LEVELS[i]}♥`}</small>
+            </button>
+          </li>
+        ))}
       </ol>
-      {bond < HEART_LEVELS.length && <KBar value={hearts} max={HEART_LEVELS[bond]} kind="gold" label={`${hearts} / ${HEART_LEVELS[bond]} hearts`} />}
+      <p className="perk-say"><b>{PERK[p].name}</b> {on ? PERK[p].text(bond) : `At ${HEART_LEVELS[shown]} hearts: ${PERK[p].text(shown + 1)}`}</p>
     </section>
   )
 }
