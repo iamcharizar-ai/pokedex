@@ -15,7 +15,8 @@
     "species": "node tools/build-species.mjs",
     "shots": "node tools/shots.mjs",
     "a11y": "node tools/a11y.mjs --strict",
-    "kit": "node tools/build-ui-kit.mjs"
+    "kit": "node tools/build-ui-kit.mjs",
+    "sprites:deploy": "cd sprites && npx --yes vercel link --project iamcharizar-pokedex-sprites --yes && npx --yes vercel deploy --prod --yes"
   },
   "dependencies": {
     "@fontsource/lilita-one": "^5.3.0",

@@ -1,13 +1,13 @@
 // The balls and the Key Stone, as pictures: the item icons you supplied
-// (public/sprites/items). Nothing is drawn here.
+// (sprites/items). Nothing is drawn here.
 import type { CSSProperties } from 'react'
 import { BALL_NAME, type Ball as BallId } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
 import { typeColor } from './screens/types.ts'
 
 /**
- * Every ball is drawn from its crisp pixel icon (public/sprites/items/<id>.png), blown up without smoothing. The large ball sheet
- * (public/sprites/balls) was a blurred upscale whose rims showed light fringes at any size, so it is no longer used.
+ * Every ball is drawn from its crisp pixel icon (sprites/items/<id>.png), blown up without smoothing. The large ball sheet
+ * (sprites/balls) was a blurred upscale whose rims showed light fringes at any size, so it is no longer used.
  */
 export function Ball({ ball, size = 24, className = '' }: { ball: BallId; size?: number; className?: string }) {
   return <img className={`ball pix ${className}`} src={`/sprites/items/${ball}-ball.png`} width={size} height={size} alt={BALL_NAME[ball]} draggable={false} />

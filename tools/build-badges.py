@@ -1,4 +1,4 @@
-# Cuts the gym badge sheet into one picture per badge, in public/sprites/badges/.
+# Cuts the gym badge sheet into one picture per badge, in sprites/badges/.
 #
 #   python tools/build-badges.py tools/badges-sheet.png
 #
@@ -16,7 +16,7 @@ ROWS = {1: 0, 2: 1, 3: 2, 4: 3, 5: 5, 6: 6}  # region number -> row of the sheet
 CELL, PITCH, ORIGIN = 16, 17, 1
 
 sheet = Image.open(sys.argv[1]).convert('RGBA')
-dest = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'public', 'sprites', 'badges')
+dest = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'sprites', 'badges')
 os.makedirs(dest, exist_ok=True)
 made = 0
 # the Orange Islands: the first four of the fifth row

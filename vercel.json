@@ -1,7 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- src core public index.html package.json package-lock.json vite.config.ts vercel.json tsconfig.json",
-  "rewrites": [{ "source": "/((?!sprites/).*)", "destination": "/index.html" }],
+  "ignoreCommand": "git diff --quiet ${VERCEL_GIT_PREVIOUS_SHA:-HEAD^} HEAD -- src core public index.html package.json package-lock.json vite.config.ts vercel.json tsconfig.json",
+  "rewrites": [
+    { "source": "/sprites/:path*", "destination": "https://iamcharizar-pokedex-sprites.vercel.app/:path*" },
+    { "source": "/((?!sprites/).*)", "destination": "/index.html" }
+  ],
   "headers": [
     {
       "source": "/sprites/(.*)",

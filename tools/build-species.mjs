@@ -4,7 +4,7 @@
 //
 //   node tools/build-species.mjs <path to unpacked sprites folder>
 //
-// Also copies the sprites that are actually used into public/sprites/.
+// Also copies the sprites that are actually used into sprites/.
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -142,7 +142,7 @@ export const SPECIES: Record<string, SpeciesRec> = ${JSON.stringify(ordered)}
 fs.writeFileSync(path.join(ROOT, 'core/species.ts'), ts)
 
 // ── copy the sprites in use ──
-const DEST = path.join(ROOT, 'public/sprites')
+const DEST = path.join(ROOT, 'sprites')
 const sets = [['gen5ani', 'ani', 'gif'], ['gen5ani-shiny', 'ani-shiny', 'gif'], ['gen5', 'static', 'png'], ['gen5-shiny', 'static-shiny', 'png']]
 let copied = 0, bytes = 0
 const missingShiny = []

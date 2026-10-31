@@ -140,7 +140,9 @@ function syncBoss(): void {
 async function pullConfig(): Promise<void> {
   if (!URL_ || !KEY) return
   try {
+    // only a row newer than the one held: an unchanged library answers with an empty list, not the ~10 KB copy again
     const q = new URLSearchParams({ select: 'device,at,day,type,payload', type: 'eq.config', order: 'at.desc', limit: '1' })
+    if (config?.at) q.set('at', `gt.${config.at}`)
     const res = await fetch(`${URL_.replace(/\/$/, '')}/rest/v1/events?${q}`, { headers: { apikey: KEY, Authorization: `Bearer ${KEY}` } })
     if (!res.ok) return
     const [row] = (await res.json()) as LedgerEvent[]
@@ -158,6 +160,8 @@ const ledger = createLedger({
   key: KEY,
   app: 'pokedex',
   types: TYPES,
+  // the game is a fold over the whole history: keep it on the device and read only what is new
+  cache: true,
   onEvents: (fresh) => {
     // something done here is added at once, then comes back from the ledger: take it once
     for (const e of fresh) if (!seen.has(keyOf(e))) { seen.add(keyOf(e)); events.push(e) }

@@ -3,13 +3,13 @@
 //   node tools/build-sprite-bbox.mjs
 //
 // Every picture is 96 x 96 with a different amount of empty margin. This writes
-// public/sprites/bbox.json: { form: [left, top, right, bottom] } of the pixels that are drawn.
+// sprites/bbox.json: { form: [left, top, right, bottom] } of the pixels that are drawn.
 // The Pokedex fetches it once (src/Fit.tsx); run this again after adding sprites.
 import fs from 'node:fs'
 import path from 'node:path'
 import { PNG } from 'pngjs'
 
-const DIR = path.resolve(import.meta.dirname, '..', 'public', 'sprites')
+const DIR = path.resolve(import.meta.dirname, '..', 'sprites')
 const out = {}
 for (const file of fs.readdirSync(path.join(DIR, 'static')).filter((f) => f.endsWith('.png')).sort()) {
   const png = PNG.sync.read(fs.readFileSync(path.join(DIR, 'static', file)))
