@@ -31,7 +31,7 @@ With one region open the pool held one rare line (Dratini), so it came back ever
 - a pool of fewer than **6** rare lines open is topped up with uncommon ones;
 - a boss never repeats **one of the last 3**, nor a line already in your party;
 - the card carries a **revision** (`rev: 2`). A card of a higher revision replaces an older one for the same week; the first of a revision still stands, so two devices cannot redraw each other.
-- The week version 18 began had been drawn by the old planner. It is drawn once more, but only while nothing has been done on it.
+- The week version 18 began had been drawn by the old planner. It is drawn once more (never as the same boss), whatever has been done on it: the work is measured from the raw events, so it carries over to the new card.
 
 A boss that is not beaten or caught still leaves at the end of its week and costs nothing (that is the design). The boss tile now says how last week ended.
 

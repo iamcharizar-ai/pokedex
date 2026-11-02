@@ -92,7 +92,7 @@ export function planCard(week: string, today: string, game: Game, input: FactsIn
   if (v18) {
     // with one region open there is a single rare line: top the pool up with uncommon ones, and keep off the last few bosses and the party's own lines
     if (rarity === 'R' && pool.length < BOSS_POOL_MIN) pool = [...pool, ...open('U')].sort()
-    const recent = Object.values(input.boss?.cards ?? {}).filter((c) => c.week < week).sort((a, b) => (a.week < b.week ? -1 : 1)).slice(-BOSS_NO_REPEAT).map((c) => c.species)
+    const recent = Object.values(input.boss?.cards ?? {}).filter((c) => c.week < week || (c.week === week && (c.rev ?? 1) < BOSS_CARD_REV)).sort((a, b) => (a.week < b.week ? -1 : 1)).slice(-BOSS_NO_REPEAT).map((c) => c.species)
     const mine = new Set([game.partner, ...game.team].map((m) => m.base))
     for (const out of [new Set([...recent, ...mine]), new Set(recent)]) {
       const fresh = pool.filter((id) => !out.has(id))

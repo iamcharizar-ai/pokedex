@@ -159,3 +159,12 @@ test('a new card has no Woodshed task while the habit is shelved, and its shares
   assert.ok(on?.tasks.some((t) => t.kind === 'shed'))
   assert.ok(Math.abs(on!.tasks.reduce((n, t) => n + t.share, 0) - 1) < 0.003)
 })
+
+test('a week redrawn by the new planner never gets the boss the old planner drew for it', () => {
+  const old = card(WEEK, { species: 'dratini' })
+  for (const prior of [[old], [card(addDays(WEEK, -7), { species: 'dratini' }), old]]) {
+    const c = planFor(LIBRARY(FOREVER), {}, prior)
+    assert.ok(c)
+    assert.notEqual(c.species, 'dratini')
+  }
+})

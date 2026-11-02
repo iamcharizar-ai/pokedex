@@ -118,8 +118,8 @@ function syncBoss(): void {
   const may = (key: string, payload: string): boolean => mem.sent[key] !== payload && mem.at.length + wrote.length < BOSS_WRITES_PER_HOUR
   let card = input.boss?.cards[week]
   // the week version 18 began had its card drawn by the old planner, which had one rare line to pick from and so brought the same boss again:
-  // drawn once more by the new one, but only while nothing has been done on it (the old card stands once there is progress)
-  const stale = Boolean(card) && week === V18_START && (card?.rev ?? 1) < BOSS_CARD_REV && !Object.entries(input.boss?.days ?? {}).some(([d, p]) => d >= week && p.some((x) => x > 0))
+  // drawn once more by the new one, whatever is done on it (the work is measured from the raw events, so it carries over to the new card)
+  const stale = Boolean(card) && week === V18_START && (card?.rev ?? 1) < BOSS_CARD_REV
   if (!card || stale) {
     const before = Object.keys(input.boss?.cards ?? {}).filter((w) => w < week).length
     const drawn = planCard(week, today, view.game, input, events, before, FORCE_BOSS)
