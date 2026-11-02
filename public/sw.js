@@ -10,7 +10,7 @@
 //  • /api/* is never touched: a signed-in response must not outlive the session in a cache
 // Only good responses are cached: ok, HTML for the shell, nothing marked no-store.
 // Bump CACHE when this file's strategy changes; old caches are dropped on activate.
-const CACHE = 'pokedex-shell-v4'
+const CACHE = 'pokedex-shell-v5'
 const SPRITES = 'pokedex-sprites-v1'
 const PAGE_TIMEOUT_MS = 2500
 
@@ -21,7 +21,19 @@ const cacheable = (res, shell) =>
 
 // A sprite is cached for good, so only an image may be: a sprites host that is down can answer 200 with a web page, and that
 // page must never be kept as the picture (it was, on 2 Nov 2026: a broken Steelix that stayed broken after the host was fixed).
-const isImage = (res) => /^image\//i.test(res.headers.get('content-type') || '')
+const validSprite = (req, res) => res.ok && (/\.json$/.test(new URL(req.url).pathname) ? /json/i.test(res.headers.get('content-type') || '') : /^image\//i.test(res.headers.get('content-type') || ''))
+
+// The browser's own HTTP cache can hold a wrong answer for a sprite for a year (the host marks them immutable, and a page kept under a
+// picture's address is "fresh" for as long). When the answer is not the right kind of file, ask again past that cache.
+async function spriteFetch(req) {
+  const res = await fetch(req)
+  if (validSprite(req, res)) return res
+  try {
+    const again = await fetch(req, { cache: 'reload' })
+    if (validSprite(req, again)) return again
+  } catch { /* offline: the first answer stands, and the page falls back to a stand-in */ }
+  return res
+}
 
 const offline = () => new Response('Offline', { status: 503, statusText: 'Offline' })
 
@@ -65,7 +77,7 @@ async function purgeSprites() {
     const c = await caches.open(SPRITES)
     for (const req of await c.keys()) {
       const res = await c.match(req)
-      if (!res || !isImage(res)) await c.delete(req)
+      if (!res || !validSprite(req, res)) await c.delete(req)
     }
   } catch { /* a cache that cannot be read is left alone */ }
 }
@@ -92,8 +104,8 @@ self.addEventListener('fetch', (e) => {
   const fixed = url.pathname.startsWith('/sprites/') ? SPRITES : url.pathname.startsWith('/assets/') ? CACHE : null
   if (fixed) {
     e.respondWith(
-      caches.match(req).then((hit) => hit || fetch(req).then((res) => {
-        if (cacheable(res) && (fixed !== SPRITES || isImage(res))) e.waitUntil(put(req, res.clone(), fixed))
+      caches.match(req).then((hit) => hit || (fixed === SPRITES ? spriteFetch(req) : fetch(req)).then((res) => {
+        if (cacheable(res) && (fixed !== SPRITES || validSprite(req, res))) e.waitUntil(put(req, res.clone(), fixed))
         return res
       }).catch(offline)),
     )

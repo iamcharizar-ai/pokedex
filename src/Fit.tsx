@@ -11,8 +11,10 @@ const waiting = new Set<() => void>()
 
 function load(): void {
   if (table || loading) return
-  loading = fetch('/sprites/bbox.json')
-    .then((r) => (r.ok ? r.json() : {}))
+  // if the answer is not the table (a page kept under its address by the browser's cache), ask once more past that cache
+  const ask = (cache?: RequestCache): Promise<Record<string, Box>> => fetch('/sprites/bbox.json', cache ? { cache } : undefined).then((r) => (r.ok ? r.json() : {}))
+  loading = ask()
+    .catch(() => ask('reload'))
     .then((t: Record<string, Box>) => { table = t })
     .catch(() => { table = {} })
     .finally(() => waiting.forEach((f) => f()))
