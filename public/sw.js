@@ -10,7 +10,7 @@
 //  • /api/* is never touched: a signed-in response must not outlive the session in a cache
 // Only good responses are cached: ok, HTML for the shell, nothing marked no-store.
 // Bump CACHE when this file's strategy changes; old caches are dropped on activate.
-const CACHE = 'pokedex-shell-v3'
+const CACHE = 'pokedex-shell-v4'
 const SPRITES = 'pokedex-sprites-v1'
 const PAGE_TIMEOUT_MS = 2500
 
@@ -18,6 +18,10 @@ const cacheable = (res, shell) =>
   res.ok &&
   !/no-store/i.test(res.headers.get('cache-control') || '') &&
   (!shell || /text\/html/i.test(res.headers.get('content-type') || ''))
+
+// A sprite is cached for good, so only an image may be: a sprites host that is down can answer 200 with a web page, and that
+// page must never be kept as the picture (it was, on 2 Nov 2026: a broken Steelix that stayed broken after the host was fixed).
+const isImage = (res) => /^image\//i.test(res.headers.get('content-type') || '')
 
 const offline = () => new Response('Offline', { status: 503, statusText: 'Offline' })
 
@@ -55,6 +59,17 @@ async function precache() {
   }))
 }
 
+// Anything in the sprite cache that is not an image (a page kept by an older worker) is thrown out; the pictures stay.
+async function purgeSprites() {
+  try {
+    const c = await caches.open(SPRITES)
+    for (const req of await c.keys()) {
+      const res = await c.match(req)
+      if (!res || !isImage(res)) await c.delete(req)
+    }
+  } catch { /* a cache that cannot be read is left alone */ }
+}
+
 self.addEventListener('install', (e) => {
   e.waitUntil(precache().then(() => self.skipWaiting()))
 })
@@ -63,6 +78,7 @@ self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys()
       .then((keys) => Promise.all(keys.filter((k) => k !== CACHE && k !== SPRITES).map((k) => caches.delete(k))))
+      .then(purgeSprites)
       .then(() => self.clients.claim()),
   )
 })
@@ -77,7 +93,7 @@ self.addEventListener('fetch', (e) => {
   if (fixed) {
     e.respondWith(
       caches.match(req).then((hit) => hit || fetch(req).then((res) => {
-        if (cacheable(res)) e.waitUntil(put(req, res.clone(), fixed))
+        if (cacheable(res) && (fixed !== SPRITES || isImage(res))) e.waitUntil(put(req, res.clone(), fixed))
         return res
       }).catch(offline)),
     )

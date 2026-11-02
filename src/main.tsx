@@ -12,6 +12,9 @@ import '@fontsource/lilita-one/latin-400.css'
 import './styles/index.css'
 import App from './App.tsx'
 import { KitPage } from './Kit.tsx'
+import { installSpriteFallback } from './lib/sprite-fallback.ts'
+
+installSpriteFallback()
 
 // ?kit shows the kit page: the pieces of the new look, on stand-in art
 const kit = new URLSearchParams(location.search).has('kit')
