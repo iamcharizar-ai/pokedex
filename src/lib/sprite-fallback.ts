@@ -26,6 +26,14 @@ export const SPRITE_PLACEHOLDER = 'data:image/svg+xml;utf8,' + encodeURIComponen
 
 const tried = new WeakMap<HTMLImageElement, { shown: string; left: string[] }>()
 
+/**
+ * A stand-in is only for as long as the real picture is away. After a failure the original is asked for again, later and later
+ * (the host may have been down for a minute, or a deploy may have been replacing it), so an animated sprite that fell back to its still
+ * starts moving again by itself, with no reload.
+ */
+export const RETRY_AFTER_MS = [20_000, 90_000, 300_000, 900_000]
+const retries = new WeakMap<HTMLImageElement, { orig: string; n: number }>()
+
 /** Answer one failed image. Exported so it can be tested without a browser. */
 export function recover(img: Pick<HTMLImageElement, 'src' | 'style'> & { dataset?: DOMStringMap }, state: { shown: string; left: string[] } | undefined): { shown: string; left: string[] } | null {
   // a new picture was set on the same element (the page showed another Pokemon): start again from it
@@ -43,7 +51,23 @@ export function installSpriteFallback(): void {
   document.addEventListener('error', (e) => {
     const img = e.target
     if (!(img instanceof HTMLImageElement) || !/\/sprites\//.test(img.src)) return
-    const after = recover(img, tried.get(img))
-    if (after) tried.set(img, { shown: img.src, left: after.left })
+    const failed = img.src, prev = tried.get(img)
+    // the picture that was asked for in the first place: the one a retry puts back
+    const orig = prev && prev.shown === failed && retries.get(img) ? retries.get(img)!.orig : failed
+    const after = recover(img, prev)
+    if (!after) return
+    tried.set(img, { shown: img.src, left: after.left })
+    const r = retries.get(img)
+    const n = r && r.orig === orig ? r.n : 0
+    retries.set(img, { orig, n })
+    if (n >= RETRY_AFTER_MS.length || img.src === orig) return
+    const standIn = img.src
+    setTimeout(() => {
+      // only if it still shows the stand-in: the page may have moved on to another picture
+      if (!img.isConnected || img.src !== standIn) return
+      retries.set(img, { orig, n: n + 1 })
+      img.style.visibility = ''
+      img.src = orig
+    }, RETRY_AFTER_MS[n])
   }, true)
 }

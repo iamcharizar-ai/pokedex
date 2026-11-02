@@ -6,7 +6,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { SPECIES } from '../core/species.ts'
 import { spritePath } from '../core/fold.ts'
-import { SPRITE_PLACEHOLDER, fallbacksFor, recover } from '../src/lib/sprite-fallback.ts'
+import { RETRY_AFTER_MS, SPRITE_PLACEHOLDER, fallbacksFor, recover } from '../src/lib/sprite-fallback.ts'
 
 const ROOT = path.resolve(import.meta.dirname, '../sprites')
 const has = (p) => fs.existsSync(path.join(ROOT, p.replace(/^\/sprites\//, '')))
@@ -47,4 +47,10 @@ test('an element given a new picture after a failure starts again from it', () =
   img.src = '/sprites/ani/dratini.gif' // the page now shows another Pokemon
   state = recover(img, state)
   assert.equal(img.src, '/sprites/static/dratini.png')
+})
+
+test('a stand-in is temporary: the real picture is asked for again, later each time, then left alone', () => {
+  assert.ok(RETRY_AFTER_MS.length >= 3)
+  assert.ok(RETRY_AFTER_MS.every((ms, i) => i === 0 || ms > RETRY_AFTER_MS[i - 1]))
+  assert.ok(RETRY_AFTER_MS[0] <= 30_000, 'the first retry comes quickly: a deploy replacing the host takes seconds')
 })
