@@ -5,6 +5,7 @@
 //   ?fixture=late    five months in: evolutions, trained Pokemon, feats, an egg, a chest
 //   ?fixture=boss    a full party in a boss week, with the boss weak enough to throw at
 //   add &band=<score> to give any of them a band: fourteen measured nights, the last one scoring that (0 to 100); &band=wait is a band whose reading for this morning has not arrived
+//   add &shelve=guitar to take that kind of work off the Life OS list from today: the shop, feats and the boss's task for it go out of sight
 //   add &news to any of them to have everything recent told again (reveals, toasts, chests)
 //
 // A fixture is a list of ordinary ledger events (a habit library, ticks, things
@@ -20,7 +21,7 @@ import { BOSS_DAY_EVENT, CARD_EVENT, type BossCard } from '../../core/boss.ts'
 import { rng } from '../../core/economy.ts'
 import { USE_EVENT } from '../../core/events.ts'
 import { addDays, mondayOf } from '../../core/facts.ts'
-import { GAME_START } from '../../core/rules.ts'
+import { GAME_START, tagOf } from '../../core/rules.ts'
 import type { LedgerEvent } from '../linked/arbor-model.ts'
 
 export const FIXTURES = ['empty', 'week', 'late', 'boss'] as const
@@ -128,9 +129,16 @@ function withBand(f: Fixture, last: number | null): Fixture {
   }
   return { ...f, events }
 }
-export const fixture = (name: string | null | undefined, band?: string | null): Fixture | null => {
+/** Version 18: the same fixture with a kind of work archived in Life OS from yesterday (?shelve=guitar), to see what the game hides. */
+function withShelved(f: Fixture, tag: string): Fixture {
+  const habits = (JSON.parse(String(f.config.payload.habits)) as { id: string; spans: { from: string; to: string | null }[] }[])
+    .map((h) => (tagOf(h.id) === tag ? { ...h, spans: [{ from: '1970-01-01', to: f.today }] } : h))
+  return { ...f, config: { ...f.config, payload: { ...f.config.payload, habits: JSON.stringify(habits) } } }
+}
+export const fixture = (name: string | null | undefined, band?: string | null, shelve?: string | null): Fixture | null => {
   if (!isFixture(name)) return null
-  const f = BUILD[name]()
+  const f0 = BUILD[name]()
+  const f = shelve ? withShelved(f0, shelve) : f0
   if (band === 'wait') return withBand(f, null)
   const score = band === null || band === undefined || band === '' ? NaN : Number(band)
   return Number.isFinite(score) ? withBand(f, Math.max(0, Math.min(100, Math.round(score)))) : f

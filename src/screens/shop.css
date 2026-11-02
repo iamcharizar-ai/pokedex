@@ -74,3 +74,5 @@
 .earn { gap: var(--s-3); }
 .earn li { font-size: 14px; color: var(--text-2); }
 .shelf-more { justify-self: center; margin-top: var(--s-3); }
+/* version 18: a kind of work that is off the Life OS list, said once under what it hid */
+.shelved-note { margin: var(--s-3) 0 0; font-size: 13px; }

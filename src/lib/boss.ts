@@ -8,13 +8,13 @@
 // Nothing here is random at run time: every draw is seeded by the week, so two
 // devices opened at the same moment write the same card.
 import {
-  BOSS_KINDS, BOSS_SHARE, bossNeed, LEGENDARY_EVERY_BOSS, bossLevel,
+  BOSS_CARD_REV, BOSS_KINDS, BOSS_NO_REPEAT, BOSS_POOL_MIN, BOSS_SHARE, BOSS_TAG, bossNeed, LEGENDARY_EVERY_BOSS, bossLevel,
   type BossCard, type BossKind, type BossTask,
 } from '../../core/boss.ts'
 import { rng } from '../../core/economy.ts'
-import { addDays, factsFor, type FactsInput } from '../../core/facts.ts'
+import { addDays, factsFor, liveTags, type FactsInput } from '../../core/facts.ts'
 import type { Game } from '../../core/fold.ts'
-import { SLEEP_DONE, SLEEP_HABIT, levelOf } from '../../core/rules.ts'
+import { SLEEP_DONE, SLEEP_HABIT, V18_START, levelOf } from '../../core/rules.ts'
 import { SPECIES } from '../../core/species.ts'
 import type { LedgerEvent } from '../linked/arbor-model.ts'
 import { ITEMS } from '../linked/woodshed/course.ts'
@@ -77,6 +77,10 @@ function lastForm(base: string, r: () => number, mega: boolean): { form: string;
 export function planCard(week: string, today: string, game: Game, input: FactsInput, events: LedgerEvent[], bossesSoFar: number, force = false): BossCard | null {
   if (!force && (game.bossParty < bossNeed(today) || today > addDays(week, PLAN_BY))) return null
   const r = rng(`boss:${week}`)
+  const v18 = week >= V18_START
+  // version 18: a kind of work with no habit on the Life OS list does not get a task (null = the list is not known, so nothing is left out)
+  const live = v18 ? liveTags(input, today) : null
+  const on = (k: BossKind): boolean => !live || k === 'life' || live.has(BOSS_TAG[k])
   // who it is: a rare line from an open region, and every eighth one a legendary
   const legendary = (bossesSoFar + 1) % LEGENDARY_EVERY_BOSS === 0
   const open = (rar: string) => Object.entries(SPECIES).filter(([, s]) => s.s === 1 && !s.f && s.r === rar && (s.g ?? 9) <= game.regions).map(([id]) => id).sort()
@@ -85,6 +89,16 @@ export function planCard(week: string, today: string, game: Game, input: FactsIn
   if (!pool.length) { rarity = 'R'; pool = open('R') }
   if (!pool.length) pool = Object.entries(SPECIES).filter(([, s]) => s.s === 1 && !s.f && s.r === 'R').map(([id]) => id).sort()
   if (!pool.length) return null
+  if (v18) {
+    // with one region open there is a single rare line: top the pool up with uncommon ones, and keep off the last few bosses and the party's own lines
+    if (rarity === 'R' && pool.length < BOSS_POOL_MIN) pool = [...pool, ...open('U')].sort()
+    const recent = Object.values(input.boss?.cards ?? {}).filter((c) => c.week < week).sort((a, b) => (a.week < b.week ? -1 : 1)).slice(-BOSS_NO_REPEAT).map((c) => c.species)
+    const mine = new Set([game.partner, ...game.team].map((m) => m.base))
+    for (const out of [new Set([...recent, ...mine]), new Set(recent)]) {
+      const fresh = pool.filter((id) => !out.has(id))
+      if (fresh.length) { pool = fresh; break }
+    }
+  }
   const species = pool[Math.floor(r() * pool.length)]
   const shown = lastForm(species, r, rarity === 'L')
   const level = bossLevel([game.partner, ...game.team].reduce((sum, m) => sum + levelOf(m.xp), 0))
@@ -96,7 +110,7 @@ export function planCard(week: string, today: string, game: Game, input: FactsIn
   const gym = gymDays(events)
   const sets = back.reduce((n, d) => n + (gym[d]?.sets ?? 0), 0)
   const gymRoll = r()
-  if (sets > 0 && gymRoll < 0.45) {
+  if (!on('gym')) { /* shelved: no task */ } else if (sets > 0 && gymRoll < 0.45) {
     const target = Math.max(24, Math.round((sets / 3) * 1.25))
     tasks.push({ kind: 'gym', template: 'volume', target, text: `Log ${target} sets in Strong this week` })
   } else if (sets > 0 && gymRoll < 0.75) {
@@ -110,7 +124,7 @@ export function planCard(week: string, today: string, game: Game, input: FactsIn
   const counts = new Map<string, number>()
   for (const d of back) for (const [id, p] of Object.entries(input.arbor?.practice[d] ?? {})) if (p.done) counts.set(id, (counts.get(id) ?? 0) + 1)
   const skills = pick([...counts.entries()].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)).slice(0, 6).map(([id]) => id), 3, r)
-  if (skills.length) {
+  if (skills.length && on('arbor')) {
     if (r() < 0.6) tasks.push({ kind: 'arbor', template: 'spread', target: 4, items: skills, text: `Practise ${list(skills.map(nice))} on four days each` })
     else tasks.push({ kind: 'arbor', template: 'deep', target: 3, items: skills, text: `Three days with ${list(skills.map(nice))} all practised` })
   }
@@ -122,11 +136,11 @@ export function planCard(week: string, today: string, game: Game, input: FactsIn
     .filter((x) => x.n > 0)
     .sort((a, b) => a.feel - b.feel || b.n - a.n || (a.id < b.id ? -1 : 1))
   const pieces = pick(played.slice(0, 4).map((x) => x.id), 2, r)
-  if (pieces.length) tasks.push({ kind: 'shed', template: 'clean', target: 3, items: pieces, text: `Log ${list(pieces.map(shedName))} Clean on three days each` })
+  if (pieces.length && on('shed')) tasks.push({ kind: 'shed', template: 'clean', target: 3, items: pieces, text: `Log ${list(pieces.map(shedName))} Clean on three days each` })
 
   // sleep: the band's score if it is in use, the bedtime tick if not
   const band = back.some((d) => typeof input.body?.[d]?.sleepScore === 'number')
-  if (band) tasks.push({ kind: 'sleep', template: 'score', target: 4, text: `Four nights at ${SLEEP_DONE} or more` })
+  if (!on('sleep')) { /* shelved: no task */ } else if (band) tasks.push({ kind: 'sleep', template: 'score', target: 4, text: `Four nights at ${SLEEP_DONE} or more` })
   else tasks.push({ kind: 'sleep', template: 'bed', target: 5, text: 'Five nights in bed on time' })
 
   // life: steady days
@@ -134,11 +148,14 @@ export function planCard(week: string, today: string, game: Game, input: FactsIn
   else tasks.push({ kind: 'life', template: 'perfect', target: 1, text: 'One perfect day, and two more at three-quarters' })
 
   // a kind with nothing to draw from is left out, and what it stood for goes to the Life task
+  // (a kind that is shelved is not "nothing to draw from": its share is spread over the rest instead, below)
   const have = new Set(tasks.map((t) => t.kind))
-  const spare = BOSS_KINDS.filter((k) => !have.has(k)).reduce((n, k) => n + BOSS_SHARE[k], 0)
+  const spare = BOSS_KINDS.filter((k) => !have.has(k) && on(k)).reduce((n, k) => n + BOSS_SHARE[k], 0)
+  const shares = tasks.map((t) => BOSS_SHARE[t.kind] + (t.kind === 'life' ? spare : 0))
+  const whole = shares.reduce((n, x) => n + x, 0) || 1
   return {
-    week, species, form: shown.form, rarity, mega: shown.mega, level,
-    tasks: tasks.map((t) => ({ ...t, share: Math.round((BOSS_SHARE[t.kind] + (t.kind === 'life' ? spare : 0)) * 1000) / 1000 })),
+    week, ...(v18 ? { rev: BOSS_CARD_REV } : {}), species, form: shown.form, rarity, mega: shown.mega, level,
+    tasks: tasks.map((t, i) => ({ ...t, share: Math.round((shares[i] / whole) * 1000) / 1000 })),
   }
 }
 

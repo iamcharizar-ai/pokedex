@@ -7,7 +7,7 @@
 // party is chosen like a deck: which families do you want behind you?
 import type { CSSProperties } from 'react'
 import { FAMILY_NAME, SIG_CAP, SIG_FAMILY, sigStrength, sigText, signatureOf, type SigFamily } from '../core/bond.ts'
-import { nameOf, type Game, type Mon } from '../core/fold.ts'
+import { isShelved, nameOf, type Game, type Mon } from '../core/fold.ts'
 import { HEART_LEVELS, bondLevel, type Tag } from '../core/rules.ts'
 import { TAG_NAME, Win } from './App.tsx'
 import { heartsOf } from './Feed.tsx'
@@ -74,7 +74,7 @@ export function Deck({ game }: { game: Game }) {
               <span className="deck-ico"><ItemIcon id={FAMILY_ICON[f]} size={30} /></span>
               <span className="deck-txt">
                 <b>{FAMILY_NAME[f]} <small>{TAG_NAME[tag]}</small></b>
-                <small>{s > 0 ? sigText(f, s) : 'Asleep: bond its Pokemon to wake it'}</small>
+                <small>{isShelved(game, tag) ? `Resting: ${TAG_NAME[tag]} is off your Life OS list` : s > 0 ? sigText(f, s) : 'Asleep: bond its Pokemon to wake it'}</small>
                 <span className="deck-bar" role="meter" aria-valuemin={0} aria-valuemax={SIG_CAP} aria-valuenow={s} aria-label={`${FAMILY_NAME[f]} strength`}><i style={{ width: `${(s / SIG_CAP) * 100}%` }} /></span>
               </span>
               <span className="deck-who">{who.map((m) => <img key={m.uid} src={still(m.form, m.shiny)} alt={nameOf(m.form)} title={`${nameOf(m.form)}: ${signatureOf(m.form).name}`} width={32} height={32} className={`sprite ${m.uid === game.partner.uid ? 'lead' : ''}`} />)}</span>

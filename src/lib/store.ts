@@ -2,11 +2,12 @@
 // Everything you see is earned in Life OS; the one thing written here is an
 // item being used from the Bag.
 import { useSyncExternalStore } from 'react'
-import { BOSS_DAY_EVENT, CARD_EVENT, bossDayChanged } from '../../core/boss.ts'
+import { BOSS_CARD_REV, BOSS_DAY_EVENT, CARD_EVENT, bossDayChanged } from '../../core/boss.ts'
 import { addDays, buildFacts, mondayOf, type DayFacts, type FactsInput } from '../../core/facts.ts'
 import { USE_EVENT, sleepOf, type SleepNight } from '../../core/events.ts'
 import { settled } from '../../core/order.ts'
 import { foldGame, type Game } from '../../core/fold.ts'
+import { V18_START } from '../../core/rules.ts'
 import type { LedgerEvent } from '../linked/arbor-model.ts'
 import { DAY_START_EVENT, dayStartsAt, localDate, wakingDay } from '../../core/day.ts'
 import { createLedger, type LedgerStatus } from './ledger.ts'
@@ -116,12 +117,17 @@ function syncBoss(): void {
   for (const k of Object.keys(mem.sent)) if (k.slice(k.indexOf(':') + 1, k.indexOf(':') + 11) < week) delete mem.sent[k]
   const may = (key: string, payload: string): boolean => mem.sent[key] !== payload && mem.at.length + wrote.length < BOSS_WRITES_PER_HOUR
   let card = input.boss?.cards[week]
-  if (!card) {
-    const drawn = planCard(week, today, view.game, input, events, Object.keys(input.boss?.cards ?? {}).length, FORCE_BOSS)
-    if (!drawn) return
-    card = drawn
-    const body = JSON.stringify(drawn)
-    if (may(`card:${week}`, body)) { mem.sent[`card:${week}`] = body; wrote.push(ledger.emit(CARD_EVENT, { card: body }, week)) }
+  // the week version 18 began had its card drawn by the old planner, which had one rare line to pick from and so brought the same boss again:
+  // drawn once more by the new one, but only while nothing has been done on it (the old card stands once there is progress)
+  const stale = Boolean(card) && week === V18_START && (card?.rev ?? 1) < BOSS_CARD_REV && !Object.entries(input.boss?.days ?? {}).some(([d, p]) => d >= week && p.some((x) => x > 0))
+  if (!card || stale) {
+    const before = Object.keys(input.boss?.cards ?? {}).filter((w) => w < week).length
+    const drawn = planCard(week, today, view.game, input, events, before, FORCE_BOSS)
+    if (drawn) {
+      card = drawn
+      const body = JSON.stringify(drawn)
+      if (may(`card:${week}`, body)) { mem.sent[`card:${week}`] = body; wrote.push(ledger.emit(CARD_EVENT, { card: body }, week)) }
+    } else if (!card) return
   }
   for (let d = week; d <= today; d = addDays(d, 1)) {
     const p = measure(card, input, events, d)

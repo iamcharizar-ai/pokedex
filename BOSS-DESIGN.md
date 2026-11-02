@@ -33,6 +33,7 @@ Smaller differences:
 - **Arbor and Woodshed tasks** are drawn from the skills and pieces you logged most in the last three weeks, not from the coaches' working sets (the Pokedex does not carry the coaches). Arbor has two templates (each skill on four days; three days with all of them); Woodshed has one (each piece Clean on three days). The tempo and new-best templates are not built.
 - **A card is only drawn on Monday to Wednesday**, so a party filled on a Friday meets its first boss the next Monday.
 - **A kind with no history is left off the card** and its share goes to the Life task.
+- **From 2 Nov 2026 (rules version 18, `RULES-V18.md`):** a kind of work with no habit on the Life OS list is left off the card too, and its share is spread over the other tasks in proportion. The boss is no longer drawn from a single line when only one region is open, and never repeats one of the last three.
 - **The Trainer tab's boss history, the Home card, the locked line, the throw sequence, the Recap news and the Life OS strip line are built.** The dev preview shows a boss with `?boss` whatever the party is.
 
 **Verified since:** the throw animation plays in the boss fixture (`?fixture=boss`), which has a boss at 40% HP; the outcome logic (kill, catch, miss, flee) is covered by tests. **Not verified:** a real week against your ledger, since your party is not six yet, and the first real boss throw by hand.

@@ -7,13 +7,13 @@
 // can know it a moment early and play the right ending.
 import { useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
-import { BOSS_WHERE, bossNeed, KILL_CAP, THROW_AT, catchChance, type BossKind } from '../core/boss.ts'
+import { BOSS_KINDS, BOSS_TAG, BOSS_WHERE, bossNeed, KILL_CAP, THROW_AT, catchChance, type BossKind } from '../core/boss.ts'
 import { BALLS, itemName, rng } from '../core/economy.ts'
-import { nameOf, spritePath, type BossView, type Game } from '../core/fold.ts'
+import { isShelved, nameOf, spritePath, type BossView, type Game } from '../core/fold.ts'
 import { SPECIES } from '../core/species.ts'
 import { addDays, mondayOf } from '../core/facts.ts'
 import { PLAN_BY } from './lib/boss.ts'
-import { Win } from './App.tsx'
+import { TAG_NAME, Win } from './App.tsx'
 import { BallItem } from './Ball.tsx'
 import { ItemIcon } from './Item.tsx'
 import { KBar } from './Kit.tsx'
@@ -125,6 +125,9 @@ function Fight({ boss, game }: { boss: BossView; game: Game }) {
         </div>
       </div>
 
+      {BOSS_KINDS.filter((k) => isShelved(game, BOSS_TAG[k])).map((k) => (
+        <p key={k} className="muted shelved-note">No {BOSS_WHERE[k]} task this week: {TAG_NAME[BOSS_TAG[k]]} is off your Life OS list, so the other tasks share its HP.</p>
+      ))}
       <ul className="boss-tasks">
         {boss.tasks.map((t, i) => (
           <li key={i} className={t.p >= 1 ? 'done' : ''}>
@@ -167,6 +170,9 @@ export function BossTile({ game }: { game: Game }) {
   const b = game.boss
   if (!b) return <Locked game={game} />
   const done = b.tasks.filter((t) => t.p >= 1).length
+  // how last week ended, so a boss that left is not a week that vanished
+  const prev = game.bossLog[game.bossLog.length - 1]
+  const lastWeek = prev && prev.week === addDays(b.week, -7) ? prev : null
   const state = b.caught ? 'Caught' : b.fled ? 'It left' : b.canThrow ? 'Throw now' : b.daysLeft === 0 ? 'Last day' : `${b.daysLeft} ${b.daysLeft === 1 ? 'day' : 'days'} left`
   return (
     <>
@@ -177,6 +183,7 @@ export function BossTile({ game }: { game: Game }) {
           <b>{nameOf(b.form)}</b>
           <HpBar value={b.hp} max={b.max} />
           <small>{done} of {b.tasks.length} tasks · <em>{state}</em></small>
+          {lastWeek && <small className="muted">Last week: {nameOf(lastWeek.form)} {lastWeek.caught ? 'was caught' : lastWeek.killed ? 'was beaten' : `left with ${pct(1 - lastWeek.taken)} HP`}</small>}
         </span>
       </button>
       {open && <Sheet title={`Boss: ${nameOf(b.form)}`} onClose={() => setOpen(false)}><Fight boss={b} game={game} /></Sheet>}

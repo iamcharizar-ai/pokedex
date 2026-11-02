@@ -3,7 +3,7 @@
 // team, the Professor, quests. Every one is written to the ledger as one small
 // event (store.useItem), so the game is still recomputed from the ledger alone.
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { nameOf, spritePath, type Game, type Mon, type Quest } from '../core/fold.ts'
+import { isShelved, nameOf, spritePath, type Game, type Mon, type Quest } from '../core/fold.ts'
 import {
   BALLS, battleShelf, BERRY_HEARTS, treasurePrice, BOOST, BP_SHELF, DOMAIN_SHOPS, DOMAIN_V13, EVO_ITEMS, FOSSILS, GEAR_ITEMS, HELD, ITEMS, LEGEND_KEYS, LURES, MARKS, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, masteryCost, RARE_SHELF, RARE_SHELF_V13, REVIVE_COST, SELL, TM_SLOTS, TREASURE, itemName, throwHp, tmType,
   type MarkTag, type Offer, type ShopId,
@@ -335,12 +335,16 @@ export function DomainShop({ game, tag, open }: { game: Game; tag: MarkTag; /** 
  * how many you hold on each), and the shop chosen under it, open. It opens on the one whose marks you hold most of.
  */
 function MarkShops({ game }: { game: Game }) {
-  const richest = [...MARK_TAGS].sort((a, b) => game.wallet.marks[b] - game.wallet.marks[a])[0]
-  const [tag, setTag] = useState<MarkTag>(richest)
+  // version 18: a shop whose kind of work has no habit on the Life OS list is shelved (hidden, not gone: its marks are kept)
+  const live = openMarks(game)
+  const off = MARK_TAGS.filter((t) => !live.includes(t))
+  const richest = [...live].sort((a, b) => game.wallet.marks[b] - game.wallet.marks[a])[0]
+  const [chosen, setTag] = useState<MarkTag>(richest)
+  const tag = live.includes(chosen) ? chosen : richest
   return (
     <>
       <nav className="substrip" role="tablist" aria-label="Shops paid in marks" data-noswipe>
-        {MARK_TAGS.map((t) => (
+        {live.map((t) => (
           <button key={t} type="button" role="tab" aria-selected={tag === t} className={tag === t ? 'on' : ''} data-tag={t} onClick={() => { setTag(t); play('tap') }}>
             <span className="substrip-ico"><MarkIcon tag={t} size={30} /><i>{game.wallet.marks[t]}</i></span>
             <b>{DOMAIN_SHOPS[t].name.replace(/^The /, '')}</b>
@@ -348,8 +352,19 @@ function MarkShops({ game }: { game: Game }) {
         ))}
       </nav>
       <DomainShop key={tag} game={game} tag={tag} open />
+      {off.length > 0 && (
+        <p className="muted shelved-note">
+          {off.map((t) => TAG_NAME[t]).join(' and ')} {off.length > 1 ? 'are' : 'is'} off your Life OS list, so {off.length > 1 ? 'their shops are' : 'its shop is'} shelved ({off.map((t) => `${game.wallet.marks[t]} ${MARKS[t].name}`).join(', ')} kept). Put the habit back in Life OS and {off.length > 1 ? 'they open' : 'it opens'} again.
+        </p>
+      )}
     </>
   )
+}
+
+/** The marks shops that are open: every one, except the kinds of work shelved in Life OS (never an empty list). */
+function openMarks(game: Game): MarkTag[] {
+  const live = MARK_TAGS.filter((t) => !isShelved(game, t))
+  return live.length ? live : MARK_TAGS
 }
 
 type Place = ShopId | 'collector' | 'lab'
@@ -392,7 +407,7 @@ export function ShopTab({ game }: { game: Game }) {
           {game.v13 && (
             <>
               <span className="k-label shelf-label">Battle items · X items boost one kind of work for a day; Dire Hit, Guard Spec, Honey</span>
-              <Shelf game={game} offers={battleShelf(game.today.day)} shop="mart" fold={game.v16 ? 6 : 3} what="battle items" />
+              <Shelf game={game} offers={battleShelf(game.today.day).filter((o) => !isShelved(game, BOOST[o.item]?.tag ?? ''))} shop="mart" fold={game.v16 ? 6 : 3} what="battle items" />
             </>
           )}
         </Win>
@@ -512,7 +527,8 @@ export function Bag({ game }: { game: Game }) {
   const purse: [ReactNode, string, number, number][] = [
     [<Coin size={30} />, 'Coins', game.wallet.coins, game.wallet.coinsToday],
     [<Gem size={30} />, 'Gems', game.wallet.gems, game.wallet.gemsToday],
-    ...MARK_TAGS.map((t) => [<MarkIcon tag={t} size={30} />, `${MARKS[t].name} · spent in ${DOMAIN_SHOPS[t].name}`, game.wallet.marks[t], game.wallet.marksToday[t]] as [ReactNode, string, number, number]),
+    // every mark you hold stays in the Bag, shelved or not: only the shop is out of sight (version 18)
+    ...MARK_TAGS.map((t) => [<MarkIcon tag={t} size={30} />, `${MARKS[t].name} · spent in ${DOMAIN_SHOPS[t].name}${isShelved(game, t) ? ' (shelved)' : ''}`, game.wallet.marks[t], game.wallet.marksToday[t]] as [ReactNode, string, number, number]),
   ]
   return (
     <Win title="Bag" tone="purple" aside={balls || berries ? <>{balls > 0 && `${balls} ${balls === 1 ? 'ball' : 'balls'}`}{balls > 0 && berries > 0 && ' · '}{berries > 0 && `${berries} ${berries === 1 ? 'berry' : 'berries'}`}</> : game.keyStone ? <><ItemIcon id="key-stone" size={22} /> Key Stone</> : undefined}>

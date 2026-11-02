@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from 'react'
 import { flushSync } from 'react-dom'
-import { isGym, leaderOf, nameOf, spritePath, type Game, type Mon, type Moment } from '../core/fold.ts'
+import { isGym, isShelved, leaderOf, nameOf, spritePath, type Game, type Mon, type Moment } from '../core/fold.ts'
 import type { DayFacts, HabitFact } from '../core/facts.ts'
 import { LEAGUES, lineup } from '../core/gyms.ts'
 import {
@@ -353,7 +353,7 @@ function PowerLine({ game }: { game: Game }) {
   const { power } = game
   const common = power.team + power.bond + power.mega + power.item + power.level
   const parts: [string, number][] = [['Level', power.level], ['Team', power.team], ['Bond', power.bond], ['Mega', power.mega], ['Life Orb', power.item]]
-  const kinds = (Object.keys(power.domain) as TagKind[]).map((t) => [t, power.domain[t]] as const).filter(([, d]) => d.held + d.mastery + d.nature + d.vitamin + d.sig > 0)
+  const kinds = (Object.keys(power.domain) as TagKind[]).map((t) => [t, power.domain[t]] as const).filter(([t, d]) => d.held + d.mastery + d.nature + d.vitamin + d.sig > 0 && !isShelved(game, t))
   return (
     <div className="power" aria-label="What raises a strike">
       <span className="chip" title={parts.filter(([, v]) => v > 0).map(([n, v]) => `${n} +${pct(v)}`).join(' · ') || 'Nothing yet: a team, a bond level or a Mega adds here'}>All work +{pct(common)}</span>
@@ -392,7 +392,7 @@ function LeaderBody({ game, t, l }: { game: Game; t: NonNullable<ReturnType<type
           <div className="hp-sub"><span>{league.waiting ? 'Waiting' : today.strike > 0 ? <>Today <b className="dmg">−{today.strike}</b></> : ''}{league.slipped > 0 && <b className="leaving"> Won back {league.slipped} HP</b>}</span><b>{league.hp.toLocaleString('en-IN')} / {league.max.toLocaleString('en-IN')}</b></div>
           <div className="weak">
             <img src={`/sprites/types/${t.type}.png`} alt="" width={16} height={16} /><span>{t.type}</span>
-            {league.weak.map((w) => <span key={w} className="chip weakchip" data-tag={w}>{TAG_NAME[w] ?? w} ×{WEAK_MULT}</span>)}
+            {league.weak.filter((w) => !isShelved(game, w)).map((w) => <span key={w} className="chip weakchip" data-tag={w}>{TAG_NAME[w] ?? w} ×{WEAK_MULT}</span>)}
             {league.edge && <span className="chip mega">type edge ×{ADVANTAGE_MULT}</span>}
           </div>
         </div>
@@ -449,7 +449,7 @@ function LeaderTile({ game }: { game: Game }) {
           <span className="k-label">{l.name} · {role}</span>
           <b>{t.name}</b>
           <HpBar value={league.hp} max={league.max} />
-          <small>{league.waiting ? 'Waiting for the region' : today.strike > 0 ? <>Today <em>−{today.strike}</em></> : 'Weak to ' + (league.weak.map((w) => TAG_NAME[w] ?? w).join(' and ') || 'nothing')}</small>
+          <small>{league.waiting ? 'Waiting for the region' : today.strike > 0 ? <>Today <em>−{today.strike}</em></> : 'Weak to ' + (league.weak.filter((w) => !isShelved(game, w)).map((w) => TAG_NAME[w] ?? w).join(' and ') || 'nothing you do now')}</small>
         </span>
       </button>
       {open && <Sheet title={`${l.name}: ${t.name}`} onClose={() => setOpen(false)}><LeaderCard game={game} /></Sheet>}
@@ -1058,13 +1058,13 @@ function RulesTab({ onTour }: { onTour: () => void }) {
             A day of {STEPS_GOAL.toLocaleString('en-IN')} steps on your band pays an extra Iron mark.
           </Rule>
           <Rule title="The weekly boss" tone="purple" pic={<><ItemIcon id="master-ball" size={30} /><span className="rule-chip sm">6</span><Arrow /><span className="rule-chip">5</span></>}>
-            Once your party is six, a boss comes each Monday for the week. Its card has five tasks, from Strong, Arbor, Woodshed, your sleep and your days, each a share of its HP. It is levelled to your party, and how hard you hit depends on how strong the six are: their levels, how rare their lines are, their Megas, the bond, and whose type beats its type. Without every task done its last {Math.round((1 - KILL_CAP) * 100)}% never falls, and a day the card does not move heals it {Math.round(BOSS_HEAL * 100)}%. At {Math.round(THROW_AT * 100)}% HP or less you get {THROWS} throws: a chance, never a sure thing, and better the weaker it is.
+            Once your party is three or more, a boss comes each Monday for the week. Its card has up to five tasks, from Strong, Arbor, Woodshed, your sleep and your days, each a share of its HP. A kind of work with no habit on your Life OS list gets no task, and the others share its HP. It is levelled to your party, and how hard you hit depends on how strong the six are: their levels, how rare their lines are, their Megas, the bond, and whose type beats its type. Without every task done its last {Math.round((1 - KILL_CAP) * 100)}% never falls, and a day the card does not move heals it {Math.round(BOSS_HEAL * 100)}%. At {Math.round(THROW_AT * 100)}% HP or less you get {THROWS} throws: a chance, never a sure thing, and better the weaker it is.
           </Rule>
           <Rule title="An empty day costs" tone="red" pic={<span className="rule-chip">0</span>}>
             Since {fmtDay(STAKES_FROM)}, a day with nothing ticked is settled two days later, so a late tick still saves it. The leader wins back {SLIP.leader} HP, the wild Pokemon {SLIP.wild}, and a tenth of the XP into your current level fades. A wild Pokemon that stays {WILD_STAY.C} days gets away. Levels, evolutions, trained and caught Pokemon, badges, feats and items are never taken back.
           </Rule>
           <Rule title="A day's list" tone="red" pic={<><span className="rule-dot" /><span className="rule-dot" /><span className="rule-dot" style={{ opacity: 0.3 }} /></>}>
-            Fixed when the day starts. You can add a habit today; taking one off starts tomorrow.
+            The game reads the list Life OS shows, at once: a habit you take off is off today. A kind of work with no habit left on it (say you shelve Guitar) is shelved here too: its shop, unfinished feats, Frontier facility and boss task are hidden, and come back, with everything you kept, when the habit does.
           </Rule>
         </div>
         <div className="kit-row" style={{ marginTop: 14 }}>

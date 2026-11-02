@@ -6,7 +6,7 @@
 // ball thrown or a berry fed; the game is still the ledger, folded.
 import { useState, type ReactNode } from 'react'
 import { STAR_ENDURE_MIN, STAR_EVERY, STAR_FOCUS, STAR_FRIENDS, STAR_MAX, STAR_PICKUP, STAR_SHARE, TRAINER_LEVELS, rankName } from '../core/bond.ts'
-import { nameOf, type Game, type Mon } from '../core/fold.ts'
+import { isShelved, nameOf, type Game, type Mon } from '../core/fold.ts'
 import { BERRY_HEARTS, BOOST, DIRE_HIT, EVO_ITEMS, FOSSILS, ITEMS, LEGEND_KEYS, LEGEND_KEY_BP, COLLECTOR_MULT, REVIVE_COST, TREASURE, collectorWants, treasurePrice, VITAMINS, VITAMIN_MAX, VITAMIN_STEP, itemName, type MarkTag } from '../core/economy.ts'
 import { FACILITIES, type Facility } from '../core/frontier.ts'
 import { BOND_PERKS, CRIT_BASE, DYNAMAX, ENDURE_DAYS, FRIENDS_XP, GIGANTAMAX, HEART_CAP, HEART_LEVELS, PICKUP_BASE, PICKUP_STEP, SHARE_XP, V13_START, bondLevel, hasPerk, levelOf, type BondPerk } from '../core/rules.ts'
@@ -99,7 +99,8 @@ export function TodayEffects({ game }: { game: Game }) {
 export function BattlePrep({ game }: { game: Game }) {
   if (!game.v13) return null
   const have = (id: string) => game.inv[id] ?? 0
-  const boosts = Object.keys(BOOST).filter((id) => have(id) > 0)
+  // version 18: an X item for a kind of work shelved in Life OS stays in the Bag but is out of the way here
+  const boosts = Object.keys(BOOST).filter((id) => have(id) > 0 && !isShelved(game, BOOST[id].tag))
   const dires = Object.keys(DIRE_HIT).filter((id) => have(id) > 0)
   const bond = game.v16 ? game.trainer.level : bondLevel(heartsOf(game.partner))
   const crit = (hasPerk(bond, 'focus') ? CRIT_BASE : 0) + (game.partner.held === 'scope-lens' ? 0.1 : 0)
@@ -160,7 +161,8 @@ export function FrontierWin({ game }: { game: Game }) {
   const symbols = game.frontier.reduce((n, r) => n + (r.silver ? 1 : 0) + (r.gold ? 1 : 0), 0)
   const won = (f: Facility) => Boolean(game.frontier.find((x) => x.id === f.id)?.gold)
   // a facility with both Symbols has nothing left to chase: it steps down to a chip at the end
-  const going = FACILITIES.filter((f) => !won(f)), done = FACILITIES.filter(won)
+  // version 18: a facility for a kind of work with no habit on the Life OS list waits out of sight until it has one again
+  const going = FACILITIES.filter((f) => !won(f) && !isShelved(game, f.win)), done = FACILITIES.filter(won)
   return (
     <Win title="Battle Frontier" tone="purple" aside={<><BpIcon size={22} /> {game.wallet.bp.toLocaleString('en-IN')} BP · {symbols} / 14 Symbols</>}>
       {!game.v13 ? <p className="muted">{opens}</p> : (
