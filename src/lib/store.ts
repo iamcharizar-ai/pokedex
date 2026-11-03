@@ -168,6 +168,8 @@ const ledger = createLedger({
   types: TYPES,
   // the game is a fold over the whole history: keep it on the device and read only what is new
   cache: true,
+  // new rows (the band's night, a tick in Life OS) arrive by push; the poll is only a safety net while the socket is up
+  realtime: true,
   onEvents: (fresh) => {
     // something done here is added at once, then comes back from the ledger: take it once
     for (const e of fresh) if (!seen.has(keyOf(e))) { seen.add(keyOf(e)); events.push(e) }
