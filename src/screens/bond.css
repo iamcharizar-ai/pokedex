@@ -19,25 +19,8 @@
 
 /* ── the deck: each family's strength, who gives it ── */
 .deck { display: grid; gap: var(--s-2); }
-.deck-row { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: var(--s-2); padding: 8px 10px; border-radius: 14px; background: var(--well); border: 1px solid var(--hair); border-left: 3px solid var(--fc); }
-.deck-ico { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: color-mix(in srgb, var(--fc) 22%, transparent); }
-.deck-ico img { image-rendering: pixelated; }
-.deck-txt { display: grid; gap: 3px; min-width: 0; }
-.deck-txt b { font-family: var(--k-face); font-weight: 400; font-size: 15px; color: #fff; }
-.deck-txt b small { font-size: 12px; color: var(--text-3); margin-left: 4px; }
-.deck-txt > small { font-size: 12.5px; line-height: 1.25; color: var(--text-2); }
-.deck-bar { display: block; height: 6px; border-radius: 99px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
-.deck-bar i { display: block; height: 100%; border-radius: inherit; background: var(--fc); box-shadow: 0 0 8px var(--fc); }
-.deck-who { display: flex; }
-.deck-who img { margin-left: -8px; image-rendering: pixelated; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.4)); }
-.deck-who img.lead { filter: drop-shadow(0 0 4px var(--tone-gold)); }
-.deck-missing { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: var(--s-1) 0 0; }
-.deck-missing .k-label { width: 100%; }
-.deck-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px 3px 4px; font-family: var(--k-face); font-size: 13px; color: var(--text-2); background: var(--well); border: 1px dashed var(--hair-hi); border-radius: 99px; }
-.deck-chip small { font-family: inherit; font-size: 11px; color: var(--text-3); }
 
 /* ── feeding: who pays double today; today's signature chips ── */
-.feed-twice { margin-left: 6px; padding: 1px 7px; font: normal 11px/1.4 var(--k-face); color: #0b1029; background: var(--tone-gold); border-radius: 99px; }
 .fxchip.sig { background: linear-gradient(90deg, rgba(123, 92, 240, 0.45), rgba(8, 12, 30, 0.5)); border-color: rgba(190, 160, 255, 0.4); }
 /* past the last trainer level: the road on to the next Trainer star */
 .perk-stars { display: grid; grid-template-columns: 52px 1fr; align-items: center; gap: var(--s-3); padding-top: var(--s-2); border-top: 1px dashed rgba(255, 160, 200, 0.3); }
@@ -46,3 +29,24 @@
 .perk-star-txt { display: grid; gap: 4px; min-width: 0; }
 .perk-star-txt b { font-family: var(--k-face); font-weight: 400; font-size: 15px; color: #fff; }
 .perk-star-txt small { font-size: 12px; color: var(--text-3); line-height: 1.3; }
+
+/* ── the signatures as a row of badges (Bond.tsx Deck) ── */
+.sigrow { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
+.sig-node { display: grid; justify-items: center; gap: 3px; min-width: 0; min-height: 44px; padding: 6px 0 4px; color: var(--text-2); background: none; border: 0; border-radius: var(--r-2); cursor: pointer; }
+.sig-node b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 400 12px/1.1 var(--k-face); }
+.sig-ring { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%;
+  background: radial-gradient(circle, #141a3a 0 16px, transparent 17px), conic-gradient(var(--fc) calc(var(--p, 0) * 1turn), rgba(255, 255, 255, 0.1) 0); box-shadow: 0 0 0 2px var(--k-edge); }
+.sig-ring img { image-rendering: pixelated; }
+.sig-node.sel { color: var(--text); background: var(--surface-2); }
+.sig-node.sel .sig-ring { box-shadow: 0 0 0 2px var(--k-edge), 0 0 14px color-mix(in srgb, var(--fc) 60%, transparent); }
+.sig-node.off .sig-ring { background: radial-gradient(circle, #141a3a 0 16px, transparent 17px), rgba(255, 255, 255, 0.06); }
+.sig-node.off .sig-ring img { filter: grayscale(1) opacity(0.45); }
+.sig-node:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
+.sig-pips { display: flex; gap: 3px; min-height: 6px; }
+.sig-pips i { width: 6px; height: 6px; border-radius: 50%; background: var(--fc); }
+.sig-pips i.lead { background: var(--k-gold); box-shadow: 0 0 6px var(--gold-glow); }
+.sig-say { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin: var(--s-2) 0 0; font-size: 13.5px; line-height: 1.35; color: var(--text-2); }
+.sig-say b { font: 400 15px/1.2 var(--k-face); color: var(--text); }
+.sig-say b small { font-size: 12px; color: var(--text-3); }
+.sig-who { display: flex; align-items: flex-end; gap: 4px; margin-left: auto; }
+.sig-who .crop { filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.35)); }

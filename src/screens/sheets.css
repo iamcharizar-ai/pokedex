@@ -34,8 +34,6 @@
 .claim-chip::after { content: 'Collect'; margin-left: auto; padding: 4px 12px; font-family: var(--k-face); font-size: 13px; color: var(--k-edge); background: var(--c); border-radius: 99px; }
 
 /* a Pokemon's page: a small shadow under it, not a disc */
-.mp-art { background: radial-gradient(ellipse 70px 12px at 50% 86%, rgba(0, 0, 0, 0.4), transparent), radial-gradient(circle at 50% 50%, rgba(90, 168, 255, 0.35), transparent 62%); }
-.mp-art.mega { background: radial-gradient(ellipse 70px 12px at 50% 86%, rgba(0, 0, 0, 0.4), transparent), radial-gradient(circle at 50% 50%, rgba(169, 139, 255, 0.55), transparent 62%); }
 
 /* the help window: the rules as a list down a dark page, each with its picture at the left */
 .helpbody .k-panel { padding: 0; background: linear-gradient(#222b5c, #161c42 200px); border: 1px solid var(--hair-hi); border-radius: var(--r-4); box-shadow: var(--shadow-float); }

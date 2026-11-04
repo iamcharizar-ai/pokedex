@@ -48,3 +48,13 @@ export function PixelSprite({ src, box, className = '', style }: { src: string; 
   const k = px ? wholeScale(px[0], px[1], box) : 1
   return <img src={src} alt="" className={`sprite ${className}`} style={px ? { ...style, width: px[0] * k, height: px[1] * k } : { ...style, visibility: 'hidden' }} onLoad={onLoad} draggable={false} />
 }
+
+/** Only the drawn part of a 96px still (its box in sprites/bbox.json), at 1x: a small Pokemon without shrinking anyone. */
+export function CropSprite({ src, box, alt = '', title, className = '' }: { src: string; box?: [number, number, number, number]; alt?: string; title?: string; className?: string }) {
+  const [l, t, r, b] = box ?? [0, 0, 96, 96]
+  return (
+    <span className={`crop ${className}`} style={{ position: 'relative', display: 'inline-block', width: r - l, height: b - t, overflow: 'hidden' }} title={title}>
+      <img src={src} alt={alt} width={96} height={96} draggable={false} style={{ position: 'absolute', left: -l, top: -t, width: 96, height: 96, maxWidth: 'none', imageRendering: 'pixelated' }} />
+    </span>
+  )
+}

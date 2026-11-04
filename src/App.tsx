@@ -5,9 +5,9 @@ import type { DayFacts, HabitFact } from '../core/facts.ts'
 import { LEAGUES, lineup } from '../core/gyms.ts'
 import {
   ADVANTAGE_MULT, GEMS, SEASON_STEP, BALL_MULT, BALL_NAME, GAME_START, GRADUATES_PER_REGION, LEADER_HP, MOMENTUM_WINDOW,
-  CLAIM_AUTO, SLEEP_HABIT, bondLevel, HEART_LEVELS, LEGENDARY_EVERY_WILD, PAY_STREAK, REGIONS, REPEL_DAYS, SHINY_ODDS, SHINY_ODDS_WORN, SLEEP_AFTER, SLIP, STAKES_FROM, STEPS_GOAL, TEAM_SIZE, TRAIL_EGG_STEPS, WILD_STAY, TIER_XP, WEAK_MULT, evolveAt, graduateAt, xpForLevel,
+  CLAIM_AUTO, SLEEP_HABIT, HEART_LEVELS, LEGENDARY_EVERY_WILD, PAY_STREAK, REGIONS, REPEL_DAYS, SHINY_ODDS, SHINY_ODDS_WORN, SLEEP_AFTER, SLIP, STAKES_FROM, STEPS_GOAL, TEAM_SIZE, TRAIL_EGG_STEPS, WILD_STAY, TIER_XP, WEAK_MULT, evolveAt, graduateAt, xpForLevel,
 } from '../core/rules.ts'
-import { BERRY_HEARTS, MARKS, EGG_KINDS, RARE_EGG_GEMS, BOND_STEP, MASTERY_MAX, MASTERY_STEP, SELL, itemName as econName, masteryCost } from '../core/economy.ts'
+import { MARKS, EGG_KINDS, RARE_EGG_GEMS, BOND_STEP, MASTERY_MAX, MASTERY_STEP, SELL, itemName as econName, masteryCost } from '../core/economy.ts'
 import { MILESTONE_EVERY, CRIT_MULT, DYNAMAX, GIGANTAMAX, LEVEL_POWER, MAX_LEVEL, MEGA_BONUS, MEGA_BOND, RESEARCH_SLOTS, RESEARCH_WILD, RESEARCH_WILD_MAX, TEAM_BONUS, TEAM_LEVEL, TEAM_NATURE, type Tag as TagKind } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
 import { Ball, KeyStone } from './Ball.tsx'
@@ -21,7 +21,6 @@ import { Recap } from './Recap.tsx'
 import { BossLog, BossTile } from './Boss.tsx'
 import { fitOf, useBoxes } from './Fit.tsx'
 import { Calendar } from './screens/Calendar.tsx'
-import { SigLine } from './Bond.tsx'
 import { SIG_CAP, STAR_EVERY, TRAINER_LEVELS } from '../core/bond.ts'
 import { reachNote, tabTodo } from './screens/Today.tsx'
 import { Nursery } from './screens/Nursery.tsx'
@@ -32,7 +31,7 @@ import { Sheet } from './screens/Sheet.tsx'
 import { Tour } from './screens/Tour.tsx'
 import { TOUR_KEY, shouldTour } from './screens/tour.ts'
 import { SeasonRoad } from './Road.tsx'
-import { BattlePrep, BondPerks, FrontierWin, LegendWin, TodayEffects } from './Champion.tsx'
+import { BattlePrep, FrontierWin, LegendWin, TodayEffects } from './Champion.tsx'
 import { FACILITIES } from '../core/frontier.ts'
 import { BOSS_HEAL, KILL_CAP, THROWS, THROW_AT } from '../core/boss.ts'
 import { KIT_SHARD_EVERY } from '../core/rules.ts'
@@ -324,70 +323,23 @@ function Pace({ game }: { game: Game }) {
   )
 }
 
-/** The partner, as the Party tab's hero: on a plinth against its type's colour, with its level, its line ahead, and the bond. Tap it for its page. */
-function Summary({ game, onOpen }: { game: Game; onOpen?: () => void }) {
+/** Under the party's six places: the Feed button (it opens the cards in feed mode, Feed.tsx) and what state the partner is in.
+ *  It replaces the old hero on a plinth: the Partner card in the first place is the hero now, and its page has the rest. */
+function PartyNotes({ game }: { game: Game }) {
   const { partner } = game
-  const rec = SPECIES[partner.form]
-  const hearts = (partner.together ?? 0) + (partner.fed ?? 0)
-  const bond = bondLevel(hearts)
-  const nextAt = HEART_LEVELS[bond]
-  // version 14: the richest food first; and feeding opens a choice of who
-  const berry = game.v14 ? treatsIn(game)[0] : Object.keys(BERRY_HEARTS).find((b) => (game.inv[b] ?? 0) > 0)
+  const treats = treatsIn(game)
+  const berries = treats.reduce((n, b) => n + (game.inv[b] ?? 0), 0)
   const [feeding, setFeeding] = useState(false)
-  // what it may become: by what you have done most, when that is known; else every form it can take
-  const ahead = game.lean.length > 0 ? game.lean.slice(0, 3).map((x) => ({ form: x.form, note: `${x.pct}% ${TAG_NAME[x.tag] ?? x.tag}` })) : (rec.e ?? []).slice(0, 3).map((f) => ({ form: f, note: '' }))
   return (
-    <>
-      <section className="hero" style={{ ['--tc' as string]: typeColor(rec.t) }} aria-label="Your partner">
-        <button type="button" className="hero-stage" onClick={onOpen} aria-label={`${nameOf(game.display)}: open its page`}>
-          <span className="hero-glow" aria-hidden />
-          <span className="hero-plinth" aria-hidden />
-          <img src={spritePath(game.display, partner.shiny)} alt="" className="sprite" />
-        </button>
-        <div className="hero-info">
-          <span className="k-label">Your partner · No. {dexNo(rec.d)}</span>
-          <h2 className="hero-name">
-            {nameOf(game.display)}
-            {partner.shiny && <span className="tagchip shiny">Shiny</span>}
-            {game.aura === 'mega' && <span className="tagchip mega">Mega</span>}
-            {game.aura === 'gmax' && <span className="tagchip gmax">G-Max</span>}
-          </h2>
-          <div className="hero-types">
-            {[rec.t, rec.t2].filter(Boolean).map((t) => <span key={t} className="typechip" style={{ ['--tc' as string]: typeColor(t) }}><img src={`/sprites/types/${t}.png`} alt="" width={14} height={14} />{t}</span>)}
-            <span className="hero-met">{partner.origin === 'starter' ? 'Starter' : partner.origin === 'egg' ? 'Hatched' : 'Caught'} {fmtDay(partner.from)}</span>
-          </div>
-          <div className="hero-lv">
-            <b>Lv {game.level}</b>
-          </div>
-          <div className="hero-line" aria-label="Its line">
-            {partner.path.map((f) => <img key={f} src={still(f, partner.shiny)} alt={nameOf(f)} title={nameOf(f)} width={40} height={40} className={`sprite ${f === partner.form ? 'now' : 'past'}`} />)}
-            {ahead.length > 0 && (
-              <>
-                <span className="hero-next">Lv {game.next.level}</span>
-                {ahead.map((x) => (
-                  <span key={x.form} className="hero-ahead" title={game.dex[x.form] ? nameOf(x.form) : 'Not seen yet'}>
-                    <img src={still(x.form, partner.shiny)} alt="" width={40} height={40} className={`sprite ${game.dex[x.form] ? '' : 'unseen'}`} />
-                    {x.note && <small>{x.note}</small>}
-                  </span>
-                ))}
-              </>
-            )}
-            {ahead.length === 0 && <span className="hero-next">{game.next.what === 'master' ? 'Level 100' : 'Fully trained'} at Lv {game.next.level}</span>}
-          </div>
-          <div className="hero-bond" title={game.v16 ? `Its own bond: a heart for each pillar done while it is your partner, and more for each berry. At ${HEART_LEVELS.join(', ')} hearts it steps up: +${Math.round(BOND_STEP * 100)}% to every strike each, and its signature grows. It only ever counts up.` : `A heart for each pillar done while it is your partner, and more for each berry. At ${HEART_LEVELS.join(', ')} hearts the bond steps up: +${Math.round(BOND_STEP * 100)}% to every strike each, and a perk. It only ever counts up.`}>
-            <span className="hero-hearts" aria-label={`Bond level ${bond} of ${HEART_LEVELS.length}`}>{HEART_LEVELS.map((_, i) => <img key={i} src="/sprites/items/heart-scale.png" width={22} height={22} alt="" className={`pix ${i < bond ? 'on' : ''}`} />)}</span>
-            <span className="hero-bondtxt"><b>{hearts} ♥</b>{nextAt ? ` · ${nextAt - hearts} to bond ${bond + 1}` : ' · full bond'}</span>
-            <button type="button" className="hero-feed" disabled={!berry} onClick={() => { if (game.v14) setFeeding(true); else { useItem(berry!, '', 'feed'); play('feed') } }} title={berry ? (game.v14 ? 'Feed a Pokemon: choose who and what' : `Feed it: ${econName(berry)}`) : 'No berries: the Mart and the Garden sell them'}><ItemIcon id={berry ?? 'oran-berry'} size={24} />Feed{berry ? <i>{game.inv[berry]}</i> : null}</button>
-          </div>
-          {game.v16 && <SigLine m={partner} game={game} />}
-          {feeding && <FeedSheet game={game} onClose={() => setFeeding(false)} />}
-        </div>
-      </section>
-      {game.v13 && <BondPerks game={game} />}
+    <div className="party-notes">
+      <button type="button" className="party-feed" disabled={!berries} onClick={() => { setFeeding(true); play('tap') }} title={berries ? 'Feed any of your Pokemon: the cards show what a berry gives each' : 'No berries: the Mart and the Garden sell them'}>
+        <ItemIcon id={treats[0] ?? 'oran-berry'} size={24} />Feed{berries > 0 && <i>{berries}</i>}
+      </button>
       {game.asleep && <p className="notice warn">Dozing after two days without a pillar. Finish one pillar to wake it. Nothing finished is lost{game.today.day >= STAKES_FROM ? '; a day with nothing ticked also costs what is still in progress (see How it works)' : `. From ${fmtDay(STAKES_FROM)} a day with nothing ticked also costs what is still in progress`}.</p>}
       {game.aura === 'mega' && <p className="notice good">{partner.megas?.length ? 'Mega form: registered for good. Choose which form shows in Choices.' : 'Mega form: full momentum and every pillar done today.'}</p>}
       {game.aura === 'gmax' && <p className="notice gmax">{game.display === partner.form ? 'Perfect day: Dynamaxed for today, every strike ×2.' : 'Perfect day: Gigantamax for today, every strike ×2.5.'}</p>}
-    </>
+      {feeding && <FeedSheet game={game} onClose={() => setFeeding(false)} />}
+    </div>
   )
 }
 
@@ -1243,7 +1195,7 @@ export default function App() {
   const screen = (id: Tab) => (
     <>
       {id === 'partner' && <PartnerTab game={view.game} facts={view.facts} nights={view.nights} onShop={() => slideTo('shop')} />}
-      {id === 'team' && <TeamTab game={view.game} partnerCard={(open: () => void) => <Summary game={view.game} onOpen={open} />} choices={<Choices game={view.game} />} />}
+      {id === 'team' && <TeamTab game={view.game} under={<PartyNotes game={view.game} />} choices={<Choices game={view.game} />} />}
       {id === 'shop' && <ShopTab game={view.game} />}
       {id === 'dex' && <DexTab game={view.game} />}
       {id === 'trainer' && <TrainerTab game={view.game} />}

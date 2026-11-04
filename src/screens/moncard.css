@@ -189,3 +189,12 @@ body.dragging .mc, body.dragging .mc:hover { transform: none; cursor: grabbing; 
    content-visibility clips what is inside to the box, so each card has 8px of room around it
    (taken back by the margin) for its hover lift, its frame's glow and the focus ring. */
 .mon-grid > [role='listitem'] { content-visibility: auto; contain-intrinsic-size: auto 120px auto 204px; padding: 8px; margin: -8px; }
+
+/* the large card a Pokemon's page opens on (MonCard size="hero"): the same card, a size up, its art field taller */
+.mc.hero { width: 172px; flex: none; }
+.mc.hero.full .mc-art { height: 232px; }
+.mc.hero.full .mc-lv { height: 30px; }
+.mc.hero.full .mc-lv b { font-size: 18px; }
+.mc.hero .mc-hearts { height: 22px; }
+.mc.hero:disabled { opacity: 1; }
+.mc.hero .mc-type, .mc.hero .mc-sig { width: 30px; height: 30px; }

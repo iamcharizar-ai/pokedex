@@ -26,10 +26,10 @@
 .pre-hint { pointer-events: none; animation: pre-hint 1.6s var(--ease-in-out) both; animation-iteration-count: var(--hint-times, 2); }
 
 @keyframes ghost-pulse { 50% { opacity: 0.55; } }
-.meter-ghost, .meter-chain .ml.ghost { animation: ghost-pulse 1s ease-in-out infinite; }
+.meter-ghost, .meter-chain .ml.ghost, .mc-hearts > i.ghost { animation: ghost-pulse 1s ease-in-out infinite; }
 
 @media (prefers-reduced-motion: reduce) {
   .pre-obj, .pre-obj:hover, .pre-obj:active { transition: none; transform: none; }
-  .pre-pop, .pre-stamp, .pre-hint, .meter.pre-sweep > .meter-fill, .meter.pre-sweep > .meter-today, .meter-ghost, .meter-chain .ml.ghost { animation: none; }
+  .pre-pop, .pre-stamp, .pre-hint, .meter.pre-sweep > .meter-fill, .meter.pre-sweep > .meter-today, .meter-ghost, .meter-chain .ml.ghost, .mc-hearts > i.ghost { animation: none; }
   .pre-hint { opacity: 0; }
 }

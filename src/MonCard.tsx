@@ -30,6 +30,8 @@ export interface MonCardData {
   sig?: { icon: string; name: string }
   /** a berry in the bag would take it to its next bond level: the green arrow */
   canFeed?: boolean
+  /** hearts a feeding would add, drawn as a striped ghost on the hearts pill (the feed sheet) */
+  ghost?: number
   mega?: boolean
   /** fully trained (the banner turns gold) */
   trained?: boolean
@@ -54,6 +56,8 @@ interface Props extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'role'> {
   selected?: boolean
   /** text on an empty slot */
   emptyText?: string
+  /** 'hero': the large card a Pokemon's page opens on */
+  size?: 'hero'
   ref?: Ref<HTMLButtonElement>
 }
 
@@ -69,18 +73,18 @@ function useNarrow(): boolean {
 }
 
 /** Full look: the sprite enlarged to fill the art field (lib/fit.ts fullFit); the field is 100px wide on a phone, 132 wider, 170 tall. */
-function cardFit(box: Box | undefined, narrow: boolean): { style: { transform: string } | undefined; smooth: boolean } {
+function cardFit(box: Box | undefined, narrow: boolean, hero = false): { style: { transform: string } | undefined; smooth: boolean } {
   if (!box) return { style: undefined, smooth: false }
-  const f = fullFit(box, narrow ? 100 : 132, 170)
+  const f = hero ? fullFit(box, 150, 232) : fullFit(box, narrow ? 100 : 132, 170)
   return { style: { transform: `translate(${f.x}px, ${f.y}px) scale(${f.k.toFixed(3)})` }, smooth: f.smooth }
 }
 
-export function MonCard({ mon, state = 'card', role = 'lab', ribbon, look = 'classic', box, dimmed, held, selected, emptyText = 'Open', className = '', ref, ...rest }: Props) {
+export function MonCard({ mon, state = 'card', role = 'lab', ribbon, look = 'classic', box, dimmed, held, selected, emptyText = 'Open', size, className = '', ref, ...rest }: Props) {
   // hooks first: a card and an open place share this component
   const narrow = useNarrow()
-  const fit = look === 'full' && mon ? cardFit(box, narrow) : null
+  const fit = look === 'full' && mon ? cardFit(box, narrow, size === 'hero') : null
   const big = useBig(mon ? still(mon.form, mon.shiny) : '', Boolean(fit?.smooth))
-  const marks = `${dimmed ? 'dim' : ''} ${held ? 'held' : ''} ${selected ? 'sel' : ''}`
+  const marks = `${dimmed ? 'dim' : ''} ${held ? 'held' : ''} ${selected ? 'sel' : ''} ${size === 'hero' ? 'hero' : ''}`
   if (state === 'empty' || !mon) return <ObjCard ref={ref} look={look} empty emptyText={emptyText} ribbon={ribbon} className={`${marks} ${className}`} {...rest} />
   const locked = state === 'locked'
   const elite = mon.need === null
@@ -91,6 +95,7 @@ export function MonCard({ mon, state = 'card', role = 'lab', ribbon, look = 'cla
     : (
       <span className={`mc-hearts ${mon.canFeed ? 'ready' : ''}`} aria-hidden>
         <i style={{ width: `${pct * 100}%` }} />
+        {mon.ghost && mon.need ? <i className="ghost" style={{ left: `${pct * 100}%`, width: `${Math.min(1 - pct, mon.ghost / mon.need) * 100}%` }} /> : null}
         <span className="mc-hearts-t">{mon.canFeed && <IcArrowUp size={12} />}<IcHeart size={11} />{mon.hearts}/{mon.need}</span>
       </span>
     )

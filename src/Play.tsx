@@ -3,7 +3,7 @@
 // team, the Professor, quests. Every one is written to the ledger as one small
 // event (store.useItem), so the game is still recomputed from the ledger alone.
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
-import { isShelved, nameOf, spritePath, type Game, type Mon, type Quest } from '../core/fold.ts'
+import { isShelved, nameOf, type Game, type Mon, type Quest } from '../core/fold.ts'
 import {
   BALLS, battleShelf, BERRY_HEARTS, treasurePrice, BOOST, BP_SHELF, DOMAIN_SHOPS, DOMAIN_V13, EVO_ITEMS, FOSSILS, GEAR_ITEMS, HELD, ITEMS, LEGEND_KEYS, LURES, MARKS, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, masteryCost, RARE_SHELF, RARE_SHELF_V13, REVIVE_COST, SELL, TM_SLOTS, TREASURE, itemName, throwHp, tmType,
   type MarkTag, type Offer, type ShopId,
@@ -28,9 +28,11 @@ import { loadLayout, moveTo, reconcile, slotCount, storeLayout, tidy, type Layou
 import { buyPop } from './lib/fx.ts'
 import { play } from './lib/sfx.ts'
 import { useItem } from './lib/store.ts'
-import { BpIcon, CollectorWin, LabWin, MonExtras, evolutionsFor } from './Champion.tsx'
+import { BondPerks, BpIcon, CollectorWin, LabWin, MonExtras, evolutionsFor } from './Champion.tsx'
 import { FeedSheet, treatsIn } from './Feed.tsx'
-import { FeedBlock, RoleControl, TeamScreen } from './Team.tsx'
+import { FeedBlock, RoleControl, TeamScreen, monCardOf } from './Team.tsx'
+import { MonCard } from './MonCard.tsx'
+import { useBoxes } from './Fit.tsx'
 
 export { Coin, EggIcon, Gem }
 
@@ -690,6 +692,7 @@ export function Bag({ game }: { game: Game }) {
 /** Everything about one of yours, and what can be done with it from where it stands. */
 export function MonPage({ m, game, onClose }: { m: Mon; game: Game; onClose: () => void }) {
   const rec = SPECIES[m.form]
+  const boxes = useBoxes()
   const inBox = game.queue.some((x) => x.uid === m.uid)
   const trained = Boolean(m.graduated)
   const isPartner = game.partner.uid === m.uid
@@ -704,21 +707,25 @@ export function MonPage({ m, game, onClose }: { m: Mon; game: Game; onClose: () 
   return (
     <Sheet title={nameOf(m.form)} onClose={onClose}>
       <div className="monpage">
-        <div className={`mp-art ${m.megas?.length ? 'mega' : ''}`}><img src={spritePath(m.megas?.length && m.show !== 'base' ? (m.show && m.megas.includes(m.show) ? m.show : m.megas[0]) : m.form, m.shiny)} alt="" className="sprite" /></div>
+        {/* the page opens on the Pokemon's own card, a size up: level, bond, type and signature are on it already */}
+        <div className="mp-hero">
+          <MonCard mon={monCardOf(m, game)} look="full" size="hero" box={boxes?.[m.form]} role={isPartner ? 'partner' : inTeam ? 'party' : 'lab'} ribbon={isPartner ? 'Partner' : undefined} disabled tabIndex={-1} aria-hidden />
+          <div className="mp-facts">
+            <h2 className="k-type">{nameOf(m.form)}{m.shiny && <span className="chip">shiny</span>}</h2>
+            <div className="mp-types">
+              {[rec.t, rec.t2].filter(Boolean).map((t) => <span key={t} className="chip type"><img src={`/sprites/types/${t}.png`} alt="" width={14} height={14} onError={(e) => { e.currentTarget.style.display = 'none' }} />{t}</span>)}
+              {(m.moves ?? []).map((id) => <span key={id} className="chip type tmchip"><ItemIcon id={id} size={16} />{tmType(id)}</span>)}
+            </div>
+            <ul className="mp-chips" aria-label="About it">
+              <li className="where">{isPartner ? 'Your partner' : inTeam ? 'In the party' : game.v14 && game.research.desk.some((x) => x.uid === m.uid) ? 'On the research desk' : game.v14 ? 'With the Professor' : trained ? 'Fully trained' : 'In My Pokemon'}</li>
+              <li className="sr-only">Level {levelOf(m.xp)}, {hearts} hearts</li>{/* drawn on the card already; said here for a screen reader, which skips the card */}
+              {m.nature && <li>{m.nature.name}</li>}
+              <li>{m.origin === 'egg' ? 'Hatched' : m.origin === 'starter' ? 'Starter' : m.origin === 'fossil' ? 'Revived' : 'Caught'} {fmtDay(m.from)}</li>
+              {m.held && <li className="holdline"><ItemIcon id={m.held} size={24} />{itemName(m.held)}</li>}
+            </ul>
+          </div>
+        </div>
         <div className="mp-body">
-          <h2 className="k-type">{nameOf(m.form)}{m.shiny && <span className="chip">shiny</span>}</h2>
-          <div className="mp-types">
-            {[rec.t, rec.t2].filter(Boolean).map((t) => <span key={t} className="chip type"><img src={`/sprites/types/${t}.png`} alt="" width={14} height={14} onError={(e) => { e.currentTarget.style.display = 'none' }} />{t}</span>)}
-            {(m.moves ?? []).map((id) => <span key={id} className="chip type tmchip"><ItemIcon id={id} size={16} />{tmType(id)}</span>)}
-            <span className="chip where">{isPartner ? 'Your partner' : inTeam ? 'In the party' : game.v14 && game.research.desk.some((x) => x.uid === m.uid) ? 'On the research desk' : game.v14 ? 'With the Professor' : trained ? 'Fully trained' : 'In My Pokemon'}</span>
-          </div>
-          <div className="mp-tiles">
-            <div className="k-tile"><span className="k-label">Level</span><b>{levelOf(m.xp)}</b></div>
-            <div className="k-tile"><span className="k-label">Hearts</span><b>{hearts} ♥</b></div>
-            {m.nature && <div className="k-tile"><span className="k-label">Nature</span><b>{m.nature.name}</b></div>}
-            <div className="k-tile"><span className="k-label">{m.origin === 'egg' ? 'Hatched' : m.origin === 'starter' ? 'Starter' : m.origin === 'fossil' ? 'Revived' : 'Caught'}</span><b>{fmtDay(m.from)}</b></div>
-            {m.held && <div className="k-tile"><span className="k-label">Holding</span><b className="holdline"><ItemIcon id={m.held} size={22} />{itemName(m.held)}</b></div>}
-          </div>
           {(game.v14 || isPartner) && <FeedBlock game={game} m={m} />}
           <RoleControl game={game} m={m} onDone={onClose} />
           {game.v16 && <SigLine m={m} game={game} />}
@@ -813,7 +820,8 @@ function BallBox({ mons, onOpen, note, actions, empty }: { mons: Mon[]; onOpen: 
 type PartyView = 'team' | 'lab' | 'items'
 
 /** Party: three screens: the team (and the partner), the lab (or the box), and items (the Bag, the Forge, incense and choices). */
-export function TeamTab({ game, partnerCard, choices }: { game: Game; partnerCard: (open: () => void) => ReactNode; choices: ReactNode }) {
+/** `under`: what stands under the six places (App's PartyNotes: the Feed button and the partner's state). */
+export function TeamTab({ game, under, choices }: { game: Game; under: ReactNode; choices: ReactNode }) {
   const [page, setPage] = useState<string | null>(null)
   const [view, setView] = useState<PartyView>('team')
   const inTeam = new Set(game.team.map((m) => m.uid))
@@ -840,9 +848,7 @@ export function TeamTab({ game, partnerCard, choices }: { game: Game; partnerCar
       <div className="pview" key={view}>
         {view === 'team' && (
           <>
-            <TeamScreen game={game} onInfo={setPage} />
-            <Deck game={game} />
-            {partnerCard(() => setPage(game.partner.uid))}
+            <TeamScreen game={game} onInfo={setPage} under={under} between={<><Deck game={game} />{game.v13 && <BondPerks game={game} />}</>} />
             {!game.v14 && bench.length > 0 && (
               <Win title="Fully trained, off the party" tone="dark" aside={String(bench.length)}>
                 <BallBox mons={bench} onOpen={setPage} empty="" />

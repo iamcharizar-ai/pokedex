@@ -14,6 +14,7 @@ import { SPECIES } from '../core/species.ts'
 import { TAG_NAME, Win } from './App.tsx'
 import { Coin, ItemIcon } from './Item.tsx'
 import { KBar } from './Kit.tsx'
+import { Meter } from './Meter.tsx'
 import { fmtDay, still } from './lib/art.ts'
 import { play } from './lib/sfx.ts'
 import { useItem } from './lib/store.ts'
@@ -64,12 +65,11 @@ export function BondPerks({ game }: { game: Game }) {
       </ol>
       <p className="perk-say"><b>{v16 ? rankName(p, rank(p)) : PERK[p].name}</b> {on ? PERK[p].text(bond, rank(p)) : `At ${steps[shown]} hearts${v16 ? ' in all' : ''}: ${PERK[p].text(shown + 1)}`}</p>
       {starred && (
-        <div className="perk-stars">
+        <div className="perk-stars" title={`Every ${STAR_EVERY} hearts past ${TRAINER_LEVELS[TRAINER_LEVELS.length - 1]}: Collect offers two perks, and you rank one up (to ${['', 'I', 'II', 'III', 'IV', 'V', 'VI'][STAR_MAX + 1]}).`}>
           <span className="perk-star-ico" aria-hidden>★<i>{game.trainer.stars}</i></span>
           <span className="perk-star-txt">
             <b>Trainer star {game.trainer.stars + 1}</b>
-            <KBar value={game.trainer.hearts - fromLast} max={STAR_EVERY} kind="gold" label={`${game.trainer.hearts - fromLast} / ${STAR_EVERY} hearts`} />
-            <small>Every {STAR_EVERY} hearts past {TRAINER_LEVELS[TRAINER_LEVELS.length - 1]}: Collect offers two perks, and you rank one up (to {['', 'I', 'II', 'III', 'IV', 'V', 'VI'][STAR_MAX + 1]}).</small>
+            <Meter kind="gold" value={game.trainer.hearts - fromLast} max={STAR_EVERY} name={`Hearts to Trainer star ${game.trainer.stars + 1}`} label={`${game.trainer.hearts - fromLast} / ${STAR_EVERY} ♥`} size="lg" />
           </span>
         </div>
       )}

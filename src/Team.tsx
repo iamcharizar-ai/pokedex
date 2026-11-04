@@ -3,7 +3,7 @@
 // to choose between: drag a card to a place (or to the lab), or tap it for Info, Use or Replace.
 // Every move goes through lib/party.ts, which writes the same lead and team events as before.
 // A place can be left open; if it is still open an hour later the app fills it from the lab.
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { nameOf, type Game, type Mon } from '../core/fold.ts'
 import { BERRY_DOMAIN_MULT, signatureOf } from '../core/bond.ts'
 import { BERRY_HEARTS, itemName } from '../core/economy.ts'
@@ -70,7 +70,7 @@ export function move(game: Game, uid: string, to: Target): boolean {
   const plan = planMove(game, uid, to)
   if (!plan.ok) { say(plan.why, true); play('click'); return false }
   applyPlan(plan)
-  if (plan.ops.length) { play('tap'); if (plan.note) say(plan.note) }
+  if (plan.ops.length) { play('tap'); if (plan.note) say(plan.note); try { localStorage.setItem(HINT_KEY, '1') } catch { /* it says itself again */ } }
   return true
 }
 
@@ -268,7 +268,12 @@ function dropsFor(game: Game, uid: string): Drag['can'] {
   return { places: Array.from({ length: PLACES }, (_, i) => takes({ slot: i })), lab: takes('lab') }
 }
 
-export function TeamScreen({ game, onInfo }: { game: Game; onInfo: (uid: string) => void }) {
+/** The how-to line under the party says itself until the first card is moved, then never again. */
+const HINT_KEY = 'pokedex.teamhint.v1'
+const hinted = (): boolean => { try { return localStorage.getItem(HINT_KEY) === '1' } catch { return false } }
+
+/** `under`: what goes under the six places (the Feed button, the partner's state). `between`: what goes between the party and the lab (the signatures, the trainer's perks), so a long lab comes last. */
+export function TeamScreen({ game, onInfo, under, between }: { game: Game; onInfo: (uid: string) => void; under?: ReactNode; between?: ReactNode }) {
   const [menu, setMenu] = useState<Menu | null>(null)
   /** a sheet of cards: pick who goes to a place (`pick`), or where someone goes (`chooser`) */
   const [pick, setPick] = useState<number | null>(null)
@@ -331,14 +336,19 @@ export function TeamScreen({ game, onInfo }: { game: Game; onInfo: (uid: string)
             })}
           </div>
         </div>
-        <p className="mc-note">
-          {open && free > 0
-            ? 'Drag a card to a place, or tap an open one. A place still open after an hour fills with the oldest in the lab.'
-            : open
-              ? 'A place is open. Catch or hatch someone and it fills from the lab after an hour.'
-              : 'Drag a card to a place or to the lab, or tap it. The first place is the partner: whoever stands there is the one you raise.'}
-        </p>
+        {(open || !hinted()) && (
+          <p className="mc-note">
+            {open && free > 0
+              ? 'Drag a card to a place, or tap an open one. A place still open after an hour fills with the oldest in the lab.'
+              : open
+                ? 'A place is open. Catch or hatch someone and it fills from the lab after an hour.'
+                : 'Drag a card to a place or to the lab, or tap it. The first place is the partner: whoever stands there is the one you raise.'}
+          </p>
+        )}
+        {under}
       </Win>
+
+      {between}
 
       <Win title="In the lab" tone="dark" aside={`In lab: ${lab.length}`}>
         <div className="mc-head">

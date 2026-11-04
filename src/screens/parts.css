@@ -13,6 +13,9 @@
 .mc.m-locked .mc-art img, .mc.m-locked .mc-art .itemimg { filter: brightness(0) opacity(0.45); }
 .mc.m-elite .mc-f { background: linear-gradient(120deg, var(--metal-elite-hi), var(--metal-elite) 30%, var(--metal-elite-hi) 50%, var(--metal-elite) 70%, var(--metal-elite-hi)); background-size: 260% 100%; animation: mc-shine 5s linear infinite; }
 .mc.m-mega .mc-f { background: linear-gradient(135deg, #7fe3ff, var(--k-purple), var(--k-pink), var(--k-gold-hi), #7fe3ff); background-size: 300% 300%; animation: mc-shine 6s linear infinite; }
+/* a feeding's hearts, ghosted on a card's hearts pill (MonCard ghost) */
+.mc-hearts > i.ghost { right: auto; background: repeating-linear-gradient(135deg, rgba(255, 158, 196, 0.95) 0 3px, rgba(224, 85, 154, 0.35) 3px 6px); box-shadow: none; }
+
 /* an item on a card's art field: drawn whole-number large, centred, with the card's hard shadow */
 .mc .mc-art > .mc-item { position: relative; z-index: 1; image-rendering: pixelated; filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.3)); }
 @media (prefers-reduced-motion: reduce) { .mc.m-elite .mc-f, .mc.m-mega .mc-f { animation: none; } }

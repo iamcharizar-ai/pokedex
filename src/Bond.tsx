@@ -5,7 +5,7 @@
 // families, one for each kind of work. Its strength is the Pokemon's own bond
 // level as partner, half that in the party; a family adds up to SIG_CAP. So the
 // party is chosen like a deck: which families do you want behind you?
-import type { CSSProperties } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { FAMILY_NAME, SIG_CAP, SIG_FAMILY, sigStrength, sigText, signatureOf, type SigFamily } from '../core/bond.ts'
 import { isShelved, nameOf, type Game, type Mon } from '../core/fold.ts'
 import { HEART_LEVELS, bondLevel, type Tag } from '../core/rules.ts'
@@ -13,6 +13,9 @@ import { TAG_NAME, Win } from './App.tsx'
 import { heartsOf } from './Feed.tsx'
 import { ItemIcon } from './Item.tsx'
 import { still } from './lib/art.ts'
+import { play } from './lib/sfx.ts'
+import { CropSprite } from './lib/pixel.tsx'
+import { useBoxes } from './Fit.tsx'
 
 /** Each family's picture: the item of one of its types. */
 const FAMILY_ICON: Record<SigFamily, string> = { power: 'black-belt', insight: 'twistedspoon', charm: 'pink-scarf', forage: 'miracle-seed', dream: 'blackglasses', flow: 'mystic-water' }
@@ -56,38 +59,46 @@ export function SigLine({ m, game }: { m: Mon; game: Game }) {
   )
 }
 
-/** The party's signatures together: each family's strength, who gives it, and what it does today. */
+/**
+ * The party's signatures together, as a row of six badges (UI-AUDIT-2026-11-04 T3): each family's ring fills, in its kind of
+ * work's colour, with how strong the party makes it; a pip for each member who brings it (the partner's gold). A family nobody
+ * in the party brings is grey. What a family does is said for one at a time: the strongest, or the one tapped.
+ */
 export function Deck({ game }: { game: Game }) {
+  const [pick, setPick] = useState<SigFamily | null>(null)
+  const boxes = useBoxes()
   if (!game.v16) return null
   const members: Mon[] = [game.partner, ...game.team.filter((m) => m.uid !== game.partner.uid)]
   const families = (Object.keys(FAMILY_NAME) as SigFamily[])
-  const live = families.filter((f) => game.sigs[TAG_OF[f]] > 0 || members.some((m) => signatureOf(m.form).family === f))
-  const empty = families.filter((f) => !live.includes(f))
+  const whoOf = (f: SigFamily) => members.filter((m) => signatureOf(m.form).family === f)
+  const live = families.filter((f) => game.sigs[TAG_OF[f]] > 0 || whoOf(f).length > 0)
+  const strongest = [...live].sort((a, b) => game.sigs[TAG_OF[b]] - game.sigs[TAG_OF[a]])[0] ?? families[0]
+  const shown = pick ?? strongest
+  const tagOf = TAG_OF[shown], strength = game.sigs[tagOf], who = whoOf(shown)
+  const say = !live.includes(shown)
+    ? `Nobody in your party brings it. ${FAMILY_TYPES[shown].join(', ')} Pokemon do.`
+    : isShelved(game, tagOf) ? `Resting: ${TAG_NAME[tagOf]} is off your Life OS list.`
+      : strength > 0 ? `${sigText(shown, strength)}.` : 'Asleep: bond its Pokemon to wake it.'
   return (
     <Win title="Signatures" tone="purple" aside={`${live.length} of 6 families`}>
-      <div className="deck">
-        {live.map((f) => {
-          const tag = TAG_OF[f], s = game.sigs[tag]
-          const who = members.filter((m) => signatureOf(m.form).family === f)
+      <div className="sigrow" role="group" aria-label="The party's signatures">
+        {families.map((f) => {
+          const on = live.includes(f), tag = TAG_OF[f], st = game.sigs[tag]
           return (
-            <div key={f} className="deck-row" style={{ ['--fc' as string]: `var(--tag-${tag})` } as CSSProperties}>
-              <span className="deck-ico"><ItemIcon id={FAMILY_ICON[f]} size={30} /></span>
-              <span className="deck-txt">
-                <b>{FAMILY_NAME[f]} <small>{TAG_NAME[tag]}</small></b>
-                <small>{isShelved(game, tag) ? `Resting: ${TAG_NAME[tag]} is off your Life OS list` : s > 0 ? sigText(f, s) : 'Asleep: bond its Pokemon to wake it'}</small>
-                <span className="deck-bar" role="meter" aria-valuemin={0} aria-valuemax={SIG_CAP} aria-valuenow={s} aria-label={`${FAMILY_NAME[f]} strength`}><i style={{ width: `${(s / SIG_CAP) * 100}%` }} /></span>
-              </span>
-              <span className="deck-who">{who.map((m) => <img key={m.uid} src={still(m.form, m.shiny)} alt={nameOf(m.form)} title={`${nameOf(m.form)}: ${signatureOf(m.form).name}`} width={32} height={32} className={`sprite ${m.uid === game.partner.uid ? 'lead' : ''}`} />)}</span>
-            </div>
+            <button key={f} type="button" className={`sig-node ${on ? '' : 'off'} ${f === shown ? 'sel' : ''}`} aria-pressed={f === shown} onClick={() => { setPick(f); play('tap') }}
+              style={{ ['--fc' as string]: `var(--tag-${tag})`, ['--p' as string]: Math.min(1, st / SIG_CAP) } as CSSProperties}
+              aria-label={`${FAMILY_NAME[f]}, ${TAG_NAME[tag]}: ${on ? `strength ${st} of ${SIG_CAP}, from ${whoOf(f).map((m) => nameOf(m.form)).join(' and ') || 'nobody yet'}` : 'not in your party'}`}>
+              <span className="sig-ring"><ItemIcon id={FAMILY_ICON[f]} size={24} /></span>
+              <b>{FAMILY_NAME[f]}</b>
+              <span className="sig-pips" aria-hidden>{whoOf(f).map((m) => <i key={m.uid} className={m.uid === game.partner.uid ? 'lead' : ''} />)}</span>
+            </button>
           )
         })}
-        {empty.length > 0 && (
-          <p className="deck-missing">
-            <span className="k-label">Not in your party</span>
-            {empty.map((f) => <span key={f} className="deck-chip" title={`${FAMILY_TYPES[f].join(', ')} Pokemon bring it`}><ItemIcon id={FAMILY_ICON[f]} size={20} />{FAMILY_NAME[f]} <small>{FAMILY_TYPES[f].slice(0, 2).join('/')}{FAMILY_TYPES[f].length > 2 ? '…' : ''}</small></span>)}
-          </p>
-        )}
       </div>
+      <p className="sig-say">
+        <b>{FAMILY_NAME[shown]} <small>{TAG_NAME[tagOf]}</small></b> {say}
+        {who.length > 0 && <span className="sig-who">{who.map((m) => <CropSprite key={m.uid} src={still(m.form, m.shiny)} box={boxes?.[m.form]} alt={nameOf(m.form)} title={`${nameOf(m.form)}: ${signatureOf(m.form).name}`} />)}</span>}
+      </p>
     </Win>
   )
 }
