@@ -32,5 +32,5 @@ Egg sizes by kind are in `EGG_KINDS` (core/economy.ts); an egg's size is fixed b
 ## On the screens
 
 - The Nursery moved from the Party tab to **Today**.
-- The Bag also holds the **Frontier Symbols** (a Symbols pocket) and **Battle Points** (in Money and marks).
+- The Bag also shows **Battle Points** (in Money and marks).
 - The "Last 14 nights" strip is gone from Last night.

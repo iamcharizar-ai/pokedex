@@ -21,7 +21,6 @@ import { Coin, EggIcon, Gem, ItemIcon, MarkIcon } from './Item.tsx'
 import { KBar, KButton } from './Kit.tsx'
 import { aBall, badgeArt, badgeName, badgeWon, fmtDay, still } from './lib/art.ts'
 import { LEAGUES } from '../core/gyms.ts'
-import { FACILITIES } from '../core/frontier.ts'
 import { useFlip } from './lib/cardkit.tsx'
 import { startPress, type DragHooks } from './lib/dragcards.ts'
 import { loadLayout, moveTo, reconcile, slotCount, storeLayout, tidy, type Layout } from './lib/baglayout.ts'
@@ -509,9 +508,7 @@ export function Bag({ game }: { game: Game }) {
   const badges = badgesWon(game)
   // each badge won lies in the Bag as a thing of its own: in the Badges pocket and among everything
   const badgeIds = LEAGUES.flatMap((l, index) => l.gyms.flatMap((_, i) => (badgeWon(game.league, index, i) ? [`badge:${index}:${i}`] : [])))
-  // each Frontier Symbol won lies in the Bag too: Silver and Gold, one thing each
-  const symbolIds = FACILITIES.flatMap((f) => { const r = game.frontier.find((x) => x.id === f.id); return [...(r?.silver ? [`symbol:${f.id}:s`] : []), ...(r?.gold ? [`symbol:${f.id}:g`] : [])] })
-  const ordered = [...groups.flatMap(([, ids]) => ids), ...rest, ...badgeIds, ...symbolIds]
+  const ordered = [...groups.flatMap(([, ids]) => ids), ...rest, ...badgeIds]
   // where each thing lies (kept on this device): what was left, made to fit what is owned now
   const [saved, setSaved] = useState<Layout>(loadLayout)
   const orderKey = ordered.join('|')
@@ -519,22 +516,14 @@ export function Bag({ game }: { game: Game }) {
   const layout = useMemo(() => reconcile(saved, ordered), [saved, orderKey])
   const saveNow = (l: Layout) => { setSaved(l); storeLayout(l) }
   useEffect(() => { if (JSON.stringify(layout) !== JSON.stringify(saved)) saveNow(layout) }, [layout, saved])
-  const tabs: [string, string[]][] = [['Everything', ordered], ...groups.map(([n, ids]) => [n, ids] as [string, string[]]), ...(rest.length ? [['Everything else', rest] as [string, string[]]] : []), ...(badgeIds.length ? [['Badges', badgeIds] as [string, string[]]] : []), ...(symbolIds.length ? [['Symbols', symbolIds] as [string, string[]]] : [])]
+  const tabs: [string, string[]][] = [['Everything', ordered], ...groups.map(([n, ids]) => [n, ids] as [string, string[]]), ...(rest.length ? [['Everything else', rest] as [string, string[]]] : []), ...(badgeIds.length ? [['Badges', badgeIds] as [string, string[]]] : [])]
   const at = tabs.find(([n]) => n === tab) ?? tabs[0]
   const all = at[0] === 'Everything'
   // what a pocket draws: every slot of the layout (Everything), or its things in the order they lie, then empty slots
   const cells: (string | null)[] = all
     ? Array.from({ length: slotCount(layout) }, (_, i) => layout[i] ?? null)
     : (() => { const c: (string | null)[] = [...at[1]].sort((x, y) => layout.indexOf(x) - layout.indexOf(y)); while (c.length < Math.max(18, Math.ceil(c.length / 9) * 9)) c.push(null); return c })()
-  /** a Symbol by its id: the facility, its metal, and the day it was won */
-  const symbolOf = (id: string) => {
-    const [, fid, m] = id.split(':')
-    const f = FACILITIES.find((x) => x.id === fid)!
-    const r = game.frontier.find((x) => x.id === fid)
-    return { f, gold: m === 'g', day: (m === 'g' ? r?.gold : r?.silver) ?? null }
-  }
   const nameOfThing = (id: string): string => {
-    if (id.startsWith('symbol:')) { const { f, gold } = symbolOf(id); return `${gold ? 'Gold' : 'Silver'} Symbol, ${f.name}` }
     if (!id.startsWith('badge:')) return itemName(id)
     const [li, gi] = id.split(':').slice(1).map(Number)
     return badgeName(LEAGUES[li].gyms[gi])
@@ -584,15 +573,6 @@ export function Bag({ game }: { game: Game }) {
         </button>
       )
     }
-    if (id.startsWith('symbol:')) {
-      const { f, gold, day } = symbolOf(id)
-      return (
-        <button key={id} type="button" className={`mc-slot medal ${cls}`} data-place={i} data-flip={id} onPointerDown={press(id)} onClick={() => tap(id, i)} aria-label={`${gold ? 'Gold' : 'Silver'} Symbol, ${f.name}. Open`}>
-          <i className={`symbol ${gold ? 'g' : 's'} on`} aria-hidden />
-          <span className="mc-tip" aria-hidden><b>{gold ? 'Gold' : 'Silver'} Symbol</b><small>{f.name} · won from {f.brain}{day ? `, ${fmtDay(day)}` : ''}</small></span>
-        </button>
-      )
-    }
     const on = game.partner.held === id || equipped.includes(id) || game.theme === id
     const n = have(id)
     return (
@@ -612,7 +592,6 @@ export function Bag({ game }: { game: Game }) {
   }, [carry])
   const card = open && ITEMS[open] ? open : null
   const badgeOpen = open?.startsWith('badge:') ? open : null
-  const symbolOpen = open?.startsWith('symbol:') ? open : null
   const kind = card ? ITEMS[card].kind : null
   const fill = (n: number, min: number) => Array.from({ length: Math.max(min, Math.ceil(n / 9) * 9) - n }, (_, i) => <span key={`f${i}`} className="mc-slot blank" aria-hidden />)
   const purse: [ReactNode, string, number, number][] = [
@@ -626,24 +605,24 @@ export function Bag({ game }: { game: Game }) {
   return (
     <Win title="Bag" tone="purple" aside={balls || berries ? <>{balls > 0 && `${balls} ${balls === 1 ? 'ball' : 'balls'}`}{balls > 0 && berries > 0 && ' · '}{berries > 0 && `${berries} ${berries === 1 ? 'berry' : 'berries'}`}</> : game.keyStone ? <><ItemIcon id="key-stone" size={22} /> Key Stone</> : undefined}>
       <div className="mc">
-        {(owned.length > 0 || badges > 0 || symbolIds.length > 0) && (
+        {(owned.length > 0 || badges > 0) && (
           <div className="mc-tabs" role="tablist" aria-label="Bag pockets" data-noswipe>
             {tabs.map(([name, ids]) => (
               <button key={name} type="button" role="tab" aria-selected={at[0] === name} className={`mc-tab ${at[0] === name ? 'on' : ''}`} onClick={() => { setTab(name); play('click') }} title={`${name} · ${ids.length}`}>
-                {name === 'Badges' ? <ItemIcon id="town-map" size={26} /> : name === 'Symbols' ? <i className="symbol g on" style={{ width: 24, height: 24 }} aria-hidden /> : <ItemIcon id={name === 'Everything' ? 'seal-bag' : ids[0]} size={26} />}
+                {name === 'Badges' ? <ItemIcon id="town-map" size={26} /> : <ItemIcon id={name === 'Everything' ? 'seal-bag' : ids[0]} size={26} />}
               </button>
             ))}
           </div>
         )}
         <div className="mc-panel">
           <div className="mc-bar">
-            <span className="mc-title">{carry ? `Carrying ${nameOfThing(carry)}: tap a slot` : at[0] === 'Badges' ? `Badges · ${badges}` : at[0] === 'Symbols' ? `Symbols · ${symbolIds.length}` : owned.length ? (at[0] === 'TMs' ? `TMs · ${equipped.length} of ${TM_SLOTS} on ${nameOf(game.partner.form)}` : at[0] === 'Held items' ? `Held items · ${nameOf(game.partner.form)} holds one` : at[0]) : 'Inventory'}</span>
+            <span className="mc-title">{carry ? `Carrying ${nameOfThing(carry)}: tap a slot` : at[0] === 'Badges' ? `Badges · ${badges}` : owned.length ? (at[0] === 'TMs' ? `TMs · ${equipped.length} of ${TM_SLOTS} on ${nameOf(game.partner.form)}` : at[0] === 'Held items' ? `Held items · ${nameOf(game.partner.form)} holds one` : at[0]) : 'Inventory'}</span>
             <span className="mc-btns">
               <button type="button" className={`mc-btn ${arrange ? 'on' : ''}`} aria-pressed={arrange} onClick={() => { setArrange(!arrange); setCarry(null); play('click') }} title="Tap a thing to pick it up, tap a slot to put it down. You can also drag a thing (hold it on a touch screen).">Arrange</button>
               <button type="button" className="mc-btn" onClick={() => { glide.current = true; saveNow(tidy(ordered)); setCarry(null); play('click') }} title="Lay everything down again in order, with no gaps">Tidy</button>
             </span>
           </div>
-          {owned.length === 0 && badges === 0 && symbolIds.length === 0 && <p className="mc-empty">No items yet. The Mart opens each morning, and feats hand out the rest.</p>}
+          {owned.length === 0 && badges === 0 && <p className="mc-empty">No items yet. The Mart opens each morning, and feats hand out the rest.</p>}
           <div className={`mc-grid ${arrange ? 'arranging' : ''}`}>{cells.map(cell)}</div>
           <span className="mc-title">Money and marks</span>
           <div className="mc-grid mc-hotbar">
@@ -667,19 +646,6 @@ export function Bag({ game }: { game: Game }) {
               <h2 className="k-type">{badgeName(t)}</h2>
               <p>Won from {t.name}, {l.name}.</p>
               <p className="muted">Badges lie in the Bag with everything else. Drag one, or use Arrange, to put it where you like.</p>
-            </div>
-          </Sheet>
-        )
-      })()}
-      {symbolOpen && (() => {
-        const { f, gold, day } = symbolOf(symbolOpen)
-        return (
-          <Sheet title={`${gold ? 'Gold' : 'Silver'} Symbol`} onClose={() => setOpen(null)}>
-            <div className="ware-sheet">
-              <span className="ware-sheet-art"><i className={`symbol ${gold ? 'g' : 's'} on`} style={{ width: 96, height: 96 }} aria-hidden /></span>
-              <h2 className="k-type">{gold ? 'Gold' : 'Silver'} Symbol</h2>
-              <p>Won from {f.brain}, the {f.name}'s Brain{day ? `, on ${fmtDay(day)}` : ''}.</p>
-              <p className="muted">Symbols lie in the Bag with everything else. Drag one, or use Arrange, to put it where you like.</p>
             </div>
           </Sheet>
         )
