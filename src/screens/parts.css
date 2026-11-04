@@ -105,3 +105,13 @@
 .slot-grid.prep .inv-slot[data-tag='code'] { --tc: var(--tag-code); } .slot-grid.prep .inv-slot[data-tag='fitness'] { --tc: var(--tag-fitness); }
 .slot-grid.prep .inv-slot[data-tag='guitar'] { --tc: var(--tag-guitar); } .slot-grid.prep .inv-slot[data-tag='arbor'] { --tc: var(--tag-arbor); } .slot-grid.prep .inv-slot[data-tag='sleep'] { --tc: var(--tag-sleep); }
 .slot-grid.prep .inv-slot:disabled { cursor: default; }
+
+/* ── a pill: every action that is not a screen's one main action (the chunky .k-btn is kept for that) ── */
+.pill-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 18px; font: 400 15px/1 var(--k-face); color: var(--text); background: var(--surface-2); border: 1px solid var(--hair-hi); border-radius: 99px; cursor: pointer; transition: transform var(--t-pop) var(--ease-out), filter var(--t-fade) linear; }
+.pill-btn:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.15); }
+.pill-btn:active:not(:disabled) { transform: translateY(1px); }
+.pill-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.pill-btn:disabled { opacity: 0.45; cursor: default; }
+.pill-btn.gold { color: var(--k-edge); background: linear-gradient(#ffe27a, var(--tone-gold)); border-color: transparent; }
+.pill-btn.green { color: #fff; background: var(--k-green); border-color: transparent; }
+.pill-btn .itemimg, .pill-btn img { image-rendering: pixelated; }

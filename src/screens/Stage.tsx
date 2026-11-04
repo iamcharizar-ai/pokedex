@@ -3,9 +3,30 @@
 // The small life of the place moves eight frames a second, a whole pixel at a time; never with reduced motion,
 // and not while the scene is off the screen or the tab is hidden. Nothing here re-renders React.
 import { useEffect, useRef } from 'react'
-import { paintBack, paintFront, type StageState } from './stage.ts'
+import { layoutFor, paintBack, paintFront, type StageState } from './stage.ts'
 
 const FRAME_MS = 125
+
+/** A bought scene as a still miniature (a theme ware in the Shop): the same painter at its own small size, drawn
+ *  once and enlarged by a whole number. The meadow is the place; the theme pins the light. */
+export function MiniScene({ theme, w = 50, h = 52, k = 2 }: { theme: string; w?: number; h?: number; k?: number }) {
+  const back = useRef<HTMLCanvasElement>(null)
+  const front = useRef<HTMLCanvasElement>(null)
+  useEffect(() => {
+    const b = back.current?.getContext('2d'), f = front.current?.getContext('2d')
+    if (!b || !f) return
+    const s = { lay: layoutFor(w, h), minutes: 720, score: null, theme, biome: 'meadow' as const, seed: 'pikachu', t: 0 }
+    paintBack(b, s)
+    paintFront(f, s)
+  }, [theme, w, h])
+  const size = { width: w * k, height: h * k }
+  return (
+    <span className="mini-scene" aria-hidden style={size}>
+      <canvas ref={back} width={w} height={h} style={size} />
+      <canvas ref={front} width={w} height={h} style={size} />
+    </span>
+  )
+}
 
 export function Stage({ k, s, label }: { k: number; s: Omit<StageState, 't'>; label: string }) {
   const back = useRef<HTMLCanvasElement>(null)

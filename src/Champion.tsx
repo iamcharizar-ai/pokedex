@@ -20,6 +20,7 @@ import { fmtDay, still } from './lib/art.ts'
 import { play } from './lib/sfx.ts'
 import { useItem } from './lib/store.ts'
 import { heartsOf } from './Feed.tsx'
+import { Count } from './Play.tsx'
 
 /** Battle Points: the Frontier's own currency, drawn as a Point Card. */
 export const BpIcon = ({ size = 20 }: { size?: number }) => <ItemIcon id="point-card" size={size} />
@@ -223,30 +224,41 @@ export function CollectorWin({ game }: { game: Game }) {
   const loot = Object.keys(TREASURE).filter((id) => (game.inv[id] ?? 0) > 0)
   const today = game.today.day
   const price = (id: string) => (game.v14 ? treasurePrice(id, today) : TREASURE[id][1])
-  const worth = loot.reduce((n, id) => n + price(id) * (game.inv[id] ?? 0), 0)
   const wants = game.v14 ? collectorWants(today) : []
-  const sellAll = () => { for (const id of loot) useItem(id, '', 'sell', String(game.inv[id])); play('buy') }
+  // the treasures as the Bag's slots, the wanted ones first; tap them in, and the total counts up (UI-AUDIT-2026-11-04 T10)
+  const held = [...loot].sort((x, y) => Number(wants.includes(y)) - Number(wants.includes(x)))
+  const missing = wants.filter((id) => !loot.includes(id))
+  const [picked, setPicked] = useState<string[]>([])
+  const pick = picked.filter((id) => loot.includes(id))
+  const sel = pick.length ? pick : loot
+  const total = sel.reduce((n, id) => n + price(id) * (game.inv[id] ?? 0), 0)
+  const toggle = (id: string) => { setPicked(pick.includes(id) ? pick.filter((x) => x !== id) : [...pick, id]); play('tap') }
+  const sell = () => { for (const id of sel) useItem(id, '', 'sell', String(game.inv[id])); setPicked([]); play('buy') }
   return (
     <Win title="The Collector" tone="gold" aside={<><Coin size={22} /> {game.wallet.coins.toLocaleString('en-IN')}</>}>
-      {wants.length > 0 && <p className="muted">Today he pays ×{COLLECTOR_MULT} for the marked ones.</p>}
-      {wants.length > 0 && (
-        <div className="wanted" aria-label="Wanted today">
-          <span className="k-label">Wanted today</span>
-          <div className="kit-row">{wants.map((id) => <span key={id} className="chip" title={`${itemName(id)}: ${price(id).toLocaleString('en-IN')} coins today${game.inv[id] ? `; you have ${game.inv[id]}` : ''}`}><ItemIcon id={id} size={22} />{itemName(id)} ×{COLLECTOR_MULT}{(game.inv[id] ?? 0) > 0 && <i className="chip-have" aria-label={`you have ${game.inv[id]}`}>{game.inv[id]}</i>}</span>)}</div>
-        </div>
-      )}
-      {loot.length === 0 ? <p className="muted">Nothing to sell yet. From bond level 1, Pickup finds treasures on days with a pillar.</p> : (
+      {loot.length === 0 && missing.length === 0 ? <p className="muted">Nothing to sell yet. From bond level 1, Pickup finds treasures on days with a pillar.</p> : (
         <>
-          <div className="trade-list">
-            {loot.map((id) => (
-              <div key={id} className="trade">
-                <ItemIcon id={id} size={40} />
-                <span><b>{itemName(id)} ×{game.inv[id]}</b><small>{price(id).toLocaleString('en-IN')} coins each{wants.includes(id) ? ' · wanted today' : wants.length ? ` · ${(TREASURE[id][1] * COLLECTOR_MULT).toLocaleString('en-IN')} on its day` : ''}</small></span>
-                <button type="button" className={`k-btn ${wants.includes(id) || !wants.length ? 'ok' : ''}`} onClick={() => { useItem(id, '', 'sell', String(game.inv[id])); play('buy') }}>Sell <Coin size={16} />{(price(id) * (game.inv[id] ?? 0)).toLocaleString('en-IN')}</button>
-              </div>
+          <div className="slot-grid collector" role="group" aria-label={wants.length ? `Your treasures; the ones marked ×${COLLECTOR_MULT} are wanted today` : 'Your treasures'}>
+            {held.map((id) => {
+              const n = game.inv[id] ?? 0, want = wants.includes(id)
+              return (
+                <Slot key={id} material="glass" className={pick.includes(id) ? 'picked' : ''} icon={<ItemIcon id={id} size={48} />} n={n > 1 ? n : undefined}
+                  stamp={want ? `×${COLLECTOR_MULT}` : undefined} aria-pressed={pick.includes(id)}
+                  aria-label={`${itemName(id)}, ${n}: ${(price(id) * n).toLocaleString('en-IN')} coins${want ? ', wanted today' : ''}`}
+                  tip={{ title: `${itemName(id)} ×${n}`, note: `${price(id).toLocaleString('en-IN')} each${want ? ' today' : ''}` }} onClick={() => toggle(id)} />
+              )
+            })}
+            {missing.map((id) => (
+              <Slot key={id} as="span" material="glass" className="want" icon={<ItemIcon id={id} size={48} />} stamp={`×${COLLECTOR_MULT}`}
+                tip={{ title: itemName(id), note: `Wanted today; you have none` }} aria-label={`${itemName(id)}: wanted today, you have none`} />
             ))}
           </div>
-          {loot.length > 1 && <button type="button" className="k-btn main big" onClick={sellAll}>Sell everything for {worth.toLocaleString('en-IN')} coins</button>}
+          {loot.length > 0 && (
+            <div className="collector-sum">
+              <span className="collector-total" aria-live="polite"><Coin size={24} /><b><Count value={total} /></b><small>{pick.length ? `${pick.length} picked` : 'everything'}</small></span>
+              <button type="button" className="k-btn main" onClick={sell}>Sell</button>
+            </div>
+          )}
         </>
       )}
     </Win>

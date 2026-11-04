@@ -98,11 +98,19 @@
 .feed-berry i { position: absolute; right: 4px; top: 2px; font: normal 10.5px/1.2 var(--k-face); color: var(--text); }
 .feed-berry small { font-family: var(--k-face); font-size: 12px; }
 .feed-berry.on { color: #fff; border-color: var(--tone-gold); box-shadow: 0 0 0 1px var(--tone-gold), 0 0 12px var(--gold-glow); }
-.wanted { display: grid; gap: 6px; margin: var(--s-2) 0; }
-.wanted .chip { display: inline-flex; align-items: center; gap: 4px; }
 
 /* version 14: the Professor's lab on the Party tab */
 .party6.desk { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: var(--s-2); }
 
-/* the Collector's wanted chips are all one colour; how many you hold is a count on the chip, not a second colour */
-.wanted .chip-have { display: inline-grid; place-items: center; min-width: 18px; height: 18px; margin-left: 2px; padding: 0 5px; font: normal 11px/1 var(--k-face); color: #fff; background: var(--k-edge); border-radius: 99px; }
+
+/* the Collector (UI-AUDIT-2026-11-04 T10): the treasures as glass slots, a ×2 stamp on today's wanted ones,
+   tap them in and one total counts up; one Sell (everything when nothing is picked) */
+.slot-grid.collector { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 8px; margin: var(--s-2) 0 var(--s-3); }
+.collector .inv-slot > img { width: 48px; height: 48px; }
+.collector .inv-slot.picked { box-shadow: inset 0 0 0 2px var(--k-gold-hi), 0 0 12px var(--gold-glow); }
+.collector .inv-slot.want > img { filter: brightness(0) opacity(0.4); }
+.collector .inv-slot.want { cursor: default; }
+.collector-sum { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding: var(--s-2) var(--s-2) var(--s-2) var(--s-3); background: var(--well); border: 1px solid var(--hair); border-radius: var(--r-3); }
+.collector-total { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.collector-total b { font: 400 24px/1 var(--k-face); color: #fff; }
+.collector-total small { color: var(--text-2); font-size: 13px; }

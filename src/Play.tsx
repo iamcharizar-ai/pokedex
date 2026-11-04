@@ -14,6 +14,8 @@ import { GymBadge, TAG_NAME, Win, badgesWon, plural } from './App.tsx'
 import { Ball, BallItem, MegaStone, megaStoneName } from './Ball.tsx'
 import { Forge } from './screens/Forge.tsx'
 import { Sheet } from './screens/Sheet.tsx'
+import { MiniScene } from './screens/Stage.tsx'
+import { typeColor } from './screens/types.ts'
 import { tabTodo } from './screens/Today.tsx'
 import { Deck, SigLine } from './Bond.tsx'
 import { ResearchTab } from './Research.tsx'
@@ -230,19 +232,42 @@ function whyNot(game: Game, o: Offer, shop: ShopId): string | null {
   return o.coins ? 'Not enough coins yet' : o.gems ? 'Not enough gems yet' : shop === 'bp' ? 'Not enough Battle Points yet' : 'Not enough marks yet'
 }
 
-/** A shelf of goods: each one standing on a plank with its price tag hanging under it. Tap one to see what it does and buy it.
-    `shop` is told to the game so a price is taken from the right purse. */
-/** `fold`: a long shelf shows this many until it is opened, so one shelf does not bury the ones under it. */
+/** The kind of work a ware is for, as the badge in its corner: an X item's work, or the shop a TM is sold in. */
+function workOf(id: string): MarkTag | null {
+  // a kind of work with no marks of its own (routine) has no badge
+  if (BOOST[id]) return MARK_TAGS.includes(BOOST[id].tag as MarkTag) ? (BOOST[id].tag as MarkTag) : null
+  if (ITEMS[id]?.kind === 'tm') return MARK_TAGS.find((t) => DOMAIN_SHOPS[t].stock.some((o) => o.item === id)) ?? null
+  return null
+}
+/** How much of a price you hold, 0 to 1 (the wallet drawn behind the price). */
+function heldOf(game: Game, o: Offer, shop: ShopId): number {
+  const marks = MARK_TAGS.includes(shop as MarkTag) ? game.wallet.marks[shop as MarkTag] : shop === 'bp' ? game.wallet.bp : 0
+  const [have, need] = o.coins ? [game.wallet.coins, o.coins] : o.gems ? [game.wallet.gems, o.gems] : [marks, o.marks ?? 0]
+  return need > 0 ? Math.min(1, have / need) : 1
+}
+/** A price in a banner: the currency at 16 and the number. */
+const Tag = ({ o, shop }: { o: Offer; shop: ShopId }) => {
+  const tag = MARK_TAGS.includes(shop as MarkTag) ? (shop as MarkTag) : undefined
+  return <span className="wcard-price">{o.coins ? <Coin size={16} /> : o.gems ? <Gem size={16} /> : shop === 'bp' ? <BpIcon size={16} /> : tag ? <MarkIcon tag={tag} size={16} /> : null}{(o.coins ?? o.gems ?? o.marks ?? 0).toLocaleString('en-IN')}</span>
+}
+/** A shelf heading: one word and an icon; the longer line waits in the tip. */
+export function ShelfHead({ icon, word, tip }: { icon: ReactNode; word: string; tip?: string }) {
+  return <h3 className="shelf-head" title={tip}>{icon}<span>{word}</span>{tip && <span className="sr-only">: {tip}</span>}</h3>
+}
+
+/** A shelf of goods, each one a card (UI-AUDIT-2026-11-04 T8, T9): the field is what kind of thing it is, the frame
+    whether you can buy it (gold yes, grey not yet, silver bought or sold), the banner its price with what you hold of
+    it filled in behind. Tap one to see what it does and buy it. `shop` is told to the game so a price is taken from
+    the right purse. `fold`: a long shelf shows this many until it is opened, so one shelf does not bury the ones under it. */
 function Shelf({ game, offers: all, shop, fold, what = 'items' }: { game: Game; offers: Offer[]; shop: ShopId; fold?: number; what?: string }) {
   const [open, setOpen] = useState<string | null>(null)
   const [more, setMore] = useState(false)
   const offers = fold && !more ? all.slice(0, fold) : all
   const [bump, setBump] = useState<string | null>(null)
-  const tag = MARK_TAGS.includes(shop as MarkTag) ? (shop as MarkTag) : undefined
   const buy = (item: string) => {
     useItem(item, '', 'buy', shop); play('buy')
-    buyPop(document.querySelector(`[data-ware="${shop}:${item}"] .ware-art`))
-    setBump(item); setTimeout(() => setBump(null), 350)
+    buyPop(document.querySelector(`[data-ware="${shop}:${item}"] .mc-art > .mc-item`))
+    setBump(item); setTimeout(() => setBump(null), 400)
   }
   const o = all.find((x) => x.item === open)
   return (
@@ -253,37 +278,60 @@ function Shelf({ game, offers: all, shop, fold, what = 'items' }: { game: Game; 
           const def = ITEMS[o.item]
           const once = def?.kind === 'tm' || def?.kind === 'theme' || ONCE.has(o.item)
           const sold = shop === 'mart' && game.mart.bought.includes(o.item)
-          const owned = once && have > 0
+          const owned = once && (have > 0 || game.partner.held === o.item)
           const worn = game.theme === o.item
           const afford = canBuy(game, o, shop)
+          // in a shop of marks, its own kind of work goes without saying
+          const work = ((w) => (w === shop ? null : w))(workOf(o.item))
+          const tt = tmType(o.item)
+          const field = tt ? typeColor(tt) : def?.kind === 'theme' ? 'var(--cat-other)' : catColor(def?.kind)
+          const done = owned || sold
           return (
-            <button key={o.item} type="button" data-ware={`${shop}:${o.item}`} className={`ware ${bump === o.item ? 'bump' : ''} ${sold ? 'sold' : ''} ${owned ? 'owned' : ''} ${afford ? 'can' : ''}`} onClick={() => { setOpen(o.item); play('tap') }} aria-label={`${itemName(o.item)}: ${sold ? 'sold today' : owned ? 'owned' : 'see it and buy it'}`}>
-              <span className="ware-art"><ItemIcon id={o.item} size={56} />{have > 0 && !once && <i className="ware-have">×{have}</i>}</span>
-              <b>{itemName(o.item)}</b>
-              <span className="ware-tag">{owned ? (def.kind === 'theme' ? (worn ? 'Worn' : 'Owned') : 'Owned') : sold ? 'Sold' : <Price coins={o.coins} gems={o.gems} marks={o.marks} tag={tag} bp={shop === 'bp'} />}</span>
-            </button>
+            <ObjCard key={o.item} data-ware={`${shop}:${o.item}`} className={`wcard ${def?.kind === 'theme' ? 'theme' : ''} ${bump === o.item ? 'pre-pop' : ''}`}
+              metal={done ? 'silver' : afford ? 'gold' : 'locked'} tc={field}
+              art={<>
+                {def?.kind === 'theme' ? <MiniScene theme={o.item} /> : <ItemIcon id={o.item} size={72} className="mc-item" />}
+                {have > 0 && !once && <i className="wcard-have">×{have}</i>}
+              </>}
+              corners={work ? { tr: <MarkIcon tag={work} size={16} />, trTitle: `For ${TAG_NAME[work].toLowerCase()}` } : undefined}
+              name={itemName(o.item)}
+              banner={owned ? (def?.kind === 'theme' ? (worn ? 'Worn' : 'Owned') : 'Owned') : sold ? 'Sold' : <Tag o={o} shop={shop} />}
+              gold={!done && afford} fill={done ? 0 : 1} vars={{ '--held': String(done ? 0 : heldOf(game, o, shop)) }}
+              onClick={() => { setOpen(o.item); play('tap') }}
+              aria-label={`${itemName(o.item)}: ${sold ? 'sold today' : owned ? 'owned' : afford ? 'you can buy it' : 'not enough yet'}`} />
           )
         })}
       </div>
-      {fold !== undefined && all.length > fold && <button type="button" className="k-btn shelf-more" aria-expanded={more} onClick={() => { setMore(!more); play('tap') }}>{more ? 'Fewer' : `All ${all.length} ${what}`}</button>}
-      {o && (
-        <Sheet title={itemName(o.item)} onClose={() => setOpen(null)}>
-          <div className="ware-sheet">
-            <span className="ware-sheet-art"><ItemIcon id={o.item} size={96} /></span>
-            <h2 className="k-type">{itemName(o.item)}</h2>
-            <p>{ITEMS[o.item]?.text}</p>
-            {(game.inv[o.item] ?? 0) > 0 && ITEMS[o.item]?.kind !== 'tm' && ITEMS[o.item]?.kind !== 'theme' && <small className="ware-sheet-have">You have {game.inv[o.item]}</small>}
-            {ITEMS[o.item]?.kind === 'theme' && (game.inv[o.item] ?? 0) > 0
-              ? <KButton tone={game.theme === o.item ? 'neutral' : 'main'} big onClick={() => useItem('', '', 'theme', game.theme === o.item ? undefined : o.item)}>{game.theme === o.item ? 'Take it off' : 'Use this scene'}</KButton>
-              : (
-                <>
-                  <button type="button" className="k-btn ok big" disabled={!canBuy(game, o, shop)} onClick={() => buy(o.item)}>Buy <Price coins={o.coins} gems={o.gems} marks={o.marks} tag={tag} bp={shop === 'bp'} /></button>
-                  {whyNot(game, o, shop) && <small className="ware-sheet-why">{whyNot(game, o, shop)}</small>}
-                </>
-              )}
-          </div>
-        </Sheet>
-      )}
+      {fold !== undefined && all.length > fold && <button type="button" className="pill-btn shelf-more" aria-expanded={more} onClick={() => { setMore(!more); play('tap') }}>{more ? 'Fewer' : `All ${all.length} ${what}`}</button>}
+      {o && (() => {
+        const def = ITEMS[o.item]
+        const tt = tmType(o.item)
+        const owned = (game.inv[o.item] ?? 0) > 0
+        return (
+          <Sheet title={itemName(o.item)} onClose={() => setOpen(null)}>
+            <div className="ware-sheet">
+              <div className="item-hero">
+                <ObjCard className={`item-card wcard ${def?.kind === 'theme' ? 'theme' : ''}`} look="full" tc={tt ? typeColor(tt) : def?.kind === 'theme' ? 'var(--cat-other)' : catColor(def?.kind)} metal={canBuy(game, o, shop) ? 'gold' : 'silver'}
+                  art={def?.kind === 'theme' ? <MiniScene theme={o.item} w={58} h={70} /> : <ItemIcon id={o.item} size={72} className="mc-item" />}
+                  banner={owned ? (def?.kind === 'tm' || def?.kind === 'theme' ? 'Owned' : `×${game.inv[o.item]}`) : <Tag o={o} shop={shop} />} disabled tabIndex={-1} aria-hidden />
+                <div className="item-hero-txt">
+                  <h2 className="k-type">{itemName(o.item)}</h2>
+                  <p>{def?.text}</p>
+                  {owned && def?.kind !== 'tm' && def?.kind !== 'theme' && <small className="ware-sheet-have">You have {game.inv[o.item]}</small>}
+                </div>
+              </div>
+              {def?.kind === 'theme' && owned
+                ? <KButton tone={game.theme === o.item ? 'neutral' : 'main'} big onClick={() => useItem('', '', 'theme', game.theme === o.item ? undefined : o.item)}>{game.theme === o.item ? 'Take it off' : 'Use this scene'}</KButton>
+                : (
+                  <>
+                    <button type="button" className="k-btn ok big" disabled={!canBuy(game, o, shop)} onClick={() => buy(o.item)}>Buy <Price coins={o.coins} gems={o.gems} marks={o.marks} tag={MARK_TAGS.includes(shop as MarkTag) ? (shop as MarkTag) : undefined} bp={shop === 'bp'} /></button>
+                    {whyNot(game, o, shop) && <small className="ware-sheet-why">{whyNot(game, o, shop)}</small>}
+                  </>
+                )}
+            </div>
+          </Sheet>
+        )
+      })()}
     </>
   )
 }
@@ -331,7 +379,7 @@ export function DomainShop({ game, tag, open }: { game: Game; tag: MarkTag; /** 
       <Shelf game={game} offers={goods} shop={tag} />
       {tms.length > 0 && (
         <>
-          <span className="k-label shelf-label">TMs · each is yours for good, and {nameOf(game.partner.form)} carries {TM_SLOTS}</span>
+          <ShelfHead icon={<ItemIcon id={tms[0].item} size={24} />} word="TMs" tip={`Each is yours for good, and ${nameOf(game.partner.form)} carries ${TM_SLOTS}`} />
           <Shelf game={game} offers={tms} shop={tag} />
         </>
       )}
@@ -352,10 +400,10 @@ function MarkShops({ game }: { game: Game }) {
   const tag = live.includes(chosen) ? chosen : richest
   return (
     <>
-      <nav className="substrip" style={{ ['--n' as string]: live.length } as CSSProperties} role="tablist" aria-label="Shops paid in marks" data-noswipe>
+      <nav className="pmenu sub" style={{ ['--n' as string]: live.length } as CSSProperties} role="tablist" aria-label="Shops paid in marks" data-noswipe>
         {live.map((t) => (
-          <button key={t} type="button" role="tab" aria-selected={tag === t} className={tag === t ? 'on' : ''} data-tag={t} onClick={() => { setTag(t); play('tap') }}>
-            <span className="substrip-ico"><MarkIcon tag={t} size={30} /><i>{game.wallet.marks[t]}</i></span>
+          <button key={t} type="button" role="tab" aria-selected={tag === t} className={`pmenu-btn ${tag === t ? 'on' : ''}`} data-tag={t} onClick={() => { setTag(t); play('tap') }}>
+            <span className="pmenu-icon"><MarkIcon tag={t} size={24} /><i className="pmenu-badge">{game.wallet.marks[t]}</i></span>
             <b>{DOMAIN_SHOPS[t].name.replace(/^The /, '')}</b>
           </button>
         ))}
@@ -405,17 +453,17 @@ export function ShopTab({ game }: { game: Game }) {
       )}
       {show('mart') && (
         <Win title="The Mart" tone="gold" aside={<><Coin size={22} /> <Count value={game.wallet.coins} /></>}>
-          <span className="k-label shelf-label">Today's deals · one of each, new every morning</span>
+          {game.mart.deals[0] && <ShelfHead icon={<ItemIcon id={game.mart.deals[0].item} size={24} />} word="Deals" tip="One of each, new every morning" />}
           <Shelf game={game} offers={game.mart.deals} shop="mart" />
           {game.mart.standing.length > 0 && (
             <>
-              <span className="k-label shelf-label">Always in stock</span>
+              <ShelfHead icon={<ItemIcon id={game.mart.standing[0].item} size={24} />} word="Stock" tip="Always in stock" />
               <Shelf game={game} offers={game.mart.standing} shop="mart" />
             </>
           )}
           {game.v13 && (
             <>
-              <span className="k-label shelf-label">Battle items · X items boost one kind of work for a day; Dire Hit, Guard Spec, Honey</span>
+              <ShelfHead icon={<ItemIcon id="x-attack" size={24} />} word="Battle" tip="X items boost one kind of work for a day; Dire Hit, Guard Spec, Honey" />
               <Shelf game={game} offers={battleShelf(game.today.day).filter((o) => !isShelved(game, BOOST[o.item]?.tag ?? ''))} shop="mart" fold={game.v16 ? 6 : 3} what="battle items" />
             </>
           )}
@@ -426,16 +474,15 @@ export function ShopTab({ game }: { game: Game }) {
           <Shelf game={game} offers={game.v13 ? [...RARE_SHELF, ...RARE_SHELF_V13] : RARE_SHELF} shop="rare" />
         </Win>
       )}
-      {show('rare') && <IncenseWin game={game} />}
       {show('bp') && (
         <Win title="BP Exchange" tone="purple" aside={<><BpIcon size={22} /> {game.wallet.bp.toLocaleString('en-IN')} BP</>}>
-          <span className="k-label shelf-label">Held items · each one does something of its own</span>
+          <ShelfHead icon={<ItemIcon id="leftovers" size={24} />} word="Held" tip="Each one does something of its own" />
           <Shelf game={game} offers={BP_SHELF.filter((o) => ITEMS[o.item]?.kind === 'held')} shop="bp" />
-          <span className="k-label shelf-label">Battle items, evolution items and a Rare Candy</span>
+          <ShelfHead icon={<ItemIcon id="rare-candy" size={24} />} word="Boosts" tip="Battle items, evolution items and a Rare Candy" />
           <Shelf game={game} offers={BP_SHELF.filter((o) => ['battle', 'evo', 'candy'].includes(ITEMS[o.item]?.kind))} shop="bp" fold={6} what="of them" />
-          <span className="k-label shelf-label">Fossils · the Lab brings them back</span>
+          <ShelfHead icon={<ItemIcon id="helix-fossil" size={24} />} word="Fossils" tip="The Lab brings them back" />
           <Shelf game={game} offers={BP_SHELF.filter((o) => ITEMS[o.item]?.kind === 'fossil')} shop="bp" />
-          <span className="k-label shelf-label">Legend keys · each calls a legend as the next wild Pokemon</span>
+          <ShelfHead icon={<ItemIcon id="master-ball" size={24} />} word="Legends" tip="Each calls a legend as the next wild Pokemon" />
           <Shelf game={game} offers={BP_SHELF.filter((o) => ITEMS[o.item]?.kind === 'legend' || o.item === 'master-ball')} shop="bp" fold={6} what="legend keys" />
         </Win>
       )}
