@@ -37,7 +37,7 @@ const args = process.argv.slice(2)
 const update = args.includes('--update')
 const only = args.filter((a) => !a.startsWith('--'))
 const fixtures = only.length ? FIXTURES.filter((f) => only.includes(f)) : FIXTURES
-if (only.length && only.every((o) => o === 'sky' || o === 'band')) fixtures.length = 0
+if (only.length && only.every((o) => o === 'sky' || o === 'band' || o === 'overlay')) fixtures.length = 0
 
 // serve the built app, so the run does not depend on a dev server being open
 async function serve() {
@@ -77,6 +77,27 @@ try {
       const scene = page.locator('.scene')
       const file = `sky-${label}.png`
       const shot = await scene.screenshot({ mask: await page.locator('.scene img.sprite').all(), maskColor: '#ff00ff' })
+      const baseline = path.join(BASE, file)
+      if (update || !fs.existsSync(baseline)) { fs.writeFileSync(baseline, shot); made++ }
+      else {
+        const a = PNG.sync.read(fs.readFileSync(baseline)), b = PNG.sync.read(shot)
+        const n = a.width === b.width && a.height === b.height ? pixelmatch(a.data, b.data, new PNG({ width: a.width, height: a.height }).data, a.width, a.height, { threshold: 0.1 }) : Infinity
+        if (n / (a.width * a.height) > TOLERANCE) { failed++; fs.mkdirSync(DIFF, { recursive: true }); fs.writeFileSync(path.join(DIFF, file), shot); console.log(`CHANGED  ${file}`) } else same++
+      }
+      await page.close()
+    }
+  }
+  // the overlays: the news window (everything recent told again with &news) and the Collect sheet
+  if (!only.length || only.includes('overlay')) {
+    for (const [fx, q, open, sel, file] of [['late', '&news', null, '.rc-win', 'overlay-news.png'], ['boss', '', '.tb-collect', '.sheet', 'overlay-collect.png']]) {
+      const page = await ctx.newPage()
+      await page.goto(`http://localhost:${PORT}/?fixture=${fx}&tour=0${q}`)
+      await page.waitForSelector('.navbar button')
+      await page.waitForTimeout(800)
+      if (open) { await page.click(open); await page.waitForTimeout(500) }
+      await page.waitForSelector(sel)
+      await page.evaluate((sl) => { const el = document.querySelector(sl); if (el) el.scrollTop = 0 }, sel === '.rc-win' ? '.rc-body' : sel)
+      const shot = await page.locator(sel).screenshot({ mask: await page.locator(`${sel} img.sprite, ${sel} .crop, .fixturetag`).all(), maskColor: '#ff00ff' })
       const baseline = path.join(BASE, file)
       if (update || !fs.existsSync(baseline)) { fs.writeFileSync(baseline, shot); made++ }
       else {

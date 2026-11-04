@@ -20,6 +20,10 @@ import { flyReward, type Pocket } from './lib/fly.ts'
 import { play } from './lib/sfx.ts'
 import { useItem } from './lib/store.ts'
 import { Sheet } from './screens/Sheet.tsx'
+import { Slot } from './Slot.tsx'
+
+/** 1,234 · 12.3k: a count short enough for a slot's corner. */
+const short = (n: number): string => (n < 1000 ? String(n) : n < 10000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k` : `${Math.floor(n / 1000)}k`)
 
 interface Part { pocket: Pocket; n: number; item?: string }
 const partsOf = (h: Held | Option): Part[] => [
@@ -67,6 +71,15 @@ export function CollectButton({ game, today }: { game: Game; today: string }) {
     for (const h of list) useItem('', '', 'claim', h.key)
   }
 
+  // identical rewards (same title, same pay) are one slot
+  const groups: Held[][] = []
+  for (const h of plain) {
+    const sig = `${h.title}|${JSON.stringify(partsOf(h))}`
+    const g = groups.find((x) => `${x[0].title}|${JSON.stringify(partsOf(x[0]))}` === sig)
+    if (g) g.push(h); else groups.push([h])
+  }
+  const sum = plain.reduce((t, h) => { for (const q of partsOf(h)) { if (q.pocket === 'coins') t.coins += q.n; else if (q.pocket === 'gems') t.gems += q.n; else t.items += q.n } return t }, { coins: 0, gems: 0, items: 0 })
+
   return (
     <>
       <span className="sr-only" role="status" aria-live="polite">{said}</span>
@@ -87,6 +100,13 @@ export function CollectButton({ game, today }: { game: Game; today: string }) {
               <h2 className="k-type">Collect</h2>
               {plain.length > 1 && <button type="button" className="k-btn main" onClick={() => claim(plain)}>Collect all {plain.length}</button>}
             </div>
+            {plain.length > 1 && (
+              <p className="collect-sum" aria-label={`In all: ${sum.coins} coins, ${sum.gems} gems, ${sum.items} things`}>
+                {sum.coins > 0 && <span><Coin size={24} />{sum.coins.toLocaleString('en-IN')}</span>}
+                {sum.gems > 0 && <span><Gem size={24} />{sum.gems.toLocaleString('en-IN')}</span>}
+                {sum.items > 0 && <span><ItemIcon id="seal-bag" size={24} />{sum.items}</span>}
+              </p>
+            )}
             {held.length === 0 && <p className="muted">Nothing is waiting. Pay, quests, season steps, feats and boss prizes arrive here.</p>}
             <div className="collect-list">
               {held.filter((h) => h.choice).map((h) => (
@@ -103,24 +123,29 @@ export function CollectButton({ game, today }: { game: Game; today: string }) {
                   </div>
                 </div>
               ))}
-              {plain.map((h) => {
-                const parts = partsOf(h)
-                const left = daysLeft(h, today)
-                return (
-                  <button key={h.key} type="button" className="claim-chip breathe" data-pocket={parts[0]?.pocket} ref={(el) => { if (el) refs.current.set(h.key, el); else refs.current.delete(h.key) }} onClick={() => claim([h])}>
-                    <span className="claim-ico">
-                      {parts.map((p, i) => (p.pocket === 'coins' ? (p.n >= 250 ? <ItemIcon key={i} id="loot-sack" size={30} /> : p.n >= 100 ? <ItemIcon key={i} id="big-nugget" size={28} /> : <Coin key={i} size={26} />) : p.pocket === 'gems' ? <Gem key={i} size={26} /> : <ItemIcon key={i} id={p.item ?? ''} size={26} />))}
-                    </span>
-                    <span className="claim-txt">
-                      <b>{h.title}</b>
-                      <small>
-                        {parts.map((p) => (p.item ? `${p.n > 1 ? `${p.n} × ` : ''}${itemName(p.item)}` : `+${p.n} ${p.pocket}`)).join(' · ')}
-                        {left <= 1 ? ' · pays itself soon' : ''}
-                      </small>
-                    </span>
-                  </button>
-                )
-              })}
+              {/* everything plain as slots: identical rewards merge into one, and the picture grows with the amount (UI-AUDIT T14) */}
+              {groups.length > 0 && (
+                <div className="collect-slots">
+                  {groups.map(([first, ...more]) => {
+                    const all = [first, ...more]
+                    const parts = partsOf(first)
+                    const p = parts[0]
+                    const total = p ? p.n * all.length : 0
+                    const soon = all.some((h) => daysLeft(h, today) <= 1)
+                    const what = parts.map((q) => (q.item ? `${q.n > 1 ? `${q.n} × ` : ''}${itemName(q.item)}` : `+${q.n} ${q.pocket}`)).join(' · ')
+                    const icon = !p ? <ItemIcon id="loot-sack" size={48} /> : p.pocket === 'coins' ? <ItemIcon id={p.n >= 250 ? 'loot-sack' : p.n >= 100 ? 'big-nugget' : 'coin'} size={48} /> : p.pocket === 'gems' ? <Gem size={48} /> : <ItemIcon id={p.item ?? ''} size={48} />
+                    return (
+                      <div key={first.key} className={`collect-cell ${soon ? 'soon' : ''}`}>
+                        <Slot material="glass" className="breathe" icon={icon} n={p?.pocket === 'bag' ? (total > 1 ? total : null) : short(total)} stamp={all.length > 1 ? `×${all.length}` : undefined}
+                          ref={(el: HTMLElement | null) => { for (const h of all) { if (el) refs.current.set(h.key, el as HTMLButtonElement); else refs.current.delete(h.key) } }}
+                          onClick={() => claim(all)} aria-label={`Collect ${first.title}${all.length > 1 ? `, ${all.length} of them` : ''}: ${what}${soon ? ', pays itself soon' : ''}`}
+                          tip={{ title: first.title, note: <>{what}{soon ? ' · pays itself soon' : ''}</> }} />
+                        <small>{first.title}</small>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </Sheet>

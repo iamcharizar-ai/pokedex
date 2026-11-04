@@ -7,35 +7,43 @@ import { LIFEOS_URL } from '../lib/store.ts'
 import { Ball } from '../Ball.tsx'
 import { ItemIcon } from '../Item.tsx'
 import { play } from '../lib/sfx.ts'
+import { Meter } from '../Meter.tsx'
 import { RANK, useOverlay } from './overlay.ts'
 
 interface Card { title: string; art: ReactNode; body: ReactNode }
 
+// Each card shows a small, working piece of the real screen it is about (UI-AUDIT-2026-11-04 T22), with one line under it.
+const TABS: [string, string][] = [['coin-case', 'Shop'], ['tm-case', 'Party'], ['poke-ball', 'Today'], ['journal', 'Pokedex'], ['member-card', 'Journey']]
 const CARDS: Card[] = [
   {
     title: 'Your habits play this game',
-    art: <ItemIcon id="journal" size={72} />,
-    body: <>You tick habits in <a href={LIFEOS_URL} target="_blank" rel="noreferrer">Life OS</a>. This app shows what that did. There is nothing to tap here to make things happen: the work is done over there.</>,
+    art: <span className="tour-ring" aria-hidden><span className="tour-ring-fill" /><ItemIcon id="journal" size={48} /><i className="tour-tick pre-stamp">✓</i></span>,
+    body: <>You tick habits in <a href={LIFEOS_URL} target="_blank" rel="noreferrer">Life OS</a>; this shows what that did.</>,
   },
   {
     title: 'A tick grows your partner',
-    art: <Ball ball="great" size={72} />,
-    body: <>Every habit is XP for your partner. The share of habits you tick wears down the wild Pokemon, and a perfect day catches it on the spot. Work on a kind of thing (gym, code, guitar) hurts the gym leader.</>,
+    art: (
+      <span className="tour-bars" aria-hidden>
+        <Meter look="game" kind="xp" value={190} max={282} today={120} name="Experience" label="+120" size="lg" className="pre-sweep" />
+        <Meter look="game" kind="hp" value={640} max={1100} ghost={-180} name="The wild Pokemon" label="640 / 1,100" size="lg" />
+      </span>
+    ),
+    body: <>Habits are XP; the share you tick wears down the wild Pokemon.</>,
   },
   {
     title: 'Rewards wait for you',
-    art: <ItemIcon id="loot-sack" size={72} />,
-    body: <>Pay, quests, season steps and feats wait behind the bag in the top bar. Tap it to collect them. If you never do, each pays itself three days later, so nothing is lost.</>,
+    art: <span className="tour-bag tb-collect has breathe" aria-hidden><ItemIcon id="loot-sack" size={48} /><i className="tb-count">3</i></span>,
+    body: <>Tap the bag in the top bar to collect. Left alone, each pays itself in three days.</>,
   },
   {
     title: 'Five tabs, one job each',
-    art: <ItemIcon id="poke-ball" size={72} />,
-    body: <><b>Today</b> is the scene, <b>Party</b> is what you own and the Forge, <b>Shop</b> is what you can buy, <b>Pokedex</b> is what you have seen, and <b>Journey</b> is where you are going. Swipe sideways to move between them.</>,
+    art: <span className="tour-dock" aria-hidden>{TABS.map(([icon, name], i) => <span key={name} className={i === 2 ? 'on' : ''}><ItemIcon id={icon} size={24} /><small>{name}</small></span>)}</span>,
+    body: <>Swipe sideways between them.</>,
   },
   {
     title: 'A boss, once your party is six',
-    art: <ItemIcon id="master-ball" size={72} />,
-    body: <>Train five Pokemon fully, and with your partner that is six. Then a boss comes each Monday for the week, and its card of tasks comes from Strong, Arbor, Woodshed, your sleep and your days. Until then, just tick.</>,
+    art: <span className="tour-six" aria-hidden>{Array.from({ length: 6 }, (_, i) => <i key={i} className={`pre-pop ${i < 4 ? 'on' : ''}`} style={{ animationDelay: `${i * 90}ms` }}>{i < 4 && <Ball ball="poke" size={24} />}</i>)}</span>,
+    body: <>Your partner and five fully trained: then a boss comes each Monday. Until then, just tick.</>,
   },
 ]
 

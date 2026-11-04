@@ -929,70 +929,71 @@ function Rule({ title, tone, pic, children }: { title: string; tone: string; pic
 }
 const Arrow = () => <span className="rule-arrow" aria-hidden>▸</span>
 function RulesTab({ onTour }: { onTour: () => void }) {
+  const boxes = useBoxes()
   const [sound, setSound] = useState(soundOn())
   return (
     <section className="k-panel">
       <div className="k-panel-b">
         <h2 className="k-type" style={{ fontSize: 26, marginBottom: 12 }}>How it works</h2>
         <div className="rules">
-          <Rule title="Do the day" tone="gold" pic={<><span className="rule-chip">{TIER_XP.pillar}</span><span className="rule-chip sm">{TIER_XP.core}</span><span className="rule-chip xs">{TIER_XP.standard}</span></>}>
+          <Rule title="Do the day" tone="gold" pic={<>{([[TIER_XP.pillar, 'code'], [TIER_XP.core, 'fitness'], [TIER_XP.standard, 'routine']] as const).map(([xp, tag], i) => <span key={tag} className="rule-ring" style={{ ['--c' as string]: `var(--tag-${tag})`, ['--s' as string]: `${40 - i * 6}px` } as CSSProperties}>{xp}</span>)}</>}>
             Every habit is XP for your partner. Pillars are {TIER_XP.pillar}; chores are small.
           </Rule>
-          <Rule title="One day, three hits" tone="blue" pic={<><span className="rule-dot" style={{ background: 'var(--k-blue)' }} /><span className="rule-dot" style={{ background: 'var(--hp-ok)' }} /><span className="rule-dot" style={{ background: 'var(--k-gold)' }} /></>}>
+          <Rule title="One day, three hits" tone="blue" pic={<span className="rule-bars"><Meter look="game" kind="xp" value={60} max={100} today={30} name="XP" size="sm" /><Meter look="game" kind="hp" value={55} max={100} ghost={-20} name="The wild Pokemon" size="sm" /><Meter look="game" kind="hp" value={30} max={100} ghost={-12} name="The leader" size="sm" /></span>}>
             How much grows the partner. How many habits you tick hurts the wild Pokemon, so showing up catches. What kind of work hurts the leader.
           </Rule>
-          <Rule title="Evolves by itself" tone="green" pic={<><span className="rule-chip sm">{evolveAt(3, 1)}</span><Arrow /><span className="rule-chip sm">{evolveAt(3, 2)}</span><Arrow /><span className="rule-chip">{graduateAt(3)}</span></>}>
+          <Rule title="Evolves by itself" tone="green" pic={<span className="rule-line">{([['charmander', `Lv ${evolveAt(3, 1)}`], ['charmeleon', `Lv ${evolveAt(3, 2)}`], ['charizard', `${graduateAt(3)}`]] as const).map(([f, lv]) => <span key={f}><CropSprite src={still(f)} box={boxes?.[f]} /><small>{lv}</small></span>)}</span>}>
             At these levels. At {graduateAt(3)} it is fully trained and the next one steps up.
           </Rule>
           <Rule title="The ball is the day" tone="red" pic={<><Ball ball="poke" size={30} /><Arrow /><Ball ball="great" size={34} /><Arrow /><Ball ball="ultra" size={38} /></>}>
             Half the day's habits ticked: ×{BALL_MULT.great}. Four-fifths: ×{BALL_MULT.ultra}. Every habit ticked catches it on the spot.
           </Rule>
-          <Rule title="Coins are not XP" tone="gold" pic={<><Coin size={30} /><Arrow /><ItemIcon id="great-ball" size={34} /></>}>
+          <Rule title="Coins are not XP" tone="gold" pic={<><Coin size={24} /><Arrow /><ItemIcon id="great-ball" size={24} /></>}>
             Showing up pays coins (more the more you tick, and {PAY_STREAK.coins} more on a second day running at {Math.round(PAY_STREAK.share * 100)}% or more), and so do the weekly quests, the season, chests and the Professor. The Mart sells three deals a day, and two guards always.
           </Rule>
           <Rule title="Each work, its mark" tone="blue" pic={<>{(['code', 'fitness', 'guitar', 'arbor', 'sleep'] as const).map((t) => <ItemIcon key={t} id={{ code: 'machine-part', fitness: 'iron', guitar: 'poke-flute', arbor: 'grn-apricorn', sleep: 'lunar-wing' }[t]} size={26} />)}</>}>
             A day of coding, gym, guitar, Arbor or good sleep pays one mark, spent only in that kind's own shop.
           </Rule>
-          <Rule title="Sleep" tone="blue" pic={<><ItemIcon id="lunar-wing" size={30} /><span className="rule-chip sm">80</span><span className="rule-chip sm">90</span></>}>
+          <Rule title="Sleep" tone="blue" pic={<><ItemIcon id="lunar-wing" size={24} /><span className="rule-chip sm">80</span><span className="rule-chip sm">90</span></>}>
             A night your band measures is a pillar: its score is the XP, 80 fills it, 80 pays a Bell and 90 two, and 90 minutes of deep sleep one more. No reading is never a zero: tick it by hand for less. Sleep alone does not make a day: it counts as a pillar only next to another one.
           </Rule>
-          <Rule title="Balls have conditions" tone="red" pic={<><ItemIcon id="net-ball" size={30} /><ItemIcon id="quick-ball" size={30} /><ItemIcon id="timer-ball" size={30} /></>}>
+          <Rule title="Balls have conditions" tone="red" pic={<><ItemIcon id="net-ball" size={24} /><ItemIcon id="quick-ball" size={24} /><ItemIcon id="timer-ball" size={24} /></>}>
             A Net Ball hits Water and Bug double. A Quick Ball is best the day it appears. A Timer Ball grows each day it waits.
           </Rule>
-          <Rule title="TMs and held items" tone="purple" pic={<><ItemIcon id="tm-water" size={30} /><ItemIcon id="muscle-band" size={30} /></>}>
+          <Rule title="TMs and held items" tone="purple" pic={<><ItemIcon id="tm-water" size={24} /><ItemIcon id="muscle-band" size={24} /></>}>
             Carry three TMs: each counts as one of the partner's types against a leader. Hold one item: it adds to its kind of work. Incense shows three Pokemon and you pick the next wild one.
           </Rule>
-          <Rule title="Feats" tone="gold" pic={<><ItemIcon id="key-stone" size={30} /><ItemIcon id="master-ball" size={30} /><ItemIcon id="choice-band" size={30} /></>}>
+          <Rule title="Feats" tone="gold" pic={<><ItemIcon id="key-stone" size={24} /><ItemIcon id="master-ball" size={24} /><ItemIcon id="choice-band" size={24} /></>}>
             Runs of days and lifetime totals pay things no shop sells. One rest day inside a run is forgiven.
           </Rule>
-          <Rule title="Mega, forged" tone="purple" pic={<><ItemIcon id="red-shard" size={26} /><ItemIcon id="blue-shard" size={26} /><ItemIcon id="yellow-shard" size={26} /><Arrow /><KeyStone size={38} /></>}>
+          <Rule title="Mega, forged" tone="purple" pic={<><ItemIcon id="red-shard" size={24} /><ItemIcon id="blue-shard" size={24} /><ItemIcon id="yellow-shard" size={24} /><Arrow /><KeyStone size={48} /></>}>
             The Key Stone is a feat. Three shards of three different colours forge a Mega Stone for one Pokemon, and for one with two Megas the X or Y is yours to choose. A Comet Shard, one for each month-end review in Life OS, fills any socket. A forged stone adds {Math.round(MEGA_BONUS * 100)}% to every strike, and {Math.round(MEGA_BOND * 100)}% more for each bond level.
           </Rule>
           <Rule title="Level is power" tone="gold" pic={<><span className="rule-chip sm">Lv</span><Arrow /><span className="rule-chip">+{Math.round(LEVEL_POWER * 100)}%</span></>}>
             Every level of your partner adds {Math.round(LEVEL_POWER * 100)}% to every strike, and every member of the party {Math.round(TEAM_BONUS * 100)}% plus {(TEAM_LEVEL * 100).toFixed(1)}% a level. Leaders grow too: 15% more HP for every league further on, a quarter more for the Elite Four, 60% more for a Champion.
           </Rule>
-          <Rule title="Critical hits and Dynamax" tone="red" pic={<><ItemIcon id="scope-lens" size={30} /><ItemIcon id="dire-hit" size={30} /><span className="rule-chip sm">×{DYNAMAX}</span></>}>
+          <Rule title="Critical hits and Dynamax" tone="red" pic={<><ItemIcon id="scope-lens" size={24} /><ItemIcon id="dire-hit" size={24} /><span className="rule-chip sm">×{DYNAMAX}</span></>}>
             From bond level 3 about one day in eight is a critical hit: the day's strike ×{CRIT_MULT}. A Dire Hit or a Scope Lens raises the chance. A perfect day Dynamaxes your partner: ×{DYNAMAX}, or ×{GIGANTAMAX} for one with a Gigantamax form.
           </Rule>
-          <Rule title="Battle items" tone="red" pic={<><ItemIcon id="x-attack" size={30} /><ItemIcon id="x-special" size={30} /><ItemIcon id="guard-spec" size={30} /></>}>
+          <Rule title="Battle items" tone="red" pic={<><ItemIcon id="x-attack" size={24} /><ItemIcon id="x-special" size={24} /><ItemIcon id="guard-spec" size={24} /></>}>
             An X item, used any time in the day, makes one kind of work strike the leader harder for the whole day: +20%, +40% or +60% from the Mart, +120% from the Battle Frontier. A Guard Spec stands guard over the next empty day.
           </Rule>
-          <Rule title="Pickup and treasures" tone="green" pic={<><ItemIcon id="itemfinder" size={30} /><ItemIcon id="nugget" size={30} /><ItemIcon id="helix-fossil" size={30} /></>}>
+          <Rule title="Pickup and treasures" tone="green" pic={<><ItemIcon id="itemfinder" size={24} /><ItemIcon id="nugget" size={24} /><ItemIcon id="helix-fossil" size={24} /></>}>
             From bond level 1 your partner finds things on days with a pillar: berries, balls, treasures for the Collector, fossils the Lab brings back to life, evolution stones. The further you are in the leagues, the better the finds. The Collector wants three kinds of treasure each day and pays double for them, so a treasure can be worth keeping for its day.
           </Rule>
-          <Rule title="Evolution items and vitamins" tone="green" pic={<><ItemIcon id="fire-stone" size={30} /><ItemIcon id="rare-candy" size={30} /><ItemIcon id="calcium" size={30} /></>}>
+          <Rule title="Evolution items and vitamins" tone="green" pic={<><ItemIcon id="fire-stone" size={24} /><ItemIcon id="rare-candy" size={24} /><ItemIcon id="calcium" size={24} /></>}>
             A stone or trade item evolves a Pokemon in My Pokemon by one stage when the form it becomes has the item's type. A Rare Candy is a level. A vitamin makes one kind of work strike 3% harder for the Pokemon it is given to, for good: in full while it is your partner, a third while it stands in the party.
           </Rule>
-          <Rule title="The Battle Frontier" tone="purple" pic={<><ItemIcon id="rainbow-pass" size={30} /><ItemIcon id="point-card" size={30} /></>}>
+          <Rule title="The Battle Frontier" tone="purple" pic={<><ItemIcon id="rainbow-pass" size={24} /><ItemIcon id="point-card" size={24} /></>}>
             Seven facilities, each a run of one kind of day. Every win pays a Battle Point, every seventh in a row a bonus, and the Frontier Brains hand over Silver and Gold Symbols. BP buy held items, X items, fossils and Legend keys at the Exchange.
           </Rule>
-          <Rule title="Legends and Rematch" tone="gold" pic={<><ItemIcon id="red-orb" size={30} /><ItemIcon id="blue-orb" size={30} /><ItemIcon id="jade-orb" size={30} /></>}>
+          <Rule title="Legends and Rematch" tone="gold" pic={<><ItemIcon id="red-orb" size={24} /><ItemIcon id="blue-orb" size={24} /><ItemIcon id="jade-orb" size={24} /></>}>
             A Legend key calls one legend as the next wild Pokemon, to catch by your work. After Paldea's Champion every league comes back at Rematch rank ★2, then ★3, stronger each time, and every Rematch Champion hands over a Legend key.
           </Rule>
           <Rule title="Added, not stacked" tone="purple" pic={<><span className="rule-chip sm">+</span><span className="rule-chip sm">+</span><span className="rule-chip sm">+</span><Arrow /><span className="rule-chip">×1</span></>}>
             Level, team, bond, a Mega, the held item, mastery, vitamins, natures and the day's X items are added together and applied once. The leader card shows the sum.
           </Rule>
-          <Rule title="Strong's training kit" tone="red" pic={<><ItemIcon id="protector" size={28} /><ItemIcon id="power-band" size={28} /><Arrow /><ItemIcon id="red-shard" size={30} /></>}>
+          <Rule title="Strong's training kit" tone="red" pic={<><ItemIcon id="protector" size={24} /><ItemIcon id="power-band" size={24} /><Arrow /><ItemIcon id="red-shard" size={24} /></>}>
             Each workout in Strong's split drops its own piece of gear. A full set of seven pays gems and Iron, and every {KIT_SHARD_EVERY}rd set a Red Shard as well.
           </Rule>
           <Rule title="Leaders and badges" tone="purple" pic={<><span className="rule-chip">{(LEADER_HP / 1000).toFixed(0)}k</span><Arrow /><img src="/sprites/badges/1-1.png" alt="" width={32} height={32} className="gymbadge pix" /></>}>
@@ -1001,61 +1002,61 @@ function RulesTab({ onTour }: { onTour: () => void }) {
           <Rule title="Your team" tone="blue" pic={<><img src="/sprites/ui/party-on.png" alt="" width={30} height={30} className="pix" /><img src="/sprites/ui/party-on.png" alt="" width={30} height={30} className="pix" /><img src="/sprites/ui/party-empty.png" alt="" width={30} height={30} className="pix" /><span className="rule-chip sm">+10%</span></>}>
             The partner and up to {TEAM_SIZE} more stand together, a party of six: they fight the leaders and the weekly boss. Each of the {TEAM_SIZE} adds {Math.round(TEAM_BONUS * 100)}% to every strike, more for its level and bond, and {Math.round(TEAM_NATURE * 100)}% more to the work its nature raised. With the bond's Exp. Share they keep growing, up to level {MAX_LEVEL}.
           </Rule>
-          <Rule title="The Professor's lab" tone="purple" pic={<><ItemIcon id="journal" size={30} /><Arrow /><span className="rule-chip sm">−{Math.round(RESEARCH_WILD * 100)}% HP</span></>}>
+          <Rule title="The Professor's lab" tone="purple" pic={<><ItemIcon id="journal" size={24} /><Arrow /><span className="rule-chip sm">−{Math.round(RESEARCH_WILD * 100)}% HP</span></>}>
             Everyone not in the party lives with the Professor; nobody is sold. He studies up to {RESEARCH_SLOTS} of them on his desk, on every day with a pillar: ten plus its level, times its rarity, a shiny half again. Each research rank takes {Math.round(RESEARCH_WILD * 100)}% more HP off every wild Pokemon to come (up to {Math.round(RESEARCH_WILD_MAX * 100)}%) and sends a gift: Rare Candy, stones, Honey, balls, and every fifth rank a Mystery Egg. So a strong Pokemon either fights in the party or helps you catch on the desk.
           </Rule>
           <Rule title="Level 100" tone="gold" pic={<><span className="rule-chip sm">Lv 50</span><Arrow /><span className="rule-chip">Lv {MAX_LEVEL}</span></>}>
             Fully trained (level 50, or 30 for a Pokemon that never evolves) is still the milestone: its nature is set, it counts toward new regions and the boss, and the next partner steps up. After that it can lead again to go on to level {MAX_LEVEL}; there it steps aside by itself, as it has nothing left to learn.
           </Rule>
-          <Rule title="Gems" tone="green" pic={<><Gem size={34} /><span className="rule-chip sm">{GEMS.catch}</span><span className="rule-chip sm">{GEMS.evolve}</span><span className="rule-chip sm">{GEMS.gym}</span></>}>
+          <Rule title="Gems" tone="green" pic={<><Gem size={24} /><span className="rule-chip sm">{GEMS.catch}</span><span className="rule-chip sm">{GEMS.evolve}</span><span className="rule-chip sm">{GEMS.gym}</span></>}>
             A catch, an evolution, a badge, a feat. They buy eggs, incense, chests and scenes, never a ball.
           </Rule>
           <Rule title="The season" tone="gold" pic={<><span className="rule-chip sm">1</span><Arrow /><span className="rule-chip sm">2</span><Arrow /><span className="rule-chip sm">3</span></>}>
             Every {SEASON_STEP.toLocaleString('en-IN')} XP of the month's work is a step, and each step hands something over.
           </Rule>
-          <Rule title="Collect" tone="gold" pic={<><Coin size={28} /><Gem size={28} /><Arrow /><ItemIcon id="loot-sack" size={30} /></>}>
+          <Rule title="Collect" tone="gold" pic={<><Coin size={24} /><Gem size={24} /><Arrow /><ItemIcon id="loot-sack" size={24} /></>}>
             Showing-up pay, weekly quests, season steps, feats and a month reviewed wait in the Collect strip until you tap them. Left alone, each pays itself {CLAIM_AUTO} days later, so nothing is lost. A catch and a chest pay at once.
           </Rule>
-          <Rule title="Milestones" tone="gold" pic={<><span className="rule-chip sm">Lv {MILESTONE_EVERY}</span><Arrow /><ItemIcon id="great-ball" size={28} /><span className="rule-chip sm">or</span><ItemIcon id="red-shard" size={26} /></>}>
+          <Rule title="Milestones" tone="gold" pic={<><span className="rule-chip sm">Lv {MILESTONE_EVERY}</span><Arrow /><ItemIcon id="great-ball" size={24} /><span className="rule-chip sm">or</span><ItemIcon id="red-shard" size={24} /></>}>
             Every {MILESTONE_EVERY} levels your partner reaches, Collect offers two rewards and you keep one: balls, a shard in the colour you hold least of, a Rare Candy, coins or gems. Left alone, the first pays itself.
           </Rule>
-          <Rule title="Hearts and bond" tone="green" pic={<><ItemIcon id="heart-scale" size={28} /><ItemIcon id="oran-berry" size={28} /><ItemIcon id="sitrus-berry" size={28} /></>}>
+          <Rule title="Hearts and bond" tone="green" pic={<><ItemIcon id="heart-scale" size={24} /><ItemIcon id="oran-berry" size={24} /><ItemIcon id="sitrus-berry" size={24} /></>}>
             Your partner gets a heart for every pillar you finish. A party member gets one on each day you do its kind of work. Berries add more to anyone (Oran one, Sitrus three, a friendship berry five), and twice that on a day you did that Pokemon's kind of work. Hearts belong to the Pokemon and only count up, to {HEART_LEVELS[HEART_LEVELS.length - 1]}. At {HEART_LEVELS.join(', ')} hearts a Pokemon's bond steps up: as partner each step adds {Math.round(BOND_STEP * 100)}% to every strike, and its signature grows.
           </Rule>
-          <Rule title="Trainer perks" tone="gold" pic={<><ItemIcon id="itemfinder" size={28} /><ItemIcon id="scope-lens" size={28} /><ItemIcon id="exp-share" size={28} /></>}>
+          <Rule title="Trainer perks" tone="gold" pic={<><ItemIcon id="itemfinder" size={24} /><ItemIcon id="scope-lens" size={24} /><ItemIcon id="exp-share" size={24} /></>}>
             Pickup, Endure, Focus, Best friends and Exp. Share are yours, not one Pokemon's. They unlock from every heart across every Pokemon you own, at {TRAINER_LEVELS.join(', ')} hearts, and stay whoever leads. After that, every {STAR_EVERY} hearts is a Trainer star: Collect offers two perks, and you rank one up (from I to VI).
           </Rule>
-          <Rule title="Signatures" tone="purple" pic={<><ItemIcon id="charcoal" size={26} /><ItemIcon id="twistedspoon" size={26} /><ItemIcon id="miracle-seed" size={26} /><ItemIcon id="blackglasses" size={26} /></>}>
+          <Rule title="Signatures" tone="purple" pic={<><ItemIcon id="charcoal" size={24} /><ItemIcon id="twistedspoon" size={24} /><ItemIcon id="miracle-seed" size={24} /><ItemIcon id="blackglasses" size={24} /></>}>
             Every Pokemon has a signature from its first type, in one of six families, one for each kind of work. Power (gym) makes gym work strike harder; Insight (code) studies for the Professor; Charm (guitar) wears the wild Pokemon down; Forage (Arbor) finds berries; Dream (sleep) turns a good night into hearts for the party; Flow (routine) pays routine habits more. Its strength is its bond level as partner and half that in the party, and one family adds up to {SIG_CAP}. A party is a deck: mix the families you want behind you.
           </Rule>
           <Rule title="Momentum" tone="blue" pic={<><span className="rule-chip sm">×1.2</span><span className="rule-chip sm">×1.35</span><span className="rule-chip">×1.5</span></>}>
             Of the last seven days, three with two pillars make XP ×1.2, five ×1.35, seven ×1.5. It slides back one day at a time, never resets. {SLEEP_AFTER} days with no pillar at all and the partner dozes off until you finish one.
           </Rule>
-          <Rule title="Quests and the week" tone="gold" pic={<><span className="rule-chip sm">5</span><Arrow /><Coin size={28} /><Gem size={28} /></>}>
+          <Rule title="Quests and the week" tone="gold" pic={<><span className="rule-chip sm">5</span><Arrow /><Coin size={24} /><Gem size={24} /></>}>
             Only the week has quests: five days with two pillars, and catch a Pokemon. The day itself pays its own coins, and a perfect day pays {GEMS.perfect} gems.
           </Rule>
           <Rule title="Eggs and chests" tone="blue" pic={<><ItemIcon id="rare-egg" size={32} /><ItemIcon id="loot-sack" size={32} /></>}>
             An egg is warmed by the steps the band counts, every one of them, and one is kept warm at a time (with two kinds waiting you choose). A Mystery Egg ({EGG_KINDS['rare-egg'].steps.toLocaleString()} steps, a rare Pokemon) comes from a boss, every fifth research rank or {RARE_EGG_GEMS} gems. Walking finds a Trail Egg for every {TRAIL_EGG_STEPS.toLocaleString()} steps ({EGG_KINDS['trail-egg'].steps.toLocaleString()} steps, an uncommon Pokemon that starts with {EGG_KINDS['trail-egg'].hearts} hearts), and each kind of work's shop sells its own egg for marks ({EGG_KINDS['egg-code'].steps.toLocaleString()} steps, a Pokemon of that work). An Old Charm takes a fifth off every egg. A day with no band reading adds nothing. A chest opens on the spot.
           </Rule>
-          <Rule title="Regions, legendaries, shiny" tone="purple" pic={<><ItemIcon id="star-piece" size={30} /><span className="rule-chip sm">1/{SHINY_ODDS}</span></>}>
+          <Rule title="Regions, legendaries, shiny" tone="purple" pic={<><ItemIcon id="star-piece" size={24} /><span className="rule-chip sm">1/{SHINY_ODDS}</span></>}>
             Every {GRADUATES_PER_REGION} fully trained Pokemon open the next region once the league before it is beaten. Every {LEGENDARY_EVERY_WILD}th wild Pokemon is a legendary. A catch on a perfect day is shiny one time in {SHINY_ODDS}; one worn down, one in {SHINY_ODDS_WORN}.
           </Rule>
           <Rule title="Natures" tone="purple" pic={<><span className="rule-chip sm">▲</span><span className="rule-chip sm">▼</span></>}>
             When a partner is fully trained, the work it did most raises its nature and the work it did least lowers it. In your party it adds {Math.round(TEAM_NATURE * 100)}% on the work its nature raised.
           </Rule>
-          <Rule title="Mastery" tone="blue" pic={<><ItemIcon id="machine-part" size={28} /><ItemIcon id="iron" size={28} /><Arrow /><span className="rule-chip sm">+{Math.round(MASTERY_STEP * 100)}%</span></>}>
+          <Rule title="Mastery" tone="blue" pic={<><ItemIcon id="machine-part" size={24} /><ItemIcon id="iron" size={24} /><Arrow /><span className="rule-chip sm">+{Math.round(MASTERY_STEP * 100)}%</span></>}>
             Spend a kind of work's own marks to raise its mastery: each level makes that work strike {Math.round(MASTERY_STEP * 100)}% harder, up to level {MASTERY_MAX}. The next level costs {masteryCost(0)} marks, then {masteryCost(1)}, and so on.
           </Rule>
-          <Rule title="My Pokemon and the Professor" tone="gold" pic={<><Ball ball="poke" size={30} /><Arrow /><Coin size={28} /></>}>
+          <Rule title="My Pokemon and the Professor" tone="gold" pic={<><Ball ball="poke" size={30} /><Arrow /><Coin size={24} /></>}>
             A caught Pokemon waits in My Pokemon until it is raised. Send one to the Professor instead and he pays coins: {SELL.C} for a common, {SELL.U} uncommon, {SELL.R} rare, {SELL.L} legendary.
           </Rule>
-          <Rule title="Guards" tone="red" pic={<><ItemIcon id="max-repel" size={30} /><ItemIcon id="revive" size={30} /></>}>
+          <Rule title="Guards" tone="red" pic={<><ItemIcon id="max-repel" size={24} /><ItemIcon id="revive" size={24} /></>}>
             Max Repel keeps the wild Pokemon {REPEL_DAYS} days longer, once. A Revive takes back the HP a leader regained on empty days. Both are always on the Mart's shelf.
           </Rule>
-          <Rule title="Ten thousand steps" tone="green" pic={<><span className="rule-chip sm">10k</span><Arrow /><ItemIcon id="iron" size={28} /></>}>
+          <Rule title="Ten thousand steps" tone="green" pic={<><span className="rule-chip sm">10k</span><Arrow /><ItemIcon id="iron" size={24} /></>}>
             A day of {STEPS_GOAL.toLocaleString('en-IN')} steps on your band pays an extra Iron mark.
           </Rule>
-          <Rule title="The weekly boss" tone="purple" pic={<><ItemIcon id="master-ball" size={30} /><span className="rule-chip sm">6</span><Arrow /><span className="rule-chip">5</span></>}>
+          <Rule title="The weekly boss" tone="purple" pic={<><ItemIcon id="master-ball" size={24} /><span className="rule-chip sm">6</span><Arrow /><span className="rule-chip">5</span></>}>
             Once your party is three or more, a boss comes each Monday for the week. Its card has up to five tasks, from Strong, Arbor, Woodshed, your sleep and your days, each a share of its HP. A kind of work with no habit on your Life OS list gets no task, and the others share its HP. It is levelled to your party, and how hard you hit depends on how strong the six are: their levels, how rare their lines are, their Megas, the bond, and whose type beats its type. Without every task done its last {Math.round((1 - KILL_CAP) * 100)}% never falls, and a day the card does not move heals it {Math.round(BOSS_HEAL * 100)}%. At {Math.round(THROW_AT * 100)}% HP or less you get {THROWS} throws: a chance, never a sure thing, and better the weaker it is.
           </Rule>
           <Rule title="An empty day costs" tone="red" pic={<span className="rule-chip">0</span>}>

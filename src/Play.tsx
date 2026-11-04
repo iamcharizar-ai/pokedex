@@ -20,6 +20,8 @@ import { ResearchTab } from './Research.tsx'
 import { Coin, EggIcon, Gem, ItemIcon, MarkIcon } from './Item.tsx'
 import { KBar, KButton } from './Kit.tsx'
 import { Slot } from './Slot.tsx'
+import { ObjCard } from './ObjCard.tsx'
+import { catColor } from './lib/itemcat.ts'
 import { aBall, badgeArt, badgeName, badgeWon, fmtDay, still } from './lib/art.ts'
 import { LEAGUES } from '../core/gyms.ts'
 import { useFlip } from './lib/cardkit.tsx'
@@ -651,11 +653,17 @@ export function Bag({ game }: { game: Game }) {
       {card && kind && (
         <Sheet title={itemName(card)} onClose={() => setOpen(null)}>
           <div className="ware-sheet">
-            <span className="ware-sheet-art"><ItemIcon id={card} size={96} /></span>
-            <h2 className="k-type">{itemName(card)}</h2>
-            <p>{ITEMS[card].text}</p>
-            <small className="ware-sheet-have">{have(card) > 0 ? `You have ${have(card)}` : 'Held by your partner'}</small>
-            <p className="muted">{USED[kind]}</p>
+            {/* the thing itself as a card: its kind is the field's colour, how many you hold the banner, in use the gold frame */}
+            <div className="item-hero">
+              <ObjCard className="item-card" look="full" tc={catColor(kind)} metal={game.partner.held === card || equipped.includes(card) || game.theme === card ? 'gold' : 'silver'}
+                art={<ItemIcon id={card} size={72} className="mc-item" />} banner={have(card) > 0 ? `×${have(card)}` : 'Held'} disabled tabIndex={-1} aria-hidden />
+              <div className="item-hero-txt">
+                <h2 className="k-type">{itemName(card)}</h2>
+                <p>{ITEMS[card].text}</p>
+                <small className="sr-only">{have(card) > 0 ? `You have ${have(card)}` : 'Held by your partner'}</small>
+                <p className="muted">{USED[kind]}</p>
+              </div>
+            </div>
             {kind === 'berry' && (game.v14
               ? <button type="button" className="k-btn ok big" onClick={() => { setFeedCard(card); setOpen(null) }}>Feed it to…</button>
               : <button type="button" className="k-btn ok big" onClick={() => { useItem(card, '', 'feed'); play('feed'); if (have(card) <= 1) setOpen(null) }}>Feed it now</button>)}

@@ -4,7 +4,7 @@
 // only the telling. Closing it, skipping it or never seeing it changes nothing.
 // What has been shown is remembered on this device alone (it is not progress,
 // so it does not belong in the ledger).
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { isGym, leaderOf, nameOf, spritePath, type Game, type Moment } from '../core/fold.ts'
 import { LEAGUES, lineup } from '../core/gyms.ts'
 import { ITEMS, itemName } from '../core/economy.ts'
@@ -17,6 +17,10 @@ import { party } from './lib/fx.ts'
 import { told } from './lib/told.ts'
 import { RANK, useOverlay } from './screens/overlay.ts'
 import { FACILITIES } from '../core/frontier.ts'
+import { CropSprite } from './lib/pixel.tsx'
+import { useBoxes } from './Fit.tsx'
+import { SPECIES } from '../core/species.ts'
+import { typeColor } from './screens/types.ts'
 import { aBall, badgeArt, badgeName, fmtDay, leagueName, still } from './lib/art.ts'
 
 const SEEN_KEY = 'pokedex.seen.v1'
@@ -131,6 +135,25 @@ function Art({ t }: { t: Told }) {
   return STAR
 }
 
+/** A piece of news in the list as an object, not only a sentence (UI-AUDIT-2026-11-04 T13): the Pokemon at 1x (only its drawn
+ *  part, in a portrait window on its type's colour), the ball it came in as a stamp, the badge, the item. */
+function NewsArt({ t, boxes }: { t: Told; boxes: Record<string, [number, number, number, number]> | null }) {
+  if (t.form && (t.art === 'mon' || t.art === 'evolve' || t.art === 'catch')) {
+    const rec = SPECIES[t.form]
+    return (
+      <span className="rc-art mon" style={{ ['--tc' as string]: typeColor(rec?.t) } as CSSProperties} aria-hidden>
+        <CropSprite src={still(t.form, t.shiny)} box={boxes?.[t.form]} />
+        {t.art === 'catch' && <span className="rc-art-stamp">{t.thrown ? <BallItem id={t.thrown} size={24} /> : <Ball ball={t.ball ?? 'poke'} size={24} />}</span>}
+        {t.art === 'evolve' && <span className="rc-art-stamp up">▲</span>}
+      </span>
+    )
+  }
+  if (t.art === 'badge') return <span className="rc-art" aria-hidden>{t.badge ? <img src={t.badge} alt="" width={48} height={48} className="pix" /> : <span className="badgeslot on">★</span>}</span>
+  if (t.art === 'key') return <span className="rc-art" aria-hidden><KeyStone size={48} /></span>
+  if (t.art === 'item' && t.item) return <span className="rc-art" aria-hidden><ItemIcon id={t.item} size={48} /></span>
+  return <span className="rc-art plain" aria-hidden><ItemIcon id="town-map" size={48} /></span>
+}
+
 /** One window for everything new: the biggest thing drawn large, the rest as a list. One tap, anywhere, closes it. */
 export function Recap({ game, today }: { game: Game; today: string }) {
   // read once per day: marking them told is part of reading them
@@ -155,6 +178,7 @@ export function Recap({ game, today }: { game: Game; today: string }) {
   const go = useRef<HTMLButtonElement>(null)
   const head = told[0]?.m
   useEffect(() => { setOpened(false); setForce(false) }, [head])
+  const boxes = useBoxes()
   const turn = useOverlay(told.length > 0, RANK.news)
   // the button takes the focus without scrolling the window to it: the reveal at the top is what to see first
   useEffect(() => { if (turn) go.current?.focus({ preventScroll: true }) }, [turn, head])
@@ -177,7 +201,7 @@ export function Recap({ game, today }: { game: Game; today: string }) {
         <p style={opened || evolving ? undefined : { visibility: 'hidden' }}>{top.t.line}</p>
         {rest.length > 0 && (
           <ul className="rc-list">
-            {rest.slice(0, 8).map(({ m, t }, i) => <li key={i}><b>{t.title}</b><span>{t.line}</span><small>{fmtDay(m.day)}</small></li>)}
+            {rest.slice(0, 8).map(({ m, t }, i) => <li key={i}><NewsArt t={t} boxes={boxes} /><b>{t.title}</b><span>{t.line}</span><small>{fmtDay(m.day)}</small></li>)}
             {rest.length > 8 && <li className="more">and {rest.length - 8} more, in the Adventure log on the Journey tab.</li>}
           </ul>
         )}

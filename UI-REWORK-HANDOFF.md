@@ -12,7 +12,7 @@ Written 4 Nov 2026 at the end of a cloud session. This file is meant to be enoug
    - `npx tsc -b`
    - `npm run build`
    - `npm run a11y -- --strict` (0 small targets, 0 unnamed)
-   - `npm run shots` (28 of 28 the same)
+   - `npm run shots` (30 of 30 the same: 28 tabs, sky and band pictures, plus the news window and Collect)
 3. `VITE_SUPABASE_DISABLE=1 npm run dev` and open `http://localhost:5190/?fixture=late&tour=0`. **Never point the dev server at the real ledger.**
 4. Pick the next item from §6. Work in the order given, and stop after each phase with before/after screenshots for the owner (§4 has the rules).
 
@@ -25,7 +25,7 @@ The owner asked for an audit of every screen against the two screens they love (
 - §3 is the show-don't-tell list (T1 to T25).
 - §8 is the phased plan.
 
-Phases 0 to 3 are done, and phase 4 is done in part.
+Phases 0, 1, 2, 3 and 5 are done; phase 4 is done in part.
 
 ---
 
@@ -50,7 +50,8 @@ Commits on the branch, oldest first:
 | `546770a` | Phase 3: Party |
 | `3240cef` | Phase 4, in part: Today below the scene |
 | `63f802c` | Baselines after phase 3 and phase 4 in part |
-| (this file) | The handoff |
+| `51c1b2d` | The handoff (this file, first version) |
+| next | Phase 5: overlays; two new baselines (`overlay-news.png`, `overlay-collect.png`) |
 
 ---
 
@@ -159,6 +160,20 @@ console.log(h.digest('hex'))
 - **`MonPage`** (`src/Play.tsx`) opens on `MonCard size="hero"`, with the facts as chips.
 - **The Lab sub-tab** (`src/Research.tsx`) has the desk, the dial and the research. The "Lab box" grid is gone; desk places fill from the picker sheet, and a desk card's menu has Replace.
 
+### Overlays (phase 5)
+
+- **News window** (`src/Recap.tsx`, `NewsArt`): each item in the list has a picture. A Pokémon is shown at 1× in a portrait window on its type's colour; a catch carries the ball as a stamp, an evolution an ▲; badges, items and the Key Stone appear as themselves. The hero reveal opens at the top (the phase 0 fix).
+- **Collect** (`src/Claim.tsx`): the plain rewards are `Slot material="glass"`.
+  - Coins grow with the amount: coin, then nugget, then sack.
+  - Identical rewards merge into one slot with a "×N" stamp, and one tap claims them all. Flights still start from the slot.
+  - A caption names the source, and a red ring marks a reward that pays itself soon.
+  - A total line (coins, gems, things) sits above "Collect all".
+  - The two-way milestone choices keep their own card.
+- **The Bag's item sheet** (`Play.tsx`) opens on the item as an `ObjCard`: its kind is the field's colour (`lib/itemcat.ts` `catColor`, ready for the shop's wares), the count is the banner, and the frame is gold when it is in use.
+- **Tour** (`src/screens/Tour.tsx`): each card shows a small working piece of the real UI (a ring that fills and ticks, the two game bars, the breathing Collect bag, the dock, six places for the boss) with one line.
+- **Help** (`RulesTab` in `App.tsx`): the first rules use the real pieces (rings, game bars, an evolution line at 1×). Every item icon there is 24 px, and the column's `scale(0.8)` is gone.
+- **`tools/shots.mjs`** now also captures the news window (`late&news`) and the Collect sheet (`boss`): `npm run shots -- overlay`.
+
 ### Today, in part (phase 4)
 
 - `Pace` (`App.tsx`): momentum pips with steps; the XP meter between forms.
@@ -185,7 +200,13 @@ Each phase should leave the app working and green. The T numbers are the audit's
 4. **The Throw belt sockets** still carry text under them ("−110 HP"). It is fine to keep (it is short and on the object), but the item icons are at 58 and 36 px. Use 48 or 72 (24 px sprites).
 5. Check the **Mega and Gigantamax looks** on screen. No fixture has one. Either add a fixture variant (a fixture is ordinary ledger events in `src/lib/fixtures.ts`, and `tools/fixtures.test.mjs` checks them; adding events does not touch `core/`), or force them temporarily in a scratch copy. The scene draws a framed border, the Dynamax at the next whole size, and a red-tinted sky on Gigantamax.
 
-### Phase 5: overlays (every reward moment)
+### Phase 5: overlays: DONE (see §5). Loose ends:
+
+- The milestone choice card in Collect still has its old layout and 30/32 px icons; make each side a `Slot` too.
+- The tour's Back button is as loud as Next; make it a text button like Skip.
+- More help rules could use real pieces (the season, Level 100, Gems still use number chips).
+
+### (the original phase 5 notes, kept for reference)
 
 - **News window (`src/Recap.tsx`), T13:** each news item becomes a small object. A catch is the sprite in its ball; a badge is the badge art; an evolution is old → new form; a find is the item. Use `ObjCard` (small) or `Slot`. Keep the hero reveal pinned at the top with the list scrolling under it. (The scroll-to-bottom bug is already fixed in phase 0.)
 - **Collect sheet (`src/Claim.tsx`), T14:** rewards as objects that grow with the amount (coin, pile, sack, as the top-bar chip does), identical rewards merged into one with "×N", and "Collect all" sending them flying (`lib/fly.ts` exists). Use `Slot material="glass"` (Q9).

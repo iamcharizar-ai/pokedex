@@ -73,7 +73,6 @@ details.win.folded[open] .chev { transform: rotate(180deg); }
 .collect-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding-right: 48px; }
 .collect-head h2 { margin: 0; font-size: var(--t-display); }
 .collect-list { display: grid; gap: var(--s-2); }
-.collect-list .claim-chip { width: 100%; min-height: 56px; justify-content: flex-start; }
 
 /* ── a sheet's handle: the strip you drag down ── */
 .sheet-handle { display: grid; place-items: center; height: 28px; margin: calc(var(--s-4) * -1) 0 var(--s-1); touch-action: none; cursor: grab; }
@@ -137,3 +136,19 @@ details.win.folded[open] .chev { transform: rotate(180deg); }
 .tour-skip { min-height: 44px; padding: 0 var(--s-4); font: inherit; font-family: var(--k-face); font-size: 16px; color: var(--text-2); background: none; border: 0; border-radius: 99px; cursor: pointer; }
 .tour-skip:hover { color: var(--text); }
 .tour-skip:focus-visible { outline: 2px solid #fff; }
+
+/* ── the tour's pictures are small working pieces of the real screens (Tour.tsx) ── */
+.tour-art { width: 100%; height: 120px; border-radius: var(--r-3); background: radial-gradient(60% 70% at 50% 50%, rgba(255, 216, 0, 0.18), transparent 75%); }
+.tour-ring { position: relative; display: grid; place-items: center; width: 96px; height: 96px; border-radius: 50%; background: radial-gradient(circle, var(--ground) 0 38px, transparent 39px), conic-gradient(var(--tag-code) 0.75turn, rgba(255, 255, 255, 0.1) 0); box-shadow: 0 0 0 2px var(--k-edge); }
+.tour-tick { position: absolute; right: -2px; bottom: 4px; display: grid; place-items: center; width: 28px; height: 28px; font: normal 16px/1 var(--k-face); color: #fff; background: var(--tag-code); border: 2px solid var(--k-edge); border-radius: 50%; animation-delay: 300ms; }
+.tour-bars { display: grid; gap: 10px; width: min(260px, 100%); }
+.tour-bag { position: relative; width: 72px; height: 72px; border-radius: 18px; }
+.tour-dock { display: flex; gap: 4px; padding: 6px; background: var(--glass); border: 1px solid var(--hair-hi); border-radius: 20px; }
+.tour-dock span { display: grid; justify-items: center; gap: 2px; padding: 6px 6px 4px; color: var(--text-3); border-radius: 14px; }
+.tour-dock span.on { color: var(--text); background: var(--surface-2); }
+.tour-dock small { font: 400 10.5px/1 var(--k-face); }
+.tour-dock img { image-rendering: pixelated; }
+.tour-six { display: flex; gap: 6px; }
+.tour-six i { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; background: var(--well); box-shadow: inset 0 0 0 2px var(--hair-hi); }
+.tour-six i.on { background: var(--surface-2); box-shadow: inset 0 0 0 2px var(--tone-purple); }
+.tour-six img { image-rendering: pixelated; }
