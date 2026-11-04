@@ -10,14 +10,19 @@
 //  • /api/* is never touched: a signed-in response must not outlive the session in a cache
 // Only good responses are cached: ok, HTML for the shell, nothing marked no-store.
 // Bump CACHE when this file's strategy changes; old caches are dropped on activate.
-const CACHE = 'pokedex-shell-v5'
+const CACHE = 'pokedex-shell-v6'
 const SPRITES = 'pokedex-sprites-v1'
 const PAGE_TIMEOUT_MS = 2500
 
-const cacheable = (res, shell) =>
+// A build asset is never a web page: a file that is gone from the host is answered with the app page (200, HTML) by the
+// host's fallback, and kept as the script it was asked for that would leave the app blank for good (the poisoned-cache
+// blank screen of 4 Nov 2026).
+const isPage = (res) => /text\/html/i.test(res.headers.get('content-type') || '')
+const cacheable = (res, shell, asset) =>
   res.ok &&
   !/no-store/i.test(res.headers.get('cache-control') || '') &&
-  (!shell || /text\/html/i.test(res.headers.get('content-type') || ''))
+  (!shell || isPage(res)) &&
+  (!asset || !isPage(res))
 
 // A sprite is cached for good, so only an image may be: a sprites host that is down can answer 200 with a web page, and that
 // page must never be kept as the picture (it was, on 2 Nov 2026: a broken Steelix that stayed broken after the host was fixed).
@@ -53,7 +58,7 @@ async function precache() {
     try {
       const res = await fetch(path)
       if (!res.ok) throw new Error(path + ' ' + res.status)
-      if (!cacheable(res)) return null
+      if (!cacheable(res, false, true)) { if (essential) throw new Error(path + ' is not a build file'); return null }
       await c.put(path, res.clone())
       return res
     } catch (err) {
@@ -105,7 +110,7 @@ self.addEventListener('fetch', (e) => {
   if (fixed) {
     e.respondWith(
       caches.match(req).then((hit) => hit || (fixed === SPRITES ? spriteFetch(req) : fetch(req)).then((res) => {
-        if (cacheable(res) && (fixed !== SPRITES || validSprite(req, res))) e.waitUntil(put(req, res.clone(), fixed))
+        if (cacheable(res, false, fixed === CACHE) && (fixed !== SPRITES || validSprite(req, res))) e.waitUntil(put(req, res.clone(), fixed))
         return res
       }).catch(offline)),
     )
