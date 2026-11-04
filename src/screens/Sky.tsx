@@ -27,3 +27,10 @@ export function sleepFor(score: number | null): number | null {
   const s = q('sleep')
   return s !== null && /^\d+$/.test(s) ? Number(s) : score
 }
+
+/** A fixture can be shown on a Mega or a Gigantamax day with `?aura=mega` or `?aura=gmax`, to see those looks; only the picture changes. */
+export function auraFor(aura: 'mega' | 'gmax' | null): 'mega' | 'gmax' | null {
+  if (!FIXTURE) return aura
+  const a = q('aura')
+  return a === 'mega' || a === 'gmax' ? a : aura
+}

@@ -43,9 +43,11 @@ export function useNatural(src: string): { px: [number, number] | null; onLoad: 
 }
 
 /** An <img> at a whole-number scale of its own size, about filling `box` pixels (hidden for the moment before it has loaded). */
-export function PixelSprite({ src, box, className = '', style }: { src: string; box: number; className?: string; style?: CSSProperties }) {
+/** `up`: one whole step bigger than the box would give (a Dynamax), as long as it stays within `upMax` pixels wide. */
+export function PixelSprite({ src, box, up = false, upMax = Infinity, className = '', style }: { src: string; box: number; up?: boolean; upMax?: number; className?: string; style?: CSSProperties }) {
   const { px, onLoad } = useNatural(src)
-  const k = px ? wholeScale(px[0], px[1], box) : 1
+  const k0 = px ? wholeScale(px[0], px[1], box) : 1
+  const k = px && up && px[0] * (k0 + 1) <= upMax ? k0 + 1 : k0
   return <img src={src} alt="" className={`sprite ${className}`} style={px ? { ...style, width: px[0] * k, height: px[1] * k } : { ...style, visibility: 'hidden' }} onLoad={onLoad} draggable={false} />
 }
 

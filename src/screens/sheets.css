@@ -87,3 +87,8 @@
 .rule-line { display: flex; align-items: flex-end; gap: 4px; }
 .rule-line > span { display: grid; justify-items: center; gap: 2px; }
 .rule-line small { font: 400 11px/1 var(--k-face); color: var(--text-2); }
+
+/* the leader's power (App.tsx PowerLine): one bar for all work, a coloured part per source, the total in it */
+.power-bar { position: relative; flex: 1 1 100%; display: flex; height: 20px; overflow: hidden; border-radius: 7px; background: var(--meter-track); border: 2px solid var(--k-edge); box-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.5); }
+.power-bar i { min-width: 3px; box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.35), inset 0 -3px 0 rgba(0, 0, 0, 0.2); }
+.power-bar b { position: absolute; inset: 0; display: grid; place-items: center; font: 400 12px/1 var(--k-face); color: #fff; -webkit-text-stroke: 3px var(--k-edge); paint-order: stroke fill; }

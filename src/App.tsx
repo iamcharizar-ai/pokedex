@@ -44,7 +44,7 @@ import { play, setSoundOn, soundOn } from './lib/sfx.ts'
 import { LIFEOS_URL, start, useItem, useView } from './lib/store.ts'
 import { FIXTURE } from './lib/fixture-boot.ts'
 import { dropIn, floatNote, hit, lunge, party, react, ring, stamp, tapPop } from './lib/fx.ts'
-import { sleepFor, useClock } from './screens/Sky.tsx'
+import { auraFor, sleepFor, useClock } from './screens/Sky.tsx'
 import { Stage } from './screens/Stage.tsx'
 import { biomeOf, layoutFor, lightAt, litFilter, lookOf } from './screens/stage.ts'
 import { Meter } from './Meter.tsx'
@@ -85,8 +85,8 @@ function useBox(ref: { current: HTMLElement | null }): [number, number] {
 }
 
 /** An animated sprite at a whole-number scale: `size` is the box it should about fill (lib/pixel.tsx). */
-function Sprite({ form, shiny, size, className = '' }: { form: string; shiny?: boolean; size: number; className?: string }) {
-  return <PixelSprite src={spritePath(form, shiny)} box={size} className={className} />
+function Sprite({ form, shiny, size, up, upMax, className = '' }: { form: string; shiny?: boolean; size: number; up?: boolean; upMax?: number; className?: string }) {
+  return <PixelSprite src={spritePath(form, shiny)} box={size} up={up} upMax={upMax} className={className} />
 }
 
 export type Tone = '' | 'blue' | 'green' | 'gold' | 'dark' | 'red' | 'purple'
@@ -121,6 +121,8 @@ const label = (h: HabitFact): string => h.name?.trim() || TAG_NAME[h.tag] || h.i
 
 function Scene({ game }: { game: Game }) {
   const { partner, today, wild } = game
+  // a fixture can be shown on a Mega or Gigantamax day (?aura=), to see those looks
+  const aura = auraFor(game.aura)
   const xpBar = useRef<HTMLDivElement>(null)
   const lastXp = useRef(game.into)
   // the bar flashes when XP lands while you are looking at it
@@ -174,7 +176,7 @@ function Scene({ game }: { game: Game }) {
   const wildRec = wild ? SPECIES[wild.form] : null
   const meRec = SPECIES[game.display] ?? SPECIES[partner.form]
   const stageState = {
-    lay, minutes, score, theme: game.theme, aura: game.aura,
+    lay, minutes, score, theme: game.theme, aura: aura,
     biome: wildRec ? biomeOf(wildRec.t, wildRec.t2) : 'meadow' as const,
     seed: wild?.form ?? partner.form, partnerTc: typeColor(meRec?.t),
   }
@@ -191,7 +193,7 @@ function Scene({ game }: { game: Game }) {
   // a ball held over it (lib/aim.ts): its throw ghosted on the HP bar
   const aimed = wild && !wild.caught ? Math.min(useAimHp, wild.hp) : 0
   return (
-    <section ref={stage} className={`scene v2 ${game.theme} ${game.aura ? `aura-${game.aura}` : ''}`} style={{ ['--lit' as string]: litFilter(light) } as CSSProperties} aria-label="Today, as a battle">
+    <section ref={stage} className={`scene v2 ${game.theme} ${aura ? `aura-${aura}` : ''}`} style={{ ['--lit' as string]: litFilter(light) } as CSSProperties} aria-label="Today, as a battle">
       {cw > 0 && <Stage k={k} s={stageState} label={game.theme ? 'The scene' : look.wx.label} />}
       {wild && wildRec && (
         <>
@@ -223,15 +225,15 @@ function Scene({ game }: { game: Game }) {
       )}
       <div className="pad me-pad" style={at(lay.me)} role="button" tabIndex={0} aria-label={`Pat ${nameOf(game.display)}`} onClick={() => pat('me')} onKeyDown={press('me')}>
         {/* a perfect day: a Gigantamax form when it has one, else it Dynamaxes (the same Pokemon, the next whole size up, glowing red) */}
-        <span className="lit"><Sprite form={game.display} shiny={partner.shiny} size={(narrow ? 150 : 200) * (game.aura === 'gmax' && game.display === partner.form ? 1.5 : 1)} className={`${game.asleep ? 'asleep' : ''} ${game.aura === 'gmax' && game.display === partner.form ? 'dynamax' : ''}`} /></span>
+        <span className="lit"><Sprite form={game.display} shiny={partner.shiny} size={narrow ? 150 : 200} up={aura === 'gmax' && game.display === partner.form} upMax={Math.round(cw * 0.62)} className={`${game.asleep ? 'asleep' : ''} ${aura === 'gmax' && game.display === partner.form ? 'dynamax' : ''}`} /></span>
         {game.asleep && <span className="zzz" aria-hidden>Zzz</span>}
       </div>
-      <div className={`np np-me ${game.aura ?? ''}`}>
+      <div className={`np np-me ${aura ?? ''}`}>
         <b className="np-name">
-          {nameOf(game.display)}
+          <span className="np-nm">{nameOf(game.display)}</span>
           {partner.shiny && <IcStar size={13} />}
-          {game.aura === 'mega' && <span className="np-tag mega">Mega</span>}
-          {game.aura === 'gmax' && <span className="np-tag gmax">{game.display === partner.form ? 'Dynamax' : 'G-Max'}</span>}
+          {aura === 'mega' && <span className="np-tag mega">Mega</span>}
+          {aura === 'gmax' && <span className="np-tag gmax">{game.display === partner.form ? 'Dynamax' : 'G-Max'}</span>}
         </b>
         <b className="np-lv">Lv {game.level}</b>
         <div ref={xpBar} className="np-bar" title={`${Math.round(game.into).toLocaleString('en-IN')} of ${game.need.toLocaleString('en-IN')} XP to Lv ${game.level + 1}`}>
@@ -364,19 +366,24 @@ function PartyNotes({ game }: { game: Game }) {
 }
 
 const pct = (x: number): string => `${Math.round(x * 100)}%`
-/** Everything that raises a strike, added: what applies to all work, then what applies to one kind of work. The sum is applied once. */
+/** Everything that raises a strike, added (UI-AUDIT-2026-11-04 T24): what applies to all work as one bar, a coloured part for each
+ *  source (level, team, bond, Mega, Life Orb) and the total written in it; then a chip for each kind of work's own extra. Added once. */
+const POWER_COLOUR: Record<string, string> = { Level: 'var(--tone-gold)', Team: 'var(--tone-blue)', Bond: 'var(--k-pink)', Mega: 'var(--tone-purple)', 'Life Orb': 'var(--tone-red)' }
 function PowerLine({ game }: { game: Game }) {
   const { power } = game
-  const common = power.team + power.bond + power.mega + power.item + power.level
   const parts: [string, number][] = [['Level', power.level], ['Team', power.team], ['Bond', power.bond], ['Mega', power.mega], ['Life Orb', power.item]]
+  const common = parts.reduce((n, [, v]) => n + v, 0)
+  const shown = parts.filter(([, v]) => v > 0)
   const kinds = (Object.keys(power.domain) as TagKind[]).map((t) => [t, power.domain[t]] as const).filter(([t, d]) => d.held + d.mastery + d.nature + d.vitamin + d.sig > 0 && !isShelved(game, t))
   return (
     <div className="power" aria-label="What raises a strike">
-      <span className="chip" title={parts.filter(([, v]) => v > 0).map(([n, v]) => `${n} +${pct(v)}`).join(' · ') || 'Nothing yet: a team, a bond level or a Mega adds here'}>All work +{pct(common)}</span>
+      <span className="power-bar" role="img" aria-label={`All work +${pct(common)}: ${shown.map(([n, v]) => `${n} +${pct(v)}`).join(', ') || 'nothing yet'}. All added together, once.`} title="All added together, once">
+        {shown.map(([n, v]) => <i key={n} style={{ flexGrow: v, background: POWER_COLOUR[n] }} title={`${n} +${pct(v)}`} />)}
+        <b>+{pct(common)}</b>
+      </span>
       {kinds.map(([t, d]) => (
         <span key={t} className="chip" data-tag={t} title={[['Held item', d.held], ['Mastery', d.mastery], ['Natures on the team', d.nature], ['Vitamins', d.vitamin], ['Signatures', d.sig]].filter(([, v]) => (v as number) > 0).map(([n, v]) => `${n} +${pct(v as number)}`).join(' · ')}>{TAG_NAME[t]} +{pct(d.held + d.mastery + d.nature + d.vitamin + d.sig)}</span>
       ))}
-      <small className="muted">all added together, once</small>
     </div>
   )
 }
@@ -1015,13 +1022,13 @@ function RulesTab({ onTour }: { onTour: () => void }) {
           <Rule title="The Professor's lab" tone="purple" pic={<><ItemIcon id="journal" size={24} /><Arrow /><span className="rule-chip sm">−{Math.round(RESEARCH_WILD * 100)}% HP</span></>}>
             Everyone not in the party lives with the Professor; nobody is sold. He studies up to {RESEARCH_SLOTS} of them on his desk, on every day with a pillar: ten plus its level, times its rarity, a shiny half again. Each research rank takes {Math.round(RESEARCH_WILD * 100)}% more HP off every wild Pokemon to come (up to {Math.round(RESEARCH_WILD_MAX * 100)}%) and sends a gift: Rare Candy, stones, Honey, balls, and every fifth rank a Mystery Egg. So a strong Pokemon either fights in the party or helps you catch on the desk.
           </Rule>
-          <Rule title="Level 100" tone="gold" pic={<><span className="rule-chip sm">Lv 50</span><Arrow /><span className="rule-chip">Lv {MAX_LEVEL}</span></>}>
+          <Rule title="Level 100" tone="gold" pic={<span className="rule-bars"><Meter look="game" kind="xp" value={50} max={MAX_LEVEL} name="Level" label={`Lv 50 → ${MAX_LEVEL}`} size="lg" /></span>}>
             Fully trained (level 50, or 30 for a Pokemon that never evolves) is still the milestone: its nature is set, it counts toward new regions and the boss, and the next partner steps up. After that it can lead again to go on to level {MAX_LEVEL}; there it steps aside by itself, as it has nothing left to learn.
           </Rule>
           <Rule title="Gems" tone="green" pic={<><Gem size={24} /><span className="rule-chip sm">{GEMS.catch}</span><span className="rule-chip sm">{GEMS.evolve}</span><span className="rule-chip sm">{GEMS.gym}</span></>}>
             A catch, an evolution, a badge, a feat. They buy eggs, incense, chests and scenes, never a ball.
           </Rule>
-          <Rule title="The season" tone="gold" pic={<><span className="rule-chip sm">1</span><Arrow /><span className="rule-chip sm">2</span><Arrow /><span className="rule-chip sm">3</span></>}>
+          <Rule title="The season" tone="gold" pic={<span className="rule-line">{['coin', 'great-ball', 'gem'].map((id, i) => <span key={id}><ItemIcon id={id} size={24} /><small>{i + 1}</small></span>)}</span>}>
             Every {SEASON_STEP.toLocaleString('en-IN')} XP of the month's work is a step, and each step hands something over.
           </Rule>
           <Rule title="Collect" tone="gold" pic={<><Coin size={24} /><Gem size={24} /><Arrow /><ItemIcon id="loot-sack" size={24} /></>}>
