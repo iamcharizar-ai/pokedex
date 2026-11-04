@@ -187,7 +187,6 @@ span.pslot.empty, button.pslot.empty:disabled { cursor: default; }
 
 /* ── arranging the Bag: drag a thing, or Arrange and tap ── */
 .mc-slot { touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
-.mc-slot.badge { background: #8b8b9b; }
 .mc-slot.held { opacity: 0.25; }
 .mc-slot.over { background: #c9defa; outline: 2px solid #fff; outline-offset: -2px; }
 .mc-slot.carried { outline: 3px solid #ffd84a; outline-offset: -3px; background: #b9aa6a; }

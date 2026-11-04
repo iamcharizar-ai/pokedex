@@ -538,6 +538,7 @@ export function Bag({ game }: { game: Game }) {
     const there = cells[cell] ?? null
     const target = there !== null ? layout.indexOf(there) : all ? cell : -1
     if (target < 0 || there === id) return false
+    glide.current = true
     saveNow(moveTo(layout, id, target))
     play('tap')
     return true
@@ -551,7 +552,8 @@ export function Bag({ game }: { game: Game }) {
     drop: (id, t) => (t && t !== 'lab' ? live.current(id, t.slot) : false),
     end: () => { held.current = null; setDrag(null) },
   }), [])
-  useFlip(held)
+  const glide = useRef(false)
+  useFlip(held, glide)
   const press = (id: string) => (e: ReactPointerEvent<HTMLElement>) => startPress({ x: e.clientX, y: e.clientY, id: e.pointerId, type: e.pointerType, button: e.button }, id, e.currentTarget, hooks)
   const tap = (id: string, i: number) => {
     if (!arrange) { setOpen(id); play('tap'); return }
@@ -566,7 +568,7 @@ export function Bag({ game }: { game: Game }) {
       const [li, gi] = id.split(':').slice(1).map(Number)
       const l = LEAGUES[li], t = l.gyms[gi]
       return (
-        <button key={id} type="button" className={`mc-slot badge ${cls}`} data-place={i} data-flip={id} onPointerDown={press(id)} onClick={() => tap(id, i)} aria-label={`${badgeName(t)}, ${l.name}. Open`}>
+        <button key={id} type="button" className={`mc-slot medal ${cls}`} data-place={i} data-flip={id} onPointerDown={press(id)} onClick={() => tap(id, i)} aria-label={`${badgeName(t)}, ${l.name}. Open`}>
           <GymBadge art={badgeArt(li, gi)} on n={gi + 1} size={32} title="" />
           <span className="mc-tip" aria-hidden><b>{badgeName(t)}</b><small>{l.name} · won from {t.name}</small></span>
         </button>
@@ -616,7 +618,7 @@ export function Bag({ game }: { game: Game }) {
             <span className="mc-title">{carry ? `Carrying ${nameOfThing(carry)}: tap a slot` : at[0] === 'Badges' ? `Badges · ${badges}` : owned.length ? (at[0] === 'TMs' ? `TMs · ${equipped.length} of ${TM_SLOTS} on ${nameOf(game.partner.form)}` : at[0] === 'Held items' ? `Held items · ${nameOf(game.partner.form)} holds one` : at[0]) : 'Inventory'}</span>
             <span className="mc-btns">
               <button type="button" className={`mc-btn ${arrange ? 'on' : ''}`} aria-pressed={arrange} onClick={() => { setArrange(!arrange); setCarry(null); play('click') }} title="Tap a thing to pick it up, tap a slot to put it down. You can also drag a thing (hold it on a touch screen).">Arrange</button>
-              <button type="button" className="mc-btn" onClick={() => { saveNow(tidy(ordered)); setCarry(null); play('click') }} title="Lay everything down again in order, with no gaps">Tidy</button>
+              <button type="button" className="mc-btn" onClick={() => { glide.current = true; saveNow(tidy(ordered)); setCarry(null); play('click') }} title="Lay everything down again in order, with no gaps">Tidy</button>
             </span>
           </div>
           {owned.length === 0 && badges === 0 && <p className="mc-empty">No items yet. The Mart opens each morning, and feats hand out the rest.</p>}

@@ -73,11 +73,13 @@ export function SortBar<T extends string>({ sorts, value, onChange }: { sorts: [
 
 // ── cards that change places glide there (FLIP) ─────────────────────────────
 /** Every element marked data-flip="<id>" slides from where it was last render to where it is now. `held` is the one being dragged: it is left alone. */
-export function useFlip(held: RefObject<string | null>): void {
+export function useFlip(held: RefObject<string | null>, once?: RefObject<boolean>): void {
   const rects = useRef(new Map<string, { x: number; y: number }>())
   useLayoutEffect(() => {
     const next = new Map<string, { x: number; y: number }>()
-    const calm = matchMedia('(prefers-reduced-motion: reduce)').matches
+    // with `once`, things only glide on a render that follows a move (it is set by the move, and used up here), never when a pocket is switched
+    const calm = matchMedia('(prefers-reduced-motion: reduce)').matches || (once !== undefined && !once.current)
+    if (once) once.current = false
     document.querySelectorAll<HTMLElement>('[data-flip]').forEach((el) => {
       const id = el.dataset.flip as string
       // measured from the screen the card is on (not the window), so a tab sliding in, the page scrolling or a sheet opening never looks like a card moving
