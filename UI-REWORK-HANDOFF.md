@@ -25,7 +25,7 @@ The owner asked for an audit of every screen against the two screens they love (
 - §3 is the show-don't-tell list (T1 to T25).
 - §8 is the phased plan.
 
-Phases 0, 1, 2, 3 and 5 are done; phase 4 is done in part.
+Phases 0 to 5 are done. Phase 6 (Shop) is next.
 
 ---
 
@@ -189,7 +189,9 @@ console.log(h.digest('hex'))
 
 Each phase should leave the app working and green. The T numbers are the audit's §3.
 
-### Phase 4, the rest (Today below the scene)
+### Phase 4, the rest: DONE (5 Nov). What was done: the first-day card (the first habit's ring with a ghost tick, and an Open Life OS button, in place of the paragraph); the partner line says only what is left; every HP bar (leader card, leader sheet, league trail, boss) is the classic game bar (`HpBar` now draws `Meter look="game"`); the throw belt's icons at 48 px (2×), lifted on hover but never turned. Still open from it: T24, the leader's power chips as one stacked bar; and the Mega/Gigantamax looks, never seen on screen (no fixture has them).
+
+### (the original phase 4 notes, kept for reference)
 
 1. **Empty state and first day** (the "big" part left out on purpose):
    - Replace the text block ("Nothing has been ticked yet…") with the scene plus one card: the first habit to tick, with a `pre-hint` ghost tick on its ring.
@@ -200,11 +202,7 @@ Each phase should leave the app working and green. The T numbers are the audit's
 4. **The Throw belt sockets** still carry text under them ("−110 HP"). It is fine to keep (it is short and on the object), but the item icons are at 58 and 36 px. Use 48 or 72 (24 px sprites).
 5. Check the **Mega and Gigantamax looks** on screen. No fixture has one. Either add a fixture variant (a fixture is ordinary ledger events in `src/lib/fixtures.ts`, and `tools/fixtures.test.mjs` checks them; adding events does not touch `core/`), or force them temporarily in a scratch copy. The scene draws a framed border, the Dynamax at the next whole size, and a red-tinted sky on Gigantamax.
 
-### Phase 5: overlays: DONE (see §5). Loose ends:
-
-- The milestone choice card in Collect still has its old layout and 30/32 px icons; make each side a `Slot` too.
-- The tour's Back button is as loud as Next; make it a text button like Skip.
-- More help rules could use real pieces (the season, Level 100, Gems still use number chips).
+### Phase 5: overlays: DONE (see §5). The milestone choice in Collect is two slots now, and the tour's Back is a text button like Skip. Still open: more help rules could use real pieces (the season, Level 100, Gems still use number chips).
 
 ### (the original phase 5 notes, kept for reference)
 

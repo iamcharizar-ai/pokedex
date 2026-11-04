@@ -3,7 +3,6 @@
    glass as the page. Lists are rows; only what you press is an object. */
 
 /* the leader's card: the scene's HP label, readable on the dark */
-.sheet .hp-row b, .sec .hp-row b { color: var(--text-2); }
 .sheet .hp-sub, .sec .hp-sub { color: var(--text-2); font-size: 13px; }
 .sheet .weak, .sec .weak { color: var(--text-2); }
 .sheet .power .chip, .sec .power .chip { height: 24px; display: inline-flex; align-items: center; margin: 0; padding: 0 9px; color: var(--text); background: var(--surface-3); border: 0; border-radius: 99px; }
@@ -22,7 +21,6 @@
 .boss-throws .actions { display: flex; flex-wrap: wrap; gap: var(--s-2); }
 
 /* Collect: each reward a row you tap, its colour a thin edge and a glow behind the icon */
-.claim-ico { min-width: 44px; justify-content: center; filter: drop-shadow(0 0 8px color-mix(in srgb, var(--c) 60%, transparent)); }
 
 /* a Pokemon's page: a small shadow under it, not a disc */
 
@@ -50,9 +48,6 @@
 .claim-choice > b { font-family: var(--k-face); font-weight: 400; font-size: 17px; color: var(--text); }
 .claim-choice > small { color: var(--text-3); font-size: 12.5px; }
 .claim-sides { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-2); margin-top: var(--s-2); }
-.claim-side { display: grid; justify-items: center; gap: 6px; min-height: 92px; padding: var(--s-3) var(--s-2); font-family: var(--k-face); font-size: 14px; color: var(--text); background: var(--well); border: 1px solid var(--hair-hi); border-radius: 14px; cursor: pointer; }
-.claim-side:hover, .claim-side:focus-visible { background: var(--surface-2); outline: none; box-shadow: 0 0 0 2px var(--tone-gold), 0 0 14px var(--gold-glow); }
-.claim-side .claim-ico { display: flex; gap: 2px; align-items: center; }
 
 /* ── the news list as objects (Recap.tsx NewsArt): a picture on the left, the title and line beside it ── */
 .rc-list li:not(.more) { grid-template-columns: 64px minmax(0, 1fr) auto; align-items: center; column-gap: var(--s-3); }

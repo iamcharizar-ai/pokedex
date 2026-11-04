@@ -76,8 +76,6 @@
 .boss-ball, .boss-caught { position: absolute; left: 50%; top: 50%; margin: -22px 0 0 -22px; z-index: 3; }
 .boss-info { flex: 1 1 220px; min-width: 0; display: grid; gap: 6px; }
 .boss-hp { position: relative; }
-.boss-segs { position: absolute; inset: 0; pointer-events: none; }
-.boss-segs i { position: absolute; top: 2px; bottom: 2px; width: 3px; margin-left: -1px; background: var(--k-edge); opacity: 0.85; }
 .boss-line { margin: 0; font-size: 13px; }
 .boss-tasks { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
 .boss-tasks li { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border: 2px solid var(--k-edge); border-radius: 10px; background: rgba(8, 12, 30, 0.06); }

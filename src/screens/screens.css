@@ -124,8 +124,6 @@ details.win.folded[open] .chev { transform: rotate(180deg); }
 @keyframes tour-in { from { opacity: 0; transform: translateX(18px); } }
 
 /* ── the HP bar's segment marks, wherever it is drawn ── */
-.hpbar-kit { position: relative; }
-.hpbar-kit .boss-segs { position: absolute; inset: 0; pointer-events: none; }
 
 /* ── things you tap are at least 44 pixels each way ── */
 .k-btn, .tb .help, .seg button, .shopchips .k-btn, details.win.folded > summary.win-h, .forge-more > summary { min-height: 44px; }

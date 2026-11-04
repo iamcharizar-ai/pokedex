@@ -270,7 +270,7 @@ function Talk({ game, pillars, sleepH }: { game: Game; pillars: HabitFact[]; sle
         {today.total > 0 && (
           <div className="perfect" title={left ? `${left} left for a perfect day, which catches the wild Pokemon on the spot` : 'A perfect day'}>
             <span className="perfect-track" role="progressbar" aria-valuemin={0} aria-valuemax={today.total} aria-valuenow={today.done} aria-label="Habits ticked today"><i style={{ width: `${share * 100}%` }} /></span>
-            <b>{left ? <>{today.done} of {today.total} · <span>{left} to a perfect day</span></> : 'Perfect day!'}</b>
+            <b>{left ? <span>{left} to a perfect day</span> : 'Perfect day!'}</b>
           </div>
         )}
       </div>
@@ -426,12 +426,22 @@ function LeaderBody({ game, t, l }: { game: Game; t: NonNullable<ReturnType<type
 }
 
 /** Nothing has been ticked yet: say where the game comes from, instead of showing a row of zeros. */
-function FirstRun({ game }: { game: Game }) {
+/** A game that has not started: the first habit to tick, as the ring it will fill, with a ghost of the tick (UI-AUDIT-2026-11-04 phase 4). */
+function FirstRun({ game, first }: { game: Game; first?: HabitFact }) {
   if (game.days.some((d) => d.xp > 0 || d.ticked > 0)) return null
+  const tag = first?.tag ?? 'code'
   return (
-    <p className="notice good">
-      Nothing has been ticked yet. Every habit you tick in <a href={LIFEOS_URL} target="_blank" rel="noreferrer">Life OS</a> grows your partner and wears down the wild Pokemon. Come back after your first tick.
-    </p>
+    <section className="firstrun" aria-label="Your first tick">
+      <span className="pillar-ring firstrun-ring" data-tag={tag} style={{ ['--c' as string]: `var(--tag-${tag}, var(--tone-gold))` } as CSSProperties}>
+        <ItemIcon id={pillarIcon(tag)} size={24} />
+        <i className="firstrun-tick" aria-hidden>✓</i>
+      </span>
+      <span className="firstrun-txt">
+        <b>Tick {first ? label(first) : 'a habit'} in Life OS</b>
+        <small>It grows {nameOf(game.display)} and wears down the wild one.</small>
+      </span>
+      <a className="firstrun-go" href={LIFEOS_URL} target="_blank" rel="noreferrer">Open Life OS <span aria-hidden>↗</span></a>
+    </section>
   )
 }
 
@@ -480,7 +490,7 @@ function PartnerTab({ game, facts, nights, onShop }: { game: Game; facts: DayFac
     <div className="home daypage">
       <div className="day-main">
         <Scene game={game} />
-        <FirstRun game={game} />
+        <FirstRun game={game} first={habits.find((h) => h.pillar && h.tag !== 'sleep')} />
         <SlipNote game={game} />
         {game.warnings.map((w) => <p key={w} className="notice warn">{w}</p>)}
         <Talk game={game} pillars={habits.filter((h) => h.pillar)} sleepH={habits.find((h) => h.id === SLEEP_HABIT && !h.measured)} />

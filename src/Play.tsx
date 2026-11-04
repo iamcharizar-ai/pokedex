@@ -129,18 +129,18 @@ export function Actions({ game, onShop }: { game: Game; onShop: () => void }) {
       {balls.map((b) => {
         const hp = hitOf(game, b)
         const double = BALLS[b].vs && hp > 0 && hp >= (BALLS[b].hp * 2)
-        return socket(b, <BallItem id={b} size={58} />, itemName(b), BALLS[b].hp >= 1_000_000 ? 'catches it' : `−${hp} HP${double ? ' ×2' : ''}`, { n: game.inv[b], disabled: !wild || Boolean(flying), ready: Boolean(wild), title: ITEMS[b]?.text, aim: Math.min(hp, game.wild?.hp ?? 0), onClick: (e) => throwIt(b, e.currentTarget) })
+        return socket(b, <BallItem id={b} size={48} />, itemName(b), BALLS[b].hp >= 1_000_000 ? 'catches it' : `−${hp} HP${double ? ' ×2' : ''}`, { n: game.inv[b], disabled: !wild || Boolean(flying), ready: Boolean(wild), title: ITEMS[b]?.text, aim: Math.min(hp, game.wild?.hp ?? 0), onClick: (e) => throwIt(b, e.currentTarget) })
       })}
-      {balls.length === 0 && socket('shop', <ItemIcon id="great-ball" size={36} />, 'Get balls', 'at the Mart', { tone: 'shop', onClick: onShop })}
+      {balls.length === 0 && socket('shop', <ItemIcon id="great-ball" size={48} />, 'Get balls', 'at the Mart', { tone: 'shop', onClick: onShop })}
       {game.v14
-        ? socket('feed', <ItemIcon id={treatsIn(game)[0] ?? 'oran-berry'} size={36} />, 'Feed', berries.length ? `${berries.reduce((n, b) => n + (game.inv[b] ?? 0), 0)} to give` : 'no berries', { tone: 'feed', disabled: berries.length === 0, title: 'Feed any of your Pokemon: berries and treats', onClick: () => setFeeding(true) })
+        ? socket('feed', <ItemIcon id={treatsIn(game)[0] ?? 'oran-berry'} size={48} />, 'Feed', berries.length ? `${berries.reduce((n, b) => n + (game.inv[b] ?? 0), 0)} to give` : 'no berries', { tone: 'feed', disabled: berries.length === 0, title: 'Feed any of your Pokemon: berries and treats', onClick: () => setFeeding(true) })
         : berries.length > 0
-        ? berries.map((b) => socket(b, <ItemIcon id={b} size={36} />, itemName(b).replace(' Berry', ''), `+${BERRY_HEARTS[b]} ♥ · ${hearts}`, { tone: 'feed', n: game.inv[b], title: ITEMS[b]?.text, onClick: () => { useItem(b, '', 'feed'); play('feed') } }))
-        : socket('feed', <ItemIcon id="oran-berry" size={36} />, 'Feed', 'no berries', { tone: 'feed', disabled: true, title: 'Berries are at the Mart and in the Garden shop', onClick: () => undefined })}
-      {(game.inv['max-repel'] ?? 0) > 0 && wild && !game.wild?.repel && socket('repel', <ItemIcon id="max-repel" size={36} />, 'Max Repel', `+${REPEL_DAYS} days`, { tone: 'guard', n: game.inv['max-repel'], title: ITEMS['max-repel'].text, onClick: () => { useItem('max-repel', '', 'repel'); play('tap') } })}
-      {(game.inv['revive'] ?? 0) > 0 && game.league.slipped > 0 && socket('revive', <ItemIcon id="revive" size={36} />, 'Revive', `−${game.league.slipped} HP`, { tone: 'guard', n: game.inv['revive'], title: ITEMS['revive'].text, onClick: () => { useItem('revive', '', 'revive'); play('tap') } })}
+        ? berries.map((b) => socket(b, <ItemIcon id={b} size={48} />, itemName(b).replace(' Berry', ''), `+${BERRY_HEARTS[b]} ♥ · ${hearts}`, { tone: 'feed', n: game.inv[b], title: ITEMS[b]?.text, onClick: () => { useItem(b, '', 'feed'); play('feed') } }))
+        : socket('feed', <ItemIcon id="oran-berry" size={48} />, 'Feed', 'no berries', { tone: 'feed', disabled: true, title: 'Berries are at the Mart and in the Garden shop', onClick: () => undefined })}
+      {(game.inv['max-repel'] ?? 0) > 0 && wild && !game.wild?.repel && socket('repel', <ItemIcon id="max-repel" size={48} />, 'Max Repel', `+${REPEL_DAYS} days`, { tone: 'guard', n: game.inv['max-repel'], title: ITEMS['max-repel'].text, onClick: () => { useItem('max-repel', '', 'repel'); play('tap') } })}
+      {(game.inv['revive'] ?? 0) > 0 && game.league.slipped > 0 && socket('revive', <ItemIcon id="revive" size={48} />, 'Revive', `−${game.league.slipped} HP`, { tone: 'guard', n: game.inv['revive'], title: ITEMS['revive'].text, onClick: () => { useItem('revive', '', 'revive'); play('tap') } })}
       {feeding && <FeedSheet game={game} onClose={() => setFeeding(false)} />}
-      {((wild && game.wild?.leavesIn !== undefined && game.wild.leavesIn <= 3 && (game.inv['max-repel'] ?? 0) === 0) || (game.league.slipped > 0 && (game.inv['revive'] ?? 0) === 0)) && socket('guards', <ItemIcon id="max-repel" size={36} />, 'Guards', 'at the Mart', { tone: 'shop', onClick: onShop })}
+      {((wild && game.wild?.leavesIn !== undefined && game.wild.leavesIn <= 3 && (game.inv['max-repel'] ?? 0) === 0) || (game.league.slipped > 0 && (game.inv['revive'] ?? 0) === 0)) && socket('guards', <ItemIcon id="max-repel" size={48} />, 'Guards', 'at the Mart', { tone: 'shop', onClick: onShop })}
     </div>
   )
 }

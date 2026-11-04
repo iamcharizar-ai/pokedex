@@ -60,7 +60,7 @@
   transition: transform var(--t-fade) var(--ease-out), box-shadow var(--t-pop) linear; }
 .socket-well > img { filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.4)); transition: transform var(--t-pop) var(--ease-out); }
 .socket.ready .socket-well { box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.2), inset 0 -4px 0 rgba(0, 0, 0, 0.35), 0 0 0 2px var(--c), 0 0 18px color-mix(in srgb, var(--c) 45%, transparent); }
-.socket:hover:not(:disabled) .socket-well > img { transform: translateY(-3px) rotate(-8deg); }
+.socket:hover:not(:disabled) .socket-well > img { transform: translateY(-3px); } /* lifted, never turned: a turned sprite smears its pixels */
 .socket:active:not(:disabled) .socket-well { transform: scale(0.92); }
 .socket:disabled { cursor: default; }
 .socket:disabled .socket-well { background: var(--well); box-shadow: inset 0 0 0 1px var(--hair); }
@@ -178,3 +178,15 @@
 .bosslock-slots i { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; background: var(--well); box-shadow: inset 0 0 0 2px var(--hair-hi); }
 .bosslock-slots i.on { background: radial-gradient(circle, rgba(169, 139, 255, 0.35), transparent 70%), var(--surface-2); box-shadow: inset 0 0 0 2px var(--tone-purple); }
 .bosslock-slots img { image-rendering: pixelated; }
+
+/* ── the first day (App.tsx FirstRun): the first habit as the ring it will fill, a ghost tick on it ── */
+.firstrun { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--s-3); padding: var(--s-3); background: var(--surface-1); border: 1px solid var(--hair); border-radius: var(--r-3); }
+.firstrun-ring { position: relative; display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; background: radial-gradient(circle, var(--ground) 0 21px, transparent 22px), rgba(255, 255, 255, 0.09); box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--c) 45%, transparent); }
+.firstrun-ring img { image-rendering: pixelated; }
+.firstrun-tick { position: absolute; right: -4px; bottom: -2px; display: grid; place-items: center; width: 22px; height: 22px; font: normal 13px/1 var(--k-face); color: #fff; background: var(--c); border: 2px solid var(--k-edge); border-radius: 50%; animation: ghost-pulse 1.2s ease-in-out infinite; }
+.firstrun-txt { display: grid; gap: 2px; min-width: 0; }
+.firstrun-txt b { font: 400 16px/1.15 var(--k-face); }
+.firstrun-txt small { font-size: 13px; color: var(--text-2); }
+.firstrun-go { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding: 0 var(--s-3); font: 400 14px/1 var(--k-face); color: var(--k-edge); background: var(--tone-gold); border-radius: 99px; text-decoration: none; box-shadow: 0 3px 0 var(--k-edge); }
+@media (max-width: 420px) { .firstrun { grid-template-columns: auto minmax(0, 1fr); } .firstrun-go { grid-column: 1 / -1; justify-self: start; } }
+@media (prefers-reduced-motion: reduce) { .firstrun-tick { animation: none; } }

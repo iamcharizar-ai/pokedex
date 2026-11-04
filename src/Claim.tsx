@@ -113,12 +113,14 @@ export function CollectButton({ game, today }: { game: Game; today: string }) {
                 <div key={h.key} className="claim-choice">
                   <b>{h.title}</b>
                   <small>Choose one{daysLeft(h, today) <= 1 ? ` · left alone, ${h.choice![0].name} pays itself soon` : ''}</small>
-                  <div className="claim-sides">
+                  <div className="claim-sides collect-slots">
                     {h.choice!.map((o, i) => (
-                      <button key={i} type="button" className="claim-side" onClick={(e) => choose(h, i as 0 | 1, e.currentTarget)}>
-                        <span className="claim-ico">{partsOf(o).map((p, j) => (p.pocket === 'coins' ? <Coin key={j} size={30} /> : p.pocket === 'gems' ? <Gem key={j} size={30} /> : <ItemIcon key={j} id={p.item ?? ''} size={32} />))}</span>
-                        <span>{o.name}</span>
-                      </button>
+                      <div key={i} className="collect-cell">
+                        {/* each side of the choice is a slot too: its picture and its amount; the name under it */}
+                        <Slot material="glass" icon={(() => { const p = partsOf(o)[0]; return !p ? <ItemIcon id="loot-sack" size={48} /> : p.pocket === 'coins' ? <ItemIcon id={p.n >= 250 ? 'loot-sack' : p.n >= 100 ? 'big-nugget' : 'coin'} size={48} /> : p.pocket === 'gems' ? <Gem size={48} /> : <ItemIcon id={p.item ?? ''} size={48} /> })()}
+                          n={(() => { const p = partsOf(o)[0]; return p && (p.pocket !== 'bag' || p.n > 1) ? short(p.n) : null })()} onClick={(e) => choose(h, i as 0 | 1, e.currentTarget)} aria-label={`Choose ${o.name}`} tip={{ title: o.name }} />
+                        <small>{o.name}</small>
+                      </div>
                     ))}
                   </div>
                 </div>
