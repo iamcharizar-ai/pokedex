@@ -20,23 +20,23 @@
 .scene.v2 .sprite.dynamax { transform: none; animation: none; }
 
 /* ── the nameplates ── */
-.np { --np-metal: var(--hair-hi); position: absolute; z-index: 5; display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; gap: 6px 8px; padding: 7px 10px 9px 7px;
+.np { --np-metal: var(--hair-hi); position: absolute; z-index: 5; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px 8px; padding: 7px 10px 9px 10px;
   color: var(--text); background: rgba(10, 14, 36, 0.8); border: 2px solid var(--np-metal); border-radius: 12px; box-shadow: 0 4px 0 var(--k-edge), 0 10px 22px rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
 .np-foe { left: 10px; top: 10px; width: min(250px, 62%); }
 .np-me { right: 10px; bottom: 10px; width: min(250px, 50%); }
-.np-type { width: 24px; height: 24px; display: grid; place-items: center; border: 2px solid var(--k-edge); border-radius: 50%; background: var(--tc, var(--tone-blue)); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.4); }
-.np-type img { image-rendering: auto; }
 .np-name { display: flex; align-items: center; gap: 4px; min-width: 0; overflow: hidden; font: 400 16px/1.1 var(--k-face); white-space: nowrap; text-overflow: ellipsis; text-shadow: 0 2px 0 var(--k-edge); }
 .np-name .ico { flex: none; color: var(--k-gold-hi); filter: drop-shadow(0 1px 0 var(--k-edge)); }
 .np-lv { font: 400 17px/1 var(--k-face); color: #fff; -webkit-text-stroke: 3px var(--k-edge); paint-order: stroke fill; }
 .np-ball { display: grid; place-items: center; }
 .np-ball img { image-rendering: pixelated; }
-.np > .meter, .np-xp, .np-note, .np-flee { grid-column: 1 / -1; }
+.np-bar, .np-note, .np-flee { grid-column: 1 / -1; }
 .np-note { font-size: 13px; color: var(--text-2); }
-.np-xp { display: flex; align-items: center; gap: 7px; margin-top: 2px; }
-.np-xp > .meter { flex: 1; min-width: 0; }
-.np-gain { flex: none; padding: 0 6px 1px; font: 400 12px/1.3 var(--k-face); color: #fff; background: color-mix(in srgb, var(--meter-xp) 70%, #12205a); border-radius: 99px; box-shadow: 0 0 0 2px var(--k-edge); }
+.np-bar { display: flex; align-items: center; gap: 6px; margin-top: 1px; }
+.np-bar > .meter { flex: 1; min-width: 0; }
+/* what today did, beside the bar: experience gained in gold, damage taken in red */
+.np-chip { flex: none; padding: 0 6px 1px; font: 400 12px/1.35 var(--k-face); color: var(--k-edge); background: var(--k-gold); border-radius: 99px; box-shadow: 0 0 0 2px var(--k-edge); }
+.np-chip.hit { color: #fff; background: var(--hp-low); }
 /* how many days it has left: a pip a day, red */
 .np-flee { display: flex; gap: 4px; justify-content: flex-end; margin-top: -2px; }
 .np-flee i { width: 7px; height: 7px; border-radius: 2px; background: rgba(255, 255, 255, 0.12); }
@@ -58,6 +58,6 @@
 .scene.v2.aura-gmax::after { box-shadow: inset 0 0 0 3px #ff2f6d, inset 0 0 30px rgba(255, 47, 109, 0.5); }
 
 @media (max-width: 479px) {
-  .np { padding: 6px 8px 8px 6px; gap: 5px 6px; }
+  .np { padding: 6px 8px 8px 8px; gap: 5px 6px; }
   .np-name { font-size: 15px; }
 }

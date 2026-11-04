@@ -192,13 +192,17 @@ function Scene({ game }: { game: Game }) {
       {cw > 0 && <Stage k={k} s={stageState} label={game.theme ? 'The scene' : look.wx.label} />}
       {wild && wildRec && (
         <>
-          <div className={`np np-foe r-${wild.rarity}`} style={{ ['--tc' as string]: typeColor(wildRec.t) } as CSSProperties} title={wild.rarity !== 'C' ? RARITY[wild.rarity] : undefined}>
-            <span className="np-type" aria-hidden><img src={`/sprites/types/${wildRec.t}.png`} alt="" width={16} height={16} /></span>
+          <div className={`np np-foe r-${wild.rarity}`} title={wild.rarity !== 'C' ? RARITY[wild.rarity] : undefined}>
             <b className="np-name"><span className="sr-only">{wild.caught ? '' : 'Wild '}</span>{nameOf(wild.form)}{wild.shiny && <IcStar size={13} />}<span className="sr-only">{wild.rarity !== 'C' ? `, ${RARITY[wild.rarity]}` : ''}</span></b>
             <span className="np-ball" title={wild.caught ? 'Caught' : `Today's ball: ${BALL_NAME[today.ball]}`}><Ball ball={today.ball} size={24} /></span>
             {wild.caught
               ? <span className="np-note">Caught · in My Pokemon</span>
-              : <Meter kind="hp" value={wild.hp} max={wild.max} lost={today.hit} name="The wild Pokemon's HP" label={`${wild.hp.toLocaleString('en-IN')} / ${wild.max.toLocaleString('en-IN')}`} size="lg" />}
+              : (
+                <div className="np-bar">
+                  <Meter look="game" kind="hp" value={wild.hp} max={wild.max} name="The wild Pokemon's HP" label={`${wild.hp.toLocaleString('en-IN')} / ${wild.max.toLocaleString('en-IN')}`} size="lg" />
+                  {today.hit > 0 && <span className="np-chip hit" title={`${today.hit} taken today`}><span className="sr-only">taken today: </span>−{today.hit.toLocaleString('en-IN')}</span>}
+                </div>
+              )}
             {!wild.caught && wild.leavesIn !== undefined && wild.leavesIn <= 3 && (
               <span className="np-flee" title={wild.leavesIn === 0 ? 'Gets away tomorrow' : `Gets away in ${wild.leavesIn + 1} days`} aria-label={wild.leavesIn === 0 ? 'Gets away tomorrow' : `Gets away in ${wild.leavesIn + 1} days`}>
                 {Array.from({ length: 4 }, (_, i) => <i key={i} className={i <= wild.leavesIn! ? 'on' : ''} />)}
@@ -219,8 +223,7 @@ function Scene({ game }: { game: Game }) {
         <span className="lit"><Sprite form={game.display} shiny={partner.shiny} size={(narrow ? 150 : 200) * (game.aura === 'gmax' && game.display === partner.form ? 1.5 : 1)} className={`${game.asleep ? 'asleep' : ''} ${game.aura === 'gmax' && game.display === partner.form ? 'dynamax' : ''}`} /></span>
         {game.asleep && <span className="zzz" aria-hidden>Zzz</span>}
       </div>
-      <div className={`np np-me ${game.aura ?? ''}`} style={{ ['--tc' as string]: typeColor(meRec?.t) } as CSSProperties}>
-        <span className="np-type" aria-hidden><img src={`/sprites/types/${meRec?.t}.png`} alt="" width={16} height={16} /></span>
+      <div className={`np np-me ${game.aura ?? ''}`}>
         <b className="np-name">
           {nameOf(game.display)}
           {partner.shiny && <IcStar size={13} />}
@@ -228,9 +231,9 @@ function Scene({ game }: { game: Game }) {
           {game.aura === 'gmax' && <span className="np-tag gmax">{game.display === partner.form ? 'Dynamax' : 'G-Max'}</span>}
         </b>
         <b className="np-lv">Lv {game.level}</b>
-        <div ref={xpBar} className="np-xp" title={`${Math.round(game.into).toLocaleString('en-IN')} of ${game.need.toLocaleString('en-IN')} XP to Lv ${game.level + 1}`}>
-          <Meter kind="xp" value={game.into} max={game.need} today={gained} name="Progress to the next level" />
-          {today.xp > 0 && <span className="np-gain" aria-hidden>+{today.xp.toLocaleString('en-IN')}</span>}
+        <div ref={xpBar} className="np-bar" title={`${Math.round(game.into).toLocaleString('en-IN')} of ${game.need.toLocaleString('en-IN')} XP to Lv ${game.level + 1}`}>
+          <Meter look="game" kind="xp" value={game.into} max={game.need} today={gained} name="Progress to the next level" label={`${Math.round(game.into).toLocaleString('en-IN')} / ${game.need.toLocaleString('en-IN')}`} size="lg" />
+          {today.xp > 0 && <span className="np-chip" title={`${today.xp} XP today`}><span className="sr-only">today: </span>+{today.xp.toLocaleString('en-IN')}</span>}
         </div>
       </div>
     </section>

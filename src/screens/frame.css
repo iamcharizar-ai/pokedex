@@ -79,7 +79,7 @@ main .notice.gmax, .sheet .notice.gmax { --nc: var(--k-pink); }
 .num-short { display: none; }
 @media (max-width: 480px) { .num-full { display: none; } .num-short { display: inline; } }
 /* on a phone the battle box shows the ball as its picture, so the Pokemon's name has the room */
-@media (max-width: 560px) { .foe-box .ballname-txt, .foe-box .hp-wild { display: none; } }
+@media (max-width: 560px) { }
 .tb-ring .track { fill: var(--well); stroke: rgba(255, 255, 255, 0.08); stroke-width: 5; }
 .tb-ring .fill { filter: drop-shadow(0 0 4px var(--gold-glow)); }
 .tb-collect { background: var(--well); border: 1px solid var(--hair); }

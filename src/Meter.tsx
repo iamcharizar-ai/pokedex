@@ -5,6 +5,7 @@
 //   ghost   what an action would add (+) or take (−): a striped, pulsing stretch, the berry's ghost hearts made general
 //   links   draw it as a chain of this many links (hearts to the next bond level) instead of one bar
 //   lost    what was taken recently (today's damage): a pale stretch after the fill, so the hit is seen, not read
+//   look    'game': the handheld battle bar (a dark track, a lit green fill; today's part striped gold), the one the Today scene uses
 //   marks   where segments end, as fractions (a boss's tasks)
 //
 // It only draws: the numbers come from the game. The look is screens/parts.css (.meter), the pulse is
@@ -16,7 +17,7 @@ export type MeterKind = 'hp' | 'xp' | 'hearts' | 'gold'
 
 const clamp = (x: number): number => Math.max(0, Math.min(1, x))
 
-export function Meter({ value, max, kind = 'xp', today = 0, ghost = 0, lost = 0, links, marks, label, name, ghostText, size = 'md', className = '' }: {
+export function Meter({ value, max, kind = 'xp', today = 0, ghost = 0, lost = 0, links, marks, label, name, ghostText, size = 'md', look, className = '' }: {
   value: number
   max: number
   kind?: MeterKind
@@ -32,6 +33,7 @@ export function Meter({ value, max, kind = 'xp', today = 0, ghost = 0, lost = 0,
   /** what the ghost means, read after the value ("110 off if you throw an Ultra Ball") */
   ghostText?: string
   size?: 'sm' | 'md' | 'lg'
+  look?: 'game'
   /** a preset from screens/presets.css, e.g. 'pre-sweep' (the fill sweeps in as it first draws) */
   className?: string
 }) {
@@ -61,7 +63,7 @@ export function Meter({ value, max, kind = 'xp', today = 0, ghost = 0, lost = 0,
     )
   }
   return (
-    <div className={`meter k-${kind} ${tone} s-${size} ${className}`} {...aria}>
+    <div className={`meter k-${kind} ${tone} s-${size} ${look ?? ''} ${className}`} {...aria}>
       <i className="meter-fill" style={{ width: `${(v - t) * 100}%` }} />
       {lost > 0 && v < 1 && <i className="meter-lost" style={{ left: `${v * 100}%`, width: `${(clamp(v + lost / max) - v) * 100}%` }} />}
       {t > 0 && <i className="meter-today" style={{ left: `${(v - t) * 100}%`, width: `${t * 100}%` }} />}

@@ -69,3 +69,25 @@ test('the partner\'s type tints its own pad, not the wild one\'s', () => {
   const fire = new Set(pads('#ee8130')), water = new Set(pads('#6390f0'))
   assert.notDeepEqual([...fire].sort(), [...water].sort())
 })
+
+test('every place is drawn in whole pixels inside the stage, by day and by night, in every weather', () => {
+  for (const biome of BUILT) for (const minutes of [0, 420, 720, 1170, 1380]) for (const score of [null, 95, 45, 20]) for (const aura of [null, 'gmax']) for (const t of [0, 37]) for (const lay of [layoutFor(179, 195), layoutFor(198, 127)]) {
+    const s = state({ biome, minutes, score, aura, t, lay })
+    for (const paint of [paintBack, paintFront]) {
+      const g = recorder()
+      paint(g, s)
+      for (const [x, y, w, h, c, a] of g.rects) {
+        assert.ok([x, y, w, h].every(Number.isInteger), `${biome} ${paint.name} drew a fraction at ${minutes}: ${x},${y},${w},${h}`)
+        assert.ok(w > 0 && h > 0 && y < lay.h + 4 && y + h > -12 && x < lay.w + 30 && x + w > -50, `${biome} ${paint.name} drew far off the stage: ${x},${y},${w},${h}`)
+        assert.ok(typeof c === 'string' && c.length > 3 && a >= 0 && a <= 1, `${biome}: a bad colour or alpha`)
+      }
+    }
+  }
+})
+
+test('each place looks like itself: two places never draw the same picture', () => {
+  const pic = (biome) => { const g = recorder(); paintBack(g, state({ biome })); return JSON.stringify(g.rects) }
+  const seen = new Map()
+  // the cave is a scene you buy (its look comes with the theme), not a type's place
+  for (const b of BUILT.filter((b) => b !== 'cave')) { const p = pic(b); assert.ok(!seen.has(p), `${b} draws the same as ${seen.get(p)}`); seen.set(p, b) }
+})

@@ -60,12 +60,6 @@ p { margin: 6px 0; }
 .zzz { position: absolute; z-index: 2; right: -8px; top: 0; font-family: var(--lbl); font-size: 16px; color: #fff; text-shadow: 2px 2px 0 var(--edge); animation: bob 1.8s steps(2, end) infinite; }
 @keyframes bob { 50% { transform: translateY(-4px); } }
 
-.hpbox { position: absolute; width: min(330px, 46%); padding: 8px 12px 10px; background: var(--win); border: 3px solid var(--edge); border-radius: 12px 4px 12px 4px; box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3); }
-.foe-box { left: 4%; top: 22px; }
-.me-box { right: 4%; bottom: 24px; }
-.hp-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-.hp-name { font-family: var(--lbl); font-size: 17px; text-transform: uppercase; letter-spacing: 0.03em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hp-lv { flex: none; font-family: var(--lbl); font-size: 15px; }
 .hp-row { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 8px; margin-top: 6px; padding: 3px 6px 3px 8px; background: var(--edge); border-radius: 99px; }
 .hp-row b { font-family: var(--lbl); font-weight: 400; font-size: 11px; color: var(--gold); letter-spacing: 0.05em; }
 .bar { display: flex; height: 12px; background: #4a5068; border-radius: 99px; overflow: hidden; border: 2px solid #fff; }
@@ -319,11 +313,7 @@ details.fold .list { padding-left: 14px; }
     .scene { height: 390px; }
   .me-pad { left: 5%; bottom: 112px; }
   .foe-pad { right: 8%; top: 104px; }
-  .hpbox { padding: 6px 10px 8px; }
-  .foe-box { left: 3%; top: 10px; width: 62%; }
-  .me-box { left: 3%; right: 3%; bottom: 10px; width: auto; }
-  .hp-name { font-size: 15px; }
-  .hp-sub { font-size: 13px; }
+          .hp-sub { font-size: 13px; }
     .say { font-size: 18px; padding: 12px 14px; }
   .moves { border-left: 0; border-top: 3px solid var(--edge); border-radius: 0 0 7px 7px; }
     .list li, details.fold > summary { grid-template-columns: 20px 1fr 54px 50px; gap: 8px; }

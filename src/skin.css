@@ -16,7 +16,6 @@ h1, h2, h3 { font-family: var(--k-face); letter-spacing: 0.03em; text-transform:
 .topbar .sync { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--k-edge); background: #8a90a6; flex: none; }
 .topbar .sync.s-live { background: var(--hp-ok); } .topbar .sync.s-connecting { background: var(--hp-mid); } .topbar .sync.s-error { background: var(--hp-low); }
 /* the level bar keeps the split it always had: what was banked, and what today added */
-.k-bar > i.banked { background: var(--k-blue); border-radius: 5px 0 0 5px; }
 .k-bar > i.today { background: var(--k-gold) var(--stripe); border-radius: 0 5px 5px 0; box-shadow: inset 0 5px 0 rgba(255, 255, 255, 0.38), inset 0 -4px 0 rgba(0, 0, 0, 0.2); }
 
 /* ── frame: bottom bar. Five tabs; only the open one is lifted, lit and named ── */
@@ -45,8 +44,6 @@ h1, h2, h3 { font-family: var(--k-face); letter-spacing: 0.03em; text-transform:
 
 /* ── home: the scene's two boxes ── */
 .scene { border-radius: 16px 16px 0 0; border-color: var(--k-edge); }
-.hpbox { border-radius: 14px; border-color: var(--k-edge); box-shadow: 0 5px 0 rgba(0, 0, 0, 0.35), inset 0 3px 0 #fff; }
-.hp-name, .hp-lv { font-family: var(--k-face); font-size: 18px; text-transform: none; letter-spacing: 0.02em; }
 .hp-sub b { font-family: var(--k-face); }
 
 /* ── home: the talk box, and the pillars as buttons you can read at a glance ── */
@@ -187,7 +184,6 @@ main .queue.pick button.on img { background: none; outline: 0; }
 .scene.theme-beach { --sky-1: #58c8e8; --sky-2: #d8f6ff; --far: #3aa6d0; --ground: #f1dc9a; --ground-2: #e6cc80; --pad: #e9d08a; --pad-2: #cdb066; }
 .scene.theme-cave { --sky-1: #2f2a44; --sky-2: #4a4466; --far: #5c5470; --ground: #8a7a6a; --ground-2: #74675a; --pad: #9a8a78; --pad-2: #6e6254; }
 .scene.theme-night { --sky-1: #121a3d; --sky-2: #2c3d7a; --far: #2f5b56; --ground: #3d7a5c; --ground-2: #336a50; --pad: #2e6a4c; --pad-2: #24553d; }
-.foe-pad > img { animation: sway 3.2s ease-in-out infinite; transform-origin: 50% 100%; }
 @keyframes sway { 50% { transform: translateY(-3px) rotate(-2deg); } }
 .pop { position: absolute; left: 50%; top: -6px; z-index: 5; font-family: var(--k-face); font-size: 30px; color: #fff; -webkit-text-stroke: 5px var(--k-red); paint-order: stroke fill; text-shadow: 0 3px 0 var(--k-edge); pointer-events: none; animation: pop-up 1.6s cubic-bezier(0.2, 0.9, 0.3, 1) both; white-space: nowrap; }
 @keyframes pop-up { 0% { opacity: 0; transform: translate(-50%, 20px) scale(0.5); } 18% { opacity: 1; transform: translate(-50%, -8px) scale(1.25); } 30% { transform: translate(-50%, -4px) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -44px) scale(0.9); } }
