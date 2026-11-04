@@ -35,25 +35,42 @@
 .seg2 button { min-height: 44px; min-width: 44px; padding: 0 var(--s-3); font-family: var(--k-face); font-size: 14px; color: var(--text-2); background: none; border: 0; border-radius: 99px; cursor: pointer; transition: background var(--t-fade) linear, color var(--t-fade) linear; }
 .seg2 button.on { color: var(--k-edge); background: linear-gradient(#ffe27a, var(--tone-gold)); }
 
-/* ── the grid: sprites on the page, a number under each ── */
-.dex2 { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: var(--s-1); }
-.dx { position: relative; display: grid; justify-items: center; align-content: end; height: 84px; padding: 0 0 4px; background: none; border: 0; border-radius: var(--r-2); cursor: pointer; transition: background var(--t-fade) linear, transform var(--t-fade) var(--ease-out); }
-.dx:hover { background: var(--surface-1); transform: translateY(-2px); }
+/* ── the grid (UI-AUDIT-2026-11-04 phase 7): each entry a mini object card. Caught: the type's colour as the field.
+   Seen only: the same field, faded. Not seen: the grey frame and a silhouette. The ball sits in the corner, the
+   number is the banner, and the sprite is drawn at 1x (only its drawn part), so nobody is shrunk. ── */
+.dex2 { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px; }
 /* a region is up to 240 cells: only the ones near the screen are drawn */
-.dx { content-visibility: auto; contain-intrinsic-size: auto 72px auto 90px; }
-.dx:focus-visible { outline: 3px solid #fff; outline-offset: -2px; }
-.dx img { width: 56px; height: 56px; image-rendering: pixelated; transition: transform var(--t-fade) linear; }
-.dx img.unseen { filter: brightness(0) opacity(0.22); }
-.dx-no { font-family: var(--k-face); font-size: 11px; color: var(--text-3); }
-.dx.seen .dx-no { color: var(--text-2); }
-.dx.own { background: radial-gradient(40px 18px at 50% 64px, rgba(255, 200, 40, 0.18), transparent 70%); }
-.dx.own .dx-no { color: var(--text); }
-.dx-ball { position: absolute; left: calc(50% + 20px); top: 10px; width: 10px; height: 10px; border-radius: 50%; background: linear-gradient(#ff5a64 0 45%, #1a1a2e 45% 55%, #fff 55%); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5); }
-.dx-star { position: absolute; right: calc(50% + 20px); top: 6px; font-style: normal; font-size: 12px; color: var(--tone-gold); }
-.dx-shine { position: absolute; right: calc(50% + 20px); top: 22px; font-style: normal; font-size: 12px; color: #7fe3ff; }
-.dx.mg img { filter: drop-shadow(0 0 5px rgba(169, 139, 255, 0.9)); }
-.dex2.locked .dx { opacity: 0.45; }
+.dexcard { content-visibility: auto; contain-intrinsic-size: auto 76px auto 104px; }
+.dexcard .mc-f { gap: 2px; padding: 2px; border-radius: 10px; }
+.dexcard .mc-art { height: 72px; border-radius: 7px 7px 3px 3px; }
+.dexcard .mc-art::after { bottom: 8px; height: 7px; }
+.dexcard .mc-lv { height: 18px; }
+.dexcard .mc-lv b { font-size: 11.5px; -webkit-text-stroke: 2.5px var(--k-edge); }
+.dexcard .mc-sig { right: 2px; top: 2px; width: 20px; height: 20px; border-width: 1.5px; }
+.dexcard .mc-sig img { width: 16px; height: 16px; }
+.dexcard .crop { z-index: 1; flex: none; }
+/* seen, not caught: the field without its colour */
+.dexcard.dc-seen .mc-art { background: radial-gradient(circle at 50% 44%, color-mix(in srgb, var(--tc) 22%, #5a6180) 0 18%, color-mix(in srgb, var(--tc) 18%, #1a2040) 80%); }
+.dexcard.dc-seen .mc-lv b { color: var(--text-2); }
+/* not seen: the silhouette (the grey metal blacks the sprite) and a dim number */
+.dexcard.dc-none .mc-lv b { color: var(--text-3); }
+.dexcard.dc-none .mc-art::after { display: none; }
+.dexcard .mc-shiny { color: #7fe3ff; font-size: 12px; }
+.dexcard .dc-ball { display: block; width: 10px; height: 10px; border-radius: 50%; background: linear-gradient(#ff5a64 0 45%, #1a1a2e 45% 55%, #fff 55%); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5); }
+.dexcard.m-gold .mc-f { box-shadow: 0 4px 0 var(--k-edge); }
+.dex2.locked .dexcard { opacity: 0.45; }
 .dex-none { grid-column: 1 / -1; }
+
+/* ── the header's ring in parts: caught, seen only, and the track for not seen ── */
+.ring-part { fill: none; stroke-width: 7; }
+.ring.seg .ring-track { stroke-width: 7; }
+.dexkey { display: flex; flex-wrap: wrap; gap: var(--s-1) var(--s-3); margin: 2px 0 0; padding: 0; list-style: none; font: 400 16px/1 var(--k-face); color: var(--text); }
+.dexkey li { display: inline-flex; align-items: center; gap: 5px; }
+.dexkey i { width: 10px; height: 10px; border-radius: 50%; }
+.dexkey .k-own i { background: var(--dex-own); }
+.dexkey .k-seen i { background: var(--dex-seen); }
+.dexkey .k-none i { background: rgba(255, 255, 255, 0.12); box-shadow: inset 0 0 0 1px var(--hair-hi); }
+.dexkey .k-raised { color: var(--tone-gold); }
 
 /* ── an entry, in its sheet ── */
 .entry { --tc: var(--tone-blue); display: grid; justify-items: center; gap: var(--s-2); text-align: center; }
@@ -68,6 +85,6 @@
 .entry-forms span { display: grid; justify-items: center; }
 .entry-forms small { font-family: var(--k-face); font-size: 12px; color: var(--text-2); }
 @media (max-width: 560px) {
-  .dex2 { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); }
+  .dex2 { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); }
   .dexhead-txt h2 { font-size: 28px; }
 }

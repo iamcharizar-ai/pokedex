@@ -121,6 +121,8 @@
   --cat-ball: #e0565e;   --cat-berry: #5bbf6a;  --cat-held: #8a6ee8;  --cat-battle: #e39a3b;
   --cat-tm: #4b8fe0;     --cat-fossil: #a8865a; --cat-key: #b65ee0;   --cat-treasure: #e6b93a;
   --cat-evo: #3fb8b0;    --cat-other: #6f7aa8;
+  /* the Pokedex ring: caught, seen only */
+  --dex-own: var(--tone-gold); --dex-seen: #7f8bc0;
   /* a slot (Slot.tsx): stone is the Bag's block-game look, glass the same slot on the night page */
   --slot-stone: #8b8b8b;  --slot-stone-lo: #373737;  --slot-stone-hi: #ffffff;  --slot-stone-hover: #a9a9a9;  --slot-stone-on: #9fb98a;
   --slot-glass: rgba(4, 7, 22, 0.55);  --slot-glass-lo: rgba(0, 0, 0, 0.55);  --slot-glass-hi: rgba(255, 255, 255, 0.12);

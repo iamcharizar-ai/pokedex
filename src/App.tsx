@@ -11,6 +11,7 @@ import { MARKS, EGG_KINDS, RARE_EGG_GEMS, BOND_STEP, MASTERY_MAX, MASTERY_STEP, 
 import { MILESTONE_EVERY, CRIT_MULT, DYNAMAX, GIGANTAMAX, LEVEL_POWER, MAX_LEVEL, MEGA_BONUS, MEGA_BOND, RESEARCH_SLOTS, RESEARCH_WILD, RESEARCH_WILD_MAX, TEAM_BONUS, TEAM_LEVEL, TEAM_NATURE, type Tag as TagKind } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
 import { Ball, KeyStone } from './Ball.tsx'
+import { ObjCard } from './ObjCard.tsx'
 import { FeatsWin } from './Feats.tsx'
 import { SleepWin } from './Sleep.tsx'
 import type { SleepNight } from '../core/events.ts'
@@ -19,7 +20,7 @@ import { KClose, KPill } from './Kit.tsx'
 import { Actions, Coin, Count, Gem, Pop, Quests, ShopTab, TeamTab } from './Play.tsx'
 import { Recap } from './Recap.tsx'
 import { BossLog, BossTile } from './Boss.tsx'
-import { fitOf, useBoxes } from './Fit.tsx'
+import { useBoxes } from './Fit.tsx'
 import { Calendar } from './screens/Calendar.tsx'
 import { SIG_CAP, STAR_EVERY, TRAINER_LEVELS } from '../core/bond.ts'
 import { reachNote, tabTodo } from './screens/Today.tsx'
@@ -620,13 +621,20 @@ const natureLine = (m: Mon): string =>
     : `${m.nature.name} nature: raised evenly.`
 
 /** A ring that fills with a share, a number in the middle. */
-function Ring({ value, size = 64, children }: { value: number; size?: number; children?: ReactNode }) {
-  const R = size / 2 - 4, C = 2 * Math.PI * R
+/** A ring in parts (the Pokedex header, UI-AUDIT-2026-11-04 T21): each part an arc in its own colour, the rest the track. */
+function SegRing({ parts, total, size = 84, label, children }: { parts: [number, string][]; total: number; size?: number; label: string; children?: ReactNode }) {
+  const R = size / 2 - 5, C = 2 * Math.PI * R
+  let at = 0
   return (
-    <span className="ring" style={{ width: size, height: size }}>
+    <span className="ring seg" style={{ width: size, height: size }} role="img" aria-label={label}>
       <svg viewBox={`0 0 ${size} ${size}`} aria-hidden>
         <circle cx={size / 2} cy={size / 2} r={R} className="ring-track" />
-        <circle cx={size / 2} cy={size / 2} r={R} className="ring-fill" strokeDasharray={`${C * clamp01(value)} ${C}`} transform={`rotate(-90 ${size / 2} ${size / 2})`} />
+        {parts.map(([n, color], i) => {
+          const len = total > 0 ? (C * Math.max(0, n)) / total : 0
+          const el = len > 0 ? <circle key={i} cx={size / 2} cy={size / 2} r={R} className="ring-part" style={{ stroke: color }} strokeDasharray={`${len} ${C}`} strokeDashoffset={-at} transform={`rotate(-90 ${size / 2} ${size / 2})`} /> : null
+          at += len
+          return el
+        })}
       </svg>
       <span className="ring-in">{children}</span>
     </span>
@@ -703,7 +711,6 @@ function DexTab({ game }: { game: Game }) {
   const here = perRegion[region - 1]
   // each sprite is sized by what is drawn in it, so a small Pokemon and a large one look alike in the grid
   const boxes = useBoxes()
-  const fit = (id: string): CSSProperties | undefined => { const t = boxes ? fitOf(boxes[id], 56, 42) : undefined; return t ? { transform: t } : undefined }
   return (
     <div className="dexpage">
       <div className="regions2" role="tablist" aria-label="Region" data-noswipe>
@@ -720,13 +727,22 @@ function DexTab({ game }: { game: Game }) {
       </div>
 
       <header className="dexhead">
-        <Ring value={here.total ? here.own / here.total : 0} size={84}><b>{here.total ? Math.round((here.own / here.total) * 100) : 0}%</b></Ring>
+        <SegRing size={88} parts={[[here.own, 'var(--dex-own)'], [here.seen - here.own, 'var(--dex-seen)']]} total={here.total} label={`${REGIONS[region - 1]}: ${here.own} caught, ${here.seen - here.own} seen only, ${here.total - here.seen} not seen, ${raisedIn} raised`}>
+          <b>{here.total ? Math.round((here.own / here.total) * 100) : 0}%</b>
+        </SegRing>
         <div className="dexhead-txt">
-          <span className="k-label">Region {region} · {seenTotal} of {all.length} seen in all</span>
+          <span className="k-label" title={`${seenTotal} of ${all.length} seen in all`}>Region {region}</span>
           <h2>{REGIONS[region - 1]}</h2>
-          <p>{locked
-            ? `Opens when the ${REGIONS[region - 2]} league is beaten and ${(region - 1) * GRADUATES_PER_REGION} Pokemon are fully trained (you have ${game.graduates.length}).`
-            : <><b>{here.own}</b> caught · <b>{here.seen}</b> seen · <b>{raisedIn}</b> raised · {here.total} in all</>}</p>
+          {locked
+            ? <p>Opens when the {REGIONS[region - 2]} league is beaten and {(region - 1) * GRADUATES_PER_REGION} Pokemon are fully trained (you have {game.graduates.length}).</p>
+            : (
+              <ul className="dexkey" aria-hidden>
+                <li className="k-own"><i />{here.own}</li>
+                <li className="k-seen"><i />{here.seen - here.own}</li>
+                <li className="k-none"><i />{here.total - here.seen}</li>
+                {raisedIn > 0 && <li className="k-raised" title="Fully trained">★{raisedIn}</li>}
+              </ul>
+            )}
         </div>
       </header>
 
@@ -740,14 +756,16 @@ function DexTab({ game }: { game: Game }) {
         {shown.map(([id, r]) => {
           const e = game.dex[id]
           const mon = owned.get(id)
+          const mg = (r.m ?? []).some((f) => game.dex[f]?.own)
+          // a mini card: the type's field once caught, a faded one when only seen, a silhouette when not; the ball in the corner
           return (
-            <button key={id} type="button" className={`dx ${e ? 'seen' : ''} ${e?.own ? 'own' : ''} ${(r.m ?? []).some((f) => game.dex[f]?.own) ? 'mg' : ''}`} onClick={() => setOpen(id)} title={e ? r.n : `#${r.d}`} aria-label={e ? `${r.n}, number ${r.d}${e.own ? ', caught' : ', seen'}` : `Not seen, number ${r.d}`}>
-              <img src={still(id, e?.shiny)} alt="" loading="lazy" decoding="async" width={56} height={56} className={`sprite ${e ? '' : 'unseen'}`} style={fit(id)} />
-              <span className="dx-no">{dexNo(r.d)}</span>
-              {e?.own && (mon?.ball ? <Ball ball={mon.ball} size={16} className="dx-ball" /> : <i className="dx-ball plain" aria-hidden />)}
-              {mon?.graduated && <i className="dx-star" title="Fully trained" aria-hidden>★</i>}
-              {e?.shiny && <i className="dx-shine" title="Shiny" aria-hidden>✦</i>}
-            </button>
+            <ObjCard key={id} className={`dexcard ${e ? (e.own ? 'dc-own' : 'dc-seen') : 'dc-none'}`} metal={!e ? 'locked' : mg ? 'mega' : mon?.graduated ? 'gold' : 'silver'}
+              tc={e ? typeColor(r.t) : undefined}
+              art={<CropSprite src={still(id, e?.shiny)} box={boxes?.[id]} lazy className="dx-sprite" />}
+              corners={{ ...(e?.own ? { tr: mon?.ball ? <Ball ball={mon.ball} size={16} /> : <i className="dc-ball" />, trTitle: 'Caught' } : {}), ...(e?.shiny ? { top: '✦' } : {}) }}
+              banner={dexNo(r.d)}
+              onClick={() => setOpen(id)} title={e ? r.n : `#${r.d}`}
+              aria-label={e ? `${r.n}, number ${r.d}${e.own ? ', caught' : ', seen'}${mon?.graduated ? ', fully trained' : ''}` : `Not seen, number ${r.d}`} />
           )
         })}
         {shown.length === 0 && <p className="muted dex-none">Nothing here with this filter.</p>}

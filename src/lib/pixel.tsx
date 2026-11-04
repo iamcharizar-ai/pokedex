@@ -52,11 +52,11 @@ export function PixelSprite({ src, box, up = false, upMax = Infinity, className 
 }
 
 /** Only the drawn part of a 96px still (its box in sprites/bbox.json), at 1x: a small Pokemon without shrinking anyone. */
-export function CropSprite({ src, box, alt = '', title, className = '' }: { src: string; box?: [number, number, number, number]; alt?: string; title?: string; className?: string }) {
+export function CropSprite({ src, box, alt = '', title, className = '', lazy }: { src: string; box?: [number, number, number, number]; alt?: string; title?: string; className?: string; /** load it only near the screen (a long grid) */ lazy?: boolean }) {
   const [l, t, r, b] = box ?? [0, 0, 96, 96]
   return (
     <span className={`crop ${className}`} style={{ position: 'relative', display: 'inline-block', width: r - l, height: b - t, overflow: 'hidden' }} title={title}>
-      <img src={src} alt={alt} width={96} height={96} draggable={false} style={{ position: 'absolute', left: -l, top: -t, width: 96, height: 96, maxWidth: 'none', imageRendering: 'pixelated' }} />
+      <img src={src} alt={alt} width={96} height={96} draggable={false} loading={lazy ? 'lazy' : undefined} decoding={lazy ? 'async' : undefined} style={{ position: 'absolute', left: -l, top: -t, width: 96, height: 96, maxWidth: 'none', imageRendering: 'pixelated' }} />
     </span>
   )
 }

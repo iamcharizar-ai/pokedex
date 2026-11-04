@@ -95,19 +95,10 @@
 .pcol { display: grid; gap: var(--s-5); align-content: start; min-width: 0; }
 @media (min-width: 900px) { .pview.two { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
 
-/* ── the Pokedex: regions as cards, entries as tiles; a caught one shows its ball ── */
+/* ── the Pokedex: regions as cards (the grid itself is dex.css) ── */
 .regions2 { gap: var(--s-2); }
 .rg { min-width: 98px; background: var(--surface-1); border: 2px solid var(--hair-hi); border-radius: 14px 14px 14px 5px; }
 .rg.on { background: linear-gradient(160deg, color-mix(in srgb, var(--tone-gold) 30%, #18204a), #121838 80%); border-color: var(--tone-gold); box-shadow: 0 0 14px var(--gold-glow); }
-.dex2 { grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px; }
-.dx { height: 90px; padding: 0 0 5px; background: rgba(255, 255, 255, 0.04); border: 2px solid var(--hair); border-radius: 12px; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.18); }
-.dx:hover { background: var(--surface-2); border-color: var(--hair-hi); }
-.dx.seen { background: linear-gradient(160deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03)); }
-.dx.own { background: linear-gradient(160deg, rgba(255, 200, 40, 0.22), rgba(255, 200, 40, 0.04)); border-color: rgba(255, 200, 40, 0.5); }
-.dx img.dx-ball { position: absolute; left: auto; right: 4px; top: 4px; width: 16px; height: 16px; border-radius: 0; background: none; box-shadow: none; image-rendering: pixelated; }
-.dx i.dx-ball.plain { position: absolute; display: block; box-sizing: border-box; padding: 0; min-width: 0; width: 10px; height: 10px; border-radius: 50%; background: linear-gradient(#ff5a64 0 45%, #1a1a2e 45% 55%, #fff 55%); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5); right: 6px; top: 6px; }
-.dx-star { right: auto; left: 5px; top: 3px; }
-.dx-shine { right: auto; left: 5px; top: 19px; }
 
 @keyframes view-in { from { opacity: 0; translate: 0 8px; } to { opacity: 1; translate: 0 0; } }
 @keyframes ball-rock { 0%, 100% { rotate: 0deg; } 30% { rotate: -14deg; } 65% { rotate: 10deg; } }
