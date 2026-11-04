@@ -77,9 +77,9 @@
    the top, soft surfaces instead of outlined boxes, hairlines instead of
    borders, and a glow in a section's colour where something wants attention. */
 :root {
-  --ground: #11163a;
-  --ground-lo: #0b0f28;
-  --ground-hi: #24306a;
+  --ground: #1d2656;
+  --ground-lo: #151c4a;
+  --ground-hi: #34428c;
   --glass: rgba(17, 22, 54, 0.78);
   --surface-1: rgba(255, 255, 255, 0.04);
   --surface-2: rgba(255, 255, 255, 0.075);

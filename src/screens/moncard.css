@@ -29,7 +29,7 @@
 .mc-lv.trained::before { background: linear-gradient(90deg, var(--k-gold), var(--k-gold-hi)); }
 
 /* bond hearts under the banner: x/y, a green arrow when a berry in the bag can take it up a level */
-.mc-hearts { position: relative; height: 19px; display: grid; place-items: center; overflow: hidden; border-radius: 3px 3px 8px 8px; background: #3a4a94; box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.35); }
+.mc-hearts { position: relative; height: 19px; display: grid; place-items: center; overflow: hidden; border-radius: 3px 3px 8px 8px; background: #0c1126; box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.5); }
 .mc-hearts > i { position: absolute; inset: 0 auto 0 0; background: var(--k-pink); box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.3); }
 .mc-hearts.ready > i { background: var(--k-green); }
 .mc-hearts-t { position: relative; display: inline-flex; align-items: center; gap: 3px; font-family: var(--k-face); font-size: 12px; line-height: 1; color: #fff; -webkit-text-stroke: 3px var(--k-edge); paint-order: stroke fill; }
@@ -126,8 +126,8 @@
 .mp-berries i { position: absolute; right: -3px; bottom: -3px; min-width: 18px; padding: 0 4px; font-style: normal; font-family: var(--k-face); font-size: 11px; line-height: 16px; text-align: center; color: var(--k-edge); background: var(--tone-gold); border-radius: 99px; }
 
 /* ── the chain: one link for each heart the next bond level takes ── */
-.chain { --cols: 20; display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: 4px 3px; padding: 5px; background: #3a4a94; border-radius: 11px; box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.35), 0 0 0 2px rgba(255, 255, 255, 0.14); }
-.chain .link { position: relative; height: 12px; min-width: 0; border-radius: 3px; background: rgba(12, 17, 38, 0.45); }
+.chain { --cols: 20; display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: 4px 3px; padding: 5px; background: #0c1126; border-radius: 11px; box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.5); }
+.chain .link { position: relative; height: 12px; min-width: 0; border-radius: 3px; background: rgba(255, 255, 255, 0.1); }
 .chain .link:not(.end)::after { content: ''; position: absolute; left: 100%; top: 50%; width: 3px; height: 2px; translate: 0 -50%; background: rgba(255, 255, 255, 0.22); }
 .chain .link.on { background: linear-gradient(var(--k-pink) 0 45%, #b83a78 45%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45); }
 .chain .link.on:not(.end)::after { background: #b83a78; }
@@ -169,7 +169,7 @@ body.dragging .mc, body.dragging .mc:hover { transform: none; cursor: grabbing; 
 .mc.full .mc-lv.trained { background: linear-gradient(rgba(255, 216, 74, 0.95), rgba(245, 184, 0, 0.95)); }
 .mc.full .mc-lv.trained b { -webkit-text-stroke-color: #5a3d00; }
 .mc.full .mc-lv b { font-size: 15px; }
-.mc.full .mc-hearts { height: 19px; margin-top: 7px; border-radius: 7px; background: #4a5bb0; box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.3), 0 0 0 2px var(--k-edge), 0 0 0 3px rgba(255, 255, 255, 0.22); }
+.mc.full .mc-hearts { height: 19px; margin-top: 7px; border-radius: 7px; background: #0c1126; box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.5), 0 0 0 2px var(--k-edge); }
 .mc.full .mc-hearts.elite { background: linear-gradient(90deg, var(--k-gold), var(--k-gold-hi), var(--k-gold)); }
 .mc.full.empty .mc-art { height: 172px; }
 .mc.full.empty .mc-f::after { display: none; }
