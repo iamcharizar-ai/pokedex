@@ -24,9 +24,9 @@ export interface DragHooks {
 }
 
 /** How long a finger must stay down on a card before it lifts. */
-export const HOLD_MS = 1200
+export const HOLD_MS = 500
 /** The card starts to show it is being held after this long, so the wait is not a mystery. */
-const CUE_MS = 250
+const CUE_MS = 100
 const MOUSE_PX = 4
 const TOUCH_SLOP = 8
 let busy = false
