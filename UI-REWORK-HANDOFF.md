@@ -51,7 +51,7 @@ Commits on the branch, oldest first:
 | `3240cef` | Phase 4, in part: Today below the scene |
 | `63f802c` | Baselines after phase 3 and phase 4 in part |
 | `51c1b2d` | The handoff (this file, first version) |
-| next | Phase 5: overlays; two new baselines (`overlay-news.png`, `overlay-collect.png`) |
+| `cd4aece` | Phase 5: overlays; two new baselines (`overlay-news.png`, `overlay-collect.png`) |
 
 ---
 
