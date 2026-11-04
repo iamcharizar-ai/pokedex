@@ -69,11 +69,11 @@
 .inv-btn.on { background: #9fb98a; box-shadow: inset 2px 2px 0 #cfe3bf, inset -2px -2px 0 #5d7a4a; }
 .inv-btn:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
 .inv-grid { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); }
-.inv-slot { position: relative; display: grid; place-items: center; aspect-ratio: 1; min-width: 0; padding: 0; background: var(--inv-slot); border: 0; border-radius: 0; box-shadow: inset 2px 2px 0 var(--inv-slot-lo), inset -2px -2px 0 var(--inv-hi); cursor: pointer; }
+.inv-slot { --slot-bg: var(--slot-stone); --slot-lo: var(--slot-stone-lo); --slot-hi: var(--slot-stone-hi); --slot-hover: var(--slot-stone-hover); --slot-on: var(--slot-stone-on); position: relative; display: grid; place-items: center; aspect-ratio: 1; min-width: 0; padding: 0; background: var(--slot-bg); border: 0; border-radius: 0; box-shadow: inset 2px 2px 0 var(--slot-lo), inset -2px -2px 0 var(--slot-hi); cursor: pointer; }
 .inv-slot.blank { cursor: default; }
 .inv-slot > img, .inv-slot > .swatch { width: 78%; height: auto; image-rendering: pixelated; }
-.inv-slot:hover:not(.blank), .inv-slot:focus-visible { background: #a9a9a9; outline: none; }
-.inv-slot.on { background: #9fb98a; }
+.inv-slot:hover:not(.blank), .inv-slot:focus-visible { background: var(--slot-hover); outline: none; }
+.inv-slot.on { background: var(--slot-on); }
 .inv-n { position: absolute; right: 2px; bottom: 0; font: 600 13px/1 'Pixelify Sans', var(--k-face); color: #fff; text-shadow: 2px 2px 0 #3f3f3f; pointer-events: none; }
 .inv-on { position: absolute; left: 3px; top: 2px; font: 600 10px/1 'Pixelify Sans', var(--k-face); font-style: normal; color: #ffe066; text-shadow: 1px 1px 0 #3f3f3f; }
 /* the tooltip: dark, with a purple edge, over the slot */

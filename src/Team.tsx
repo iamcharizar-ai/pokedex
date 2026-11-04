@@ -4,7 +4,6 @@
 // Every move goes through lib/party.ts, which writes the same lead and team events as before.
 // A place can be left open; if it is still open an hour later the app fills it from the lab.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { createPortal } from 'react-dom'
 import { nameOf, type Game, type Mon } from '../core/fold.ts'
 import { BERRY_DOMAIN_MULT, signatureOf } from '../core/bond.ts'
 import { BERRY_HEARTS, itemName } from '../core/economy.ts'
@@ -21,6 +20,7 @@ import { startPress, type DragHooks } from './lib/dragcards.ts'
 import { IcArrowUp, IcHeart, IcInfo, IcLab, IcSort, IcSwap } from './lib/icons.tsx'
 import { FILL_AFTER_MS, PLACES, canLead, hasOpen, labOf, nextPlace, placesOf, planFill, planMove, type Plan, type Target } from './lib/party.ts'
 import { play } from './lib/sfx.ts'
+import { note } from './lib/toast.ts'
 import { useItem } from './lib/store.ts'
 
 // ── what a card shows, from the game ────────────────────────────────────────
@@ -46,27 +46,9 @@ export function monCardOf(m: Mon, game: Game): MonCardData {
   }
 }
 
-// ── a short message that does not block ─────────────────────────────────────
-const SAY = 'pokedex:say'
+// ── a short message that does not block: the app's one toast (lib/toast.ts) ──
 /** Say something about a move: what happened, or why it cannot. */
-export const say = (text: string, bad = false): void => { window.dispatchEvent(new CustomEvent(SAY, { detail: { text, bad } })) }
-
-export function PartyToast() {
-  const [msg, setMsg] = useState<{ text: string; bad: boolean; n: number } | null>(null)
-  useEffect(() => {
-    let timer = 0
-    const on = (e: Event) => {
-      const { text, bad } = (e as CustomEvent<{ text: string; bad: boolean }>).detail
-      setMsg((m) => ({ text, bad, n: (m?.n ?? 0) + 1 }))
-      clearTimeout(timer)
-      timer = window.setTimeout(() => setMsg(null), 4200)
-    }
-    window.addEventListener(SAY, on)
-    return () => { window.removeEventListener(SAY, on); clearTimeout(timer) }
-  }, [])
-  if (!msg) return null
-  return createPortal(<div key={msg.n} className={`mc-toast ${msg.bad ? 'bad' : ''}`} role="status">{msg.text}</div>, document.body)
-}
+export const say = (text: string, bad = false): void => note(text, bad)
 
 // ── how long a place has been open ──────────────────────────────────────────
 const OPEN_KEY = 'pokedex.openplace.v1'

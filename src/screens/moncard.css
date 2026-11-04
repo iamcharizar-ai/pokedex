@@ -106,9 +106,6 @@
 .mc-pick-lab { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; font-family: var(--k-face); font-size: 16px; color: var(--text); background: var(--surface-2); border: 2px dashed var(--hair-hi); border-radius: var(--r-3); cursor: pointer; }
 .mc-pick-lab:hover { border-color: var(--tone-gold); color: var(--tone-gold); }
 
-/* a short message that does not block anything */
-.mc-toast { position: fixed; left: 50%; bottom: calc(86px + env(safe-area-inset-bottom, 0px)); z-index: 95; translate: -50% 0; max-width: min(92vw, 420px); padding: 10px 16px; font-size: 14px; line-height: 1.35; color: var(--text); background: #1a2250; border: 2px solid var(--hair-hi); border-radius: 99px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); animation: mc-pop var(--t-slide) var(--ease-out); }
-.mc-toast.bad { border-color: #ee6a5e; }
 
 /* ── a Pokemon's page: where it stands, and feeding ── */
 .mp-role { display: grid; gap: 6px; }

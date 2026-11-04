@@ -15,7 +15,7 @@ import { FeatsWin } from './Feats.tsx'
 import { SleepWin } from './Sleep.tsx'
 import type { SleepNight } from '../core/events.ts'
 import { ItemIcon } from './Item.tsx'
-import { KPill } from './Kit.tsx'
+import { KClose, KPill } from './Kit.tsx'
 import { Actions, Coin, Count, Gem, Pop, Quests, ShopTab, TeamTab } from './Play.tsx'
 import { Recap } from './Recap.tsx'
 import { BossLog, BossTile } from './Boss.tsx'
@@ -46,7 +46,7 @@ import { LIFEOS_URL, start, useItem, useView } from './lib/store.ts'
 import { FIXTURE } from './lib/fixture-boot.ts'
 import { dropIn, floatNote, hit, lunge, party, react, ring, stamp, tapPop } from './lib/fx.ts'
 import { Sky, skyVars, sleepFor, useClock } from './screens/Sky.tsx'
-import { wholeScale } from './lib/fit.ts'
+import { PixelSprite } from './lib/pixel.tsx'
 import { ChestOpener, HatchOpener } from './Reveal.tsx'
 
 type Tab = 'partner' | 'team' | 'shop' | 'dex' | 'trainer'
@@ -72,16 +72,9 @@ function useMedia(q: string): boolean {
   return on
 }
 
-/** An animated sprite at a whole-number scale: `size` is the box it should about fill, and the scale is worked out from the picture's own size once it has loaded (lib/fit.ts). */
+/** An animated sprite at a whole-number scale: `size` is the box it should about fill (lib/pixel.tsx). */
 function Sprite({ form, shiny, size, className = '' }: { form: string; shiny?: boolean; size: number; className?: string }) {
-  const [px, setPx] = useState<[number, number] | null>(null)
-  const src = spritePath(form, shiny)
-  useEffect(() => setPx(null), [src])
-  const k = px ? wholeScale(px[0], px[1], size) : 1
-  return (
-    <img src={src} alt="" className={`sprite ${className}`} style={px ? { width: px[0] * k, height: px[1] * k } : { visibility: 'hidden' }}
-      onLoad={(e) => setPx([e.currentTarget.naturalWidth, e.currentTarget.naturalHeight])} />
-  )
+  return <PixelSprite src={spritePath(form, shiny)} box={size} className={className} />
 }
 
 export type Tone = '' | 'blue' | 'green' | 'gold' | 'dark' | 'red' | 'purple'
@@ -1265,7 +1258,7 @@ export default function App() {
       {help && (
         <div className="recap helpwin" role="dialog" aria-modal="true" aria-label="How it works" onClick={() => setHelp(false)}>
           <div className="helpbody" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="k-btn k-close" aria-label="Close" onClick={() => setHelp(false)}>✕</button>
+            <KClose onClick={() => setHelp(false)} />
             <RulesTab onTour={() => { setHelp(false); setTourOpen(true) }} />
           </div>
         </div>

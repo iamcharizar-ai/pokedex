@@ -1,0 +1,35 @@
+/* PRESETS: the motion every screen reuses, in the `motion` layer (it beats the screens). Only transform,
+   opacity and filter move (MOTION-AUDIT §5), and under reduced motion nothing does: the end state shows.
+   Timings and easings are the tokens (--t-*, --ease-*), from the animation study.
+
+     .pre-obj     an object lifts 3px under the pointer and sinks 1px when pressed (the card's feel, for any thing)
+     .pre-pop     arrives small, overshoots, settles (a thing that just appeared)
+     .pre-stamp   arrives big and bright, lands small (a title, a ×2, a tick)
+     .pre-sweep   on a .meter: the fill sweeps in from the left when it first draws
+     .pre-hint    a ghost that shows what to do: from (--hx0, --hy0) to (--hx1, --hy1), fading, --hint-times times
+     ghost-pulse what an action would do, pulsing on a meter (.meter-ghost, .ml.ghost) */
+
+.pre-obj { transition: transform var(--t-pop) var(--ease-out), filter var(--t-fade) linear; }
+.pre-obj:hover { transform: translateY(-3px); }
+.pre-obj:active { transform: translateY(1px); }
+
+@keyframes pre-pop { from { transform: scale(0.6); opacity: 0; } 70% { transform: scale(1.08); opacity: 1; } to { transform: none; opacity: 1; } }
+.pre-pop { animation: pre-pop var(--t-pop) var(--ease-out) both; }
+
+@keyframes pre-stamp { 0% { transform: scale(1.6); opacity: 0; filter: brightness(2); } 60% { transform: scale(0.9); opacity: 1; } 100% { transform: none; opacity: 1; filter: none; } }
+.pre-stamp { animation: pre-stamp var(--t-pop) var(--ease-out) both; }
+
+@keyframes pre-sweep { from { transform: scaleX(0); } }
+.meter.pre-sweep > .meter-fill, .meter.pre-sweep > .meter-today { transform-origin: 0 50%; animation: pre-sweep 600ms var(--ease-out) both; }
+
+@keyframes pre-hint { 0% { opacity: 0; transform: translate(var(--hx0, 0px), var(--hy0, 0px)); } 15% { opacity: 0.9; } 70% { opacity: 0.9; transform: translate(var(--hx1, 0px), var(--hy1, 0px)); } 100% { opacity: 0; transform: translate(var(--hx1, 0px), var(--hy1, 0px)); } }
+.pre-hint { pointer-events: none; animation: pre-hint 1.6s var(--ease-in-out) both; animation-iteration-count: var(--hint-times, 2); }
+
+@keyframes ghost-pulse { 50% { opacity: 0.55; } }
+.meter-ghost, .meter-chain .ml.ghost { animation: ghost-pulse 1s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pre-obj, .pre-obj:hover, .pre-obj:active { transition: none; transform: none; }
+  .pre-pop, .pre-stamp, .pre-hint, .meter.pre-sweep > .meter-fill, .meter.pre-sweep > .meter-today, .meter-ghost, .meter-chain .ml.ghost { animation: none; }
+  .pre-hint { opacity: 0; }
+}

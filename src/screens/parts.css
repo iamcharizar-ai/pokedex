@@ -1,0 +1,87 @@
+/* PARTS: the shared pieces of the benchmark (UI-AUDIT-2026-11-04 §4.4), for every screen to build from.
+   The card's own look is moncard.css and the Bag's slot menu.css; this file adds what any card or slot can
+   ask for, the meter, the toast and the close. Colours and sizes come from tokens.css; motion from presets.css. */
+
+/* ── frame metals any object card can take (ObjCard metal="...") ── */
+.mc.m-silver { --m: var(--metal-silver); --m-hi: var(--metal-silver-hi); }
+.mc.m-gold { --m: var(--metal-gold); --m-hi: var(--metal-gold-hi); }
+.mc.m-gold .mc-f { box-shadow: var(--lift-obj), 0 0 20px var(--gold-glow); }
+.mc.m-blue { --m: var(--metal-blue); --m-hi: var(--metal-blue-hi); }
+.mc.m-pink { --m: var(--metal-pink); --m-hi: var(--metal-pink-hi); }
+.mc.m-locked .mc-f { background: linear-gradient(160deg, var(--metal-locked-hi), var(--metal-locked)); }
+.mc.m-locked .mc-art { background: #2a3050; }
+.mc.m-locked .mc-art img, .mc.m-locked .mc-art .itemimg { filter: brightness(0) opacity(0.45); }
+.mc.m-elite .mc-f { background: linear-gradient(120deg, var(--metal-elite-hi), var(--metal-elite) 30%, var(--metal-elite-hi) 50%, var(--metal-elite) 70%, var(--metal-elite-hi)); background-size: 260% 100%; animation: mc-shine 5s linear infinite; }
+.mc.m-mega .mc-f { background: linear-gradient(135deg, #7fe3ff, var(--k-purple), var(--k-pink), var(--k-gold-hi), #7fe3ff); background-size: 300% 300%; animation: mc-shine 6s linear infinite; }
+/* an item on a card's art field: drawn whole-number large, centred, with the card's hard shadow */
+.mc .mc-art > .mc-item { position: relative; z-index: 1; image-rendering: pixelated; filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.3)); }
+@media (prefers-reduced-motion: reduce) { .mc.m-elite .mc-f, .mc.m-mega .mc-f { animation: none; } }
+
+/* ── a slot on the night page (Slot material="glass"): the Bag's slot, in the app's own glass ── */
+.inv-slot.glass { --slot-bg: var(--slot-glass); --slot-lo: var(--slot-glass-lo); --slot-hi: var(--slot-glass-hi); --slot-hover: var(--slot-glass-hover); --slot-on: var(--slot-glass-on); border-radius: 10px; }
+.inv-slot.glass .inv-n { right: 4px; bottom: 3px; font: 13px/1 var(--k-face); color: #fff; text-shadow: none; -webkit-text-stroke: 3px var(--k-edge); paint-order: stroke fill; }
+.inv-slot.glass .inv-on { font-family: var(--k-face); color: var(--k-gold-hi); text-shadow: 0 1px 0 var(--k-edge); }
+.inv-slot.glass .inv-tip { background: var(--glass); border: 1px solid var(--hair-hi); border-radius: 10px; box-shadow: var(--shadow-float); backdrop-filter: blur(8px); }
+.inv-slot.glass:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+/* a stamp on a slot's corner (the Collector's ×2): either material */
+.inv-stamp { position: absolute; right: -4px; top: -5px; z-index: 2; padding: 1px 5px 2px; font: normal 11px/1.2 var(--k-face); color: var(--k-edge); background: var(--tone-gold); border-radius: 99px; box-shadow: 0 0 0 2px var(--k-edge); pointer-events: none; }
+/* slots laid out on the page, outside the Bag */
+.slot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); gap: 6px; }
+
+/* ── the meter (Meter.tsx): one bar, or a chain of links ── */
+.meter { --mc: var(--meter-xp); position: relative; display: block; height: 14px; overflow: hidden; border-radius: 99px; background: var(--meter-track); box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.5), 0 0 0 2px var(--k-edge); }
+.meter.s-sm { height: 8px; }
+.meter.s-lg { height: 20px; }
+.meter > i { position: absolute; top: 0; bottom: 0; }
+.meter-fill { left: 0; background: var(--mc); box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.3); }
+.meter.s-sm .meter-fill { box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.3); }
+.meter-today { background: color-mix(in srgb, var(--mc) 55%, #fff); box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.45); }
+.meter-ghost.gain { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--mc) 80%, #fff) 0 3px, color-mix(in srgb, var(--mc) 30%, transparent) 3px 6px); }
+.meter-ghost.loss { background: repeating-linear-gradient(135deg, var(--meter-ghost-loss) 0 3px, rgba(255, 255, 255, 0.2) 3px 6px); }
+.meter-mark { width: 2px; translate: -1px 0; background: rgba(0, 0, 0, 0.5); }
+.meter-label { position: relative; z-index: 1; display: grid; place-items: center; height: 100%; font: 12px/1 var(--k-face); color: #fff; white-space: nowrap; -webkit-text-stroke: 3px var(--k-edge); paint-order: stroke fill; }
+.meter.s-sm .meter-label { display: none; }
+.meter.k-hp, .meter-chain.k-hp { --mc: var(--meter-hp); }
+.meter.k-hp.mid { --mc: var(--meter-hp-mid); }
+.meter.k-hp.low { --mc: var(--meter-hp-low); }
+.meter.k-hearts, .meter-chain.k-hearts { --mc: var(--meter-hearts); }
+.meter.k-gold, .meter-chain.k-gold { --mc: var(--meter-gold); }
+.meter-chain { --mc: var(--meter-xp); --cols: 10; display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: 4px 3px; padding: 5px; border-radius: 11px; background: var(--meter-track); box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.5); }
+.meter-chain .ml { position: relative; min-width: 0; height: 12px; border-radius: 3px; background: rgba(255, 255, 255, 0.1); }
+.meter-chain.s-sm .ml { height: 8px; }
+.meter-chain .ml:not(.end)::after { content: ''; position: absolute; left: 100%; top: 50%; width: 3px; height: 2px; translate: 0 -50%; background: rgba(255, 255, 255, 0.22); }
+.meter-chain .ml.on { background: linear-gradient(var(--mc) 0 45%, color-mix(in srgb, var(--mc) 72%, #000) 45%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45); }
+.meter-chain .ml.on.today { background: linear-gradient(color-mix(in srgb, var(--mc) 55%, #fff) 0 45%, var(--mc) 45%); }
+.meter-chain .ml.ghost.gain { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--mc) 85%, #fff) 0 3px, color-mix(in srgb, var(--mc) 30%, transparent) 3px 6px); }
+.meter-chain .ml.ghost.loss { background: repeating-linear-gradient(135deg, var(--meter-ghost-loss) 0 3px, rgba(255, 255, 255, 0.2) 3px 6px); }
+
+/* ── the one toast (Toasts.tsx; anything can say one with lib/toast.ts) ── */
+.toast-rail { position: fixed; z-index: 70; left: 50%; top: 64px; transform: translateX(-50%); display: grid; gap: 6px; width: min(92vw, 420px); pointer-events: none; }
+.toast { padding: 10px 14px; font-size: 14px; line-height: 1.35; color: var(--text); background: var(--glass); border: 1px solid var(--hair-hi); border-radius: 14px; box-shadow: var(--shadow-float); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.toast b { font-family: var(--k-face); font-weight: 400; color: var(--tone-gold); }
+.toast.bad { border-color: rgba(238, 106, 94, 0.8); box-shadow: var(--shadow-float), inset 3px 0 0 #ee6a5e; }
+
+/* ── the one close: a ✕ in dark glass, a full thumb's target ── */
+.x-close { width: 44px; height: 44px; display: grid; place-items: center; padding: 0; color: var(--text); background: rgba(8, 12, 30, 0.62); border: 1px solid var(--hair-hi); border-radius: 50%; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35); cursor: pointer; transition: background var(--t-fade) linear, transform var(--t-pop) var(--ease-out); }
+.x-close:hover { background: var(--surface-3); }
+.x-close:active { transform: scale(0.94); }
+.x-close:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+
+/* ── the foundations on the ?kit page (screens/Foundations.tsx) ── */
+.found { display: grid; gap: var(--s-3); padding: var(--s-4); color: var(--text); background: radial-gradient(120% 60% at 50% 0%, var(--ground-hi), transparent 70%), var(--ground); border: 1px solid var(--hair-hi); border-radius: var(--r-4); }
+.found .kit-grid { align-items: start; }
+.found-panel { display: grid; gap: var(--s-2); align-content: start; min-width: 0; padding: var(--s-3); background: var(--surface-1); border: 1px solid var(--hair); border-radius: var(--r-3); }
+.found-panel > .k-label { color: var(--text-2); }
+.found .kit-note { color: var(--text-2); }
+.found > h2 { margin: 0; font-size: var(--t-display); }
+.found-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 18px 10px; padding-top: 12px; }
+.found-slots { max-width: 260px; }
+.found-slots.glassrow { margin-top: var(--s-2); padding: var(--s-2); background: var(--ground); border-radius: var(--r-2); }
+.found-meters { display: grid; gap: var(--s-2); }
+.found-meters small { margin-top: var(--s-1); color: var(--text-2); font-size: 12.5px; }
+.found-fx { min-height: 64px; margin-top: var(--s-3); }
+.found-fx .pre-stamp { font-size: 30px; color: var(--tone-gold); }
+.found-hint { position: relative; display: inline-flex; align-items: center; gap: 48px; }
+.found-hint .pre-hint { position: absolute; left: 0; top: 0; }
+.found-socket { width: 48px; height: 48px; border: 2px dashed var(--hair-hi); border-radius: 50%; }
+.found-obj { display: inline-block; padding: 10px 14px; background: var(--surface-2); border: var(--edge-2); border-radius: var(--r-2); box-shadow: var(--lift-obj); cursor: pointer; }

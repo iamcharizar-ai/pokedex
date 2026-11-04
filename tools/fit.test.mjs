@@ -2,7 +2,7 @@
 //   node --test tools/fit.test.mjs
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { wholeScale } from '../src/lib/fit.ts'
+import { fullFit, wholeScale } from '../src/lib/fit.ts'
 
 test('the scale is always a whole number of at least 1', () => {
   for (let w = 1; w <= 300; w += 7) for (const box of [40, 80, 96, 136, 184, 260]) {
@@ -24,4 +24,28 @@ test('it fills the box as nearly as a whole number can, without overflowing it b
 test('nothing is ever drawn smaller than it is', () => {
   assert.equal(wholeScale(300, 300, 96), 1)
   assert.equal(wholeScale(0, 0, 96), 1)
+})
+
+test('a card enlarges a sprite by a whole number, or marks it to be drawn from the hard-edged copy', () => {
+  for (const box of [[30, 40, 66, 90], [10, 5, 86, 92], [40, 60, 56, 80], [0, 0, 96, 96]]) {
+    const f = fullFit(box, 100, 170)
+    assert.ok(f.smooth || Number.isInteger(f.k), `${box}: k ${f.k} is a fraction but not marked smooth`)
+    assert.ok(f.k >= 1 && f.k <= 3.6)
+  }
+})
+
+test('the numbers the cards were drawn with before the move are the same after it', () => {
+  // MonCard's own formula before it moved here (W is 100 on a phone, 132 wider; H is 170)
+  const before = (box, narrow) => {
+    const W = narrow ? 100 : 132, H = 170
+    const [l, t, r, b] = box
+    let k = Math.max(1, Math.min(3.6, Math.min((W * 0.82) / Math.max(1, r - l), (H * 0.64) / Math.max(1, b - t))))
+    const whole = Math.abs(k - Math.round(k)) < 0.1
+    if (whole) k = Math.round(k)
+    return { x: Math.round(-((l + r) / 2 - 48) * k), y: Math.round(H * 0.8 - (H / 2 + (b - 48) * k)), k, smooth: !whole }
+  }
+  for (let i = 0; i < 400; i++) {
+    const l = (i * 7) % 40, t = (i * 11) % 50, r = l + 8 + ((i * 13) % (88 - l)), b = t + 8 + ((i * 17) % (88 - t))
+    for (const narrow of [true, false]) assert.deepEqual(fullFit([l, t, r, b], narrow ? 100 : 132, 170), before([l, t, r, b], narrow))
+  }
 })

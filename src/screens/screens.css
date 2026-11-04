@@ -26,7 +26,7 @@
 .sheet-back { position: fixed; inset: 0; z-index: 50; display: grid; align-items: end; background: rgba(10, 14, 30, 0.72); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); animation: rc-fade 0.2s linear; }
 .sheet { position: relative; width: min(640px, 100%); max-height: 88vh; margin: 0 auto; overflow-y: auto; padding: var(--s-4) var(--s-3) calc(var(--s-5) + env(safe-area-inset-bottom, 0px)); background: linear-gradient(var(--k-frame), var(--k-frame-lo)); border: 3px solid var(--k-edge); border-bottom: 0; border-radius: var(--r-3) var(--r-3) 0 0; box-shadow: 0 -6px 0 rgba(0, 0, 0, 0.3); animation: sheet-up 0.25s var(--ease-out); outline: none; }
 .sheet-grip { display: block; width: 44px; height: 5px; margin: 0 auto var(--s-3); border-radius: 3px; background: var(--k-edge); opacity: 0.35; }
-.sheet > .k-close { position: absolute; top: var(--s-3); right: var(--s-3); z-index: 2; }
+.sheet > .x-close { position: absolute; top: var(--s-3); right: var(--s-3); z-index: 2; }
 .sheet-body > .win { margin-top: 0; }
 @keyframes sheet-up { from { transform: translateY(40px); opacity: 0; } }
 
@@ -83,7 +83,7 @@ details.win.folded[open] .chev { transform: rotate(180deg); }
 
 /* a Pokemon's page inside a sheet: the sheet is the frame, so the page's own frame goes */
 .sheet .monpage { width: auto; max-height: none; padding: 0; overflow: visible; background: none; border: 0; box-shadow: none; border-radius: 0; animation: none; }
-.sheet .monpage > .k-close { display: none; }
+.sheet .monpage > .x-close { display: none; }
 @media (max-width: 560px) { .tb .help { width: 40px; height: 40px; flex: none; } }
 
 /* ── the Home scene: a sky that follows the clock, behind the two Pokemon ── */

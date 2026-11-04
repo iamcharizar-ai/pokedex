@@ -2,11 +2,18 @@
 // the pickers, the gallery in ?kit. Slot position carries the role, so the card itself only has a look:
 // art on its type's colour, "Lv N" on a banner under the art (never beside it), bond hearts under that.
 // It reads nothing from the game: Team.tsx turns a Mon into these props (monCardOf), the gallery makes them by hand.
-import { useEffect, useState, type ButtonHTMLAttributes, type CSSProperties, type Ref } from 'react'
+// The card's shape is ObjCard (the same anatomy for any thing); this file only fills it with a Pokemon.
+import { useEffect, useState, type ButtonHTMLAttributes, type Ref } from 'react'
 import { ItemIcon } from './Item.tsx'
-import { IcArrowUp, IcHeart, IcPlus, IcStar } from './lib/icons.tsx'
+import { ObjCard, type CardLook } from './ObjCard.tsx'
+import { IcArrowUp, IcHeart, IcStar } from './lib/icons.tsx'
 import { still } from './lib/art.ts'
+import { fullFit, type Box } from './lib/fit.ts'
+import { useBig } from './lib/pixel.tsx'
 import { typeColor } from './screens/types.ts'
+
+export type { Box } from './lib/fit.ts'
+export type { CardLook } from './ObjCard.tsx'
 
 export interface MonCardData {
   form: string
@@ -29,10 +36,6 @@ export interface MonCardData {
 }
 
 export type CardState = 'card' | 'empty' | 'locked'
-/** 'classic': art in a frame with the name under it. 'full': the art covers the whole card face, no name, the hearts bar under the card (the Clash Royale way). */
-export type CardLook = 'classic' | 'full'
-/** The drawn part of a sprite: left, top, right, bottom (sprites/bbox.json) */
-export type Box = [number, number, number, number]
 export type CardRole = 'partner' | 'party' | 'lab'
 
 interface Props extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'role'> {
@@ -65,73 +68,23 @@ function useNarrow(): boolean {
   return n
 }
 
-/**
- * Full look: enlarge the Pokemon so what is drawn fills about the same share of the card whatever its size (a Goldeen is small in its
- * file, an Onix is not), and stand its feet near the banner. A scale that is a whole number (or within a hair of one) is drawn as it is,
- * crisp. Any other is drawn from a copy enlarged four times with hard edges and then shrunk smoothly (see `big`), which keeps the edges
- * clean where the browser's own fractional scaling would make some pixels wider than others.
- */
-function fullFit(box: Box | undefined, narrow: boolean): { style: CSSProperties | undefined; smooth: boolean } {
+/** Full look: the sprite enlarged to fill the art field (lib/fit.ts fullFit); the field is 100px wide on a phone, 132 wider, 170 tall. */
+function cardFit(box: Box | undefined, narrow: boolean): { style: { transform: string } | undefined; smooth: boolean } {
   if (!box) return { style: undefined, smooth: false }
-  const W = narrow ? 100 : 132, H = 170
-  const [l, t, r, b] = box
-  let k = Math.max(1, Math.min(3.6, Math.min((W * 0.82) / Math.max(1, r - l), (H * 0.64) / Math.max(1, b - t))))
-  const whole = Math.abs(k - Math.round(k)) < 0.1
-  if (whole) k = Math.round(k)
-  const x = Math.round(-((l + r) / 2 - 48) * k)
-  const y = Math.round(H * 0.8 - (H / 2 + (b - 48) * k))
-  return { style: { transform: `translate(${x}px, ${y}px) scale(${k.toFixed(3)})` }, smooth: !whole }
-}
-
-const bigs = new Map<string, string>()
-/** A sprite enlarged four times, hard-edged, as a picture to shrink from: ready after it has been made once (null until then). */
-function useBig(src: string, on: boolean): string | null {
-  const [url, set] = useState<string | null>(() => bigs.get(src) ?? null)
-  useEffect(() => {
-    if (!on) return
-    const have = bigs.get(src)
-    if (have) { set(have); return }
-    let live = true
-    const img = new Image()
-    img.onload = () => {
-      try {
-        const c = document.createElement('canvas')
-        c.width = img.naturalWidth * 4; c.height = img.naturalHeight * 4
-        const g = c.getContext('2d')
-        if (!g) return
-        g.imageSmoothingEnabled = false
-        g.drawImage(img, 0, 0, c.width, c.height)
-        const u = c.toDataURL('image/png')
-        bigs.set(src, u)
-        if (live) set(u)
-      } catch { /* a picture that cannot be read is drawn plain */ }
-    }
-    img.src = src
-    return () => { live = false }
-  }, [src, on])
-  return on ? url : null
+  const f = fullFit(box, narrow ? 100 : 132, 170)
+  return { style: { transform: `translate(${f.x}px, ${f.y}px) scale(${f.k.toFixed(3)})` }, smooth: f.smooth }
 }
 
 export function MonCard({ mon, state = 'card', role = 'lab', ribbon, look = 'classic', box, dimmed, held, selected, emptyText = 'Open', className = '', ref, ...rest }: Props) {
   // hooks first: a card and an open place share this component
   const narrow = useNarrow()
-  const fit = look === 'full' && mon ? fullFit(box, narrow) : null
+  const fit = look === 'full' && mon ? cardFit(box, narrow) : null
   const big = useBig(mon ? still(mon.form, mon.shiny) : '', Boolean(fit?.smooth))
-  if (state === 'empty' || !mon) {
-    return (
-      <button type="button" ref={ref} className={`mc ${look} empty ${dimmed ? 'dim' : ''} ${held ? 'held' : ''} ${selected ? 'sel' : ''} ${className}`} {...rest}>
-        <span className="mc-f">
-          <span className="mc-art"><span className="mc-plus"><IcPlus size={30} /></span></span>
-          <span className="mc-lv"><b>{emptyText}</b></span>
-        </span>
-        {ribbon && <span className="mc-ribbon">{ribbon}</span>}
-      </button>
-    )
-  }
+  const marks = `${dimmed ? 'dim' : ''} ${held ? 'held' : ''} ${selected ? 'sel' : ''}`
+  if (state === 'empty' || !mon) return <ObjCard ref={ref} look={look} empty emptyText={emptyText} ribbon={ribbon} className={`${marks} ${className}`} {...rest} />
   const locked = state === 'locked'
   const elite = mon.need === null
   const into = Math.max(0, Math.min(1, mon.into ?? 0))
-  const style = { ['--tc' as string]: typeColor(mon.type), ['--bob' as string]: beat(mon.form), ['--into' as string]: `${(mon.trained ? 1 : into) * 100}%` } as CSSProperties
   const pct = mon.need ? Math.max(0, Math.min(1, mon.hearts / mon.need)) : 1
   const hearts = elite
     ? <span className="mc-hearts elite" aria-hidden><IcStar size={12} />Elite</span>
@@ -141,30 +94,31 @@ export function MonCard({ mon, state = 'card', role = 'lab', ribbon, look = 'cla
         <span className="mc-hearts-t">{mon.canFeed && <IcArrowUp size={12} />}<IcHeart size={11} />{mon.hearts}/{mon.need}</span>
       </span>
     )
+  const art = look === 'full'
+    ? <span className="mc-fit" style={fit?.style}><img src={big ?? still(mon.form, mon.shiny)} alt="" width={96} height={96} className={`sprite mc-sprite ${big ? 'smooth' : ''}`} draggable={false} loading="lazy" decoding="async" /></span>
+    : <img src={still(mon.form, mon.shiny)} alt="" width={96} height={96} className="sprite mc-sprite" draggable={false} loading="lazy" decoding="async" />
   return (
-    <button
-      type="button"
+    <ObjCard
       ref={ref}
-      className={`mc ${look} r-${role} ${elite && !locked ? 'elite' : ''} ${locked ? 'locked' : ''} ${mon.mega ? 'mega' : ''} ${dimmed ? 'dim' : ''} ${held ? 'held' : ''} ${selected ? 'sel' : ''} ${className}`}
-      style={style}
+      look={look}
+      className={`r-${role} ${elite && !locked ? 'elite' : ''} ${locked ? 'locked' : ''} ${mon.mega ? 'mega' : ''} ${marks} ${className}`}
+      tc={typeColor(mon.type)}
+      vars={{ '--bob': beat(mon.form) }}
+      fill={mon.trained ? 1 : into}
       aria-label={locked ? 'Not found yet' : `${mon.name}, level ${mon.level}${role === 'partner' ? ', partner' : ''}, ${mon.need === null ? 'every bond level reached' : `${mon.hearts} of ${mon.need} hearts`}${mon.canFeed ? ', can be fed to the next bond level' : ''}`}
+      art={art}
+      corners={locked ? undefined : {
+        tl: <img src={`/sprites/types/${mon.type}.png`} alt="" width={16} height={16} onError={(e) => { e.currentTarget.style.display = 'none' }} />,
+        tr: mon.sig ? <ItemIcon id={mon.sig.icon} size={18} /> : undefined,
+        trTitle: mon.sig?.name,
+        top: mon.shiny ? <IcStar size={12} /> : undefined,
+      }}
+      name={locked ? '???' : mon.name}
+      banner={locked ? undefined : <>Lv {mon.level}</>}
+      gold={mon.trained}
+      pill={locked ? undefined : hearts}
+      ribbon={ribbon}
       {...rest}
-    >
-      <span className="mc-f">
-        <span className="mc-art">
-          {look === 'full'
-            ? <span className="mc-fit" style={fit?.style}><img src={big ?? still(mon.form, mon.shiny)} alt="" width={96} height={96} className={`sprite mc-sprite ${big ? 'smooth' : ''}`} draggable={false} loading="lazy" decoding="async" /></span>
-            : <img src={still(mon.form, mon.shiny)} alt="" width={96} height={96} className="sprite mc-sprite" draggable={false} loading="lazy" decoding="async" />}
-          {!locked && <span className="mc-type" aria-hidden><img src={`/sprites/types/${mon.type}.png`} alt="" width={16} height={16} onError={(e) => { e.currentTarget.style.display = 'none' }} /></span>}
-          {!locked && mon.sig && <span className="mc-sig" aria-hidden title={mon.sig.name}><ItemIcon id={mon.sig.icon} size={18} /></span>}
-          {!locked && mon.shiny && <span className="mc-shiny" aria-hidden><IcStar size={12} /></span>}
-          <span className="mc-name">{locked ? '???' : mon.name}</span>
-        </span>
-        {!locked && <span className={`mc-lv ${mon.trained ? 'trained' : ''}`}><b>Lv {mon.level}</b></span>}
-        {!locked && look === 'classic' && hearts}
-      </span>
-      {!locked && look === 'full' && hearts}
-      {ribbon && <span className="mc-ribbon">{ribbon}</span>}
-    </button>
+    />
   )
 }

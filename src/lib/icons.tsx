@@ -19,3 +19,4 @@ export const IcLab = (p: P) => <Svg {...p}><path d="M9 3h6M10 3v6l-5.5 9.5A1.5 1
 export const IcSwap = (p: P) => <Svg {...p}><path d="M4 8h14l-4-4M20 16H6l4 4" /></Svg>
 export const IcInfo = (p: P) => <Svg {...p}><circle cx="12" cy="12" r="9" /><path d="M12 11v6M12 7.5v.1" /></Svg>
 export const IcSort = (p: P) => <Svg {...p}><path d="M4 7h12M4 12h8M4 17h4M18 8v9m0 0l-3-3m3 3l3-3" /></Svg>
+export const IcClose = (p: P) => <Svg {...p}><path d="M6 6l12 12M18 6L6 18" /></Svg>

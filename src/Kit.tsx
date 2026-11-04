@@ -6,14 +6,18 @@ import { useEffect, useRef, useState, type ComponentProps, type CSSProperties, t
 import { Ball, KeyStone } from './Ball.tsx'
 import { useBoxes } from './Fit.tsx'
 import { MonCard } from './MonCard.tsx'
+import { IcClose } from './lib/icons.tsx'
+import { Foundations } from './screens/Foundations.tsx'
+import { Toasts } from './Toasts.tsx'
 
 // ── pieces ──────────────────────────────────────────────────────────────────
 type Tone = 'neutral' | 'main' | 'ok'
 export function KButton({ tone = 'neutral', big, disabled, onClick, children }: { tone?: Tone; big?: boolean; disabled?: boolean; onClick?: () => void; children: ReactNode }) {
   return <button type="button" className={`k-btn ${tone === 'neutral' ? '' : tone} ${big ? 'big' : ''}`} disabled={disabled} onClick={onClick}>{children}</button>
 }
+/** The one close: a ✕ in dark glass, a 44px target (screens/parts.css .x-close). */
 export function KClose({ onClick, label = 'Close' }: { onClick?: () => void; label?: string }) {
-  return <button type="button" className="k-btn k-close" aria-label={label} onClick={onClick}>✕</button>
+  return <button type="button" className="x-close" aria-label={label} onClick={onClick}><IcClose size={20} /></button>
 }
 export function KPanel({ onClose, children }: { onClose?: () => void; children: ReactNode }) {
   return <section className="k-panel">{onClose && <KClose onClick={onClose} />}<div className="k-panel-b">{children}</div></section>
@@ -140,6 +144,9 @@ export function KitPage() {
     <main className="kit">
       <h1 className="k-type">The kit</h1>
       <p>Every piece the new Pokedex screens will be built from, in our own colours. Stand-in art only; nothing here touches your game. Press things: buttons sink, the bar fills, the reveals replay.</p>
+
+      <Foundations />
+      <Toasts />
 
       <div className="kit-bar-top" aria-label="Top bar">
         <span className="k-type sm" style={{ fontSize: 18 }}>Lv 17</span>

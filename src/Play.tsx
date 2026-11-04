@@ -19,6 +19,7 @@ import { Deck, SigLine } from './Bond.tsx'
 import { ResearchTab } from './Research.tsx'
 import { Coin, EggIcon, Gem, ItemIcon, MarkIcon } from './Item.tsx'
 import { KBar, KButton } from './Kit.tsx'
+import { Slot } from './Slot.tsx'
 import { aBall, badgeArt, badgeName, badgeWon, fmtDay, still } from './lib/art.ts'
 import { LEAGUES } from '../core/gyms.ts'
 import { useFlip } from './lib/cardkit.tsx'
@@ -29,7 +30,7 @@ import { play } from './lib/sfx.ts'
 import { useItem } from './lib/store.ts'
 import { BpIcon, CollectorWin, LabWin, MonExtras, evolutionsFor } from './Champion.tsx'
 import { FeedSheet, treatsIn } from './Feed.tsx'
-import { FeedBlock, PartyToast, RoleControl, TeamScreen } from './Team.tsx'
+import { FeedBlock, RoleControl, TeamScreen } from './Team.tsx'
 
 export { Coin, EggIcon, Gem }
 
@@ -562,26 +563,20 @@ export function Bag({ game }: { game: Game }) {
   }
   const cell = (id: string | null, i: number) => {
     const cls = `${drag && drag.over === i && drag.id !== id ? 'over' : ''} ${drag?.id === id ? 'held' : ''} ${carry === id && id !== null ? 'carried' : ''}`
-    if (id === null) return <span key={`b${i}`} className={`inv-slot blank ${cls} ${drag || carry ? 'drop' : ''}`} data-place={i} onClick={carry ? () => { if (dropOn(carry, i)) setCarry(null) } : undefined} aria-hidden />
+    if (id === null) return <Slot as="span" key={`b${i}`} className={`blank ${cls} ${drag || carry ? 'drop' : ''}`} data-place={i} onClick={carry ? () => { if (dropOn(carry, i)) setCarry(null) } : undefined} aria-hidden />
     if (id.startsWith('badge:')) {
       const [li, gi] = id.split(':').slice(1).map(Number)
       const l = LEAGUES[li], t = l.gyms[gi]
       return (
-        <button key={id} type="button" className={`inv-slot medal ${cls}`} data-place={i} data-flip={id} onPointerDown={press(id)} onClick={() => tap(id, i)} aria-label={`${badgeName(t)}, ${l.name}. Open`}>
-          <GymBadge art={badgeArt(li, gi)} on n={gi + 1} size={32} title="" />
-          <span className="inv-tip" aria-hidden><b>{badgeName(t)}</b><small>{l.name} · won from {t.name}</small></span>
-        </button>
+        <Slot key={id} className={`medal ${cls}`} data-place={i} data-flip={id} onPointerDown={press(id)} onClick={() => tap(id, i)} aria-label={`${badgeName(t)}, ${l.name}. Open`}
+          icon={<GymBadge art={badgeArt(li, gi)} on n={gi + 1} size={32} title="" />} tip={{ title: badgeName(t), note: <>{l.name} · won from {t.name}</> }} />
       )
     }
     const on = game.partner.held === id || equipped.includes(id) || game.theme === id
     const n = have(id)
     return (
-      <button key={id} type="button" className={`inv-slot ${on ? 'on' : ''} ${cls}`} data-place={i} data-flip={id} onPointerDown={press(id)} onClick={() => tap(id, i)} aria-label={`${itemName(id)}, ${n || 'held'}${on ? ', in use' : ''}. Open`}>
-        <ItemIcon id={id} size={32} />
-        {n > 1 && <b className="inv-n">{short(n)}</b>}
-        {on && <i className="inv-on" aria-hidden>E</i>}
-        <span className="inv-tip" aria-hidden><b>{itemName(id)}</b><small>{on ? (game.theme === id ? 'In use' : 'Equipped') : `×${n}`} · {ITEMS[id].text}</small></span>
-      </button>
+      <Slot key={id} className={cls} on={on} data-place={i} data-flip={id} onPointerDown={press(id)} onClick={() => tap(id, i)} aria-label={`${itemName(id)}, ${n || 'held'}${on ? ', in use' : ''}. Open`}
+        icon={<ItemIcon id={id} size={32} />} n={n > 1 ? short(n) : null} tip={{ title: itemName(id), note: <>{on ? (game.theme === id ? 'In use' : 'Equipped') : `×${n}`} · {ITEMS[id].text}</> }} />
     )
   }
   useEffect(() => {
@@ -593,7 +588,7 @@ export function Bag({ game }: { game: Game }) {
   const card = open && ITEMS[open] ? open : null
   const badgeOpen = open?.startsWith('badge:') ? open : null
   const kind = card ? ITEMS[card].kind : null
-  const fill = (n: number, min: number) => Array.from({ length: Math.max(min, Math.ceil(n / 9) * 9) - n }, (_, i) => <span key={`f${i}`} className="inv-slot blank" aria-hidden />)
+  const fill = (n: number, min: number) => Array.from({ length: Math.max(min, Math.ceil(n / 9) * 9) - n }, (_, i) => <Slot as="span" key={`f${i}`} className="blank" aria-hidden />)
   const purse: [ReactNode, string, number, number][] = [
     [<Coin size={30} />, 'Coins', game.wallet.coins, game.wallet.coinsToday],
     [<Gem size={30} />, 'Gems', game.wallet.gems, game.wallet.gemsToday],
@@ -627,10 +622,8 @@ export function Bag({ game }: { game: Game }) {
           <span className="inv-title">Money and marks</span>
           <div className="inv-grid inv-hotbar">
             {purse.map(([icon, name, n, today], i) => (
-              <span key={i} className="inv-slot" tabIndex={0} aria-label={`${name}: ${n.toLocaleString('en-IN')}${today > 0 ? `, +${today} today` : ''}`}>
-                {icon}<b className="inv-n">{short(n)}</b>
-                <span className="inv-tip" aria-hidden><b>{name}</b><small>{n.toLocaleString('en-IN')}{today > 0 ? ` · +${today} today` : ''}</small></span>
-              </span>
+              <Slot as="span" key={i} tabIndex={0} aria-label={`${name}: ${n.toLocaleString('en-IN')}${today > 0 ? `, +${today} today` : ''}`}
+                icon={icon} n={short(n)} tip={{ title: name, note: <>{n.toLocaleString('en-IN')}{today > 0 ? ` · +${today} today` : ''}</> }} />
             ))}
             {fill(purse.length, 9)}
           </div>
@@ -861,7 +854,6 @@ export function TeamTab({ game, partnerCard, choices }: { game: Game; partnerCar
         {view === 'items' && <><Bag game={game} /><Forge game={game} /><IncenseWin game={game} />{choices}</>}
       </div>
       {shown && <MonPage m={shown} game={game} onClose={() => setPage(null)} />}
-      <PartyToast />
     </div>
   )
 }

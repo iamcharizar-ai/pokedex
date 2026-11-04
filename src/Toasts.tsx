@@ -8,6 +8,7 @@ import { levelUp, toast } from './lib/motion.js'
 import { play } from './lib/sfx.ts'
 import { ItemIcon } from './Item.tsx'
 import { useBusy } from './screens/overlay.ts'
+import { onNote } from './lib/toast.ts'
 import { nameOf, type Game, type Moment } from '../core/fold.ts'
 
 const KEY = 'pokedex.toasted.v1'
@@ -37,15 +38,18 @@ function load(): Set<string> | null {
   }
 }
 
-type Item = { key: string; title: string; line: string; big?: boolean }
+/** `urgent`: a note answering what you just did (lib/toast.ts), shown at once, over a sheet too. */
+type Item = { key: string; title: string; line: string; big?: boolean; bad?: boolean; urgent?: boolean }
 
-export function Toasts({ game, today }: { game: Game; today: string }) {
+/** Without a game (the ?kit page) it shows notes only. */
+export function Toasts({ game, today = '' }: { game?: Game; today?: string }) {
   const [rail, setRail] = useState<Item[]>([])
   // news that arrives while a window is open waits for it to close, then plays: never on top of it
   const [held, setHeld] = useState<Item[]>([])
   const busy = useBusy()
   const seen = useRef<Set<string> | null | undefined>(undefined)
   useEffect(() => {
+    if (!game) return
     if (seen.current === undefined) seen.current = load()
     const mine = game.moments.filter((m) => m.day === today && textOf(m))
     const known = seen.current
@@ -55,7 +59,7 @@ export function Toasts({ game, today }: { game: Game; today: string }) {
     try { localStorage.setItem(KEY, JSON.stringify([...all].filter((k) => k.startsWith(today)))) } catch { /* the worst case is a repeated toast */ }
     if (!fresh.length) return
     setHeld((h) => [...h, ...fresh.map((m) => ({ key: keyOf(m), ...textOf(m)! }))])
-  }, [game.moments.length, today])
+  }, [game?.moments.length, today])
   useEffect(() => {
     if (busy || !held.length) return
     // a moment's grace: on opening the app the news window asks for the screen in the same breath, and goes first
@@ -68,10 +72,18 @@ export function Toasts({ game, today }: { game: Game; today: string }) {
     }, SETTLE_MS)
     return () => window.clearTimeout(wait)
   }, [busy, held])
-  if (!rail.length || busy) return null
+  // notes (lib/toast.ts): at once, and a newer one replaces the last
+  const n = useRef(0)
+  useEffect(() => onNote(({ text, bad }) => {
+    const item: Item = { key: `note${n.current++}`, title: '', line: text, bad, urgent: true }
+    setRail((r) => [...r.filter((x) => !x.urgent), item])
+    window.setTimeout(() => setRail((r) => r.filter((x) => x.key !== item.key)), SHOWN_MS)
+  }), [])
+  const shown = busy ? rail.filter((t) => t.urgent) : rail
+  if (!shown.length) return null
   return (
     <div className="toast-rail" role="status" aria-live="polite">
-      {rail.map((t) => t.big ? <Banner key={t.key} title={t.title} line={t.line} /> : <div key={t.key} className="toast" ref={(el) => { if (el && !el.dataset.on && !motionConfig.reduced) { el.dataset.on = '1'; void toast(el, { hold: SHOWN_MS - 1000 }) } }}><b>{t.title}</b> {t.line}</div>)}
+      {shown.map((t) => t.big ? <Banner key={t.key} title={t.title} line={t.line} /> : <div key={t.key} className={`toast ${t.bad ? 'bad' : ''}`} ref={(el) => { if (el && !el.dataset.on && !motionConfig.reduced) { el.dataset.on = '1'; void toast(el, { hold: SHOWN_MS - 1000 }) } }}>{t.title && <b>{t.title}</b>} {t.line}</div>)}
     </div>
   )
 }

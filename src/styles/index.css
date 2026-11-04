@@ -14,7 +14,8 @@
      screens  the rebuilt screens, one small file each (phase 2 of UI-OVERHAUL.md).
               A screen moves here when it is rebuilt on the kit, and its old
               rules are deleted from legacy in the same change. Beats legacy.
-     motion   keyframes and the moving parts of the rebuilt screens. Beats all.
+     motion   keyframes and the moving parts of the rebuilt screens (presets.css,
+              the shared motion: UI-AUDIT-2026-11-04). Beats all.
 
    When a screen is rebuilt it needs no long selector to win: being in a later
    layer is enough. When the last screen has moved, legacy is empty and goes. */
@@ -40,3 +41,5 @@
 @import '../screens/menu.css' layer(screens);
 @import '../screens/bond.css' layer(screens);
 @import '../screens/lab.css' layer(screens);
+@import '../screens/parts.css' layer(screens);
+@import '../screens/presets.css' layer(motion);
