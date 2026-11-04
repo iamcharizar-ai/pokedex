@@ -2,7 +2,7 @@
 // throwing a ball, feeding a berry, holding an item, TMs, lures, the Smithy, the
 // team, the Professor, quests. Every one is written to the ledger as one small
 // event (store.useItem), so the game is still recomputed from the ledger alone.
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { isShelved, nameOf, spritePath, type Game, type Mon, type Quest } from '../core/fold.ts'
 import {
   BALLS, battleShelf, BERRY_HEARTS, treasurePrice, BOOST, BP_SHELF, DOMAIN_SHOPS, DOMAIN_V13, EVO_ITEMS, FOSSILS, GEAR_ITEMS, HELD, ITEMS, LEGEND_KEYS, LURES, MARKS, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, masteryCost, RARE_SHELF, RARE_SHELF_V13, REVIVE_COST, SELL, TM_SLOTS, TREASURE, itemName, throwHp, tmType,
@@ -10,7 +10,7 @@ import {
 } from '../core/economy.ts'
 import { DAILY_PAY, MAX_LEVEL, REPEL_DAYS, RESEARCH_SLOTS, TEAM_BONUS, TEAM_NATURE, TEAM_SIZE, levelOf, studyPoints, type Rarity } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
-import { BadgeCase, TAG_NAME, Win, badgesWon, plural } from './App.tsx'
+import { GymBadge, TAG_NAME, Win, badgesWon, plural } from './App.tsx'
 import { Ball, BallItem, MegaStone, megaStoneName } from './Ball.tsx'
 import { Forge } from './screens/Forge.tsx'
 import { Sheet } from './screens/Sheet.tsx'
@@ -20,7 +20,11 @@ import { Deck, SigLine } from './Bond.tsx'
 import { ResearchTab } from './Research.tsx'
 import { Coin, EggIcon, Gem, ItemIcon, MarkIcon } from './Item.tsx'
 import { KBar, KButton } from './Kit.tsx'
-import { aBall, fmtDay, still } from './lib/art.ts'
+import { aBall, badgeArt, badgeName, badgeWon, fmtDay, still } from './lib/art.ts'
+import { LEAGUES } from '../core/gyms.ts'
+import { useFlip } from './lib/cardkit.tsx'
+import { startPress, type DragHooks } from './lib/dragcards.ts'
+import { loadLayout, moveTo, reconcile, slotCount, storeLayout, tidy, type Layout } from './lib/baglayout.ts'
 import { buyPop } from './lib/fx.ts'
 import { play } from './lib/sfx.ts'
 import { useItem } from './lib/store.ts'
@@ -503,15 +507,75 @@ export function Bag({ game }: { game: Game }) {
     play('tap')
   }
   const badges = badgesWon(game)
-  // Badges are not items: their pocket draws the badge case instead of a grid of slots
-  const tabs: [string, string[]][] = [['Everything', owned], ...groups.map(([n, ids]) => [n, ids] as [string, string[]]), ...(rest.length ? [['Everything else', rest] as [string, string[]]] : []), ...(badges > 0 ? [['Badges', []] as [string, string[]]] : [])]
+  // each badge won lies in the Bag as a thing of its own: in the Badges pocket and among everything
+  const badgeIds = LEAGUES.flatMap((l, index) => l.gyms.flatMap((_, i) => (badgeWon(game.league, index, i) ? [`badge:${index}:${i}`] : [])))
+  const ordered = [...groups.flatMap(([, ids]) => ids), ...rest, ...badgeIds]
+  // where each thing lies (kept on this device): what was left, made to fit what is owned now
+  const [saved, setSaved] = useState<Layout>(loadLayout)
+  const orderKey = ordered.join('|')
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const layout = useMemo(() => reconcile(saved, ordered), [saved, orderKey])
+  const saveNow = (l: Layout) => { setSaved(l); storeLayout(l) }
+  useEffect(() => { if (JSON.stringify(layout) !== JSON.stringify(saved)) saveNow(layout) }, [layout, saved])
+  const tabs: [string, string[]][] = [['Everything', ordered], ...groups.map(([n, ids]) => [n, ids] as [string, string[]]), ...(rest.length ? [['Everything else', rest] as [string, string[]]] : []), ...(badgeIds.length ? [['Badges', badgeIds] as [string, string[]]] : [])]
   const at = tabs.find(([n]) => n === tab) ?? tabs[0]
-  const onBadges = at[0] === 'Badges'
-  const slot = (id: string) => {
+  const all = at[0] === 'Everything'
+  // what a pocket draws: every slot of the layout (Everything), or its things in the order they lie, then empty slots
+  const cells: (string | null)[] = all
+    ? Array.from({ length: slotCount(layout) }, (_, i) => layout[i] ?? null)
+    : (() => { const c: (string | null)[] = [...at[1]].sort((x, y) => layout.indexOf(x) - layout.indexOf(y)); while (c.length < Math.max(18, Math.ceil(c.length / 9) * 9)) c.push(null); return c })()
+  const nameOfThing = (id: string): string => {
+    if (!id.startsWith('badge:')) return itemName(id)
+    const [li, gi] = id.split(':').slice(1).map(Number)
+    return badgeName(LEAGUES[li].gyms[gi])
+  }
+  // arranging: drag a thing (mouse, or a held touch) or, in Arrange mode, tap it and then tap where it goes
+  const [arrange, setArrange] = useState(false)
+  const [carry, setCarry] = useState<string | null>(null)
+  const [drag, setDrag] = useState<{ id: string; over: number | null } | null>(null)
+  /** Put `id` on a cell: an empty cell only in Everything (elsewhere the cells are not places), another thing's cell swaps with it. */
+  const dropOn = (id: string, cell: number): boolean => {
+    const there = cells[cell] ?? null
+    const target = there !== null ? layout.indexOf(there) : all ? cell : -1
+    if (target < 0 || there === id) return false
+    saveNow(moveTo(layout, id, target))
+    play('tap')
+    return true
+  }
+  const live = useRef(dropOn)
+  live.current = dropOn
+  const held = useRef<string | null>(null)
+  const hooks = useMemo<DragHooks>(() => ({
+    begin: (id) => { held.current = id; setCarry(null); setDrag({ id, over: null }) },
+    hover: (t) => setDrag((d) => (d ? { ...d, over: t && t !== 'lab' ? t.slot : null } : d)),
+    drop: (id, t) => (t && t !== 'lab' ? live.current(id, t.slot) : false),
+    end: () => { held.current = null; setDrag(null) },
+  }), [])
+  useFlip(held)
+  const press = (id: string) => (e: ReactPointerEvent<HTMLElement>) => startPress({ x: e.clientX, y: e.clientY, id: e.pointerId, type: e.pointerType, button: e.button }, id, e.currentTarget, hooks)
+  const tap = (id: string, i: number) => {
+    if (!arrange) { setOpen(id); play('tap'); return }
+    if (carry === null) { setCarry(id); play('click'); return }
+    if (carry === id) { setCarry(null); return }
+    if (dropOn(carry, i)) setCarry(null)
+  }
+  const cell = (id: string | null, i: number) => {
+    const cls = `${drag && drag.over === i && drag.id !== id ? 'over' : ''} ${drag?.id === id ? 'held' : ''} ${carry === id && id !== null ? 'carried' : ''}`
+    if (id === null) return <span key={`b${i}`} className={`mc-slot blank ${cls} ${drag || carry ? 'drop' : ''}`} data-place={i} onClick={carry ? () => { if (dropOn(carry, i)) setCarry(null) } : undefined} aria-hidden />
+    if (id.startsWith('badge:')) {
+      const [li, gi] = id.split(':').slice(1).map(Number)
+      const l = LEAGUES[li], t = l.gyms[gi]
+      return (
+        <button key={id} type="button" className={`mc-slot badge ${cls}`} data-place={i} data-flip={id} onPointerDown={press(id)} onClick={() => tap(id, i)} aria-label={`${badgeName(t)}, ${l.name}. Open`}>
+          <GymBadge art={badgeArt(li, gi)} on n={gi + 1} size={32} title="" />
+          <span className="mc-tip" aria-hidden><b>{badgeName(t)}</b><small>{l.name} · won from {t.name}</small></span>
+        </button>
+      )
+    }
     const on = game.partner.held === id || equipped.includes(id) || game.theme === id
     const n = have(id)
     return (
-      <button key={id} type="button" className={`mc-slot ${on ? 'on' : ''}`} onClick={() => { setOpen(id); play('tap') }} aria-label={`${itemName(id)}, ${n || 'held'}${on ? ', in use' : ''}. Open`}>
+      <button key={id} type="button" className={`mc-slot ${on ? 'on' : ''} ${cls}`} data-place={i} data-flip={id} onPointerDown={press(id)} onClick={() => tap(id, i)} aria-label={`${itemName(id)}, ${n || 'held'}${on ? ', in use' : ''}. Open`}>
         <ItemIcon id={id} size={32} />
         {n > 1 && <b className="mc-n">{short(n)}</b>}
         {on && <i className="mc-on" aria-hidden>E</i>}
@@ -519,7 +583,14 @@ export function Bag({ game }: { game: Game }) {
       </button>
     )
   }
+  useEffect(() => {
+    if (!carry) return
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setCarry(null) }
+    window.addEventListener('keydown', esc)
+    return () => window.removeEventListener('keydown', esc)
+  }, [carry])
   const card = open && ITEMS[open] ? open : null
+  const badgeOpen = open?.startsWith('badge:') ? open : null
   const kind = card ? ITEMS[card].kind : null
   const fill = (n: number, min: number) => Array.from({ length: Math.max(min, Math.ceil(n / 9) * 9) - n }, (_, i) => <span key={`f${i}`} className="mc-slot blank" aria-hidden />)
   const purse: [ReactNode, string, number, number][] = [
@@ -541,9 +612,15 @@ export function Bag({ game }: { game: Game }) {
           </div>
         )}
         <div className="mc-panel">
-          <span className="mc-title">{onBadges ? `Badges · ${badges}` : owned.length ? (at[0] === 'TMs' ? `TMs · ${equipped.length} of ${TM_SLOTS} on ${nameOf(game.partner.form)}` : at[0] === 'Held items' ? `Held items · ${nameOf(game.partner.form)} holds one` : at[0]) : 'Inventory'}</span>
-          {owned.length === 0 && !onBadges && <p className="mc-empty">No items yet. The Mart opens each morning, and feats hand out the rest.</p>}
-          {onBadges ? <BadgeCase game={game} /> : <div className="mc-grid">{at[1].map(slot)}{fill(at[1].length, 18)}</div>}
+          <div className="mc-bar">
+            <span className="mc-title">{carry ? `Carrying ${nameOfThing(carry)}: tap a slot` : at[0] === 'Badges' ? `Badges · ${badges}` : owned.length ? (at[0] === 'TMs' ? `TMs · ${equipped.length} of ${TM_SLOTS} on ${nameOf(game.partner.form)}` : at[0] === 'Held items' ? `Held items · ${nameOf(game.partner.form)} holds one` : at[0]) : 'Inventory'}</span>
+            <span className="mc-btns">
+              <button type="button" className={`mc-btn ${arrange ? 'on' : ''}`} aria-pressed={arrange} onClick={() => { setArrange(!arrange); setCarry(null); play('click') }} title="Tap a thing to pick it up, tap a slot to put it down. You can also drag a thing (hold it on a touch screen).">Arrange</button>
+              <button type="button" className="mc-btn" onClick={() => { saveNow(tidy(ordered)); setCarry(null); play('click') }} title="Lay everything down again in order, with no gaps">Tidy</button>
+            </span>
+          </div>
+          {owned.length === 0 && badges === 0 && <p className="mc-empty">No items yet. The Mart opens each morning, and feats hand out the rest.</p>}
+          <div className={`mc-grid ${arrange ? 'arranging' : ''}`}>{cells.map(cell)}</div>
           <span className="mc-title">Money and marks</span>
           <div className="mc-grid mc-hotbar">
             {purse.map(([icon, name, n, today], i) => (
@@ -556,6 +633,20 @@ export function Bag({ game }: { game: Game }) {
           </div>
         </div>
       </div>
+      {badgeOpen && (() => {
+        const [li, gi] = badgeOpen.split(':').slice(1).map(Number)
+        const l = LEAGUES[li], t = l.gyms[gi]
+        return (
+          <Sheet title={badgeName(t)} onClose={() => setOpen(null)}>
+            <div className="ware-sheet">
+              <span className="ware-sheet-art"><GymBadge art={badgeArt(li, gi)} on n={gi + 1} size={96} title={badgeName(t)} /></span>
+              <h2 className="k-type">{badgeName(t)}</h2>
+              <p>Won from {t.name}, {l.name}.</p>
+              <p className="muted">Badges lie in the Bag with everything else. Drag one, or use Arrange, to put it where you like.</p>
+            </div>
+          </Sheet>
+        )
+      })()}
       {card && kind && (
         <Sheet title={itemName(card)} onClose={() => setOpen(null)}>
           <div className="ware-sheet">

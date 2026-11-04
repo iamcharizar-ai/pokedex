@@ -15,7 +15,7 @@ import { FeatsWin } from './Feats.tsx'
 import { SleepWin } from './Sleep.tsx'
 import type { SleepNight } from '../core/events.ts'
 import { ItemIcon } from './Item.tsx'
-import { KPill, KRibbon } from './Kit.tsx'
+import { KPill } from './Kit.tsx'
 import { Actions, Coin, Count, Gem, Pop, Quests, ShopTab, TeamTab } from './Play.tsx'
 import { Recap } from './Recap.tsx'
 import { BossLog, BossTile } from './Boss.tsx'
@@ -831,28 +831,6 @@ function HallOfFame({ game }: { game: Game }) {
         ))}
       </ul>
     </Win>
-  )
-}
-
-/** Every badge won, league by league, with the open league's empty places. It lives in the Bag, as the Badges pocket. */
-export function BadgeCase({ game }: { game: Game }) {
-  const shown = LEAGUES.map((l, index) => [l, index] as const).filter(([, index]) => game.league.lap > 0 || index <= game.league.index)
-  return (
-    <>
-      {shown.map(([l, index]) => (
-        <div key={l.name} className="caserow">
-          <KRibbon metal={game.league.lap > 0 || index < game.league.index ? 'gold' : 'silver'}>{l.name}</KRibbon>
-          <div className="casemedals">
-            {l.gyms.map((t, i) => {
-              const on = badgeWon(game.league, index, i)
-              const title = `${badgeName(t)}: ${on ? `won from ${t.name}` : `beat ${t.name}`}`
-              // the real badge where there is a picture of it; an empty numbered place for the regions without one
-              return <GymBadge key={i} art={badgeArt(index, i)} on={on} n={i + 1} title={title} />
-            })}
-          </div>
-        </div>
-      ))}
-    </>
   )
 }
 
