@@ -3,7 +3,7 @@
 // to choose between: drag a card to a place (or to the lab), or tap it for Info, Use or Replace.
 // Every move goes through lib/party.ts, which writes the same lead and team events as before.
 // A place can be left open; if it is still open an hour later the app fills it from the lab.
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import { nameOf, type Game, type Mon } from '../core/fold.ts'
 import { BERRY_DOMAIN_MULT, signatureOf } from '../core/bond.ts'
@@ -189,6 +189,8 @@ export function FeedBlock({ game, m }: { game: Game; m: Mon }) {
   const shown = sweep?.old ? { ...segOf(sweep.from), filled: segOf(sweep.from).total } : cur
   const showPre = sweep?.old ? 0 : pre
   const { start, total, filled } = shown
+  // one row of links while they fit, else two rows, filled left to right then down (never a sideways scroll)
+  const cols = total <= 20 ? total : Math.ceil(total / 2)
   const sweepFrom = sweep?.from ?? 0
   const sweepTo = sweep?.old ? start + total : sweep?.to ?? 0
 
@@ -217,12 +219,12 @@ export function FeedBlock({ game, m }: { game: Game; m: Mon }) {
         <span><IcHeart size={14} style={{ color: 'var(--k-pink)' }} /> {full ? 'Every bond level' : `Bond ${lvl}`}</span>
         {spill && <small className="up"><IcArrowUp size={12} /> Level up</small>}
       </div>
-      <div className={`chain ${full ? 'full' : ''} ${sweep?.up && !sweep.old ? 'lvlup' : ''}`} role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={filled} aria-label={full ? 'Every bond level reached' : `${filled} of ${total} hearts to the next bond level`}>
+      <div className={`chain ${full ? 'full' : ''} ${sweep?.up && !sweep.old ? 'lvlup' : ''}`} style={{ ['--cols' as string]: cols } as CSSProperties} role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={filled} aria-label={full ? 'Every bond level reached' : `${filled} of ${total} hearts to the next bond level`}>
         {Array.from({ length: total }, (_, i) => {
           const h = start + i
           const on = i < filled
           const grow = sweep !== null && on && h >= sweepFrom && h < sweepTo
-          return <i key={i} className={`cell ${on ? 'on' : i < filled + showPre ? 'pre' : ''} ${grow ? 'grow' : ''}`} style={grow ? { animationDelay: `${(h - sweepFrom) * 40}ms` } : undefined} />
+          return <i key={i} className={`link ${i % cols === cols - 1 ? 'end' : ''} ${on ? 'on' : i < filled + showPre ? 'pre' : ''} ${grow ? 'grow' : ''}`} style={grow ? { animationDelay: `${(h - sweepFrom) * 40}ms` } : undefined} />
         })}
       </div>
       {treats.length > 1 && (

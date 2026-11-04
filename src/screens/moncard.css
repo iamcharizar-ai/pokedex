@@ -126,20 +126,19 @@
 .mp-berries i { position: absolute; right: -3px; bottom: -3px; min-width: 18px; padding: 0 4px; font-style: normal; font-family: var(--k-face); font-size: 11px; line-height: 16px; text-align: center; color: var(--k-edge); background: var(--tone-gold); border-radius: 99px; }
 
 /* ── the chain: one link for each heart the next bond level takes ── */
-.chain { display: flex; align-items: stretch; height: 22px; padding: 4px 5px; background: #3a4a94; border-radius: 11px; box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.35), 0 0 0 2px rgba(255, 255, 255, 0.14); }
-.chain .cell { position: relative; flex: 1 1 0; min-width: 0; margin-right: 2px; border-radius: 3px; background: rgba(12, 17, 38, 0.45); }
-.chain .cell:last-child { margin-right: 0; }
-.chain .cell:not(:last-child)::after { content: ''; position: absolute; left: 100%; top: 50%; width: 2px; height: 2px; translate: 0 -50%; background: rgba(255, 255, 255, 0.22); }
-.chain .cell.on { background: linear-gradient(var(--k-pink) 0 45%, #b83a78 45%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45); }
-.chain .cell.on:not(:last-child)::after { background: #b83a78; }
-.chain .cell.pre { background: repeating-linear-gradient(135deg, rgba(224, 85, 154, 0.8) 0 3px, rgba(224, 85, 154, 0.3) 3px 6px); animation: chain-pulse 1s ease-in-out infinite; }
+.chain { --cols: 20; display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: 4px 3px; padding: 5px; background: #3a4a94; border-radius: 11px; box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.35), 0 0 0 2px rgba(255, 255, 255, 0.14); }
+.chain .link { position: relative; height: 12px; min-width: 0; border-radius: 3px; background: rgba(12, 17, 38, 0.45); }
+.chain .link:not(.end)::after { content: ''; position: absolute; left: 100%; top: 50%; width: 3px; height: 2px; translate: 0 -50%; background: rgba(255, 255, 255, 0.22); }
+.chain .link.on { background: linear-gradient(var(--k-pink) 0 45%, #b83a78 45%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45); }
+.chain .link.on:not(.end)::after { background: #b83a78; }
+.chain .link.pre { background: repeating-linear-gradient(135deg, rgba(224, 85, 154, 0.8) 0 3px, rgba(224, 85, 154, 0.3) 3px 6px); animation: chain-pulse 1s ease-in-out infinite; }
 @keyframes chain-pulse { 50% { opacity: 0.55; } }
-.chain .cell.grow { animation: chain-fill 360ms cubic-bezier(0.2, 0.9, 0.3, 1.3) both; }
+.chain .link.grow { animation: chain-fill 360ms cubic-bezier(0.2, 0.9, 0.3, 1.3) both; }
 @keyframes chain-fill { from { background: rgba(224, 85, 154, 0.45); transform: scaleY(0.55); } 60% { transform: scaleY(1.35); filter: brightness(1.5); } to { transform: none; } }
-.chain.full .cell.on { background: linear-gradient(var(--k-gold-hi) 0 45%, var(--k-gold) 45%); }
+.chain.full .link.on { background: linear-gradient(var(--k-gold-hi) 0 45%, var(--k-gold) 45%); }
 .chain.lvlup { animation: chain-up 900ms ease-out; }
 @keyframes chain-up { 30% { box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.5), 0 0 18px var(--k-green); } }
-@media (prefers-reduced-motion: reduce) { .chain .cell, .chain, .mp-feed-top small.up { animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { .chain .link, .chain, .mp-feed-top small.up { animation: none !important; } }
 
 /* ── dragging a card ── */
 body.dragging { user-select: none; -webkit-user-select: none; cursor: grabbing; }
