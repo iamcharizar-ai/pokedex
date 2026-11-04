@@ -25,10 +25,12 @@ interface Props extends Omit<HTMLAttributes<HTMLElement>, 'children'> {
   material?: SlotMaterial
   /** a button (it can be tapped), or a span (an empty place, or something only read) */
   as?: 'button' | 'span'
+  /** a button that cannot be pressed now (it is in use) */
+  disabled?: boolean
   ref?: Ref<HTMLElement>
 }
 
-export function Slot({ icon, n, on, stamp, tip, material = 'stone', as = 'button', className = '', ref, ...rest }: Props) {
+export function Slot({ icon, n, on, stamp, tip, material = 'stone', as = 'button', disabled, className = '', ref, ...rest }: Props) {
   const cls = `inv-slot ${material === 'glass' ? 'glass' : ''} ${on ? 'on' : ''} ${className}`
   const inner = (
     <>
@@ -40,6 +42,6 @@ export function Slot({ icon, n, on, stamp, tip, material = 'stone', as = 'button
     </>
   )
   return as === 'button'
-    ? <button type="button" ref={ref as Ref<HTMLButtonElement>} className={cls} {...rest}>{inner}</button>
+    ? <button type="button" ref={ref as Ref<HTMLButtonElement>} className={cls} disabled={disabled} {...rest}>{inner}</button>
     : <span ref={ref as Ref<HTMLSpanElement>} className={cls} {...rest}>{inner}</span>
 }

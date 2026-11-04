@@ -5,7 +5,7 @@ import type { DayFacts, HabitFact } from '../core/facts.ts'
 import { LEAGUES, lineup } from '../core/gyms.ts'
 import {
   ADVANTAGE_MULT, GEMS, SEASON_STEP, BALL_MULT, BALL_NAME, GAME_START, GRADUATES_PER_REGION, LEADER_HP, MOMENTUM_WINDOW,
-  CLAIM_AUTO, SLEEP_HABIT, HEART_LEVELS, LEGENDARY_EVERY_WILD, PAY_STREAK, REGIONS, REPEL_DAYS, SHINY_ODDS, SHINY_ODDS_WORN, SLEEP_AFTER, SLIP, STAKES_FROM, STEPS_GOAL, TEAM_SIZE, TRAIL_EGG_STEPS, WILD_STAY, TIER_XP, WEAK_MULT, evolveAt, graduateAt, xpForLevel,
+  CLAIM_AUTO, SLEEP_HABIT, HEART_LEVELS, momentumMult, levelOf, LEGENDARY_EVERY_WILD, PAY_STREAK, REGIONS, REPEL_DAYS, SHINY_ODDS, SHINY_ODDS_WORN, SLEEP_AFTER, SLIP, STAKES_FROM, STEPS_GOAL, TEAM_SIZE, TRAIL_EGG_STEPS, WILD_STAY, TIER_XP, WEAK_MULT, evolveAt, graduateAt, xpForLevel,
 } from '../core/rules.ts'
 import { MARKS, EGG_KINDS, RARE_EGG_GEMS, BOND_STEP, MASTERY_MAX, MASTERY_STEP, SELL, itemName as econName, masteryCost } from '../core/economy.ts'
 import { MILESTONE_EVERY, CRIT_MULT, DYNAMAX, GIGANTAMAX, LEVEL_POWER, MAX_LEVEL, MEGA_BONUS, MEGA_BOND, RESEARCH_SLOTS, RESEARCH_WILD, RESEARCH_WILD_MAX, TEAM_BONUS, TEAM_LEVEL, TEAM_NATURE, type Tag as TagKind } from '../core/rules.ts'
@@ -48,8 +48,9 @@ import { sleepFor, useClock } from './screens/Sky.tsx'
 import { Stage } from './screens/Stage.tsx'
 import { biomeOf, layoutFor, lightAt, litFilter, lookOf } from './screens/stage.ts'
 import { Meter } from './Meter.tsx'
+import { useAim } from './lib/aim.ts'
 import { IcStar } from './lib/icons.tsx'
-import { PixelSprite } from './lib/pixel.tsx'
+import { CropSprite, PixelSprite } from './lib/pixel.tsx'
 import { ChestOpener, HatchOpener } from './Reveal.tsx'
 
 type Tab = 'partner' | 'team' | 'shop' | 'dex' | 'trainer'
@@ -164,6 +165,7 @@ function Scene({ game }: { game: Game }) {
     else { void img?.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-12px)' }, { transform: 'translateX(6px)' }, { transform: 'translateX(0)' }], { duration: 260, easing: 'ease-out' }) }
   }
   const press = (who: 'me' | 'foe') => (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pat(who) } }
+  const useAimHp = useAim()
   // ── the stage: its size in screen pixels, the whole number it is enlarged by, and where things stand on it ──
   const [cw, ch] = useBox(stage)
   const k = cw < 480 ? 2 : 3
@@ -186,6 +188,8 @@ function Scene({ game }: { game: Game }) {
   // the partner's experience: today's part drawn brighter, and what today paid beside it
   const gained = Math.max(0, game.into - game.intoBeforeToday)
   const at = (sp: { x: number; y: number }) => ({ left: sp.x * k, top: (sp.y + 1) * k })
+  // a ball held over it (lib/aim.ts): its throw ghosted on the HP bar
+  const aimed = wild && !wild.caught ? Math.min(useAimHp, wild.hp) : 0
   return (
     <section ref={stage} className={`scene v2 ${game.theme} ${game.aura ? `aura-${game.aura}` : ''}`} style={{ ['--lit' as string]: litFilter(light) } as CSSProperties} aria-label="Today, as a battle">
       {cw > 0 && <Stage k={k} s={stageState} label={game.theme ? 'The scene' : look.wx.label} />}
@@ -197,8 +201,8 @@ function Scene({ game }: { game: Game }) {
             {wild.caught
               ? <span className="np-note">Caught · in My Pokemon</span>
               : (
-                <div className="np-bar">
-                  <Meter look="game" kind="hp" value={wild.hp} max={wild.max} name="The wild Pokemon's HP" label={`${wild.hp.toLocaleString('en-IN')} / ${wild.max.toLocaleString('en-IN')}`} size="lg" />
+                <div className={`np-bar ${aimed > 0 ? 'aimed' : ''} ${aimed >= wild.hp ? 'catches' : ''}`}>
+                  <Meter look="game" kind="hp" value={wild.hp} max={wild.max} ghost={-aimed} ghostText={aimed >= wild.hp ? 'this throw catches it' : `${aimed} off with this throw`} name="The wild Pokemon's HP" label={`${wild.hp.toLocaleString('en-IN')} / ${wild.max.toLocaleString('en-IN')}`} size="lg" />
                   {today.hit > 0 && <span className="np-chip hit" title={`${today.hit} taken today`}><span className="sr-only">taken today: </span>−{today.hit.toLocaleString('en-IN')}</span>}
                 </div>
               )}
@@ -297,27 +301,43 @@ function Talk({ game, pillars, sleepH }: { game: Game; pillars: HabitFact[]; sle
 }
 
 /** The pace of things: the week's momentum as seven dots and the bonus they make (3 days with two pillars x1.2, 5 x1.35, 7 x1.5), and how far the partner is from its next change. */
+/** The pace of things (UI-AUDIT-2026-11-04 T15, T16): momentum as seven pips that fill with the days that counted, its steps
+ *  (×1.2 at 3, ×1.35 at 5, ×1.5 at 7) marked on them, the next one ghosted; and the way to the partner's next change as a meter
+ *  between the form it is and the form it becomes (or a star for level 100). */
 function Pace({ game }: { game: Game }) {
-  const { momentum } = game
-  const prev = game.days.slice(-(MOMENTUM_WINDOW + 1), -1)
-  const missing = MOMENTUM_WINDOW - prev.length
-  const toLevel = Math.max(0, Math.ceil(xpForLevel(game.next.level) - game.partner.xp))
+  const { momentum, partner } = game
+  const steps: [number, number][] = [[3, momentumMult(3)], [5, momentumMult(5)], [7, momentumMult(7)]]
+  const next = steps.find(([d]) => d > momentum.days)
+  const startXp = xpForLevel(levelOf(partner.xp)), goalXp = xpForLevel(game.next.level)
+  const toLevel = Math.max(0, Math.ceil(goalXp - partner.xp))
+  const gained = Math.max(0, game.into - game.intoBeforeToday)
+  const ahead = game.next.what === 'evolve' ? (SPECIES[partner.form]?.e ?? []) : []
+  const boxes = useBoxes()
   return (
     <div className="pace">
-      <div className="pace-cell" title="Days with two pillars in the last seven: 3 make XP x1.2, 5 x1.35, 7 x1.5. It slides back a day at a time, never resets.">
+      <div className="pace-cell pace-mo" title={`Days with two pillars in the last seven: ${steps.map(([d, m]) => `${d} make XP ×${m}`).join(', ')}. It slides back a day at a time, never resets.`}>
         <span className="k-label">Momentum</span>
-        <span className="pace-week" aria-label={`${momentum.days} of the last 7 days counted`}>
+        <span className="mo-pips" role="meter" aria-valuemin={0} aria-valuemax={MOMENTUM_WINDOW} aria-valuenow={momentum.days} aria-label={`${momentum.days} of the last ${MOMENTUM_WINDOW} days counted: XP ×${momentum.mult}${next ? `; ${next[0] - momentum.days} more for ×${next[1]}` : ''}`}>
           {Array.from({ length: MOMENTUM_WINDOW }, (_, i) => {
-            const d = prev[i - missing]
-            return <i key={i} className={d?.counts ? 'on' : d ? 'off' : 'none'} title={d ? `${fmtDay(d.day)}: ${d.pillars} of ${d.pillarTotal} pillars` : 'before the game began'} />
+            const step = steps.find(([d]) => d === i + 1)
+            return (
+              <span key={i} className={`mo-pip ${i < momentum.days ? 'on' : ''} ${next && i + 1 === next[0] ? 'next' : ''}`}>
+                <i />
+                {step && <b className={momentum.days >= step[0] ? 'got' : next?.[0] === step[0] ? 'next' : ''}>×{step[1]}</b>}
+              </span>
+            )
           })}
-          <i className={`now ${game.today.counts ? 'on' : ''}`} title="Today" />
         </span>
-        <b className="pace-big">×{momentum.mult}</b>
       </div>
-      <div className="pace-cell">
+      <div className="pace-cell pace-evo" title={`${toLevel.toLocaleString('en-IN')} XP to Lv ${game.next.level}`}>
         <span className="k-label">{game.next.what === 'evolve' ? 'Evolves' : game.next.what === 'master' ? 'Level 100' : 'Fully trained'} at Lv {game.next.level}</span>
-        <b className="pace-big">{toLevel.toLocaleString('en-IN')}<small> XP to go</small></b>
+        <span className="evo-way">
+          <CropSprite src={still(partner.form, partner.shiny)} box={boxes?.[partner.form]} alt={nameOf(partner.form)} className="evo-now" />
+          <Meter look="game" kind="xp" value={partner.xp - startXp} max={Math.max(1, goalXp - startXp)} today={Math.min(gained, partner.xp - startXp)} name={`XP to Lv ${game.next.level}`} label={`${toLevel.toLocaleString('en-IN')} to go`} size="lg" />
+          {ahead.length > 0
+            ? <CropSprite src={still(ahead[0], partner.shiny)} box={boxes?.[ahead[0]]} alt={game.dex[ahead[0]] ? nameOf(ahead[0]) : 'Not seen yet'} className={`evo-next ${game.dex[ahead[0]] ? '' : 'unseen'}`} />
+            : <span className="evo-star" aria-hidden>★</span>}
+        </span>
       </div>
     </div>
   )
@@ -464,11 +484,14 @@ function PartnerTab({ game, facts, nights, onShop }: { game: Game; facts: DayFac
         <SlipNote game={game} />
         {game.warnings.map((w) => <p key={w} className="notice warn">{w}</p>)}
         <Talk game={game} pillars={habits.filter((h) => h.pillar)} sleepH={habits.find((h) => h.id === SLEEP_HABIT && !h.measured)} />
-        {/* on a wide screen Last night stays with the day; on a phone it comes last (today.css) */}
+        {/* the pace stays with the day; on a phone it falls where it always was, under the rings */}
+        <Pace game={game} />
+        {/* on a wide screen Last night stays with the day; on a phone it comes last (today.css). Without a measured night
+            the Nursery stands here instead, so the two columns end near each other (UI-AUDIT D4) */}
         {game.sleep.state === 'measured' && <div className="day-late"><SleepWin game={game} nights={nights} /></div>}
+        {game.sleep.state !== 'measured' && <div className="day-late"><Nursery game={game} onShop={onShop} /></div>}
       </div>
       <div className="day-side">
-      <Pace game={game} />
       <Win title="Throw and feed" tone="gold" aside={reachNote(game)}>
         <Actions game={game} onShop={onShop} />
       </Win>
@@ -479,7 +502,7 @@ function PartnerTab({ game, facts, nights, onShop }: { game: Game; facts: DayFac
           <BossTile game={game} />
         </div>
       </Win>
-      <Nursery game={game} onShop={onShop} />
+      {game.sleep.state === 'measured' && <Nursery game={game} onShop={onShop} />}
       </div>
     </div>
   )

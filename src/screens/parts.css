@@ -99,3 +99,9 @@
 .found-hint .pre-hint { position: absolute; left: 0; top: 0; }
 .found-socket { width: 48px; height: 48px; border: 2px dashed var(--hair-hi); border-radius: 50%; }
 .found-obj { display: inline-block; padding: 10px 14px; background: var(--surface-2); border: var(--edge-2); border-radius: var(--r-2); box-shadow: var(--lift-obj); cursor: pointer; }
+/* battle prep (Champion.tsx): slots on the page, each X item edged in its kind of work's colour */
+.slot-grid.prep { grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); max-width: 420px; }
+.slot-grid.prep .inv-slot.tagged { box-shadow: inset 2px 2px 0 var(--slot-lo), inset -2px -2px 0 var(--slot-hi), inset 0 -3px 0 var(--tc, var(--tone-gold)); }
+.slot-grid.prep .inv-slot[data-tag='code'] { --tc: var(--tag-code); } .slot-grid.prep .inv-slot[data-tag='fitness'] { --tc: var(--tag-fitness); }
+.slot-grid.prep .inv-slot[data-tag='guitar'] { --tc: var(--tag-guitar); } .slot-grid.prep .inv-slot[data-tag='arbor'] { --tc: var(--tag-arbor); } .slot-grid.prep .inv-slot[data-tag='sleep'] { --tc: var(--tag-sleep); }
+.slot-grid.prep .inv-slot:disabled { cursor: default; }

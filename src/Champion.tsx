@@ -15,6 +15,7 @@ import { TAG_NAME, Win } from './App.tsx'
 import { Coin, ItemIcon } from './Item.tsx'
 import { KBar } from './Kit.tsx'
 import { Meter } from './Meter.tsx'
+import { Slot } from './Slot.tsx'
 import { fmtDay, still } from './lib/art.ts'
 import { play } from './lib/sfx.ts'
 import { useItem } from './lib/store.ts'
@@ -116,17 +117,17 @@ export function BattlePrep({ game }: { game: Game }) {
     <Win title="Battle prep" tone="red" aside={crit > 0 ? `Critical ${pct(crit)}` : undefined}>
       <TodayEffects game={game} />
       {items.length > 0 ? (
-        <div className="belt prep" role="group" aria-label="Battle items">
+        <div className="slot-grid prep" role="group" aria-label="Battle items">
           {items.map((id) => {
             const b = BOOST[id]
             const used = b ? (today[b.tag] ?? 0) >= b.add : id === 'guard-spec' ? game.guard : id === 'honey' ? Boolean(game.wish.chosen) : false
             const sub = b ? `${TAG_NAME[b.tag]} +${pct(b.add)}` : DIRE_HIT[id] ? `crit +${pct(DIRE_HIT[id])}` : id === 'guard-spec' ? (game.guard ? 'on guard' : 'empty day') : (game.wish.chosen ? 'coming' : 'rare next')
+            // a thing is its icon and a number; what it does is a stamp, and the rest is in the tip (UI-AUDIT: battle prep on slots)
+            const stamp = b ? `+${pct(b.add)}` : DIRE_HIT[id] ? 'crit' : undefined
             return (
-              <button key={id} type="button" className={`socket guard ${used ? '' : 'ready'}`} disabled={used} onClick={() => use(id)} title={ITEMS[id]?.text} aria-label={`${itemName(id)}: ${sub}`}>
-                <span className="socket-well"><ItemIcon id={id} size={36} /><i className="socket-n">{have(id)}</i></span>
-                <b>{itemName(id)}</b>
-                <small>{used ? 'In use' : sub}</small>
-              </button>
+              <Slot key={id} material="glass" className={b ? 'tagged' : ''} data-tag={b?.tag} on={used} disabled={used} onClick={() => use(id)}
+                icon={<ItemIcon id={id} size={48} />} n={have(id)} stamp={stamp} aria-label={`${itemName(id)}: ${sub}${used ? ', in use' : ''}`}
+                tip={{ title: itemName(id), note: <>{used ? 'In use' : sub} · {ITEMS[id]?.text}</> }} />
             )
           })}
         </div>

@@ -43,23 +43,9 @@
 .lifeos-link:hover { background: var(--surface-2); }
 
 /* ── the pace: two numbers side by side, a hairline between them ── */
-.pace { display: grid; grid-template-columns: 1.4fr 1fr; padding: var(--s-3) 0; border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); }
+.pace { display: grid; grid-template-columns: 1fr 1fr; padding: var(--s-3) 0; border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); }
 .pace-cell { display: grid; align-content: center; gap: 6px; padding: 0 var(--s-3); min-width: 0; }
 .pace-cell + .pace-cell { border-left: 1px solid var(--hair); }
-.pace-cell:first-child { grid-template-columns: 1fr auto; grid-template-areas: 'l b' 'w b'; }
-.pace-cell:first-child .k-label { grid-area: l; }
-.pace-cell:first-child .pace-week { grid-area: w; }
-.pace-cell:first-child .pace-big { grid-area: b; align-self: center; }
-.pace-week { display: flex; align-items: center; gap: 5px; }
-.pace-week i { width: 12px; height: 12px; border-radius: 50%; background: var(--well); box-shadow: inset 0 0 0 1px var(--hair-hi); }
-.pace-week i.on { background: var(--tone-gold); box-shadow: 0 0 8px var(--gold-glow); }
-.pace-week i.off { background: rgba(255, 90, 100, 0.35); box-shadow: none; }
-.pace-week i.none { opacity: 0.3; }
-.pace-week i.now { width: 16px; height: 16px; margin-left: 3px; box-shadow: inset 0 0 0 2px #fff; }
-.pace-week i.now.on { box-shadow: 0 0 0 2px #fff, 0 0 10px var(--gold-glow); }
-.pace-big { font-family: var(--k-face); font-weight: 400; font-size: 26px; line-height: 1; color: var(--text); white-space: nowrap; }
-.pace-cell:first-child .pace-big { color: var(--tone-gold); }
-.pace-big small { font-size: 13px; color: var(--text-2); }
 
 /* ── the belt: every item you can use today, as a socket you press ── */
 .belt { position: relative; display: flex; gap: var(--s-3); overflow-x: auto; padding: 4px 2px var(--s-2); margin: 0 -2px; scrollbar-width: none; }
@@ -109,8 +95,6 @@
 /* before there is a boss: the six places of the party it waits for */
 .duel.bosslock { display: flex; gap: var(--s-3); margin: 0; min-height: 0; background: linear-gradient(110deg, rgba(150, 110, 255, 0.18), #161c42 70%); border-color: rgba(150, 110, 255, 0.35); box-shadow: none; grid-column: 1 / -1; }
 .bosslock small { color: var(--text-2); opacity: 1; }
-.bosslock-pips i { border: 0; background: var(--well); box-shadow: inset 0 0 0 1px var(--hair-hi); }
-.bosslock-pips i.on { background: var(--tone-gold); box-shadow: 0 0 8px var(--gold-glow); }
 
 /* ── last night: the dial and the stages, on the page ── */
 .sleepdial { width: 92px; height: 92px; border: 0; background: radial-gradient(circle, #1a2150 0 38px, transparent 39px), conic-gradient(var(--tone-purple) calc(var(--p, 0.5) * 1turn), rgba(255, 255, 255, 0.09) 0); box-shadow: 0 0 22px rgba(150, 110, 255, 0.25); }
@@ -144,8 +128,6 @@
   .daypage { grid-template-columns: minmax(0, 1.55fr) minmax(320px, 1fr); align-items: start; gap: var(--s-6); }
 
   .day-side .duels { grid-template-columns: 1fr; }
-  .pace { grid-template-columns: 1fr; }
-  .pace-cell + .pace-cell { border-left: 0; border-top: 1px solid var(--hair); margin-top: var(--s-3); padding-top: var(--s-3); }
 }
 
 /* ── the bar that pays Bells: it fills to last night's score; the marks at 80 and 90 are the Bells it passed ── */
@@ -173,3 +155,26 @@
 @media (max-width: 560px) { .pillar b { font-size: 13.5px; letter-spacing: -0.01em; } .pillar small { font-size: 11px; } }
 
 
+
+/* ── the pace (App.tsx Pace): momentum as pips with its steps marked; the way to the next change as a meter between forms ── */
+.pace-mo, .pace-evo { align-content: start; }
+.mo-pips { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; padding-bottom: 16px; }
+.mo-pip { position: relative; display: grid; justify-items: center; }
+.mo-pip i { width: 100%; max-width: 30px; height: 12px; border-radius: 4px; background: var(--well); box-shadow: inset 0 0 0 1px var(--hair-hi); }
+.mo-pip.on i { background: linear-gradient(var(--k-gold-hi) 0 45%, var(--k-gold) 45%); box-shadow: 0 0 8px var(--gold-glow); }
+.mo-pip.next i { background: repeating-linear-gradient(135deg, rgba(255, 216, 74, 0.6) 0 3px, rgba(255, 216, 74, 0.15) 3px 6px); animation: ghost-pulse 1s ease-in-out infinite; }
+.mo-pip b { position: absolute; top: 15px; font: 400 11px/1 var(--k-face); color: var(--text-3); white-space: nowrap; }
+.mo-pip b.got { color: var(--k-gold-hi); }
+.mo-pip b.next { color: var(--text); }
+.evo-way { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: end; gap: 8px; }
+.evo-way .meter { align-self: center; }
+.evo-way .crop { filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.35)); }
+.evo-way .crop.unseen img { filter: brightness(0) opacity(0.35); }
+.evo-star { align-self: center; font: 400 22px/1 var(--k-face); color: var(--k-gold-hi); text-shadow: 0 2px 0 var(--k-edge); }
+@media (prefers-reduced-motion: reduce) { .mo-pip.next i { animation: none; } }
+
+/* the boss before it comes (Boss.tsx Locked): the party it needs as six places that fill with a ball each */
+.bosslock-slots { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.bosslock-slots i { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; background: var(--well); box-shadow: inset 0 0 0 2px var(--hair-hi); }
+.bosslock-slots i.on { background: radial-gradient(circle, rgba(169, 139, 255, 0.35), transparent 70%), var(--surface-2); box-shadow: inset 0 0 0 2px var(--tone-purple); }
+.bosslock-slots img { image-rendering: pixelated; }

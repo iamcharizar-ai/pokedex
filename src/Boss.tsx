@@ -36,13 +36,15 @@ function Locked({ game }: { game: Game }) {
   const today = game.today.day
   const soon = Boolean(today) && today <= addDays(mondayOf(today), PLAN_BY)
   return (
-    <div className="duel static bosslock" title={`A boss is a week-long fight. It comes once your party is ${need}: the partner and ${need - 1} more. A bigger party hits it harder.`}>
-      <ItemIcon id="master-ball" size={30} />
+    <div className="duel static bosslock" title={`A boss is a week-long fight. It comes once your party is ${need}: the partner and ${need - 1} more. A bigger party hits it harder. ` + (have < need ? `${have} of ${need} in your party: add ${need - have} more to bring one out. Fully trained members make a throw at it likelier.` : soon ? 'Your party is ready: it is drawn the next time the Pokedex syncs. A fuller party hits it harder.' : 'Your party is ready. A boss is drawn in the first days of each week. A fuller party hits it harder.')}>
+      <ItemIcon id="master-ball" size={24} />
       <span>
         <b>{have < need ? `A boss comes once your party is ${need}` : soon ? 'A boss arrives this week' : 'A boss comes on Monday'}</b>
-        <small>{have < need ? `${have} of ${need} in your party: add ${need - have} more to bring one out. Fully trained members make a throw at it likelier.` : soon ? 'Your party is ready: it is drawn the next time the Pokedex syncs. A fuller party hits it harder.' : 'Your party is ready. A boss is drawn in the first days of each week. A fuller party hits it harder.'}</small>
+        {/* the party it needs, as places that fill (UI-AUDIT T6); what it means is in the tip */}
+        <span className="bosslock-slots" role="meter" aria-valuemin={0} aria-valuemax={need} aria-valuenow={have} aria-label={`${have} of ${need} in the party`}>
+          {Array.from({ length: need }, (_, i) => <i key={i} className={i < have ? 'on' : ''}>{i < have && <ItemIcon id="poke-ball" size={24} />}</i>)}
+        </span>
       </span>
-      <span className="bosslock-pips" aria-hidden>{Array.from({ length: need }, (_, i) => <i key={i} className={i < have ? 'on' : ''} />)}</span>
     </div>
   )
 }

@@ -28,6 +28,7 @@ import { loadLayout, moveTo, reconcile, slotCount, storeLayout, tidy, type Layou
 import { buyPop } from './lib/fx.ts'
 import { play } from './lib/sfx.ts'
 import { useItem } from './lib/store.ts'
+import { aim } from './lib/aim.ts'
 import { BondPerks, BpIcon, CollectorWin, LabWin, MonExtras, evolutionsFor } from './Champion.tsx'
 import { FeedSheet, treatsIn } from './Feed.tsx'
 import { FeedBlock, RoleControl, TeamScreen, monCardOf } from './Team.tsx'
@@ -98,7 +99,7 @@ export function Actions({ game, onShop }: { game: Game; onShop: () => void }) {
   const [flying, setFlying] = useState<string | null>(null)
   const [feeding, setFeeding] = useState(false)
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
-  useEffect(() => () => clearTimeout(timer.current), [])
+  useEffect(() => () => { clearTimeout(timer.current); aim(0) }, [])
   const wild = game.wild && !game.wild.caught
   const throwIt = (item: string, from?: Element) => {
     if (flying) return
@@ -107,13 +108,15 @@ export function Actions({ game, onShop }: { game: Game; onShop: () => void }) {
     play('throw')
     // the outcome is read from the game as it is now; the ball is seen to fly, then the ledger is told and the HP falls
     const sound = hitOf(game, item) >= (game.wild?.hp ?? 1) ? 'catch' : 'hit'
-    timer.current = setTimeout(() => { useItem(item, '', 'throw'); setFlying(null); play(sound) }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 650)
+    timer.current = setTimeout(() => { useItem(item, '', 'throw'); setFlying(null); play(sound); aim(0) }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 650)
   }
   const balls = Object.keys(BALLS).filter((b) => (game.inv[b] ?? 0) > 0).sort((a, b) => hitOf(game, b) - hitOf(game, a))
   const berries = Object.keys(BERRY_HEARTS).filter((b) => (game.inv[b] ?? 0) > 0)
   const hearts = (game.partner.together ?? 0) + (game.partner.fed ?? 0)
-  const socket = (key: string, icon: ReactNode, name: string, sub: string, o: { tone?: 'feed' | 'guard' | 'shop'; n?: number; disabled?: boolean; ready?: boolean; title?: string; onClick: (e: React.MouseEvent<HTMLButtonElement>) => void }) => (
-    <button key={key} type="button" className={`socket ${o.tone ?? ''} ${o.ready ? 'ready' : ''}`} disabled={o.disabled} onClick={o.onClick} title={o.title} aria-label={`${name}: ${sub}`}>
+  // a ball held over the wild Pokemon ghosts its throw on the scene's HP bar (lib/aim.ts)
+  const hold = (hp?: number) => (hp ? { onPointerEnter: () => aim(hp), onPointerDown: () => aim(hp), onFocus: () => aim(hp), onPointerLeave: () => aim(0), onBlur: () => aim(0) } : {})
+  const socket = (key: string, icon: ReactNode, name: string, sub: string, o: { tone?: 'feed' | 'guard' | 'shop'; n?: number; disabled?: boolean; ready?: boolean; title?: string; aim?: number; onClick: (e: React.MouseEvent<HTMLButtonElement>) => void }) => (
+    <button key={key} type="button" className={`socket ${o.tone ?? ''} ${o.ready ? 'ready' : ''}`} disabled={o.disabled} onClick={o.onClick} title={o.title} aria-label={`${name}: ${sub}`} {...hold(o.disabled ? 0 : o.aim)}>
       <span className="socket-well">{icon}{o.n !== undefined && <i className="socket-n">{o.n}</i>}</span>
       <b>{name}</b>
       <small>{sub}</small>
@@ -124,7 +127,7 @@ export function Actions({ game, onShop }: { game: Game; onShop: () => void }) {
       {balls.map((b) => {
         const hp = hitOf(game, b)
         const double = BALLS[b].vs && hp > 0 && hp >= (BALLS[b].hp * 2)
-        return socket(b, <BallItem id={b} size={58} />, itemName(b), BALLS[b].hp >= 1_000_000 ? 'catches it' : `−${hp} HP${double ? ' ×2' : ''}`, { n: game.inv[b], disabled: !wild || Boolean(flying), ready: Boolean(wild), title: ITEMS[b]?.text, onClick: (e) => throwIt(b, e.currentTarget) })
+        return socket(b, <BallItem id={b} size={58} />, itemName(b), BALLS[b].hp >= 1_000_000 ? 'catches it' : `−${hp} HP${double ? ' ×2' : ''}`, { n: game.inv[b], disabled: !wild || Boolean(flying), ready: Boolean(wild), title: ITEMS[b]?.text, aim: Math.min(hp, game.wild?.hp ?? 0), onClick: (e) => throwIt(b, e.currentTarget) })
       })}
       {balls.length === 0 && socket('shop', <ItemIcon id="great-ball" size={36} />, 'Get balls', 'at the Mart', { tone: 'shop', onClick: onShop })}
       {game.v14

@@ -85,18 +85,19 @@ export function Nursery({ game, onShop }: { game: Game; onShop: () => void }) {
   const days = pace > 0 ? Math.max(1, Math.ceil(left / pace)) : null
   const hatch = days !== null ? fmtDay(addDays(game.today.day, days)) : null
   return (
-    <Win title="Nursery" tone="green" aside={`${Math.round(warm * 100)}% warm`}>
+    <Win title="Nursery" tone="green">
       <div className={`nursery ${near ? 'tomorrow' : ''}`} style={{ ['--warm' as string]: warm } as CSSProperties}>
         <span className="nest" role="progressbar" aria-valuemin={0} aria-valuemax={egg.need} aria-valuenow={egg.have} aria-label="How warm the egg is">
           <span className="nursery-egg">
-            <ItemIcon id={egg.kind} size={84} />
+            <ItemIcon id={egg.kind} size={72} />
             <i className="crack c1" /><i className="crack c2" /><i className="crack c3" />
           </span>
         </span>
         <span className="nursery-txt">
           <b>{near ? `${kind?.name ?? 'The egg'} is about to hatch` : `${kind?.name ?? 'An egg'} is warming`}</b>
           {egg.since === game.today.day && <small className="nest-note"><b>Incubation begins tomorrow.</b> The egg is set up today, so today's steps do not count; they start from the next day.</small>}
-          <small>Every step the band counts goes in, with no limit a day. It hatches into {hatchesInto(egg.kind)}. {left.toLocaleString()} to go.</small>
+          {/* the ring is how warm it is; the number is said once, here (UI-AUDIT T5) */}
+          <small title="Every step the band counts goes in, with no limit a day.">Hatches into {hatchesInto(egg.kind)}.</small>
           <span className="nest-count">{counted}</span>
           <span className="nest-chips">
             {egg.since !== game.today.day && egg.today > 0 && <span className="nest-chip"><b>+{egg.today.toLocaleString()}</b> today</span>}

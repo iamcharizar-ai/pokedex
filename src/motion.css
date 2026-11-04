@@ -70,9 +70,6 @@
 .bosslock { display: flex; align-items: center; gap: 12px; margin: 0 0 12px; padding: 10px 14px; color: #fff; background: linear-gradient(120deg, #2a1f5c, #4a2f9e); border: 3px solid var(--k-edge); border-radius: 12px; }
 .bosslock > span:nth-child(2) { flex: 1; display: grid; line-height: 1.2; }
 .bosslock small { opacity: 0.8; font-size: 12px; }
-.bosslock-pips { display: flex; gap: 4px; }
-.bosslock-pips i { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--k-edge); background: rgba(8, 12, 30, 0.6); }
-.bosslock-pips i.on { background: #ffd800; box-shadow: 0 0 6px #ffd800; }
 .boss { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
 .boss-stage { position: relative; flex: none; width: 150px; height: 140px; display: grid; place-items: center; border-radius: 12px; background: radial-gradient(circle at 50% 70%, rgba(192, 76, 255, 0.35), transparent 65%); overflow: visible; }
 .boss.r-L .boss-stage { background: radial-gradient(circle at 50% 70%, rgba(255, 216, 0, 0.45), transparent 65%); }
