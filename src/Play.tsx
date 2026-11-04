@@ -341,7 +341,7 @@ function MarkShops({ game }: { game: Game }) {
   const tag = live.includes(chosen) ? chosen : richest
   return (
     <>
-      <nav className="substrip" role="tablist" aria-label="Shops paid in marks" data-noswipe>
+      <nav className="substrip" style={{ ['--n' as string]: live.length } as CSSProperties} role="tablist" aria-label="Shops paid in marks" data-noswipe>
         {live.map((t) => (
           <button key={t} type="button" role="tab" aria-selected={tag === t} className={tag === t ? 'on' : ''} data-tag={t} onClick={() => { setTag(t); play('tap') }}>
             <span className="substrip-ico"><MarkIcon tag={t} size={30} /><i>{game.wallet.marks[t]}</i></span>

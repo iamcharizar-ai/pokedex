@@ -1,7 +1,8 @@
 // Feats: what the work has proved, and what each proof paid. Runs first (they
 // can end, but nothing they paid ever does), then the ones closest to done.
-import { FEATS, ITEMS, featDomain, itemName, type Feat } from '../core/economy.ts'
-import { isShelved, type Game } from '../core/fold.ts'
+import { FEATS, ITEMS, itemName, type Feat } from '../core/economy.ts'
+import type { Game } from '../core/fold.ts'
+import { featShown } from './lib/shelved.ts'
 import { Win, plural } from './App.tsx'
 import { Gem, ItemIcon } from './Item.tsx'
 import { KBar, KMedal } from './Kit.tsx'
@@ -36,7 +37,7 @@ function FeatRow({ f, game }: { f: Feat; game: Game }) {
 export function FeatsWin({ game }: { game: Game }) {
   const earned = new Set(game.feats.map((f) => f.id))
   // version 18: a feat about a kind of work with no habit on the Life OS list is hidden until it has one again (one already earned stays)
-  const shown = FEATS.filter((f) => earned.has(f.id) || !isShelved(game, featDomain(f) ?? ''))
+  const shown = FEATS.filter((f) => featShown(game, f))
   const ratio = (f: Feat) => Math.min(1, (game.counters[f.key] ?? 0) / f.n)
   const next = shown.filter((f) => !earned.has(f.id)).sort((a, b) => ratio(b) - ratio(a)).slice(0, 2)
   return (

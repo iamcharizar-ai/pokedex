@@ -25,6 +25,7 @@ import { still } from '../lib/art.ts'
 import { motion, motionConfig } from '../lib/fx.ts'
 import { play } from '../lib/sfx.ts'
 import { useItem } from '../lib/store.ts'
+import { featShown } from '../lib/shelved.ts'
 import { told } from '../lib/told.ts'
 
 interface Slot { m: Mon; mega: string; index: number; count: number }
@@ -269,7 +270,7 @@ export function Forge({ game }: { game: Game }) {
  */
 function NextShards({ game }: { game: Game }) {
   const earned = new Set(game.feats.map((f) => f.id))
-  const feats = FEATS.filter((f) => !earned.has(f.id) && Object.keys(f.reward.items ?? {}).some((id) => KINDS.includes(id)))
+  const feats = FEATS.filter((f) => !earned.has(f.id) && featShown(game, f) && Object.keys(f.reward.items ?? {}).some((id) => KINDS.includes(id)))
     .map((f) => ({ f, have: Math.min(f.n, game.counters[f.key] ?? 0) }))
     .sort((a, b) => b.have / b.f.n - a.have / a.f.n)
     .slice(0, 2)
