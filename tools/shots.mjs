@@ -72,7 +72,7 @@ try {
     for (const [clock, sleep, label] of SKIES) {
       const page = await ctx.newPage()
       await page.goto(`http://localhost:${PORT}/?fixture=week&clock=${clock}&sleep=${sleep}&tour=0`)
-      await page.waitForSelector('.scene .sky')
+      await page.waitForSelector('.scene .stage-back')
       await page.waitForTimeout(500)
       const scene = page.locator('.scene')
       const file = `sky-${label}.png`

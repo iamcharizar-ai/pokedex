@@ -1,0 +1,63 @@
+/* THE TODAY SCENE as a place (UI-AUDIT-2026-11-04 §5; stage.ts paints it, Stage.tsx holds the canvases).
+   Back canvas · the two Pokemon on their pads · front canvas · the nameplates. Every layer is pixel art at a
+   whole-number scale; the nameplates are the card's language (a dark plate, a type badge, a metal edge that
+   says how rare, a meter instead of numbers in a box). The cream boxes are retired. */
+
+.scene.v2 { isolation: isolate; overflow: hidden; background: var(--ground-lo); }
+.scene.v2 .stage { position: absolute; inset: 0; pointer-events: none; }
+.scene.v2 .stage canvas { position: absolute; left: 0; top: 0; image-rendering: pixelated; image-rendering: crisp-edges; }
+.scene.v2 .stage-back { z-index: 0; }
+.scene.v2 .stage-front { z-index: 3; }
+
+/* the pads are drawn on the canvas; these are only where each Pokemon stands (left/top come from the layout) */
+.scene.v2 .pad { left: auto; right: auto; top: auto; bottom: auto; z-index: 2; display: grid; justify-items: center; align-items: end; min-width: 48px; min-height: 48px; transform: translate(-50%, -100%); } /* a thumb's target even for a thin Pokemon */
+.scene.v2 .pad::before, .scene.v2 .pad::after { display: none; }
+.scene.v2 .pad .lit { display: block; filter: var(--lit, none); }
+.scene.v2 .foe-fit { position: relative; }
+.scene.v2 .foe-fit > img { position: absolute; max-width: none; image-rendering: pixelated; }
+.scene.v2 .me-pad img.sprite { display: block; }
+/* a Dynamax is the next whole size up (Scene), so the old fractional scale goes; the red glow stays */
+.scene.v2 .sprite.dynamax { transform: none; animation: none; }
+
+/* ── the nameplates ── */
+.np { --np-metal: var(--hair-hi); position: absolute; z-index: 5; display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; gap: 6px 8px; padding: 7px 10px 9px 7px;
+  color: var(--text); background: rgba(10, 14, 36, 0.8); border: 2px solid var(--np-metal); border-radius: 12px; box-shadow: 0 4px 0 var(--k-edge), 0 10px 22px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.np-foe { left: 10px; top: 10px; width: min(250px, 62%); }
+.np-me { right: 10px; bottom: 10px; width: min(250px, 50%); }
+.np-type { width: 24px; height: 24px; display: grid; place-items: center; border: 2px solid var(--k-edge); border-radius: 50%; background: var(--tc, var(--tone-blue)); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.4); }
+.np-type img { image-rendering: auto; }
+.np-name { display: flex; align-items: center; gap: 4px; min-width: 0; overflow: hidden; font: 400 16px/1.1 var(--k-face); white-space: nowrap; text-overflow: ellipsis; text-shadow: 0 2px 0 var(--k-edge); }
+.np-name .ico { flex: none; color: var(--k-gold-hi); filter: drop-shadow(0 1px 0 var(--k-edge)); }
+.np-lv { font: 400 17px/1 var(--k-face); color: #fff; -webkit-text-stroke: 3px var(--k-edge); paint-order: stroke fill; }
+.np-ball { display: grid; place-items: center; }
+.np-ball img { image-rendering: pixelated; }
+.np > .meter, .np-xp, .np-note, .np-flee { grid-column: 1 / -1; }
+.np-note { font-size: 13px; color: var(--text-2); }
+.np-xp { display: flex; align-items: center; gap: 7px; margin-top: 2px; }
+.np-xp > .meter { flex: 1; min-width: 0; }
+.np-gain { flex: none; padding: 0 6px 1px; font: 400 12px/1.3 var(--k-face); color: #fff; background: color-mix(in srgb, var(--meter-xp) 70%, #12205a); border-radius: 99px; box-shadow: 0 0 0 2px var(--k-edge); }
+/* how many days it has left: a pip a day, red */
+.np-flee { display: flex; gap: 4px; justify-content: flex-end; margin-top: -2px; }
+.np-flee i { width: 7px; height: 7px; border-radius: 2px; background: rgba(255, 255, 255, 0.12); }
+.np-flee i.on { background: var(--hp-low); box-shadow: 0 0 6px rgba(238, 75, 62, 0.6); }
+.np-tag { padding: 0 6px 1px; font-size: 11px; line-height: 1.3; text-shadow: none; color: var(--k-edge); border-radius: 99px; }
+.np-tag.mega { background: linear-gradient(90deg, #7fe3ff, #c8a8ff, #ffb3dc); }
+.np-tag.gmax { color: #fff; background: #d81b52; }
+
+/* rarity is the plate's metal, as a card's frame says its state */
+.np-foe.r-U { --np-metal: var(--metal-blue-hi); }
+.np-foe.r-R { --np-metal: var(--metal-pink-hi); }
+.np-foe.r-L { --np-metal: var(--metal-gold-hi); box-shadow: 0 4px 0 var(--k-edge), 0 0 22px var(--gold-glow); }
+.np.mega { border-color: transparent; background: linear-gradient(rgba(10, 14, 36, 0.86), rgba(10, 14, 36, 0.86)) padding-box, linear-gradient(135deg, #7fe3ff, var(--k-purple), var(--k-pink), var(--k-gold-hi)) border-box; }
+.np.gmax { --np-metal: #ff2f6d; box-shadow: 0 4px 0 var(--k-edge), 0 0 22px rgba(255, 47, 109, 0.55); }
+
+/* a Mega or Gigantamax day frames the whole place */
+.scene.v2.aura-mega::after, .scene.v2.aura-gmax::after { content: ''; position: absolute; inset: 0; z-index: 6; pointer-events: none; border-radius: inherit; }
+.scene.v2.aura-mega::after { box-shadow: inset 0 0 0 3px #7fe3ff, inset 0 0 22px rgba(169, 139, 255, 0.55); }
+.scene.v2.aura-gmax::after { box-shadow: inset 0 0 0 3px #ff2f6d, inset 0 0 30px rgba(255, 47, 109, 0.5); }
+
+@media (max-width: 479px) {
+  .np { padding: 6px 8px 8px 6px; gap: 5px 6px; }
+  .np-name { font-size: 15px; }
+}

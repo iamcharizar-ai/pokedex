@@ -45,7 +45,11 @@ import { play, setSoundOn, soundOn } from './lib/sfx.ts'
 import { LIFEOS_URL, start, useItem, useView } from './lib/store.ts'
 import { FIXTURE } from './lib/fixture-boot.ts'
 import { dropIn, floatNote, hit, lunge, party, react, ring, stamp, tapPop } from './lib/fx.ts'
-import { Sky, skyVars, sleepFor, useClock } from './screens/Sky.tsx'
+import { sleepFor, useClock } from './screens/Sky.tsx'
+import { Stage } from './screens/Stage.tsx'
+import { biomeOf, layoutFor, lightAt, litFilter, lookOf } from './screens/stage.ts'
+import { Meter } from './Meter.tsx'
+import { IcStar } from './lib/icons.tsx'
 import { PixelSprite } from './lib/pixel.tsx'
 import { ChestOpener, HatchOpener } from './Reveal.tsx'
 
@@ -65,11 +69,19 @@ const RARITY: Record<string, string> = { C: 'Common', U: 'Uncommon', R: 'Rare', 
 export const badgesWon = (game: Game): number =>
   LEAGUES.reduce((n, l, i) => n + l.gyms.filter((_, s) => badgeWon(game.league, i, s)).length, 0)
 
-/** Does a media query match now (and as it changes)? */
-function useMedia(q: string): boolean {
-  const [on, set] = useState(() => matchMedia(q).matches)
-  useEffect(() => { const m = matchMedia(q); const f = () => set(m.matches); m.addEventListener('change', f); return () => m.removeEventListener('change', f) }, [q])
-  return on
+/** The size of an element in screen pixels, kept up to date. */
+function useBox(ref: { current: HTMLElement | null }): [number, number] {
+  const [box, set] = useState<[number, number]>([0, 0])
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const read = () => set((was) => { const n: [number, number] = [Math.round(el.clientWidth), Math.round(el.clientHeight)]; return was[0] === n[0] && was[1] === n[1] ? was : n })
+    read()
+    const ro = new ResizeObserver(read)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  return box
 }
 
 /** An animated sprite at a whole-number scale: `size` is the box it should about fill (lib/pixel.tsx). */
@@ -153,55 +165,72 @@ function Scene({ game }: { game: Game }) {
     else { void img?.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-12px)' }, { transform: 'translateX(6px)' }, { transform: 'translateX(0)' }], { duration: 260, easing: 'ease-out' }) }
   }
   const press = (who: 'me' | 'foe') => (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pat(who) } }
-  // the partner's box: a phone has less room (the scene's own sizes are in index.css)
-  const narrow = useMedia('(max-width: 760px)')
-  const pct = clamp01(game.into / game.need)
-  const before = Math.min(pct, clamp01(game.intoBeforeToday / game.need))
+  // ── the stage: its size in screen pixels, the whole number it is enlarged by, and where things stand on it ──
+  const [cw, ch] = useBox(stage)
+  const k = cw < 480 ? 2 : 3
+  const lay = layoutFor(Math.max(1, Math.ceil(cw / k)), Math.max(1, Math.ceil(ch / k)))
+  const narrow = cw < 480
+  const wildRec = wild ? SPECIES[wild.form] : null
+  const meRec = SPECIES[game.display] ?? SPECIES[partner.form]
+  const stageState = {
+    lay, minutes, score, theme: game.theme, aura: game.aura,
+    biome: wildRec ? biomeOf(wildRec.t, wildRec.t2) : 'meadow' as const,
+    seed: wild?.form ?? partner.form, partnerTc: typeColor(meRec?.t),
+  }
+  const look = lookOf({ ...stageState, t: 0 })
+  const light = look.cave ? { b: 0.82, s: 0.85, warm: 0 } : lightAt(look.minutes, look.wx.gloom)
+  // the wild Pokemon: what is drawn in its picture, enlarged by a whole number to about two thirds of the partner's height
+  const boxes = useBoxes()
+  const [bl, bt, br, bb] = (wild && boxes?.[wild.form]) || [0, 0, 96, 96]
+  let kf = Math.max(1, Math.round((narrow ? 84 : 112) / Math.max(1, bb - bt)))
+  while (kf > 1 && (br - bl) * kf > (narrow ? 150 : 190)) kf--
+  // the partner's experience: today's part drawn brighter, and what today paid beside it
+  const gained = Math.max(0, game.into - game.intoBeforeToday)
+  const at = (sp: { x: number; y: number }) => ({ left: sp.x * k, top: (sp.y + 1) * k })
   return (
-    <section ref={stage} className={`scene ${game.theme} ${game.aura ? `aura-${game.aura}` : ''}`} style={skyVars(minutes, game.theme)} aria-label="Today, as a battle">
-      <Sky minutes={minutes} theme={game.theme} score={score} />
-      {wild && (
+    <section ref={stage} className={`scene v2 ${game.theme} ${game.aura ? `aura-${game.aura}` : ''}`} style={{ ['--lit' as string]: litFilter(light) } as CSSProperties} aria-label="Today, as a battle">
+      {cw > 0 && <Stage k={k} s={stageState} label={game.theme ? 'The scene' : look.wx.label} />}
+      {wild && wildRec && (
         <>
-          <div className="hpbox foe-box">
-            <div className="hp-top">
-              <span className="hp-name">{!wild.caught && <span className="hp-wild">Wild </span>}{nameOf(wild.form)}{wild.shiny && <span className="chip">shiny</span>}{wild.rarity !== 'C' && <span className={`chip r-${wild.rarity}`}>{RARITY[wild.rarity]}</span>}</span>
-              <span className="hp-lv ballname" title={wild.caught ? 'Caught' : BALL_NAME[today.ball]}><Ball ball={today.ball} size={18} /><span className="ballname-txt">{wild.caught ? 'Caught' : BALL_NAME[today.ball]}</span></span>
-            </div>
-            <HpBar variant="game" value={wild.hp} max={wild.max} name="The wild Pokemon" />
-            <div className="hp-sub"><span>{wild.caught ? 'In My Pokemon' : today.hit > 0 ? `Today −${today.hit}` : ''}{!wild.caught && wild.leavesIn !== undefined && wild.leavesIn <= 3 && <b className="leaving"> {wild.leavesIn === 0 ? 'Gets away tomorrow' : `Gets away in ${wild.leavesIn + 1} days`}</b>}</span><b>{wild.hp} / {wild.max}</b></div>
+          <div className={`np np-foe r-${wild.rarity}`} style={{ ['--tc' as string]: typeColor(wildRec.t) } as CSSProperties} title={wild.rarity !== 'C' ? RARITY[wild.rarity] : undefined}>
+            <span className="np-type" aria-hidden><img src={`/sprites/types/${wildRec.t}.png`} alt="" width={16} height={16} /></span>
+            <b className="np-name"><span className="sr-only">{wild.caught ? '' : 'Wild '}</span>{nameOf(wild.form)}{wild.shiny && <IcStar size={13} />}<span className="sr-only">{wild.rarity !== 'C' ? `, ${RARITY[wild.rarity]}` : ''}</span></b>
+            <span className="np-ball" title={wild.caught ? 'Caught' : `Today's ball: ${BALL_NAME[today.ball]}`}><Ball ball={today.ball} size={24} /></span>
+            {wild.caught
+              ? <span className="np-note">Caught · in My Pokemon</span>
+              : <Meter kind="hp" value={wild.hp} max={wild.max} lost={today.hit} name="The wild Pokemon's HP" label={`${wild.hp.toLocaleString('en-IN')} / ${wild.max.toLocaleString('en-IN')}`} size="lg" />}
+            {!wild.caught && wild.leavesIn !== undefined && wild.leavesIn <= 3 && (
+              <span className="np-flee" title={wild.leavesIn === 0 ? 'Gets away tomorrow' : `Gets away in ${wild.leavesIn + 1} days`} aria-label={wild.leavesIn === 0 ? 'Gets away tomorrow' : `Gets away in ${wild.leavesIn + 1} days`}>
+                {Array.from({ length: 4 }, (_, i) => <i key={i} className={i <= wild.leavesIn! ? 'on' : ''} />)}
+              </span>
+            )}
           </div>
-          <div className="pad foe-pad" role="button" tabIndex={0} aria-label={`Poke the wild ${nameOf(wild.form)}`} onClick={() => pat('foe')} onKeyDown={press('foe')}>
-            <img src={still(wild.form, wild.shiny)} alt="" width={96} height={96} className={`sprite ${wild.caught ? 'got' : ''}`} />
+          <div className="pad foe-pad" style={at(lay.foe)} role="button" tabIndex={0} aria-label={`Poke the wild ${nameOf(wild.form)}`} onClick={() => pat('foe')} onKeyDown={press('foe')}>
+            <span className="lit foe-fit" style={{ width: (br - bl) * kf, height: (bb - bt) * kf }}>
+              <img src={still(wild.form, wild.shiny)} alt="" width={96 * kf} height={96 * kf} className={`sprite ${wild.caught ? 'got' : ''}`} style={{ left: -bl * kf, top: -bt * kf, width: 96 * kf, height: 96 * kf }} draggable={false} />
+            </span>
             {wild.caught && <Ball ball={today.ball} size={34} className="caughtball" />}
             {!wild.caught && <Pop value={today.hit} />}
           </div>
         </>
       )}
-      <div className="pad me-pad" role="button" tabIndex={0} aria-label={`Pat ${nameOf(game.display)}`} onClick={() => pat('me')} onKeyDown={press('me')}>
-        {/* a perfect day: a Gigantamax form when it has one, else it Dynamaxes (the same Pokemon, giant, glowing red) */}
-        <Sprite form={game.display} shiny={partner.shiny} size={narrow ? 136 : 184} className={`${game.asleep ? 'asleep' : ''} ${game.aura === 'gmax' && game.display === partner.form ? 'dynamax' : ''}`} />
+      <div className="pad me-pad" style={at(lay.me)} role="button" tabIndex={0} aria-label={`Pat ${nameOf(game.display)}`} onClick={() => pat('me')} onKeyDown={press('me')}>
+        {/* a perfect day: a Gigantamax form when it has one, else it Dynamaxes (the same Pokemon, the next whole size up, glowing red) */}
+        <span className="lit"><Sprite form={game.display} shiny={partner.shiny} size={(narrow ? 150 : 200) * (game.aura === 'gmax' && game.display === partner.form ? 1.5 : 1)} className={`${game.asleep ? 'asleep' : ''} ${game.aura === 'gmax' && game.display === partner.form ? 'dynamax' : ''}`} /></span>
         {game.asleep && <span className="zzz" aria-hidden>Zzz</span>}
       </div>
-      <div className="hpbox me-box">
-        <div className="hp-top">
-          <span className="hp-name">
-            {nameOf(game.display)}
-            {partner.shiny && <span className="chip">shiny</span>}
-            {game.aura === 'mega' && <span className="chip mega">mega</span>}
-            {game.aura === 'gmax' && <span className="chip gmax">{game.display === partner.form ? 'dynamax' : 'g-max'}</span>}
-          </span>
-          <span className="hp-lv">Lv{game.level}</span>
-        </div>
-        <div className="hp-row">
-          <b>EXP</b>
-          <div ref={xpBar} className="bar" role="progressbar" aria-valuemin={0} aria-valuemax={game.need} aria-valuenow={Math.round(game.into)} aria-valuetext={`${Math.round(game.into)} of ${game.need} XP, ${Math.round(game.into - game.intoBeforeToday)} of it earned today`} aria-label="Progress to the next level">
-            <i className="base" style={{ width: `${before * 100}%` }} />
-            <i className="today" style={{ width: `${(pct - before) * 100}%` }} />
-          </div>
-        </div>
-        <div className="hp-sub">
-          <span><span className="key" />banked <span className="key today" style={{ marginLeft: 8 }} />today <b>+{today.xp}</b></span>
-          <b>{Math.round(game.into)} / {game.need}</b>
+      <div className={`np np-me ${game.aura ?? ''}`} style={{ ['--tc' as string]: typeColor(meRec?.t) } as CSSProperties}>
+        <span className="np-type" aria-hidden><img src={`/sprites/types/${meRec?.t}.png`} alt="" width={16} height={16} /></span>
+        <b className="np-name">
+          {nameOf(game.display)}
+          {partner.shiny && <IcStar size={13} />}
+          {game.aura === 'mega' && <span className="np-tag mega">Mega</span>}
+          {game.aura === 'gmax' && <span className="np-tag gmax">{game.display === partner.form ? 'Dynamax' : 'G-Max'}</span>}
+        </b>
+        <b className="np-lv">Lv {game.level}</b>
+        <div ref={xpBar} className="np-xp" title={`${Math.round(game.into).toLocaleString('en-IN')} of ${game.need.toLocaleString('en-IN')} XP to Lv ${game.level + 1}`}>
+          <Meter kind="xp" value={game.into} max={game.need} today={gained} name="Progress to the next level" />
+          {today.xp > 0 && <span className="np-gain" aria-hidden>+{today.xp.toLocaleString('en-IN')}</span>}
         </div>
       </div>
     </section>

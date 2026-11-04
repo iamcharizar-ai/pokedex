@@ -42,4 +42,5 @@
 @import '../screens/bond.css' layer(screens);
 @import '../screens/lab.css' layer(screens);
 @import '../screens/parts.css' layer(screens);
+@import '../screens/scene.css' layer(screens);
 @import '../screens/presets.css' layer(motion);
