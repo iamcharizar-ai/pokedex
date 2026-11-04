@@ -6,7 +6,7 @@ Written 5 Nov 2026 at the end of a cloud session, for a local Claude Code sessio
 - §8 is the phased plan
 - the Progress notes are at the end
 
-**Status:** phases 0 to 5 are done and **merged into `master`** (so they deploy with it). Phases 6 to 9 are left.
+**Status (updated 5 Nov 2026, local session):** phases 0 to 9 are done and on `master`. What is left is in §5 (the leftovers, and the parts of phase 9 that need rewriting rather than moving).
 
 ---
 
@@ -14,13 +14,13 @@ Written 5 Nov 2026 at the end of a cloud session, for a local Claude Code sessio
 
 1. `git checkout master && git pull`. The work came from the branch `claude/trusting-hopper-z9jl9q` and is merged.
 2. `npm ci`, then check you start green:
-   - `npm test` (207 pass)
+   - `npm test` (208 pass)
    - `npx tsc -b`
    - `npm run build`
    - `npm run a11y -- --strict` (0 small targets, 0 unnamed)
    - `npm run shots` (30 of 30 the same)
 3. `VITE_SUPABASE_DISABLE=1 npm run dev`, then open `http://localhost:5190/?fixture=late&tour=0`. **Never run against the real ledger.**
-4. Do phase 6 (§5). Stop after each phase with before/after screenshots for the owner (§4).
+4. The baselines in `tests/baseline` were taken on Windows (the owner's PC). On Linux, text smoothing differs: re-take them there from unchanged code first, in their own commit, before judging a change.
 
 ---
 
@@ -64,7 +64,12 @@ From the original brief:
 | 3 Party | `546770a` | See below |
 | 4 Today below the scene | `3240cef`, `cab0fb3`, baselines `63f802c` and `3ac35a6` | See below |
 | 5 Overlays | `cd4aece`, `cab0fb3` | See below |
-| Loose ends | the last commit before the merge | See below |
+| Loose ends | `99ac3ba` | See below |
+| Windows baselines | `22ad19f` | No screen change; text smoothing only |
+| 6 Shop | `d099fa6` | See below |
+| 7 Pokedex | `1f58e95` | See below |
+| 8 Journey | `41aae4e` | See below |
+| 9 Legacy | `fef0155`, baselines `5c17925` | See below |
 
 **Phase 0, defects:**
 - The news window no longer opens scrolled past its reveal.
@@ -139,6 +144,30 @@ From the original brief:
 - The plate's tag no longer gets cut off.
 - The help's Season and Level 100 pictures are real pieces.
 
+**Phase 6, Shop:**
+- Every ware is an `ObjCard`: the field is its kind (`catColor`, a TM's type), the metal says whether you can buy it (gold yes, grey `locked` not yet, silver bought or sold; a grey ware's item stays visible, dimmed), and the banner is the price with what you hold of it filled in behind (`--held`).
+- X items and TMs carry their kind of work as the corner badge (not inside that work's own shop).
+- The three bought scenes are a still `MiniScene` (`screens/Stage.tsx`), the meadow painted at 50×52, ×2.
+- Shelf headings are `ShelfHead`: one word and an icon, the old sentence in the tip.
+- Shop › Marks is one `.pmenu.sub` row. Incense is gone from the Shop's Gems counter.
+- The Collector: glass slots, a ×2 stamp on today's wanted ones (the ones you lack shown dark), tap them in and one total counts up; one Sell (everything when nothing is picked).
+
+**Phase 7, Pokedex:**
+- Each entry is a mini `ObjCard` (`.dexcard`): caught is the type colour, seen only is that field faded, not seen is the grey frame and a silhouette; the ball is the corner badge, the number the banner, fully trained the gold frame, a Mega the Mega frame. The sprite is `CropSprite` at 1× (`lazy`).
+- The header is `SegRing` (caught, seen only, the track for not seen) with a key of three dots and numbers.
+
+**Phase 8, Journey:**
+- The season road: one collected node (a stamp when a step was collected since you last looked, `pokedex:season-seen`), the step you are on lit, the next ones locked; the rule in the tip.
+- Legend quests: a card per key, a silhouette until caught, the key and what earns it lit or dark in the corners; Use only under a key usable now; tap a card for where its key comes from.
+- League trail: badges not yet won are a readable grey; the Rematch sentence is the heading's tip.
+- Every `KBar` outside the kit page is now `Meter` (feats and their folds, quests, pay, the Frontier, boss tasks, the Forge).
+
+**Phase 9, legacy:**
+- The five old stylesheets open the `screens` layer, first and in their old order; `legacy` is empty. Proved by the screenshots and by `tools/stylediff.mjs` (every element's computed style in ~100 states, old build against new). The old declarations that had only lost because of the layer were deleted.
+- `.ring` (Pokedex) had been leaking onto the news reveal's ring and pushing its badge down: it is `.dexring` now.
+- Item icons at 24, 48, 72 or 120 only (16 on tiny chips). The Bag is unchanged. The top bar's and sub-menus' icons went from 30 to 24.
+- Secondary actions are `.pill-btn` (in `parts.css`, with `gold` and `green`); each screen's one main action keeps `.k-btn`.
+
 ---
 
 ## 3. The parts to build from
@@ -193,69 +222,23 @@ console.log(h.digest('hex'))
 
 ---
 
-## 5. What is left, in order
+## 5. What is left
 
-### Phase 6: Shop
+### Needs the owner's decision
+- **The bought beach scene** is the meadow at noon, an older bug. A `shore` place exists now. Switching it (`biome = game.theme === 'theme-beach' ? 'shore' : …` in `Scene`) changes what a bought scene looks like, so ask first. The Shop's Beach miniature would follow (`MiniScene` paints the meadow).
+- **Top bar and sub-menu icons** are 24 px now (were 30, not a whole scale). If they read too small, the fix is a bigger box drawn at 48, not 30.
 
-Files: the shops in `src/Play.tsx` (the `.ware` cards and their sheet), the Collector in `src/Champion.tsx`, `screens/shop.css`, and the `.ware` rules in `screens/menu.css`.
+### Phase 9, the rewriting part
+- The five old files still hold about 1,000 used rules, and the cream palette block in `tokens.css` is still read by them (`--edge` 46 times, `--lbl` 29, `--muted` 24). Retiring them means moving each rule into the screen it styles and deleting what a screen overrides, a screen at a time, with `tools/stylediff.mjs` proving each step.
+- The kit page (`?kit`) shows small spacing differences after the layer move (its `.kit` collides with the training kit's `.kit`). Dev-only.
 
-1. **Wares on `ObjCard`** (T8, T9):
-   - the field is `catColor(ITEMS[id].kind)`
-   - the item at 48 or 72 px
-   - a kind-of-work badge in a corner for X items and TMs
-   - the metal says affordability: `gold` if you can buy it, `locked` if you can't, `silver` otherwise
-   - the price on the banner, with your wallet as a meter behind it
-   - buying: a `pre-pop`, the banner drains, and the coin chip ticks down (`lib/fly.ts` exists)
-2. **Theme wares** (T12): a live miniature of the scene. `paintBack` and `paintFront` from `stage.ts` can draw a small canvas at k = 1. Pass the theme, and the meadow as the biome.
-3. **The Collector** (T10): the treasures as `Slot material="glass"`, a gold "×2" `stamp` on today's wanted ones, one running total, and one Sell button. Drop the ten blue Sell buttons and the "on its day" prose.
-4. **Shelf headings:** one word plus an icon, not a sentence in capitals.
-5. **Shop › Marks:** fold the third level of navigation into one segmented row.
-6. **Incense:** remove its section from Shop › Gems & BP (keep the ware).
-7. Baselines: `*-shop`.
-
-### Phase 7: Pokedex
-
-Files: `DexTab` in `src/App.tsx`, `screens/dex.css`, and the `.dex2` and `.dx` overrides in `screens/menu.css` (the later one wins; merge them).
-
-1. **Cells as mini `ObjCard`s** (about 76 px, 3 to 4 across):
-   - caught: the type's colour as the field (now every caught cell is the same gold)
-   - seen only: a desaturated field
-   - not seen: a dark silhouette
-   - the ball as a corner badge
-   - the sprite at 1× via `CropSprite`, not 56 px
-2. **Header** (T21): one segmented ring (caught, seen, not seen) replaces the four numbers in prose.
-3. **Keep one flat grid** with `content-visibility`.
-4. Baselines: `*-pokedex`.
-
-### Phase 8: Journey
-
-Files: `src/Road.tsx`, `src/Feats.tsx`, `src/Champion.tsx` (LegendWin, FrontierWin), `screens/journey.css`.
-
-1. **Season road:** node states (locked, ready, collected) with `pre-stamp` when a step is collected. The rule sentence goes into a tip.
-2. **Legend quests** (T20): silhouette `ObjCard`s with the requirement's icon lit or dark. Use appears only when it can be used; drop the chunky gold Use on every row.
-3. **League trail:** lift the badge silhouettes from near-black to a readable grey. The Rematch sentence goes into a tip.
-4. **Feats:** use `Meter` for "Closest to done" and the fold.
-5. **Quests and Frontier:** their `KBar`s become `Meter`.
-6. Baselines: `*-journey`.
-
-### Phase 9: retire legacy
-
-1. **The legacy layer** (`index.css`, `kit.css`, `skin.css`, `motion.css`, `economy.css`, about 1,000 rules): move what still applies into `screens/*.css` and delete the rest. The aim is an empty `legacy` layer with the screenshots unchanged.
-2. **`k-btn`** keeps its chunky look only for a screen's one main action; the rest become pills.
-3. **Retire the cream palette block** in `tokens.css`.
-4. **Item icon sweep:** `grep -rn "ItemIcon id=.* size={" src`. Every size should be 24, 48 or 72 (16 only for tiny chips).
-
-### Small things left from earlier phases
-
+### Small things
 - More help rules could use real pieces (Gems, Milestones and a few others still use number chips).
-- **The bought beach scene** is the meadow at noon, an older bug. A `shore` place exists now. Ask before switching the beach to it (`biome = game.theme === 'theme-beach' ? 'shore' : …` in `Scene`), because it changes what a bought scene looks like.
 - **On desktop**, a big partner (Tangrowth) draws at 2× on a 3× stage. This is accepted.
 - **A Dynamax** can touch the scene's left edge on a phone.
 
----
-
 ## 6. Deploying
 
-- Production is `master`, built by Vercel. Phases 0 to 5 are merged into it.
+- Production is `master`, built by Vercel. Phases 0 to 9 are on it.
 - The sprites are a separate Vercel project (`npm run sprites:deploy`), and nothing here changed them.
 - `public/world/` was removed. The service worker and `vercel.json` never referenced it.
