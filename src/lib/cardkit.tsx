@@ -80,8 +80,10 @@ export function useFlip(held: RefObject<string | null>): void {
     const calm = matchMedia('(prefers-reduced-motion: reduce)').matches
     document.querySelectorAll<HTMLElement>('[data-flip]').forEach((el) => {
       const id = el.dataset.flip as string
+      // measured from the screen the card is on (not the window), so a tab sliding in, the page scrolling or a sheet opening never looks like a card moving
       const r = el.getBoundingClientRect()
-      const at = { x: r.left + scrollX, y: r.top + scrollY }
+      const root = (el.closest('.pane') ?? document.body).getBoundingClientRect()
+      const at = { x: r.left - root.left, y: r.top - root.top }
       next.set(id, at)
       const was = rects.current.get(id)
       if (!was || calm || id === held.current) return

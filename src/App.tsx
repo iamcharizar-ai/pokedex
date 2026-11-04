@@ -1190,6 +1190,8 @@ export default function App() {
   const dragMove = (e: PointerEvent<HTMLElement>) => {
     const d = drag.current
     if (!d || e.pointerId !== d.id) return
+    // a card is being carried (Team screen): the page stays where it is
+    if (document.body.classList.contains('dragging')) { drag.current = null; return }
     const dx = e.clientX - d.x, dy = e.clientY - d.y
     if (d.dir === 0) {
       // a mostly upright drag is a scroll, and the page keeps it

@@ -178,3 +178,9 @@ body.dragging .mc, body.dragging .mc:hover { transform: none; cursor: grabbing; 
 .mc.full.empty .mc-lv { position: absolute; }
 .mc.full.held .mc-hearts { visibility: hidden; }
 .mc.full.locked .mc-fit { filter: brightness(0) opacity(0.45); }
+
+/* a finger held on a card: it fills with light while the hold completes, then the card lifts */
+.mc.pressing .mc-f { animation: mc-charge 950ms linear forwards; }
+@keyframes mc-charge { from { box-shadow: 0 4px 0 var(--k-edge), 0 0 0 0 rgba(255, 216, 74, 0); filter: brightness(1); } to { box-shadow: 0 4px 0 var(--k-edge), 0 0 0 4px var(--k-gold-hi), 0 0 22px var(--gold-glow); filter: brightness(1.18); } }
+.mc.pressing { transform: scale(0.97); }
+@media (prefers-reduced-motion: reduce) { .mc.pressing .mc-f { animation: none; box-shadow: 0 4px 0 var(--k-edge), 0 0 0 3px var(--k-gold-hi); } }

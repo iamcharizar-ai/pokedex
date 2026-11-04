@@ -2,8 +2,9 @@
 // drag layer (the browser's drag and drop cannot be styled and does not work on touch).
 //
 //   mouse: the drag starts after 4px of movement.
-//   touch: after a 150ms press that has not moved (the page keeps scrolling if you move first), or at
-//          once on a clear sideways move. A quick tap is never a drag: it stays a click.
+//   touch: only after a press held still for HOLD_MS (so a brush or a misclick never picks a card up).
+//          Move before that and it is a scroll or a swipe between tabs, which the page keeps. A quick tap
+//          stays a click. Once the card is up, the page does not scroll or swipe (body.dragging; App.tsx).
 //
 // While it runs, a copy of the card follows the pointer (lifted, tilted by how fast it moves) and the
 // page scrolls near its top and bottom edges. What is under the pointer is told to `hooks.hover`;
@@ -22,13 +23,17 @@ export interface DragHooks {
   end(): void
 }
 
-const HOLD_MS = 150
+/** How long a finger must stay down on a card before it lifts. */
+export const HOLD_MS = 1200
+/** The card starts to show it is being held after this long, so the wait is not a mystery. */
+const CUE_MS = 250
 const MOUSE_PX = 4
 const TOUCH_SLOP = 8
 let busy = false
 
 const clamp = (n: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, n))
-const frames = (n: number): Promise<void> => new Promise((res) => { const f = (k: number) => (k <= 0 ? res() : requestAnimationFrame(() => f(k - 1))); f(n) })
+/** Wait n frames, or n x 50ms if the page is not drawing frames (a hidden tab), so a drop can never be left half-done. */
+const frames = (n: number): Promise<void> => new Promise((res) => { const t = window.setTimeout(res, n * 50); const f = (k: number) => (k <= 0 ? (clearTimeout(t), res()) : requestAnimationFrame(() => f(k - 1))); f(n) })
 const calm = (): boolean => matchMedia('(prefers-reduced-motion: reduce)').matches
 
 /** The place or the lab under a point, from the data-place and data-lab marks on the screen. */
@@ -56,7 +61,7 @@ export function startPress(init: { x: number; y: number; id: number; type: strin
   const rect = card.getBoundingClientRect()
   const ox = init.x - rect.left, oy = init.y - rect.top
   let x = init.x, y = init.y, lastX = init.x, tilt = 0
-  let active = false, ghost: HTMLElement | null = null, raf = 0, timer = 0, hover = '', over: Target | null = null
+  let active = false, ghost: HTMLElement | null = null, raf = 0, timer = 0, cue = 0, hover = '', over: Target | null = null
 
   const place = () => { if (ghost) ghost.style.transform = `translate3d(${x - ox}px, ${y - oy}px, 0) rotate(${tilt}deg) scale(${calm() ? 1 : 1.08})` }
 
@@ -78,6 +83,8 @@ export function startPress(init: { x: number; y: number; id: number; type: strin
     active = true
     busy = true
     clearTimeout(timer)
+    clearTimeout(cue)
+    card.classList.remove('pressing')
     ghost = card.cloneNode(true) as HTMLElement
     ghost.classList.add('mc-ghost')
     ghost.removeAttribute('aria-haspopup')
@@ -98,6 +105,8 @@ export function startPress(init: { x: number; y: number; id: number; type: strin
     window.removeEventListener('touchmove', stopScroll)
     window.removeEventListener('contextmenu', noMenu)
     clearTimeout(timer)
+    clearTimeout(cue)
+    card.classList.remove('pressing')
     cancelAnimationFrame(raf)
   }
 
@@ -107,10 +116,8 @@ export function startPress(init: { x: number; y: number; id: number; type: strin
     if (active) return
     const dx = x - init.x, dy = y - init.y, d = Math.hypot(dx, dy)
     if (!touch) { if (d >= MOUSE_PX) begin(); return }
-    if (d <= TOUCH_SLOP) return
-    // a touch that moved before the press was held: sideways is ours, anything else is the page being scrolled
-    if (Math.abs(dx) > 10 && Math.abs(dx) > 2 * Math.abs(dy)) begin()
-    else off()
+    // a touch that moved before the press was held is the page being scrolled or swiped: let it go
+    if (d > TOUCH_SLOP) off()
   }
 
   const up = async (e: PointerEvent) => {
@@ -145,5 +152,8 @@ export function startPress(init: { x: number; y: number; id: number; type: strin
   window.addEventListener('pointercancel', up)
   window.addEventListener('touchmove', stopScroll, { passive: false })
   window.addEventListener('contextmenu', noMenu)
-  if (touch) timer = window.setTimeout(begin, HOLD_MS)
+  if (touch) {
+    timer = window.setTimeout(begin, HOLD_MS)
+    cue = window.setTimeout(() => card.classList.add('pressing'), CUE_MS)
+  }
 }
