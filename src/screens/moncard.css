@@ -82,10 +82,13 @@
 .mc-head .k-label:nth-of-type(2) { margin-left: auto; }
 .mc-chip { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 11px; font-family: var(--k-face); font-size: 14px; color: var(--k-edge); background: var(--tone-gold); border-radius: 99px; }
 .mc-note { margin: 4px 0 0; font-size: 12.5px; color: var(--text-2); }
-.mc-sort { margin-left: 0; display: inline-flex; align-items: center; gap: 4px; padding: 3px; background: var(--well); border: 1px solid var(--hair); border-radius: 99px; }
-.mc-sort button { min-height: 28px; padding: 0 10px; font-family: var(--k-face); font-size: 12.5px; color: var(--text-2); background: none; border: 0; border-radius: 99px; cursor: pointer; }
-.mc-sort button[aria-pressed='true'] { color: var(--k-edge); background: var(--tone-gold); }
-.mc-sort button:focus-visible { outline: 2px solid #fff; }
+/* the pill you see is 28px; the button around it is 44px tall, so a thumb finds it (npm run a11y) */
+.mc-sort { margin-left: 0; display: inline-flex; align-items: center; gap: 4px; padding: 0 3px; background: var(--well); border: 1px solid var(--hair); border-radius: 99px; }
+.mc-sort button { min-height: 44px; padding: 0; font-family: var(--k-face); font-size: 12.5px; color: var(--text-2); background: none; border: 0; border-radius: 99px; cursor: pointer; }
+.mc-sort button > span { display: grid; place-items: center; min-height: 28px; padding: 0 10px; border-radius: 99px; }
+.mc-sort button[aria-pressed='true'] > span { color: var(--k-edge); background: var(--tone-gold); }
+.mc-sort button:focus-visible { outline: none; }
+.mc-sort button:focus-visible > span { outline: 2px solid #fff; }
 .mc-emptylab { grid-column: span 2; align-content: center; display: grid; justify-items: center; gap: 6px; padding: 18px 12px; text-align: center; color: var(--text-2); border: 2px dashed var(--hair-hi); border-radius: var(--r-3); }
 .mc-emptylab b { font-family: var(--k-face); font-weight: 400; font-size: 17px; color: var(--text); }
 .mc-emptylab small { max-width: 34ch; font-size: 13px; line-height: 1.4; }
@@ -171,7 +174,8 @@ body.dragging .mc, body.dragging .mc:hover { transform: none; cursor: grabbing; 
 .mc.full .mc-lv b { font-size: 15px; }
 .mc.full .mc-hearts { height: 19px; margin-top: 7px; border-radius: 7px; background: #0c1126; box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.5), 0 0 0 2px var(--k-edge); }
 .mc.full .mc-hearts.elite { background: linear-gradient(90deg, var(--k-gold), var(--k-gold-hi), var(--k-gold)); }
-.mc.full.empty .mc-art { height: 172px; }
+.mc.full.empty .mc-art { height: 172px; background: var(--surface-1); } /* an open place is quiet: no type, so no type colour */
+.mc.full.empty .mc-lv { background: none; }
 .mc.full.empty .mc-f::after { display: none; }
 .mc.full.empty::after { content: ''; display: block; height: 25px; }
 .mc.full.empty .mc-lv { position: absolute; }
@@ -183,3 +187,8 @@ body.dragging .mc, body.dragging .mc:hover { transform: none; cursor: grabbing; 
 @keyframes mc-charge { from { box-shadow: 0 4px 0 var(--k-edge), 0 0 0 0 rgba(255, 216, 74, 0); filter: brightness(1); } to { box-shadow: 0 4px 0 var(--k-edge), 0 0 0 4px var(--k-gold-hi), 0 0 22px var(--gold-glow); filter: brightness(1.18); } }
 .mc.pressing { transform: scale(0.97); }
 @media (prefers-reduced-motion: reduce) { .mc.pressing .mc-f { animation: none; box-shadow: 0 4px 0 var(--k-edge), 0 0 0 3px var(--k-gold-hi); } }
+
+/* ── a long lab (300 cards on the boss fixture) draws only the cards near the screen ──
+   content-visibility clips what is inside to the box, so each card has 8px of room around it
+   (taken back by the margin) for its hover lift, its frame's glow and the focus ring. */
+.mon-grid > [role='listitem'] { content-visibility: auto; contain-intrinsic-size: auto 120px auto 204px; padding: 8px; margin: -8px; }

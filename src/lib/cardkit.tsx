@@ -56,7 +56,7 @@ export function LookToggle({ look, setLook }: { look: CardLook; setLook: (l: Car
     <>
       <span className="k-label">Cards</span>
       <div className="mc-sort" role="group" aria-label="How the cards look">
-        {([['full', 'Full art'], ['classic', 'Classic']] as [CardLook, string][]).map(([id, name]) => <button key={id} type="button" aria-pressed={look === id} onClick={() => setLook(id)}>{name}</button>)}
+        {([['full', 'Full art'], ['classic', 'Classic']] as [CardLook, string][]).map(([id, name]) => <button key={id} type="button" aria-pressed={look === id} onClick={() => setLook(id)}><span>{name}</span></button>)}
       </div>
     </>
   )
@@ -66,7 +66,7 @@ export function LookToggle({ look, setLook }: { look: CardLook; setLook: (l: Car
 export function SortBar<T extends string>({ sorts, value, onChange }: { sorts: [T, string][]; value: T; onChange: (s: T) => void }) {
   return (
     <div className="mc-sort" role="group" aria-label="Sort the lab">
-      {sorts.map(([id, name]) => <button key={id} type="button" aria-pressed={value === id} onClick={() => onChange(id)}>{name}</button>)}
+      {sorts.map(([id, name]) => <button key={id} type="button" aria-pressed={value === id} onClick={() => onChange(id)}><span>{name}</span></button>)}
     </div>
   )
 }

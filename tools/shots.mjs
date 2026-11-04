@@ -62,8 +62,9 @@ try {
   const ctx = await browser.newContext({ viewport: VIEW, deviceScaleFactor: 1, reducedMotion: 'reduce', serviceWorkers: 'block' })
   await ctx.addInitScript(() => {
     // nothing may move, and a fixed clock keeps "today" out of the pictures
+    // content-visibility (long grids) skips what is off screen, and a full-page picture would show those cells empty
     const style = document.createElement('style')
-    style.textContent = '*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}'
+    style.textContent = '*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important;content-visibility:visible!important}'
     document.addEventListener('DOMContentLoaded', () => document.head.appendChild(style))
   })
   // the Home scene at different times and after different nights (`?clock=` and `?sleep=` are for fixtures)

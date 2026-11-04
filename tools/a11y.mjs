@@ -27,6 +27,8 @@ const weight = []
 try {
   for (const fx of FIXTURES) {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce', serviceWorkers: 'block' })
+    // long grids skip what is off screen (content-visibility); everything is measured here, so everything is laid out
+    await ctx.addInitScript(() => document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '*{content-visibility:visible!important}'; document.head.appendChild(st) }))
     const page = await ctx.newPage()
     let files = 0, bytes = 0
     page.on('response', async (r) => { files++; try { bytes += (await r.body()).length } catch { /* redirects have none */ } })

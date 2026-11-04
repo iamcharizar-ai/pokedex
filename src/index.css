@@ -19,7 +19,7 @@ p { margin: 6px 0; }
 .muted { color: var(--muted); font-size: 15px; }
 .sprite { image-rendering: pixelated; object-fit: contain; }
 .unseen { filter: brightness(0) opacity(0.45); }
-.asleep { filter: grayscale(1) brightness(0.65); }
+.asleep { filter: brightness(0.78) saturate(0.75); } /* dozing, not locked: grey is what a silhouette looks like */
 
 /* ── the device: red Pokedex top with its lens ─────────────────────────── */
 .shell { max-width: 1000px; margin: 0 auto; padding: 0 16px 56px; }
@@ -280,10 +280,6 @@ details.fold .list { padding-left: 14px; }
 .ballname { display: inline-flex; align-items: center; gap: 6px; }
 .foe-pad .caughtball { position: absolute; z-index: 2; right: -6px; bottom: 4px; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.35)); }
 .item.off { background: var(--win-2); box-shadow: none; }
-.caserow { display: grid; grid-template-columns: 84px 1fr; align-items: center; gap: 10px; margin-bottom: 8px; }
-.caserow .badges { justify-content: start; padding: 8px 10px; }
-.keyrow { display: flex; align-items: center; gap: 12px; margin-top: 10px; padding-top: 10px; border-top: 2px dashed rgba(35, 40, 58, 0.3); }
-.keyrow p { margin: 0; }
 .facts.notes { display: grid; grid-template-columns: 1fr; gap: 6px; margin-bottom: 10px; }
 
 /* ── the recap: what is new, said once ──────────────────────────────────── */
@@ -322,9 +318,7 @@ details.fold .list { padding-left: 14px; }
   main { margin-top: 14px; }
     .scene { height: 390px; }
   .me-pad { left: 5%; bottom: 112px; }
-  .me-pad img { width: 136px !important; height: 136px !important; }
   .foe-pad { right: 8%; top: 104px; }
-  .foe-pad img { width: 80px !important; height: 80px !important; }
   .hpbox { padding: 6px 10px 8px; }
   .foe-box { left: 3%; top: 10px; width: 62%; }
   .me-box { left: 3%; right: 3%; bottom: 10px; width: auto; }
@@ -339,7 +333,6 @@ details.fold .list { padding-left: 14px; }
   .card .who { width: 96px; height: 96px; position: absolute; right: 14px; top: 14px; }
   .chart .y, .chart .bars { height: 130px; }
   .tiers { grid-template-columns: repeat(2, 1fr); }
-        .caserow { grid-template-columns: 1fr; gap: 4px; }
   .recap { place-items: end center; padding-bottom: 76px; }
 }
 @media (prefers-reduced-motion: reduce) {

@@ -4,10 +4,6 @@
    so the shelf stays a shelf. */
 
 /* ── which shop: a row of signs ── */
-.shopchips { gap: var(--s-2); padding: 2px 2px var(--s-1); margin: 0 -2px; }
-.shopchips .k-btn { min-height: 44px; padding: 0 var(--s-4) 0 var(--s-3); font-size: 15px; color: var(--text-2); -webkit-text-stroke: 0; text-shadow: none; background: var(--surface-1); border: 1px solid var(--hair-hi); border-radius: 99px; box-shadow: none; }
-.shopchips .k-btn:active { transform: scale(0.97); box-shadow: none; }
-.shopchips .k-btn.main { color: var(--k-edge); background: linear-gradient(#ffe27a, var(--tone-gold)); border-color: transparent; box-shadow: 0 0 16px var(--gold-glow); }
 
 /* ── the shelf ── */
 .shelf-label { display: block; margin: var(--s-2) 0 calc(var(--s-1) * -1); }
@@ -68,7 +64,6 @@
 .gear.on img { background: color-mix(in srgb, var(--tone-gold) 20%, transparent); box-shadow: 0 0 0 1px var(--tone-gold); }
 
 /* the egg warming, under the Rare shelf */
-.eggrow { background: none; border: 0; border-top: 1px solid var(--hair); border-radius: 0; padding: var(--s-3) 0 0; }
 
 /* where everything comes from: a plain list */
 .earn { gap: var(--s-3); }

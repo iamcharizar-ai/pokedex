@@ -562,25 +562,25 @@ export function Bag({ game }: { game: Game }) {
   }
   const cell = (id: string | null, i: number) => {
     const cls = `${drag && drag.over === i && drag.id !== id ? 'over' : ''} ${drag?.id === id ? 'held' : ''} ${carry === id && id !== null ? 'carried' : ''}`
-    if (id === null) return <span key={`b${i}`} className={`mc-slot blank ${cls} ${drag || carry ? 'drop' : ''}`} data-place={i} onClick={carry ? () => { if (dropOn(carry, i)) setCarry(null) } : undefined} aria-hidden />
+    if (id === null) return <span key={`b${i}`} className={`inv-slot blank ${cls} ${drag || carry ? 'drop' : ''}`} data-place={i} onClick={carry ? () => { if (dropOn(carry, i)) setCarry(null) } : undefined} aria-hidden />
     if (id.startsWith('badge:')) {
       const [li, gi] = id.split(':').slice(1).map(Number)
       const l = LEAGUES[li], t = l.gyms[gi]
       return (
-        <button key={id} type="button" className={`mc-slot medal ${cls}`} data-place={i} data-flip={id} onPointerDown={press(id)} onClick={() => tap(id, i)} aria-label={`${badgeName(t)}, ${l.name}. Open`}>
+        <button key={id} type="button" className={`inv-slot medal ${cls}`} data-place={i} data-flip={id} onPointerDown={press(id)} onClick={() => tap(id, i)} aria-label={`${badgeName(t)}, ${l.name}. Open`}>
           <GymBadge art={badgeArt(li, gi)} on n={gi + 1} size={32} title="" />
-          <span className="mc-tip" aria-hidden><b>{badgeName(t)}</b><small>{l.name} · won from {t.name}</small></span>
+          <span className="inv-tip" aria-hidden><b>{badgeName(t)}</b><small>{l.name} · won from {t.name}</small></span>
         </button>
       )
     }
     const on = game.partner.held === id || equipped.includes(id) || game.theme === id
     const n = have(id)
     return (
-      <button key={id} type="button" className={`mc-slot ${on ? 'on' : ''} ${cls}`} data-place={i} data-flip={id} onPointerDown={press(id)} onClick={() => tap(id, i)} aria-label={`${itemName(id)}, ${n || 'held'}${on ? ', in use' : ''}. Open`}>
+      <button key={id} type="button" className={`inv-slot ${on ? 'on' : ''} ${cls}`} data-place={i} data-flip={id} onPointerDown={press(id)} onClick={() => tap(id, i)} aria-label={`${itemName(id)}, ${n || 'held'}${on ? ', in use' : ''}. Open`}>
         <ItemIcon id={id} size={32} />
-        {n > 1 && <b className="mc-n">{short(n)}</b>}
-        {on && <i className="mc-on" aria-hidden>E</i>}
-        <span className="mc-tip" aria-hidden><b>{itemName(id)}</b><small>{on ? (game.theme === id ? 'In use' : 'Equipped') : `×${n}`} · {ITEMS[id].text}</small></span>
+        {n > 1 && <b className="inv-n">{short(n)}</b>}
+        {on && <i className="inv-on" aria-hidden>E</i>}
+        <span className="inv-tip" aria-hidden><b>{itemName(id)}</b><small>{on ? (game.theme === id ? 'In use' : 'Equipped') : `×${n}`} · {ITEMS[id].text}</small></span>
       </button>
     )
   }
@@ -593,7 +593,7 @@ export function Bag({ game }: { game: Game }) {
   const card = open && ITEMS[open] ? open : null
   const badgeOpen = open?.startsWith('badge:') ? open : null
   const kind = card ? ITEMS[card].kind : null
-  const fill = (n: number, min: number) => Array.from({ length: Math.max(min, Math.ceil(n / 9) * 9) - n }, (_, i) => <span key={`f${i}`} className="mc-slot blank" aria-hidden />)
+  const fill = (n: number, min: number) => Array.from({ length: Math.max(min, Math.ceil(n / 9) * 9) - n }, (_, i) => <span key={`f${i}`} className="inv-slot blank" aria-hidden />)
   const purse: [ReactNode, string, number, number][] = [
     [<Coin size={30} />, 'Coins', game.wallet.coins, game.wallet.coinsToday],
     [<Gem size={30} />, 'Gems', game.wallet.gems, game.wallet.gemsToday],
@@ -604,32 +604,32 @@ export function Bag({ game }: { game: Game }) {
   ]
   return (
     <Win title="Bag" tone="purple" aside={balls || berries ? <>{balls > 0 && `${balls} ${balls === 1 ? 'ball' : 'balls'}`}{balls > 0 && berries > 0 && ' · '}{berries > 0 && `${berries} ${berries === 1 ? 'berry' : 'berries'}`}</> : game.keyStone ? <><ItemIcon id="key-stone" size={22} /> Key Stone</> : undefined}>
-      <div className="mc">
+      <div className="inv">
         {(owned.length > 0 || badges > 0) && (
-          <div className="mc-tabs" role="tablist" aria-label="Bag pockets" data-noswipe>
+          <div className="inv-tabs" role="tablist" aria-label="Bag pockets" data-noswipe>
             {tabs.map(([name, ids]) => (
-              <button key={name} type="button" role="tab" aria-selected={at[0] === name} className={`mc-tab ${at[0] === name ? 'on' : ''}`} onClick={() => { setTab(name); play('click') }} title={`${name} · ${ids.length}`}>
+              <button key={name} type="button" role="tab" aria-selected={at[0] === name} className={`inv-tab ${at[0] === name ? 'on' : ''}`} onClick={() => { setTab(name); play('click') }} title={`${name} · ${ids.length}`}>
                 {name === 'Badges' ? <ItemIcon id="town-map" size={26} /> : <ItemIcon id={name === 'Everything' ? 'seal-bag' : ids[0]} size={26} />}
               </button>
             ))}
           </div>
         )}
-        <div className="mc-panel">
-          <div className="mc-bar">
-            <span className="mc-title">{carry ? `Carrying ${nameOfThing(carry)}: tap a slot` : at[0] === 'Badges' ? `Badges · ${badges}` : owned.length ? (at[0] === 'TMs' ? `TMs · ${equipped.length} of ${TM_SLOTS} on ${nameOf(game.partner.form)}` : at[0] === 'Held items' ? `Held items · ${nameOf(game.partner.form)} holds one` : at[0]) : 'Inventory'}</span>
-            <span className="mc-btns">
-              <button type="button" className={`mc-btn ${arrange ? 'on' : ''}`} aria-pressed={arrange} onClick={() => { setArrange(!arrange); setCarry(null); play('click') }} title="Tap a thing to pick it up, tap a slot to put it down. You can also drag a thing (hold it on a touch screen).">Arrange</button>
-              <button type="button" className="mc-btn" onClick={() => { glide.current = true; saveNow(tidy(ordered)); setCarry(null); play('click') }} title="Lay everything down again in order, with no gaps">Tidy</button>
+        <div className="inv-panel">
+          <div className="inv-bar">
+            <span className="inv-title">{carry ? `Carrying ${nameOfThing(carry)}: tap a slot` : at[0] === 'Badges' ? `Badges · ${badges}` : owned.length ? (at[0] === 'TMs' ? `TMs · ${equipped.length} of ${TM_SLOTS} on ${nameOf(game.partner.form)}` : at[0] === 'Held items' ? `Held items · ${nameOf(game.partner.form)} holds one` : at[0]) : 'Inventory'}</span>
+            <span className="inv-btns">
+              <button type="button" className={`inv-btn ${arrange ? 'on' : ''}`} aria-pressed={arrange} onClick={() => { setArrange(!arrange); setCarry(null); play('click') }} title="Tap a thing to pick it up, tap a slot to put it down. You can also drag a thing (hold it on a touch screen).">Arrange</button>
+              <button type="button" className="inv-btn" onClick={() => { glide.current = true; saveNow(tidy(ordered)); setCarry(null); play('click') }} title="Lay everything down again in order, with no gaps">Tidy</button>
             </span>
           </div>
-          {owned.length === 0 && badges === 0 && <p className="mc-empty">No items yet. The Mart opens each morning, and feats hand out the rest.</p>}
-          <div className={`mc-grid ${arrange ? 'arranging' : ''}`}>{cells.map(cell)}</div>
-          <span className="mc-title">Money and marks</span>
-          <div className="mc-grid mc-hotbar">
+          {owned.length === 0 && badges === 0 && <p className="inv-empty">No items yet. The Mart opens each morning, and feats hand out the rest.</p>}
+          <div className={`inv-grid ${arrange ? 'arranging' : ''}`}>{cells.map(cell)}</div>
+          <span className="inv-title">Money and marks</span>
+          <div className="inv-grid inv-hotbar">
             {purse.map(([icon, name, n, today], i) => (
-              <span key={i} className="mc-slot" tabIndex={0} aria-label={`${name}: ${n.toLocaleString('en-IN')}${today > 0 ? `, +${today} today` : ''}`}>
-                {icon}<b className="mc-n">{short(n)}</b>
-                <span className="mc-tip" aria-hidden><b>{name}</b><small>{n.toLocaleString('en-IN')}{today > 0 ? ` · +${today} today` : ''}</small></span>
+              <span key={i} className="inv-slot" tabIndex={0} aria-label={`${name}: ${n.toLocaleString('en-IN')}${today > 0 ? `, +${today} today` : ''}`}>
+                {icon}<b className="inv-n">{short(n)}</b>
+                <span className="inv-tip" aria-hidden><b>{name}</b><small>{n.toLocaleString('en-IN')}{today > 0 ? ` · +${today} today` : ''}</small></span>
               </span>
             ))}
             {fill(purse.length, 9)}

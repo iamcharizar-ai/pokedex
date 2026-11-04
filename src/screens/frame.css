@@ -84,9 +84,6 @@ main .notice.gmax, .sheet .notice.gmax { --nc: var(--k-pink); }
 .tb-ring .fill { filter: drop-shadow(0 0 4px var(--gold-glow)); }
 .tb-collect { background: var(--well); border: 1px solid var(--hair); }
 .tb-collect.has { background: radial-gradient(circle at 50% 40%, #ffe27a, var(--k-gold)); border-color: transparent; box-shadow: 0 0 18px var(--gold-glow); }
-.tb-season .k-bar { height: 14px; background: var(--well); border: 1px solid var(--hair); box-shadow: none; }
-.tb-season .k-bar > i { box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.35); }
-.tb-season .k-bar > span { font-size: 11px; -webkit-text-stroke: 2px var(--k-edge); }
 .tb .help { width: 44px; height: 44px; min-height: 44px; padding: 0 0 3px; font-size: 18px; border-width: 2px; border-radius: 50%; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.35), 0 3px 0 var(--k-edge); }
 
 /* ── the dock: five places, floating over the page. Each says what it is ── */

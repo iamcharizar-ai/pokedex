@@ -1,14 +1,12 @@
 // Small things the page did not already say:
 // - whether the balls in the bag can finish the wild Pokemon (the heading of
 //   Throw and feed; its HP is already on the scene, so it is not repeated),
-// - the egg's steps, as a tile beside Momentum and Evolves (the Nursery below has the rest),
 // - and for the tab bar, which other tab has something you can do right now.
 // Nothing here is a new rule: all of it is read from the game as it stands.
-import { ItemIcon } from '../Item.tsx'
-import { BALLS, EGG_KINDS, EVO_ITEMS, FOSSILS, REVIVE_COST, collectorWants, itemName, throwHp } from '../../core/economy.ts'
+import { BALLS, EVO_ITEMS, FOSSILS, REVIVE_COST, collectorWants, itemName, throwHp } from '../../core/economy.ts'
 import type { Game } from '../../core/fold.ts'
 import { SPECIES } from '../../core/species.ts'
-import { STEPS_GOAL, V14_START } from '../../core/rules.ts'
+import { V14_START } from '../../core/rules.ts'
 
 /** What a ball would take off the wild Pokemon today. */
 const hitOf = (game: Game, ball: string): number => {
@@ -27,25 +25,6 @@ export function reachNote(game: Game): string | undefined {
   if (hitOf(game, balls[0]) >= w.hp) return `A ${itemName(balls[0])} catches it`
   const reach = balls.reduce((n, b) => n + hitOf(game, b) * (game.inv[b] ?? 0), 0)
   return reach >= w.hp ? 'Your balls can catch it' : undefined
-}
-
-/** The egg as a pace tile: how far it is, and what is left. */
-export function EggCell({ game }: { game: Game }) {
-  const egg = game.egg
-  if (!egg) return null
-  const left = Math.max(0, egg.need - egg.have)
-  const pct = egg.need > 0 ? Math.min(1, egg.have / egg.need) : 0
-  const set = egg.since === game.today.day
-  return (
-    <div className="pace-cell pace-egg" title={`Every step the band counts warms it. ${egg.have.toLocaleString()} of ${egg.need.toLocaleString()}.`}>
-      <span className="k-label">{left <= (egg.pace > 0 ? egg.pace : STEPS_GOAL) ? 'Egg hatches soon' : (EGG_KINDS[egg.kind]?.name ?? 'Egg')}</span>
-      <span className="pace-eggrow">
-        <ItemIcon id={egg.kind} size={28} />
-        <b className="pace-big">{set ? 'From tomorrow' : <>{left.toLocaleString()}<small> steps</small></>}</b>
-      </span>
-      <span className="pace-eggbar" role="progressbar" aria-valuemin={0} aria-valuemax={egg.need} aria-valuenow={egg.have} aria-label="How warm the egg is"><i style={{ width: `${pct * 100}%` }} /></span>
-    </div>
-  )
 }
 
 /**

@@ -24,7 +24,12 @@ import { play } from './lib/sfx.ts'
 import { useItem } from './lib/store.ts'
 
 // ── what a card shows, from the game ────────────────────────────────────────
-const bagHearts = (game: Game): number => Object.entries(BERRY_HEARTS).reduce((n, [id, h]) => n + (game.inv[id] ?? 0) * h, 0)
+/** The most hearts one berry you hold would give this Pokemon now (twice as many on a day its kind of work was done, as feeding pays). */
+const bestBerry = (game: Game, m: Mon): number => {
+  const top = treatsIn(game)[0]
+  if (!top) return 0
+  return BERRY_HEARTS[top] * (game.v16 && game.worked[signatureOf(m.form).tag] ? BERRY_DOMAIN_MULT : 1)
+}
 
 export function monCardOf(m: Mon, game: Game): MonCardData {
   const lv = levelOf(m.xp)
@@ -35,7 +40,8 @@ export function monCardOf(m: Mon, game: Game): MonCardData {
   return {
     form: m.form, name: nameOf(m.form), shiny: m.shiny, level: lv, into, hearts, need, type: SPECIES[m.form].t,
     sig: game.v16 ? { icon: s.icon, name: s.name } : undefined,
-    canFeed: need !== null && bagHearts(game) >= need - hearts,
+    // the green arrow: one berry you hold finishes its next bond level (not "there are berries somewhere")
+    canFeed: need !== null && bestBerry(game, m) >= need - hearts,
     mega: Boolean(m.megas?.length), trained: Boolean(m.graduated),
   }
 }
@@ -356,7 +362,7 @@ export function TeamScreen({ game, onInfo }: { game: Game; onInfo: (uid: string)
         <div className="mc-head">
           <span className="k-label"><IcSort size={14} /> Sort</span>
           <div className="mc-sort" role="group" aria-label="Sort the lab">
-            {SORTS.map(([id, name]) => <button key={id} type="button" aria-pressed={sort === id} onClick={() => setBy(id)}>{name}</button>)}
+            {SORTS.map(([id, name]) => <button key={id} type="button" aria-pressed={sort === id} onClick={() => setBy(id)}><span>{name}</span></button>)}
           </div>
           <LookToggle look={look} setLook={setLook} />
         </div>

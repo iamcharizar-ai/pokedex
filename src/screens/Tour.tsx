@@ -63,7 +63,7 @@ export function Tour({ onClose }: { onClose: () => void }) {
         </div>
         <div className="tour-dots" aria-hidden>{CARDS.map((_, n) => <i key={n} className={n === i ? 'on' : ''} />)}</div>
         <div className="tour-actions">
-          {i > 0 ? <button type="button" className="k-btn" onClick={() => { setI(i - 1); play('tap') }}>Back</button> : <button type="button" className="k-btn" onClick={onClose}>Skip</button>}
+          {i > 0 ? <button type="button" className="k-btn" onClick={() => { setI(i - 1); play('tap') }}>Back</button> : <button type="button" className="tour-skip" onClick={onClose}>Skip</button>}
           <button ref={next} type="button" className="k-btn main" onClick={() => { if (last) { play('catch'); onClose() } else { setI(i + 1); play('tap') } }}>{last ? "Let's go" : 'Next'}</button>
         </div>
       </div>

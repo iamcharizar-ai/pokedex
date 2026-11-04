@@ -59,7 +59,7 @@ export function startPress(init: { x: number; y: number; id: number; type: strin
   if (busy || (init.type === 'mouse' && init.button !== 0)) return
   const touch = init.type !== 'mouse'
   // a Bag slot lifts only its picture (the tile stays where it is); a card lifts whole
-  const icon = card.classList.contains('mc-slot') ? card.querySelector('img') : null
+  const icon = card.classList.contains('inv-slot') ? card.querySelector('img') : null
   const lift = icon ?? card
   const rect = lift.getBoundingClientRect()
   const ox = icon ? rect.width / 2 : init.x - rect.left, oy = icon ? rect.height / 2 : init.y - rect.top
@@ -90,7 +90,7 @@ export function startPress(init: { x: number; y: number; id: number; type: strin
     card.classList.remove('pressing')
     ghost = lift.cloneNode(true) as HTMLElement
     ghost.classList.add('mc-ghost')
-    if (icon) ghost.classList.add('mc-ghost-icon')
+    if (icon) ghost.classList.add('inv-ghost')
     ghost.removeAttribute('aria-haspopup')
     ghost.style.width = `${rect.width}px`
     ghost.style.height = `${rect.height}px`

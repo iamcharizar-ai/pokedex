@@ -152,9 +152,12 @@ export function Recap({ game, today }: { game: Game; today: string }) {
   const [opened, setOpened] = useState(false)
   const [force, setForce] = useState(false)
   const win = useRef<HTMLDivElement>(null)
+  const go = useRef<HTMLButtonElement>(null)
   const head = told[0]?.m
   useEffect(() => { setOpened(false); setForce(false) }, [head])
   const turn = useOverlay(told.length > 0, RANK.news)
+  // the button takes the focus without scrolling the window to it: the reveal at the top is what to see first
+  useEffect(() => { if (turn) go.current?.focus({ preventScroll: true }) }, [turn, head])
   if (!told.length || !turn) return null
   const [top, ...rest] = told
   const days = new Set(told.map((x) => x.m.day))
@@ -178,7 +181,7 @@ export function Recap({ game, today }: { game: Game; today: string }) {
             {rest.length > 8 && <li className="more">and {rest.length - 8} more, in the Adventure log on the Journey tab.</li>}
           </ul>
         )}
-        <button className={`go ${opened || evolving ? '' : 'breathe'}`} autoFocus>{opened || evolving ? 'Continue' : 'Tap to open'}</button>
+        <button ref={go} className={`go ${opened || evolving ? '' : 'breathe'}`}>{opened || evolving ? 'Continue' : 'Tap to open'}</button>
         <small className="rc-note">Already saved. Tap anywhere to close.</small>
         </div>
       </div>

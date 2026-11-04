@@ -112,14 +112,10 @@ main .muted { color: var(--k-dim); }
 .card .facts dd { font-family: var(--k-face); font-size: 17px; }
 .card .who { background: radial-gradient(circle at 50% 40%, #6f86d6 0 30%, #3a4a8e 72%); border-color: var(--k-edge); border-radius: 14px; box-shadow: 0 0 0 5px var(--k-gold), 0 0 0 8px var(--k-edge); }
 .badges { background: rgba(8, 12, 30, 0.55); border: 2px solid var(--k-edge); border-radius: 12px; }
-.caserow { grid-template-columns: 1fr; gap: 6px; margin-bottom: 14px; }
-.caserow .k-ribbon { font-size: 17px; min-height: 36px; }
-.casemedals { display: flex; flex-wrap: wrap; gap: 8px 6px; padding: 4px 4px 0; }
 .gymbadge { image-rendering: pixelated; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.45)); }
 .gymbadge.off { filter: brightness(0) opacity(0.35); }
 .badgeslot { display: inline-grid; place-items: center; box-sizing: border-box; border: 2px dashed rgba(255, 255, 255, 0.3); border-radius: 8px; color: rgba(255, 255, 255, 0.45); font-family: var(--k-face); font-size: 16px; }
 .badgeslot.on { border-style: solid; border-color: var(--k-gold); color: var(--k-gold); }
-.keyrow { border-top-color: rgba(255, 255, 255, 0.2); }
 .road-win .k-road { gap: 8px; }
 .k-step img.sprite { width: 52px; height: 52px; }
 .k-step .gymbadge, .k-step .badgeslot { flex: none; }
@@ -278,10 +274,8 @@ main .queue.pick button.on img { background: none; outline: 0; }
 .card .who img { filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.3)); }
 
 /* ── top bar: the season ── */
-.topbar .nextprize { display: inline-flex; align-items: center; justify-content: center; gap: 4px; font-size: 13px; }
 
 /* ── the egg, being kept warm ── */
-.eggrow { display: flex; align-items: center; gap: 12px; margin-top: 14px; padding: 10px 12px; background: rgba(8, 12, 30, 0.4); border: 2px solid var(--k-edge); border-radius: 12px; }
 .warm { display: inline-block; animation: wobble 3s steps(3, end) infinite; transform-origin: 50% 90%; }
 
 /* ── the rules, as pictures ── */

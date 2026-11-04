@@ -37,3 +37,8 @@ export function useOverlay(want: boolean, rank: number): boolean {
 
 /** For something the player opened: take the front and keep it until it is gone. */
 export const useHold = (): void => { useOverlay(true, RANK.sheet) }
+
+/** Is anything in front of the game (a window, a reveal, a sheet)? Small news (Toasts.tsx) waits while it is. */
+export function useBusy(): boolean {
+  return useSyncExternalStore(subscribe, () => line.length > 0)
+}

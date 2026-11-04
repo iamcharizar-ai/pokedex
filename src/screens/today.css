@@ -152,9 +152,6 @@
 
 /* ── the bar that pays Bells: it fills to last night's score; the marks at 80 and 90 are the Bells it passed ── */
 .bellbar { display: grid; gap: var(--s-3); }
-.bellbar-track { position: relative; display: block; height: 14px; border-radius: 99px; background: var(--well); box-shadow: inset 0 0 0 1px var(--hair); overflow: hidden; }
-.bellbar-track i { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: linear-gradient(90deg, #6b5be0, var(--tone-purple)); box-shadow: 0 0 12px rgba(150, 110, 255, 0.6); transition: width 0.7s var(--ease-out); }
-.bellmark { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(255, 255, 255, 0.5); }
 .bellchips { display: flex; gap: var(--s-2); }
 .bell { position: relative; flex: 1; display: flex; align-items: center; gap: var(--s-2); padding: var(--s-2) var(--s-3) var(--s-2) var(--s-2); border: 1px dashed var(--hair-hi); border-radius: var(--r-3); }
 .bell-ico { width: 40px; height: 40px; display: grid; place-items: center; flex: none; border-radius: 50%; background: var(--well); }
@@ -170,7 +167,6 @@
 .bell-n { position: absolute; right: 8px; top: 6px; font-style: normal; font-size: 13px; color: var(--tone-green); }
 .bellnote { margin: 0; font-size: 13.5px; color: var(--text-2); }
 .bellnote b { color: var(--tone-gold); font-family: var(--k-face); font-weight: 400; }
-@media (prefers-reduced-motion: reduce) { .bellbar-track i { transition: none; } }
 
 /* Sleep with a band whose reading has not come yet: a dashed ring, waiting */
 .pillar.waiting .pillar-ring { background: radial-gradient(circle, var(--ground) 0 25px, transparent 26px), repeating-conic-gradient(var(--c) 0 6deg, transparent 6deg 14deg); opacity: 0.8; }
@@ -178,16 +174,4 @@
 .pillar.waiting small { color: var(--text-3); white-space: normal; }
 @media (max-width: 560px) { .pillar b { font-size: 13.5px; letter-spacing: -0.01em; } .pillar small { font-size: 11px; } }
 
-/* ── the egg, as a third pace tile ── */
-.pace.has-egg { grid-template-columns: 1.3fr 1fr 1fr; }
-.pace-eggrow { display: flex; align-items: center; gap: 6px; min-width: 0; }
-.pace-eggrow .pace-big { white-space: nowrap; }
-.pace-egg .pace-big { font-size: 20px; }
-.pace-eggbar { display: block; height: 6px; border-radius: 99px; background: var(--well); overflow: hidden; }
-.pace-eggbar i { display: block; height: 100%; border-radius: inherit; background: var(--tone-gold); box-shadow: 0 0 8px var(--gold-glow); }
-@media (max-width: 560px) {
-  .pace.has-egg { grid-template-columns: 1fr 1fr; row-gap: var(--s-3); }
-  .pace.has-egg .pace-cell:first-child { grid-column: 1 / -1; padding-bottom: var(--s-3); border-bottom: 1px solid var(--hair); }
-  .pace.has-egg .pace-cell:nth-child(2) { border-left: 0; }
-}
-@media (min-width: 900px) { .pace.has-egg { grid-template-columns: 1fr; } }
+

@@ -23,7 +23,7 @@ import { fitOf, useBoxes } from './Fit.tsx'
 import { Calendar } from './screens/Calendar.tsx'
 import { SigLine } from './Bond.tsx'
 import { SIG_CAP, STAR_EVERY, TRAINER_LEVELS } from '../core/bond.ts'
-import { EggCell, reachNote, tabTodo } from './screens/Today.tsx'
+import { reachNote, tabTodo } from './screens/Today.tsx'
 import { Nursery } from './screens/Nursery.tsx'
 import { HpBar } from './screens/HpBar.tsx'
 import { hpTone } from './screens/hp.ts'
@@ -46,6 +46,7 @@ import { LIFEOS_URL, start, useItem, useView } from './lib/store.ts'
 import { FIXTURE } from './lib/fixture-boot.ts'
 import { dropIn, floatNote, hit, lunge, party, react, ring, stamp, tapPop } from './lib/fx.ts'
 import { Sky, skyVars, sleepFor, useClock } from './screens/Sky.tsx'
+import { wholeScale } from './lib/fit.ts'
 import { ChestOpener, HatchOpener } from './Reveal.tsx'
 
 type Tab = 'partner' | 'team' | 'shop' | 'dex' | 'trainer'
@@ -64,8 +65,23 @@ const RARITY: Record<string, string> = { C: 'Common', U: 'Uncommon', R: 'Rare', 
 export const badgesWon = (game: Game): number =>
   LEAGUES.reduce((n, l, i) => n + l.gyms.filter((_, s) => badgeWon(game.league, i, s)).length, 0)
 
+/** Does a media query match now (and as it changes)? */
+function useMedia(q: string): boolean {
+  const [on, set] = useState(() => matchMedia(q).matches)
+  useEffect(() => { const m = matchMedia(q); const f = () => set(m.matches); m.addEventListener('change', f); return () => m.removeEventListener('change', f) }, [q])
+  return on
+}
+
+/** An animated sprite at a whole-number scale: `size` is the box it should about fill, and the scale is worked out from the picture's own size once it has loaded (lib/fit.ts). */
 function Sprite({ form, shiny, size, className = '' }: { form: string; shiny?: boolean; size: number; className?: string }) {
-  return <img src={spritePath(form, shiny)} alt="" width={size} height={size} className={`sprite ${className}`} style={{ width: size, height: size }} />
+  const [px, setPx] = useState<[number, number] | null>(null)
+  const src = spritePath(form, shiny)
+  useEffect(() => setPx(null), [src])
+  const k = px ? wholeScale(px[0], px[1], size) : 1
+  return (
+    <img src={src} alt="" className={`sprite ${className}`} style={px ? { width: px[0] * k, height: px[1] * k } : { visibility: 'hidden' }}
+      onLoad={(e) => setPx([e.currentTarget.naturalWidth, e.currentTarget.naturalHeight])} />
+  )
 }
 
 export type Tone = '' | 'blue' | 'green' | 'gold' | 'dark' | 'red' | 'purple'
@@ -144,6 +160,8 @@ function Scene({ game }: { game: Game }) {
     else { void img?.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-12px)' }, { transform: 'translateX(6px)' }, { transform: 'translateX(0)' }], { duration: 260, easing: 'ease-out' }) }
   }
   const press = (who: 'me' | 'foe') => (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pat(who) } }
+  // the partner's box: a phone has less room (the scene's own sizes are in index.css)
+  const narrow = useMedia('(max-width: 760px)')
   const pct = clamp01(game.into / game.need)
   const before = Math.min(pct, clamp01(game.intoBeforeToday / game.need))
   return (
@@ -160,7 +178,7 @@ function Scene({ game }: { game: Game }) {
             <div className="hp-sub"><span>{wild.caught ? 'In My Pokemon' : today.hit > 0 ? `Today −${today.hit}` : ''}{!wild.caught && wild.leavesIn !== undefined && wild.leavesIn <= 3 && <b className="leaving"> {wild.leavesIn === 0 ? 'Gets away tomorrow' : `Gets away in ${wild.leavesIn + 1} days`}</b>}</span><b>{wild.hp} / {wild.max}</b></div>
           </div>
           <div className="pad foe-pad" role="button" tabIndex={0} aria-label={`Poke the wild ${nameOf(wild.form)}`} onClick={() => pat('foe')} onKeyDown={press('foe')}>
-            <img src={still(wild.form, wild.shiny)} alt="" width={104} height={104} className={`sprite ${wild.caught ? 'got' : ''}`} />
+            <img src={still(wild.form, wild.shiny)} alt="" width={96} height={96} className={`sprite ${wild.caught ? 'got' : ''}`} />
             {wild.caught && <Ball ball={today.ball} size={34} className="caughtball" />}
             {!wild.caught && <Pop value={today.hit} />}
           </div>
@@ -168,7 +186,7 @@ function Scene({ game }: { game: Game }) {
       )}
       <div className="pad me-pad" role="button" tabIndex={0} aria-label={`Pat ${nameOf(game.display)}`} onClick={() => pat('me')} onKeyDown={press('me')}>
         {/* a perfect day: a Gigantamax form when it has one, else it Dynamaxes (the same Pokemon, giant, glowing red) */}
-        <Sprite form={game.display} shiny={partner.shiny} size={184} className={`${game.asleep ? 'asleep' : ''} ${game.aura === 'gmax' && game.display === partner.form ? 'dynamax' : ''}`} />
+        <Sprite form={game.display} shiny={partner.shiny} size={narrow ? 136 : 184} className={`${game.asleep ? 'asleep' : ''} ${game.aura === 'gmax' && game.display === partner.form ? 'dynamax' : ''}`} />
         {game.asleep && <span className="zzz" aria-hidden>Zzz</span>}
       </div>
       <div className="hpbox me-box">
@@ -235,7 +253,7 @@ function Talk({ game, pillars, sleepH }: { game: Game; pillars: HabitFact[]; sle
             <li key={h.id} className={`pillar ${st}`} data-tag={h.tag} style={{ ['--p' as string]: h.frac }} title={`${label(h)}: ${Math.round(h.worth * h.frac)} of ${h.worth} XP`}>
               <span className="pillar-ring"><ItemIcon id={pillarIcon(h.tag)} size={30} />{st === 'done' && <i className="pillar-tick" aria-hidden />}</span>
               <b>{h.tag === 'sleep' ? 'Sleep' : label(h)}</b>
-              <small>{st === 'done' ? 'Done' : st === 'part' ? `${Math.round(h.frac * 100)}%` : `${h.worth} XP`}</small>
+              <small>{st === 'done' ? `+${h.worth}` : st === 'part' ? `${Math.round(h.frac * 100)}%` : `${h.worth} XP`}</small>
             </li>
           )
         })}
@@ -244,7 +262,7 @@ function Talk({ game, pillars, sleepH }: { game: Game; pillars: HabitFact[]; sle
           <li className={`pillar ${sleepDone ? 'done' : 'waiting'}`} data-tag="sleep" title={game.sleep.band ? "Last night's reading has not arrived. The band syncs about 07:00; a night with no reading is never a zero." : 'No band yet: tick Sleep by hand in Life OS. With a band it is paid by last night\'s score, and a good night pays Bells.'}>
             <span className="pillar-ring"><ItemIcon id={pillarIcon('sleep')} size={30} />{sleepDone && <i className="pillar-tick" aria-hidden />}</span>
             <b>Sleep</b>
-            <small>{sleepDone ? 'Done' : game.sleep.band ? 'Waiting for the band' : `No band · ${sleepH?.worth ?? 30} XP`}</small>
+            <small>{sleepDone ? `+${sleepH?.worth ?? 30}` : game.sleep.band ? 'Waiting for the band' : `No band · ${sleepH?.worth ?? 30} XP`}</small>
           </li>
         )}
         {pillars.length === 0 && !showSleep && <li className="muted">No pillar habits are on today's list.</li>}
@@ -261,7 +279,7 @@ function Pace({ game }: { game: Game }) {
   const missing = MOMENTUM_WINDOW - prev.length
   const toLevel = Math.max(0, Math.ceil(xpForLevel(game.next.level) - game.partner.xp))
   return (
-    <div className={`pace ${game.egg ? 'has-egg' : ''}`}>
+    <div className="pace">
       <div className="pace-cell" title="Days with two pillars in the last seven: 3 make XP x1.2, 5 x1.35, 7 x1.5. It slides back a day at a time, never resets.">
         <span className="k-label">Momentum</span>
         <span className="pace-week" aria-label={`${momentum.days} of the last 7 days counted`}>
@@ -277,7 +295,6 @@ function Pace({ game }: { game: Game }) {
         <span className="k-label">{game.next.what === 'evolve' ? 'Evolves' : game.next.what === 'master' ? 'Level 100' : 'Fully trained'} at Lv {game.next.level}</span>
         <b className="pace-big">{toLevel.toLocaleString('en-IN')}<small> XP to go</small></b>
       </div>
-      {game.egg && <EggCell game={game} />}
     </div>
   )
 }
@@ -1091,7 +1108,7 @@ function TopBar({ game, today, status, loading, onHelp }: { game: Game; today: s
           <circle cx="32" cy="32" r={R} className="fill" strokeDasharray={`${C * into} ${C}`} transform="rotate(-90 32 32)" />
         </svg>
         {v5 ? (nx.coins ? <Coin size={30} /> : nx.gems ? <Gem size={30} /> : nx.item ? <ItemIcon id={nx.item} size={34} /> : <Ball ball="poke" size={32} />) : <Ball ball="poke" size={32} />}
-        {v5 && <b className="tb-lv">Season {game.season.step}</b>}
+        {v5 && <b className="tb-lv">Step {game.season.step}</b>}
       </span>
       <div className="tb-main">
         <div className="tb-row">

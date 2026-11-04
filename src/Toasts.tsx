@@ -7,10 +7,13 @@ import { motionConfig } from './lib/fx.ts'
 import { levelUp, toast } from './lib/motion.js'
 import { play } from './lib/sfx.ts'
 import { ItemIcon } from './Item.tsx'
+import { useBusy } from './screens/overlay.ts'
 import { nameOf, type Game, type Moment } from '../core/fold.ts'
 
 const KEY = 'pokedex.toasted.v1'
 const SHOWN_MS = 4200
+/** How long news waits for a window that opens at the same moment to ask for the screen first. */
+const SETTLE_MS = 400
 
 const keyOf = (m: Moment): string => `${m.day}|${m.kind}|${m.kind === 'boss' ? m.what : 'level' in m ? m.level : ''}|${'form' in m ? m.form : ''}`
 /** Levels that get a banner: every fifth, except where an evolution or graduation already has its own moment (25, 30, 50). */
@@ -34,8 +37,13 @@ function load(): Set<string> | null {
   }
 }
 
+type Item = { key: string; title: string; line: string; big?: boolean }
+
 export function Toasts({ game, today }: { game: Game; today: string }) {
-  const [rail, setRail] = useState<{ key: string; title: string; line: string; big?: boolean }[]>([])
+  const [rail, setRail] = useState<Item[]>([])
+  // news that arrives while a window is open waits for it to close, then plays: never on top of it
+  const [held, setHeld] = useState<Item[]>([])
+  const busy = useBusy()
   const seen = useRef<Set<string> | null | undefined>(undefined)
   useEffect(() => {
     if (seen.current === undefined) seen.current = load()
@@ -46,12 +54,21 @@ export function Toasts({ game, today }: { game: Game; today: string }) {
     seen.current = all
     try { localStorage.setItem(KEY, JSON.stringify([...all].filter((k) => k.startsWith(today)))) } catch { /* the worst case is a repeated toast */ }
     if (!fresh.length) return
-    const added = fresh.map((m) => ({ key: keyOf(m), ...textOf(m)! }))
-    setRail((r) => [...r, ...added])
-    // not cleared on re-run: each toast leaves on its own clock
-    window.setTimeout(() => setRail((r) => r.filter((x) => !added.some((a) => a.key === x.key))), SHOWN_MS)
+    setHeld((h) => [...h, ...fresh.map((m) => ({ key: keyOf(m), ...textOf(m)! }))])
   }, [game.moments.length, today])
-  if (!rail.length) return null
+  useEffect(() => {
+    if (busy || !held.length) return
+    // a moment's grace: on opening the app the news window asks for the screen in the same breath, and goes first
+    const wait = window.setTimeout(() => {
+      const added = held
+      setHeld([])
+      setRail((r) => [...r, ...added])
+      // not cleared on re-run: each toast leaves on its own clock
+      window.setTimeout(() => setRail((r) => r.filter((x) => !added.some((a) => a.key === x.key))), SHOWN_MS)
+    }, SETTLE_MS)
+    return () => window.clearTimeout(wait)
+  }, [busy, held])
+  if (!rail.length || busy) return null
   return (
     <div className="toast-rail" role="status" aria-live="polite">
       {rail.map((t) => t.big ? <Banner key={t.key} title={t.title} line={t.line} /> : <div key={t.key} className="toast" ref={(el) => { if (el && !el.dataset.on && !motionConfig.reduced) { el.dataset.on = '1'; void toast(el, { hold: SHOWN_MS - 1000 }) } }}><b>{t.title}</b> {t.line}</div>)}

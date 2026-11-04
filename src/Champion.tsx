@@ -120,7 +120,7 @@ export function BattlePrep({ game }: { game: Game }) {
           {items.map((id) => {
             const b = BOOST[id]
             const used = b ? (today[b.tag] ?? 0) >= b.add : id === 'guard-spec' ? game.guard : id === 'honey' ? Boolean(game.wish.chosen) : false
-            const sub = b ? `${TAG_NAME[b.tag]} +${pct(b.add)}` : DIRE_HIT[id] ? `crit +${pct(DIRE_HIT[id])}` : id === 'guard-spec' ? (game.guard ? 'on guard' : 'next empty day') : (game.wish.chosen ? 'one is coming' : 'a rare one next')
+            const sub = b ? `${TAG_NAME[b.tag]} +${pct(b.add)}` : DIRE_HIT[id] ? `crit +${pct(DIRE_HIT[id])}` : id === 'guard-spec' ? (game.guard ? 'on guard' : 'empty day') : (game.wish.chosen ? 'coming' : 'rare next')
             return (
               <button key={id} type="button" className={`socket guard ${used ? '' : 'ready'}`} disabled={used} onClick={() => use(id)} title={ITEMS[id]?.text} aria-label={`${itemName(id)}: ${sub}`}>
                 <span className="socket-well"><ItemIcon id={id} size={36} /><i className="socket-n">{have(id)}</i></span>
@@ -231,7 +231,7 @@ export function CollectorWin({ game }: { game: Game }) {
       {wants.length > 0 && (
         <div className="wanted" aria-label="Wanted today">
           <span className="k-label">Wanted today</span>
-          <div className="kit-row">{wants.map((id) => <span key={id} className={`chip ${(game.inv[id] ?? 0) > 0 ? 'mega' : ''}`} title={`${itemName(id)}: ${price(id).toLocaleString('en-IN')} coins today`}><ItemIcon id={id} size={22} />{itemName(id)} ×{COLLECTOR_MULT}</span>)}</div>
+          <div className="kit-row">{wants.map((id) => <span key={id} className="chip" title={`${itemName(id)}: ${price(id).toLocaleString('en-IN')} coins today${game.inv[id] ? `; you have ${game.inv[id]}` : ''}`}><ItemIcon id={id} size={22} />{itemName(id)} ×{COLLECTOR_MULT}{(game.inv[id] ?? 0) > 0 && <i className="chip-have" aria-label={`you have ${game.inv[id]}`}>{game.inv[id]}</i>}</span>)}</div>
         </div>
       )}
       {loot.length === 0 ? <p className="muted">Nothing to sell yet. From bond level 1, Pickup finds treasures on days with a pillar.</p> : (

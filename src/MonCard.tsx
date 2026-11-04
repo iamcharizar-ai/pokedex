@@ -153,7 +153,7 @@ export function MonCard({ mon, state = 'card', role = 'lab', ribbon, look = 'cla
       <span className="mc-f">
         <span className="mc-art">
           {look === 'full'
-            ? <span className="mc-fit" style={fit?.style}><img src={big ?? still(mon.form, mon.shiny)} alt="" width={96} height={96} className={`sprite mc-sprite ${big ? 'smooth' : ''}`} draggable={false} decoding="async" /></span>
+            ? <span className="mc-fit" style={fit?.style}><img src={big ?? still(mon.form, mon.shiny)} alt="" width={96} height={96} className={`sprite mc-sprite ${big ? 'smooth' : ''}`} draggable={false} loading="lazy" decoding="async" /></span>
             : <img src={still(mon.form, mon.shiny)} alt="" width={96} height={96} className="sprite mc-sprite" draggable={false} loading="lazy" decoding="async" />}
           {!locked && <span className="mc-type" aria-hidden><img src={`/sprites/types/${mon.type}.png`} alt="" width={16} height={16} onError={(e) => { e.currentTarget.style.display = 'none' }} /></span>}
           {!locked && mon.sig && <span className="mc-sig" aria-hidden title={mon.sig.name}><ItemIcon id={mon.sig.icon} size={18} /></span>}
