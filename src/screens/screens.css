@@ -51,10 +51,6 @@
 details.win.folded .chev { font-style: normal; transition: transform var(--t-slide) linear; }
 details.win.folded[open] .chev { transform: rotate(180deg); }
 
-.nights { margin-top: var(--s-3); }
-.nights > summary { cursor: pointer; list-style: none; }
-.nights > summary::-webkit-details-marker { display: none; }
-.nights > summary::after { content: ' ▾'; }
 
 /* ── the top bar: the partner in a level ring, what you spend, Collect, the season ── */
 .tb { display: flex; align-items: center; gap: var(--s-3); flex-wrap: nowrap; }

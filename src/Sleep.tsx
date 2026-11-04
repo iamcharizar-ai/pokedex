@@ -1,7 +1,6 @@
 // Last night, as the band measured it, and what it paid. The score itself is
 // worked out in Vitals and written to the ledger; here it is only shown, with
 // what the game did with it (SLEEP-DESIGN.md).
-import { addDays } from '../core/facts.ts'
 import type { SleepNight } from '../core/events.ts'
 import type { Game } from '../core/fold.ts'
 import { DEEP_SLEEP_FROM, DEEP_SLEEP_MIN, SLEEP_DEEP, SLEEP_DONE, TIER_XP } from '../core/rules.ts'
@@ -10,7 +9,6 @@ import { MarkIcon } from './Item.tsx'
 
 const hm = (m: number) => `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m`
 const clock = (s?: string) => (s ? s.slice(11, 16) : '')
-const weekday = (day: string) => new Date(day + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'narrow' })
 
 /** [the score it takes, the Bells it pays in all] */
 const BELLS: [number, number][] = [[SLEEP_DONE, 1], [SLEEP_DEEP, 2]]
@@ -22,7 +20,6 @@ export function SleepWin({ game, nights }: { game: Game; nights: Record<string, 
   const night = nights[today]
   const bells = game.wallet.marksToday.sleep
   const deep = today >= DEEP_SLEEP_FROM && (night?.deepMin ?? 0) >= DEEP_SLEEP_MIN
-  const recent = Array.from({ length: 14 }, (_, i) => addDays(today, i - 13))
   const stageTotal = night ? STAGES.reduce((a, [k]) => a + ((night[k] as number | undefined) ?? 0), 0) : 0
   return (
     <Win title="Last night" tone="blue" aside={sleep.state === 'measured' ? undefined : sleep.state === 'self' || sleep.band ? 'Waiting' : 'No band'}>
@@ -70,22 +67,6 @@ export function SleepWin({ game, nights }: { game: Game; nights: Record<string, 
         <p className="muted">Last night's reading has not arrived. The band syncs about 07:00. Until it does, the Sleep habit can be ticked by hand in Life OS for {TIER_XP.core} XP; the reading replaces the tick when it comes, and a night with no reading is never a zero.</p>
       ) : (
         <p className="muted">No band yet. Sleep is a habit you tick by hand, worth {TIER_XP.core} XP. From the first night your band reports, it becomes a pillar of 100 XP paid by the night's score.</p>
-      )}
-      {sleep.band && (
-        <details className="nights fold-row">
-          <summary>Last 14 nights</summary>
-          <div className="nightbars" role="img" aria-label="Sleep score for each of the last 14 nights">
-            {recent.map((d) => {
-              const s = nights[d]?.score
-              return (
-                <span key={d} className={`nb ${typeof s !== 'number' ? 'none' : s >= SLEEP_DEEP ? 'deepnight' : s >= SLEEP_DONE ? 'goodnight' : ''}`} title={typeof s === 'number' ? `${d}: ${s}` : `${d}: not measured`}>
-                  <i style={{ height: typeof s === 'number' ? `${Math.max(6, s)}%` : '6%' }} />
-                  <small>{weekday(d)}</small>
-                </span>
-              )
-            })}
-          </div>
-        </details>
       )}
     </Win>
   )

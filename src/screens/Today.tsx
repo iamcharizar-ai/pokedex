@@ -1,11 +1,11 @@
 // Small things the page did not already say:
 // - whether the balls in the bag can finish the wild Pokemon (the heading of
 //   Throw and feed; its HP is already on the scene, so it is not repeated),
-// - the egg's steps, as a tile beside Momentum and Evolves,
+// - the egg's steps, as a tile beside Momentum and Evolves (the Nursery below has the rest),
 // - and for the tab bar, which other tab has something you can do right now.
 // Nothing here is a new rule: all of it is read from the game as it stands.
 import { ItemIcon } from '../Item.tsx'
-import { BALLS, EVO_ITEMS, FOSSILS, REVIVE_COST, collectorWants, itemName, throwHp } from '../../core/economy.ts'
+import { BALLS, EGG_KINDS, EVO_ITEMS, FOSSILS, REVIVE_COST, collectorWants, itemName, throwHp } from '../../core/economy.ts'
 import type { Game } from '../../core/fold.ts'
 import { SPECIES } from '../../core/species.ts'
 import { STEPS_GOAL, V14_START } from '../../core/rules.ts'
@@ -37,10 +37,10 @@ export function EggCell({ game }: { game: Game }) {
   const pct = egg.need > 0 ? Math.min(1, egg.have / egg.need) : 0
   const set = egg.since === game.today.day
   return (
-    <div className="pace-cell pace-egg" title={`Every step the band counts warms it, up to ${STEPS_GOAL.toLocaleString()} a day. ${egg.have.toLocaleString()} of ${egg.need.toLocaleString()}.`}>
-      <span className="k-label">{left <= STEPS_GOAL ? 'Egg hatches soon' : 'Egg'}</span>
+    <div className="pace-cell pace-egg" title={`Every step the band counts warms it. ${egg.have.toLocaleString()} of ${egg.need.toLocaleString()}.`}>
+      <span className="k-label">{left <= (egg.pace > 0 ? egg.pace : STEPS_GOAL) ? 'Egg hatches soon' : (EGG_KINDS[egg.kind]?.name ?? 'Egg')}</span>
       <span className="pace-eggrow">
-        <ItemIcon id="rare-egg" size={28} />
+        <ItemIcon id={egg.kind} size={28} />
         <b className="pace-big">{set ? 'From tomorrow' : <>{left.toLocaleString()}<small> steps</small></>}</b>
       </span>
       <span className="pace-eggbar" role="progressbar" aria-valuemin={0} aria-valuemax={egg.need} aria-valuenow={egg.have} aria-label="How warm the egg is"><i style={{ width: `${pct * 100}%` }} /></span>

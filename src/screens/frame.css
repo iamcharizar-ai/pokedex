@@ -56,7 +56,7 @@ details.drawer[open] > summary { background: none; border-color: transparent; pa
 details.drawer[open] > summary h2 { font-size: 21px; }
 details.drawer > .sec-b { padding-top: var(--s-3); }
 
-/* a plain fold inside a section ("All feats", "Last 14 nights") */
+/* a plain fold inside a section ("All feats") */
 .fold-row { border-top: 1px solid var(--hair); }
 .fold-row > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; min-height: 44px; font-family: var(--k-face); color: var(--text); }
 .fold-row > summary::-webkit-details-marker { display: none; }

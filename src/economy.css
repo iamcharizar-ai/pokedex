@@ -101,11 +101,6 @@ img.itemimg, img.pix, img.ball, img.keystone { flex: none; vertical-align: middl
 .stagebar i { display: block; min-width: 3px; }
 .stagelegend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; font-size: 12px; color: var(--k-dim); }
 .stagelegend i { display: inline-block; width: 10px; height: 10px; margin-right: 5px; border-radius: 3px; }
-.nightbars { display: grid; grid-template-columns: repeat(14, 1fr); gap: 4px; align-items: end; height: 84px; margin: 6px 0 12px; }
-.nb { display: grid; grid-template-rows: 1fr auto; justify-items: center; height: 100%; gap: 2px; }
-.nb i { align-self: end; display: block; width: 100%; border-radius: 4px 4px 0 0; background: #63c6ff; }
-.nb.goodnight i { background: var(--k-gold); } .nb.deepnight i { background: #b9a6ff; } .nb.none i { background: rgba(255, 255, 255, 0.14); }
-.nb small { font-size: 10px; color: var(--k-dim); }
 
 /* version 7: things that are about to go */
 .leaving { color: #ff9aa2; font-family: var(--k-face); }
@@ -135,3 +130,12 @@ img.itemimg, img.pix, img.ball, img.keystone { flex: none; vertical-align: middl
 .work b { display: block; font-family: var(--k-face); font-weight: 400; font-size: 17px; }
 .work small { display: block; color: var(--k-dim); font-size: 11.5px; line-height: 1.2; }
 @media (max-width: 520px) { .work li { grid-template-columns: auto 1fr auto; } .kitrow { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+/* ── version 19: kinds of egg. One sprite, tinted and lit per kind (the Mystery Egg is the sprite as drawn) ── */
+.eggk { --egg-glow: transparent; filter: drop-shadow(0 0 4px var(--egg-glow)); }
+.eggk-trail-egg { --egg-glow: #ff9a3c; filter: hue-rotate(-95deg) saturate(1.5) drop-shadow(0 0 4px var(--egg-glow)); }
+.eggk-egg-code { --egg-glow: #5b8cff; filter: hue-rotate(115deg) saturate(1.6) drop-shadow(0 0 4px var(--egg-glow)); }
+.eggk-egg-fitness { --egg-glow: #ff5b5b; filter: hue-rotate(-125deg) saturate(1.7) drop-shadow(0 0 4px var(--egg-glow)); }
+.eggk-egg-guitar { --egg-glow: #ffd23c; filter: hue-rotate(-65deg) saturate(1.7) drop-shadow(0 0 4px var(--egg-glow)); }
+.eggk-egg-arbor { --egg-glow: #5bd16a; filter: saturate(1.5) drop-shadow(0 0 4px var(--egg-glow)); }
+.eggk-egg-sleep { --egg-glow: #b48cff; filter: hue-rotate(165deg) saturate(1.5) drop-shadow(0 0 4px var(--egg-glow)); }

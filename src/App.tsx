@@ -5,9 +5,9 @@ import type { DayFacts, HabitFact } from '../core/facts.ts'
 import { LEAGUES, lineup } from '../core/gyms.ts'
 import {
   ADVANTAGE_MULT, GEMS, SEASON_STEP, BALL_MULT, BALL_NAME, GAME_START, GRADUATES_PER_REGION, LEADER_HP, MOMENTUM_WINDOW,
-  CLAIM_AUTO, EGG_STEPS, SLEEP_HABIT, bondLevel, HEART_LEVELS, LEGENDARY_EVERY_WILD, PAY_STREAK, REGIONS, REPEL_DAYS, SHINY_ODDS, SHINY_ODDS_WORN, SLEEP_AFTER, SLIP, STAKES_FROM, STEPS_GOAL, TEAM_SIZE, WILD_STAY, TIER_XP, WEAK_MULT, evolveAt, graduateAt, xpForLevel,
+  CLAIM_AUTO, SLEEP_HABIT, bondLevel, HEART_LEVELS, LEGENDARY_EVERY_WILD, PAY_STREAK, REGIONS, REPEL_DAYS, SHINY_ODDS, SHINY_ODDS_WORN, SLEEP_AFTER, SLIP, STAKES_FROM, STEPS_GOAL, TEAM_SIZE, TRAIL_EGG_STEPS, WILD_STAY, TIER_XP, WEAK_MULT, evolveAt, graduateAt, xpForLevel,
 } from '../core/rules.ts'
-import { BERRY_HEARTS, MARKS, EGG_STEPS_OLD_CHARM, BOND_STEP, MASTERY_MAX, MASTERY_STEP, SELL, itemName as econName, masteryCost } from '../core/economy.ts'
+import { BERRY_HEARTS, MARKS, EGG_KINDS, RARE_EGG_GEMS, BOND_STEP, MASTERY_MAX, MASTERY_STEP, SELL, itemName as econName, masteryCost } from '../core/economy.ts'
 import { MILESTONE_EVERY, CRIT_MULT, DYNAMAX, GIGANTAMAX, LEVEL_POWER, MAX_LEVEL, MEGA_BONUS, MEGA_BOND, RESEARCH_SLOTS, RESEARCH_WILD, RESEARCH_WILD_MAX, TEAM_BONUS, TEAM_LEVEL, TEAM_NATURE, type Tag as TagKind } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
 import { Ball, KeyStone } from './Ball.tsx'
@@ -24,6 +24,7 @@ import { Calendar } from './screens/Calendar.tsx'
 import { SigLine } from './Bond.tsx'
 import { SIG_CAP, STAR_EVERY, TRAINER_LEVELS } from '../core/bond.ts'
 import { EggCell, reachNote, tabTodo } from './screens/Today.tsx'
+import { Nursery } from './screens/Nursery.tsx'
 import { HpBar } from './screens/HpBar.tsx'
 import { hpTone } from './screens/hp.ts'
 import { typeColor } from './screens/types.ts'
@@ -484,6 +485,7 @@ function PartnerTab({ game, facts, nights, onShop }: { game: Game; facts: DayFac
           <BossTile game={game} />
         </div>
       </Win>
+      <Nursery game={game} onShop={onShop} />
       </div>
     </div>
   )
@@ -1016,7 +1018,7 @@ function RulesTab({ onTour }: { onTour: () => void }) {
             Only the week has quests: five days with two pillars, and catch a Pokemon. The day itself pays its own coins, and a perfect day pays {GEMS.perfect} gems.
           </Rule>
           <Rule title="Eggs and chests" tone="blue" pic={<><ItemIcon id="rare-egg" size={32} /><ItemIcon id="loot-sack" size={32} /></>}>
-            A boss you beat can drop a Mystery Egg, and gems buy one and Chests in the Rare shop. An egg is warmed by the steps the band counts, at most {STEPS_GOAL.toLocaleString()} a day, and hatches into a rare Pokemon at {EGG_STEPS.toLocaleString()} ({EGG_STEPS_OLD_CHARM.toLocaleString()} with an Old Charm). One is kept warm at a time. A day with no band reading adds nothing. A chest opens on the spot.
+            An egg is warmed by the steps the band counts, every one of them, and one is kept warm at a time (with two kinds waiting you choose). A Mystery Egg ({EGG_KINDS['rare-egg'].steps.toLocaleString()} steps, a rare Pokemon) comes from a boss, every fifth research rank or {RARE_EGG_GEMS} gems. Walking finds a Trail Egg for every {TRAIL_EGG_STEPS.toLocaleString()} steps ({EGG_KINDS['trail-egg'].steps.toLocaleString()} steps, an uncommon Pokemon that starts with {EGG_KINDS['trail-egg'].hearts} hearts), and each kind of work's shop sells its own egg for marks ({EGG_KINDS['egg-code'].steps.toLocaleString()} steps, a Pokemon of that work). An Old Charm takes a fifth off every egg. A day with no band reading adds nothing. A chest opens on the spot.
           </Rule>
           <Rule title="Regions, legendaries, shiny" tone="purple" pic={<><ItemIcon id="star-piece" size={30} /><span className="rule-chip sm">1/{SHINY_ODDS}</span></>}>
             Every {GRADUATES_PER_REGION} fully trained Pokemon open the next region once the league before it is beaten. Every {LEGENDARY_EVERY_WILD}th wild Pokemon is a legendary. A catch on a perfect day is shiny one time in {SHINY_ODDS}; one worn down, one in {SHINY_ODDS_WORN}.
@@ -1199,7 +1201,7 @@ export default function App() {
   const screen = (id: Tab) => (
     <>
       {id === 'partner' && <PartnerTab game={view.game} facts={view.facts} nights={view.nights} onShop={() => slideTo('shop')} />}
-      {id === 'team' && <TeamTab game={view.game} partnerCard={(open: () => void) => <Summary game={view.game} onOpen={open} />} choices={<Choices game={view.game} />} onShop={() => slideTo('shop')} />}
+      {id === 'team' && <TeamTab game={view.game} partnerCard={(open: () => void) => <Summary game={view.game} onOpen={open} />} choices={<Choices game={view.game} />} />}
       {id === 'shop' && <ShopTab game={view.game} />}
       {id === 'dex' && <DexTab game={view.game} />}
       {id === 'trainer' && <TrainerTab game={view.game} />}

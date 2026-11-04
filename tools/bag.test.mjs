@@ -33,3 +33,16 @@ test('there are three rows at least, and always an empty slot to drop into', () 
 test('tidy lays everything down again with no gaps', () => {
   assert.deepEqual(tidy(['a', 'b', 'c']), ['a', 'b', 'c'])
 })
+
+test('every currency in the wallet has a slot in the Bag\'s "Money and marks" row', async () => {
+  const { readFileSync } = await import('node:fs')
+  const fold = readFileSync(new URL('../core/fold.ts', import.meta.url), 'utf8')
+  const wallet = fold.match(/^\s*wallet: \{([^}]*)\}/m)?.[1] ?? ''
+  // a currency is a field with a "…Today" twin (coins/coinsToday, gems, marks, bp)
+  const currencies = [...wallet.matchAll(/(\w+)Today:/g)].map((m) => m[1])
+  assert.ok(currencies.length >= 4, `found the wallet's currencies: ${currencies}`)
+  const play = readFileSync(new URL('../src/Play.tsx', import.meta.url), 'utf8')
+  const start = play.indexOf('const purse:')
+  const purse = play.slice(start, play.indexOf('\n  ]', start))
+  for (const c of currencies) assert.ok(purse.includes(`wallet.${c}`), `the Bag shows wallet.${c}`)
+})

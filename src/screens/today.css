@@ -118,7 +118,6 @@
 .sleepdial.goodnight { background: radial-gradient(circle, #1a2150 0 38px, transparent 39px), conic-gradient(var(--tone-gold) calc(var(--p, 0.5) * 1turn), rgba(255, 255, 255, 0.09) 0); }
 .sleepdial.deepnight { box-shadow: 0 0 26px rgba(150, 110, 255, 0.5); }
 .stagebar { height: 12px; border: 0; border-radius: 99px; background: var(--well); }
-.nights { border-top: 1px solid var(--hair); padding-top: var(--s-2); }
 
 @media (max-width: 560px) {
   .say2 p { font-size: 20px; }
