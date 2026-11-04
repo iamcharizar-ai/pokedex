@@ -90,8 +90,6 @@
 .duel-txt b { font-family: var(--k-face); font-weight: 400; font-size: 20px; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .duel-txt small { font-size: 12.5px; color: var(--text-2); }
 .duel-txt em { font-style: normal; color: var(--text); font-weight: 700; }
-.duel .k-bar { height: 16px; border-width: 1px; border-color: rgba(0, 0, 0, 0.4); background: var(--well); box-shadow: none; }
-.duel .k-bar > span { font-size: 11px; -webkit-text-stroke: 2px var(--k-edge); }
 /* before there is a boss: the six places of the party it waits for */
 .duel.bosslock { display: flex; gap: var(--s-3); margin: 0; min-height: 0; background: linear-gradient(110deg, rgba(150, 110, 255, 0.18), #161c42 70%); border-color: rgba(150, 110, 255, 0.35); box-shadow: none; grid-column: 1 / -1; }
 .bosslock small { color: var(--text-2); opacity: 1; }

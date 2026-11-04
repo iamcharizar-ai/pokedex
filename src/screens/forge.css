@@ -89,7 +89,6 @@
 .nextshard span { display: grid; gap: 3px; min-width: 0; }
 .nextshard b { font-family: var(--k-face); font-weight: 400; font-size: 14.5px; color: var(--text); }
 .nextshard small { font-size: 12.5px; line-height: 1.25; color: var(--text-3); }
-.nextshard .k-bar { height: 16px; } .nextshard .k-bar > span { font-size: 11px; }
 
 @keyframes altar-turn { to { rotate: 360deg; } }
 @keyframes orb-bob { 50% { translate: 0 -5px; } }

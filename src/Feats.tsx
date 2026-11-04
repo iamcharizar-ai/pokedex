@@ -5,7 +5,8 @@ import type { Game } from '../core/fold.ts'
 import { featShown } from './lib/shelved.ts'
 import { Win, plural } from './App.tsx'
 import { Gem, ItemIcon } from './Item.tsx'
-import { KBar, KMedal } from './Kit.tsx'
+import { KMedal } from './Kit.tsx'
+import { Meter } from './Meter.tsx'
 import { fmtDay } from './lib/art.ts'
 
 const GROUP: Record<Feat['group'], string> = { run: 'Runs', total: 'For life', perfect: 'Perfect days', collect: 'Collection', raise: 'Raising', league: 'Leagues' }
@@ -28,7 +29,7 @@ function FeatRow({ f, game }: { f: Feat; game: Game }) {
   return (
     <li className={`feat ${got ? 'done' : ''}`}>
       <div className="fname"><b>{f.name}</b><small>{f.text}</small></div>
-      {got ? <span className="fwhen">{fmtDay(got.day)}</span> : <KBar value={have} max={f.n} label={`${have} / ${f.n}`} />}
+      {got ? <span className="fwhen">{fmtDay(got.day)}</span> : <Meter value={have} max={f.n} size="lg" name={f.name} label={`${have} / ${f.n}`} />}
       <Reward f={f} />
     </li>
   )
@@ -55,7 +56,7 @@ export function FeatsWin({ game }: { game: Game }) {
                     <KMedal on={i === 0} color="#f5b800">{big ? <ItemIcon id={big} size={30} /> : <Gem size={30} />}</KMedal>
                     <div>
                       <span className="name">{f.name}</span><small>{f.text}</small>
-                      <div style={{ marginTop: 6 }}><KBar value={have} max={f.n} kind="gold" label={`${have} / ${f.n}`} /></div>
+                      <div style={{ marginTop: 6 }}><Meter value={have} max={f.n} kind="gold" size="lg" className="pre-sweep" name={f.name} label={`${have} / ${f.n}`} /></div>
                     </div>
                   </div>
                 )
@@ -64,13 +65,13 @@ export function FeatsWin({ game }: { game: Game }) {
           </>
         )}
         <details className="featgroup fold-row">
-          <summary><b>All feats</b><span>{earned.size} / {shown.length}</span></summary>
+          <summary><b>All feats</b><Meter value={earned.size} max={shown.length} kind="gold" size="sm" name="All feats" /><span>{earned.size} / {shown.length}</span></summary>
           {ORDER.map((g) => {
             const list = shown.filter((f) => f.group === g)
             const n = list.filter((f) => earned.has(f.id)).length
             return (
               <details key={g} className="featgroup fold-row">
-                <summary><b>{GROUP[g]}</b><span>{n} / {list.length}</span></summary>
+                <summary><b>{GROUP[g]}</b><Meter value={n} max={list.length} kind="gold" size="sm" name={GROUP[g]} /><span>{n} / {list.length}</span></summary>
                 <ul className="feats">{list.map((f) => <FeatRow key={f.id} f={f} game={game} />)}</ul>
               </details>
             )

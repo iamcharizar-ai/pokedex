@@ -16,7 +16,7 @@ import { PLAN_BY } from './lib/boss.ts'
 import { TAG_NAME, Win } from './App.tsx'
 import { BallItem } from './Ball.tsx'
 import { ItemIcon } from './Item.tsx'
-import { KBar } from './Kit.tsx'
+import { Meter } from './Meter.tsx'
 import { HpBar } from './screens/HpBar.tsx'
 import { Sheet } from './screens/Sheet.tsx'
 import { typeColor } from './screens/types.ts'
@@ -137,7 +137,7 @@ function Fight({ boss, game }: { boss: BossView; game: Game }) {
             <span className="boss-task">
               <b>{t.text}</b>
               <small>{BOSS_WHERE[t.kind]} · {pct(t.share)} of its HP</small>
-              <KBar value={Math.round(t.p * 100)} max={100} ready={t.p >= 1} kind={t.p >= 1 ? '' : 'gold'} label={t.p >= 1 ? 'Done' : pct(t.p)} />
+              <Meter value={Math.round(t.p * 100)} max={100} kind={t.p >= 1 ? 'hp' : 'gold'} size="lg" name={t.text} label={t.p >= 1 ? 'Done' : pct(t.p)} />
             </span>
           </li>
         ))}

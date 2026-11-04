@@ -836,8 +836,10 @@ export function Road({ game }: { game: Game }) {
   const l = LEAGUES[index]
   const all = lineup(l)
   const at = done ? all.length : league.slot
+  // the Rematch rule waits in the tip of the league's heading (phase 8)
+  const rematch = !game.v13 ? '' : league.lap > 0 ? `Rematch rank ★${league.lap + 1}: every leader has ${Math.round(60 * league.lap)}% more HP, wins pay Battle Points, and each Champion a Legend key.` : 'After Paldea\'s Champion, every league comes back at Rematch rank ★2, then ★3: the road never ends.'
   return (
-    <Win title={`${league.lap > 0 ? `★${league.lap + 1} ` : ''}${l.name} league`} tone="gold" aside={done ? 'All beaten' : league.lap > 0 ? `Rematch rank ★${league.lap + 1}` : `${Math.min(at, l.gyms.length)} / ${l.gyms.length} badges`}>
+    <Win title={`${league.lap > 0 ? `★${league.lap + 1} ` : ''}${l.name} league`} tone="gold" aside={<span title={rematch || undefined}>{done ? 'All beaten' : league.lap > 0 ? `Rematch rank ★${league.lap + 1}` : `${Math.min(at, l.gyms.length)} / ${l.gyms.length} badges`}{rematch && <span className="sr-only">. {rematch}</span>}</span>}>
       <div className="road-win">
         <div className="k-road">
           {at > 0 && <div className="k-road-done"><span className="k-rung past">{at} {at === 1 ? 'leader' : 'leaders'} beaten</span></div>}
@@ -863,7 +865,6 @@ export function Road({ game }: { game: Game }) {
         </div>
       </div>
       {league.waiting && <p className="muted">{l.name} is not open yet.</p>}
-      {game.v13 && <p className="muted">{league.lap > 0 ? `Rematch rank ★${league.lap + 1}: every leader has ${Math.round(60 * league.lap)}% more HP, wins pay Battle Points, and each Champion a Legend key.` : 'After Paldea\'s Champion, every league comes back at Rematch rank ★2, then ★3: the road never ends.'}</p>}
     </Win>
   )
 }

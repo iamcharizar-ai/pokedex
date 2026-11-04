@@ -38,7 +38,6 @@
 .facility-txt { display: grid; gap: 3px; min-width: 0; }
 .facility-txt b { font-family: var(--k-face); font-weight: 400; font-size: 16px; color: #fff; }
 .facility-txt small { color: var(--k-dim); font-size: 12.5px; line-height: 1.2; }
-.facility-txt .k-bar { height: 20px; } .facility-txt .k-bar > span { font-size: 12px; }
 .facility-done-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: var(--s-2); }
 .facility-done-row .k-label { width: 100%; }
 .facility-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px 3px 4px; font-family: var(--k-face); font-size: 13px; color: #ffe27a; background: rgba(255, 210, 90, 0.1); border: 1px solid rgba(255, 210, 90, 0.45); border-radius: 99px; }
@@ -48,18 +47,6 @@
 .symbol.g.on { background: linear-gradient(160deg, #fff6c2, #ffcf3a 55%, #c48a00); }
 
 /* ── Legend quests (Journey) ── */
-.legends { display: grid; gap: 8px; margin: var(--s-2) 0; }
-.legend { display: grid; grid-template-columns: 44px auto 1fr auto; align-items: center; gap: var(--s-3); padding: 8px 12px; border-radius: 14px; background: rgba(8, 12, 30, 0.35); opacity: 0.7; }
-.legend.have { opacity: 1; background: linear-gradient(135deg, rgba(66, 83, 154, 0.6), rgba(8, 12, 30, 0.4)); box-shadow: inset 0 0 0 1px rgba(255, 210, 90, 0.55); }
-.legend-key { position: relative; display: grid; place-items: center; }
-.legend-key img { image-rendering: pixelated; }
-.legend-key i { position: absolute; right: -6px; bottom: -4px; font-style: normal; font-family: var(--k-face); font-size: 12px; color: #ffe27a; }
-.legend-mons { display: flex; }
-.legend-mons img { image-rendering: pixelated; margin-left: -10px; }
-.legend-mons img:first-child { margin-left: 0; }
-.legend-txt { display: grid; line-height: 1.2; min-width: 0; }
-.legend-txt b { font-family: var(--k-face); font-weight: 400; font-size: 15px; color: #fff; }
-.legend-txt small { color: var(--k-dim); font-size: 12px; }
 
 /* ── the Collector and the Lab (Shop) ── */
 .trade-list { display: grid; gap: 8px; margin: var(--s-2) 0; }
@@ -114,3 +101,21 @@
 .collector-total { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
 .collector-total b { font: 400 24px/1 var(--k-face); color: #fff; }
 .collector-total small { color: var(--text-2); font-size: 13px; }
+
+/* Legend quests (phase 8): each key a card of its legend; a silhouette until caught, the key and what earns it in the corners */
+.legend-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: var(--s-2); margin: var(--s-2) 0; }
+.legend-slot { display: grid; gap: 6px; align-content: start; }
+.legendcard .mc-art { height: 100px; }
+.legendcard.shadow .mc-art > .crop img { filter: brightness(0) opacity(0.5); }
+.legendcard.picked .mc-f { outline: 2px solid #fff; outline-offset: 2px; }
+.legendcard .mc-type, .legendcard .mc-sig { width: 26px; height: 26px; background: rgba(10, 14, 40, 0.8); }
+.legend-key, .legend-req { display: grid; place-items: center; }
+.mc.legendcard .mc-art .legend-key img, .mc.legendcard .mc-art .legend-req img { image-rendering: pixelated; filter: grayscale(1) opacity(0.45); }
+.mc.legendcard .mc-art .legend-key.lit img, .mc.legendcard .mc-art .legend-req.lit img { filter: drop-shadow(0 0 3px var(--gold-glow)); }
+.legendcard .mc-type:has(.lit), .legendcard .mc-sig:has(.lit) { border-color: var(--k-gold-hi); }
+.legend-more { padding: 0 5px; font: 400 11px/1.4 var(--k-face); color: #fff; background: rgba(10, 14, 40, 0.8); border-radius: 99px; }
+.legendcard .mc-shiny { color: inherit; filter: none; }
+.legend-where { display: flex; align-items: center; gap: var(--s-2); margin: 0 0 var(--s-2); font-size: 13.5px; color: var(--text-2); }
+.legend-where b { font-family: var(--k-face); font-weight: 400; color: var(--text); }
+.legend-where img { image-rendering: pixelated; flex: none; }
+.legend-all { display: flex; margin: 0 auto; }

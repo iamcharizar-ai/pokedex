@@ -20,8 +20,9 @@ import { tabTodo } from './screens/Today.tsx'
 import { Deck, SigLine } from './Bond.tsx'
 import { ResearchTab } from './Research.tsx'
 import { Coin, EggIcon, Gem, ItemIcon, MarkIcon } from './Item.tsx'
-import { KBar, KButton } from './Kit.tsx'
+import { KButton } from './Kit.tsx'
 import { Slot } from './Slot.tsx'
+import { Meter } from './Meter.tsx'
 import { ObjCard } from './ObjCard.tsx'
 import { catColor } from './lib/itemcat.ts'
 import { aBall, badgeArt, badgeName, badgeWon, fmtDay, still } from './lib/art.ts'
@@ -151,7 +152,7 @@ function QuestRow({ q }: { q: Quest }) {
   return (
     <li className={`quest ${q.done ? 'done' : ''}`}>
       <span className="q-name">{q.name}</span>
-      <KBar value={q.have} max={q.need} ready={q.done} label={q.done ? 'Done' : `${q.have.toLocaleString('en-IN')} / ${q.need.toLocaleString('en-IN')}`} />
+      <Meter value={q.have} max={q.need} kind={q.done ? 'gold' : 'xp'} size="lg" name={q.name} label={q.done ? 'Done' : `${q.have.toLocaleString('en-IN')} / ${q.need.toLocaleString('en-IN')}`} />
       <span className="q-pay">{q.coins > 0 && <Price coins={q.coins} />}{q.gems > 0 && <Price gems={q.gems} />}</span>
     </li>
   )
@@ -167,7 +168,7 @@ export function Quests({ game }: { game: Game }) {
           <div className="paytiers">
             {DAILY_PAY.map((p) => <span key={p.share} className={`paytier ${t.ticked >= p.share ? 'on' : ''}`}><b>{Math.round(p.share * 100)}%</b><Price coins={p.coins} /></span>)}
           </div>
-          <KBar value={t.done} max={Math.max(1, t.total)} label={`${t.done} / ${t.total} habits ticked`} />
+          <Meter value={t.done} max={Math.max(1, t.total)} size="lg" name="Habits ticked today" label={`${t.done} / ${t.total} habits ticked`} />
         </div>
         <div><span className="k-label">This week</span><ul className="quests">{game.quests.weekly.map((q) => <QuestRow key={q.id} q={q} />)}</ul></div>
       </div>

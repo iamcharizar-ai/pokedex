@@ -23,10 +23,18 @@
 .sec .k-step .name { font-size: 17px; }
 .sec .k-step small { color: var(--text-2); font-size: 12.5px; }
 .sec .k-step .sprite { image-rendering: pixelated; filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.3)); }
-.sec .k-step .k-bar { height: 16px; border-width: 1px; background: var(--well); box-shadow: none; }
-.sec .k-step .k-bar > span { font-size: 11px; -webkit-text-stroke: 2px var(--k-edge); }
-.k-road-done { margin: 0 0 var(--s-1) 44px; }
+/* the league trail's folded ends: "3 leaders beaten", "and 5 more after that" */
+.k-road-done { margin: 0 0 var(--s-1); }
 .k-road-done .k-rung, .sec .k-rung.past { display: block; padding: 0 var(--s-2); text-align: left; font-family: var(--k-face); font-size: 13px; color: var(--text-3); background: none; border: 0; }
+/* a badge not yet won: a readable grey shape, not near-black */
+.road-win .gymbadge.off { filter: grayscale(1) brightness(0.55) contrast(0.8) opacity(0.75); }
+
+/* the season's node states (phase 8): collected (folded into one node, a stamp when new), ready (lit), locked */
+.sec .k-step.collected { min-height: 56px; grid-template-columns: 56px 1fr; }
+.road-stamp { display: grid; place-items: center; width: 48px; height: 48px; justify-self: center; font: 400 26px/1 var(--k-face); color: var(--k-edge); background: radial-gradient(circle at 40% 30%, #bff5cf, var(--tone-green)); border: 2px solid var(--k-edge); border-radius: 50%; box-shadow: 0 3px 0 var(--k-edge); }
+.sec .k-step.collected .name { color: var(--tone-green); }
+.road-meter { margin-top: 6px; }
+.sec .k-step.locked .name { color: var(--text-2); }
 /* a medal on the season road, smaller and without its ribbon tails */
 .sec .k-step .k-medal { width: 52px; height: 52px; }
 .sec .k-step .k-medal::before, .sec .k-step .k-medal::after { display: none; }
@@ -39,8 +47,6 @@
 .paytier { padding: var(--s-2) 4px; background: none; border: 0; border-radius: 0; opacity: 0.7; }
 .paytier + .paytier { border-left: 1px solid var(--hair); }
 .paytier.on { opacity: 1; background: rgba(255, 200, 40, 0.14); }
-.questcols .k-bar { height: 16px; border-width: 1px; background: var(--well); box-shadow: none; }
-.questcols .k-bar > span { font-size: 11px; -webkit-text-stroke: 2px var(--k-edge); }
 .quests { gap: 0; }
 .quest { padding: var(--s-2) 0; background: none; border: 0; border-bottom: 1px solid var(--hair); border-radius: 0; box-shadow: none; }
 .quest.done { background: none; }
@@ -63,9 +69,8 @@
 .feat { padding: var(--s-2) 0; background: none; border: 0; border-bottom: 1px solid var(--hair); border-radius: 0; box-shadow: none; }
 .feat.done { background: none; }
 .feat.done .fname b { color: var(--tone-gold); }
-.feat .k-bar { height: 14px; border-width: 1px; background: var(--well); box-shadow: none; }
-.feat .k-bar > span { font-size: 10px; -webkit-text-stroke: 2px var(--k-edge); }
 .featgroup summary { padding: 0; background: none; border: 0; border-radius: 0; }
+.featgroup summary .meter { flex: 1 1 60px; max-width: 120px; margin: 0 var(--s-2) 0 auto; }
 .featgroup .featgroup { margin: 0 0 0 var(--s-3); }
 
 /* ── bosses beaten, the badge case, the Hall of Fame ── */

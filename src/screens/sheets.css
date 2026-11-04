@@ -16,8 +16,6 @@
 .boss-tasks li.done b { color: var(--tone-green); }
 .boss-task b { font-weight: 600; }
 .boss-task small { color: var(--text-2); opacity: 1; }
-.boss-task .k-bar { height: 14px; border-width: 1px; background: var(--well); box-shadow: none; }
-.boss-task .k-bar > span { font-size: 10px; -webkit-text-stroke: 2px var(--k-edge); }
 .boss-throws .actions { display: flex; flex-wrap: wrap; gap: var(--s-2); }
 
 /* Collect: each reward a row you tap, its colour a thin edge and a glow behind the icon */

@@ -13,9 +13,12 @@ import { BOND_PERKS, CRIT_BASE, DYNAMAX, ENDURE_DAYS, FRIENDS_XP, GIGANTAMAX, HE
 import { SPECIES } from '../core/species.ts'
 import { TAG_NAME, Win } from './App.tsx'
 import { Coin, ItemIcon } from './Item.tsx'
-import { KBar } from './Kit.tsx'
 import { Meter } from './Meter.tsx'
 import { Slot } from './Slot.tsx'
+import { ObjCard } from './ObjCard.tsx'
+import { CropSprite } from './lib/pixel.tsx'
+import { useBoxes } from './Fit.tsx'
+import { typeColor } from './screens/types.ts'
 import { fmtDay, still } from './lib/art.ts'
 import { play } from './lib/sfx.ts'
 import { useItem } from './lib/store.ts'
@@ -150,7 +153,7 @@ function FacilityCard({ f, game }: { f: Facility; game: Game }) {
       <div className="facility-txt">
         <b>{f.name}</b>
         <small>{winLine(f)}</small>
-        <KBar value={Math.min(reach, target)} max={target} kind={r.silver ? 'gold' : ''} label={`${reach} / ${target} for ${r.silver ? 'Gold' : 'Silver'} · best ${r.best}`} />
+        <Meter value={Math.min(reach, target)} max={target} kind={r.silver ? 'gold' : 'xp'} size="lg" name={`${f.name}: toward ${r.silver ? 'Gold' : 'Silver'}`} label={`${reach} / ${target} for ${r.silver ? 'Gold' : 'Silver'} · best ${r.best}`} />
       </div>
       <span className="symbols" aria-label={`${r.silver ? 'Silver won' : 'Silver not yet'}, Gold not yet`}>
         <i className={`symbol s ${r.silver ? 'on' : ''}`} title={r.silver ? `Silver Symbol, ${fmtDay(r.silver)}` : `Silver at ${f.silver}`} />
@@ -183,36 +186,55 @@ export function FrontierWin({ game }: { game: Game }) {
 }
 
 // ── Legend quests ───────────────────────────────────────────────────────────
-const WHERE_KEY: Record<string, string> = Object.fromEntries(FACILITIES.map((f) => [f.goldKey, `Gold Symbol at the ${f.name}`]))
+// (UI-AUDIT-2026-11-04 T20) each key is a card of its legend: a silhouette until it is caught, the key in one corner
+// (lit when you hold it), what earns the key in the other (the Symbol or the BP, lit once it is won or within reach).
+// Use shows only under a key that can be used now; tap a card for where its key comes from.
+const KEY_FROM: Record<string, Facility> = Object.fromEntries(FACILITIES.map((f) => [f.goldKey, f]))
 export function LegendWin({ game }: { game: Game }) {
   const [all, setAll] = useState(false)
+  const [open, setOpen] = useState<string | null>(null)
+  const boxes = useBoxes()
   const keys = Object.entries(LEGEND_KEYS)
   const caught = (form: string) => Boolean(game.dex[form]?.own)
   const held = keys.filter(([id]) => (game.inv[id] ?? 0) > 0)
   const legends = keys.flatMap(([, k]) => k.forms)
   const have = legends.filter(caught).length
   const shown = all ? keys : [...held, ...keys.filter(([id]) => !(game.inv[id] ?? 0)).slice(0, Math.max(0, 6 - held.length))]
+  const where = (id: string) => (KEY_FROM[id] ? `Gold Symbol at the ${KEY_FROM[id].name}` : `BP Exchange, ${LEGEND_KEY_BP} BP`)
+  const met = (id: string) => (KEY_FROM[id] ? Boolean(game.frontier.find((x) => x.id === KEY_FROM[id].id)?.gold) : game.wallet.bp >= LEGEND_KEY_BP)
+  const sel = shown.find(([id]) => id === open)
   return (
     <Win title="Legend quests" tone="gold" aside={`${have} / ${legends.length} legends`}>
       {!game.v13 ? <p className="muted">{opens}</p> : (
         <>
-          <div className="legends">
+          <div className="legend-cards">
             {shown.map(([id, k]) => {
               const n = game.inv[id] ?? 0
+              const form = k.forms.find((f) => !caught(f)) ?? k.forms[0]
+              const done = k.forms.every(caught)
+              const known = Boolean(game.dex[form])
+              const usable = n > 0 && !game.wish.chosen
               return (
-                <div key={id} className={`legend ${n ? 'have' : ''}`}>
-                  <span className="legend-key"><ItemIcon id={id} size={36} />{n > 1 && <i>×{n}</i>}</span>
-                  <span className="legend-mons">{k.forms.map((f) => <img key={f} src={still(f)} alt="" width={48} height={48} className={`sprite ${caught(f) ? '' : 'unseen'}`} title={caught(f) ? `${nameOf(f)}: caught` : game.dex[f] ? nameOf(f) : '???'} />)}</span>
-                  <span className="legend-txt">
-                    <b>{k.name}</b>
-                    <small>{k.forms.map((f) => (game.dex[f] ? nameOf(f) : '???')).join(' / ')} · {WHERE_KEY[id] ?? `BP Exchange, ${LEGEND_KEY_BP} BP`}</small>
-                  </span>
-                  {n > 0 && <button type="button" className="k-btn main" disabled={Boolean(game.wish.chosen)} onClick={() => { useItem(id, '', 'summon'); play('catch') }}>Use</button>}
+                <div key={id} className="legend-slot">
+                  <ObjCard className={`legendcard ${caught(form) ? '' : 'shadow'} ${open === id ? 'picked' : ''}`} metal={n > 0 ? 'gold' : done ? 'elite' : 'locked'}
+                    tc={known ? typeColor(SPECIES[form].t) : undefined}
+                    art={<CropSprite src={still(form)} box={boxes?.[form]} />}
+                    corners={{
+                      tl: <span className={`legend-key ${n ? 'lit' : ''}`}><ItemIcon id={id} size={16} /></span>,
+                      tr: <span className={`legend-req ${met(id) ? 'lit' : ''}`}>{KEY_FROM[id] ? <ItemIcon id={KEY_FROM[id].icon} size={16} /> : <BpIcon size={16} />}</span>,
+                      trTitle: where(id),
+                      ...(k.forms.length > 1 ? { top: <span className="legend-more">+{k.forms.length - 1}</span> } : {}),
+                    }}
+                    banner={known ? nameOf(form) : '???'} gold={n > 0}
+                    aria-pressed={open === id} aria-label={`${k.name}: ${k.forms.map((f) => (game.dex[f] ? nameOf(f) : 'unknown legend')).join(' or ')}${done ? ', caught' : ''}${n ? `, you hold ${n}` : ''}. ${where(id)}`}
+                    onClick={() => { setOpen(open === id ? null : id); play('tap') }} />
+                  {usable && <button type="button" className="pill-btn gold legend-use" onClick={() => { useItem(id, '', 'summon'); play('catch') }}>Use{n > 1 ? ` ×${n}` : ''}</button>}
                 </div>
               )
             })}
           </div>
-          <button type="button" className="k-btn" onClick={() => setAll(!all)}>{all ? 'Fewer' : `All ${keys.length} keys`}</button>
+          {sel && <p className="legend-where"><ItemIcon id={sel[0]} size={24} /><span><b>{sel[1].name}</b> · {sel[1].forms.map((f) => (game.dex[f] ? nameOf(f) : '???')).join(' / ')} · {where(sel[0])}{game.wish.chosen && (game.inv[sel[0]] ?? 0) > 0 ? ` · ${nameOf(game.wish.chosen)} is coming next first` : ''}</span></p>}
+          <button type="button" className="pill-btn legend-all" onClick={() => setAll(!all)}>{all ? 'Fewer' : `All ${keys.length} keys`}</button>
         </>
       )}
     </Win>

@@ -14,7 +14,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useHold } from './overlay.ts'
 import { COMET_SHARD, FEATS, FORGE_COST, GEAR_ITEMS, SHARDS, forgeFair, forgeShard, itemName } from '../../core/economy.ts'
 import { KIT_SHARD_EVERY } from '../../core/rules.ts'
-import { KBar } from '../Kit.tsx'
+import { Meter } from '../Meter.tsx'
 import { nameOf, spritePath, type Game, type Mon } from '../../core/fold.ts'
 import { SPECIES } from '../../core/species.ts'
 import { Win } from '../App.tsx'
@@ -289,7 +289,7 @@ function NextShards({ game }: { game: Game }) {
       {rows.map((r) => (
         <div key={r.name} className="nextshard">
           <ItemIcon id={r.icon} size={28} />
-          <span><b>{r.name}</b><small>{r.note}</small>{r.bar && <KBar value={r.bar[0]} max={r.bar[1]} label={`${r.bar[0]} / ${r.bar[1]}`} />}</span>
+          <span><b>{r.name}</b><small>{r.note}</small>{r.bar && <Meter value={r.bar[0]} max={r.bar[1]} size="lg" name={r.name} label={`${r.bar[0]} / ${r.bar[1]}`} />}</span>
         </div>
       ))}
     </div>
