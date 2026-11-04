@@ -114,7 +114,7 @@ export function MonCard({ mon, state = 'card', role = 'lab', ribbon, look = 'cla
       art={art}
       corners={locked ? undefined : {
         tl: <img src={`/sprites/types/${mon.type}.png`} alt="" width={16} height={16} onError={(e) => { e.currentTarget.style.display = 'none' }} />,
-        tr: mon.sig ? <ItemIcon id={mon.sig.icon} size={18} /> : undefined,
+        tr: mon.sig ? <ItemIcon id={mon.sig.icon} size={16} /> : undefined,
         trTitle: mon.sig?.name,
         top: mon.shiny ? <IcStar size={12} /> : undefined,
       }}

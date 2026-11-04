@@ -17,7 +17,7 @@ function Reward({ f }: { f: Feat }) {
   return (
     <span className="freward">
       {f.reward.gems ? <span className="fr"><Gem size={18} />{f.reward.gems}</span> : null}
-      {f.reward.coins ? <span className="fr"><ItemIcon id="coin" size={18} />{f.reward.coins}</span> : null}
+      {f.reward.coins ? <span className="fr"><ItemIcon id="coin" size={24} />{f.reward.coins}</span> : null}
       {items.map(([id, n]) => <span key={id} className={`fr ${ITEMS[id]?.kind === 'unique' || ITEMS[id]?.kind === 'key' ? 'big' : ''}`} title={itemName(id)}><ItemIcon id={id} size={24} />{n > 1 ? `×${n}` : ''}</span>)}
     </span>
   )
@@ -53,7 +53,7 @@ export function FeatsWin({ game }: { game: Game }) {
                 const big = Object.keys(f.reward.items ?? {})[0]
                 return (
                   <div key={f.id} className={`k-step ${i === 0 ? 'now' : 'ahead'}`} data-n={i + 1}>
-                    <KMedal on={i === 0} color="#f5b800">{big ? <ItemIcon id={big} size={30} /> : <Gem size={30} />}</KMedal>
+                    <KMedal on={i === 0} color="#f5b800">{big ? <ItemIcon id={big} size={24} /> : <Gem size={30} />}</KMedal>
                     <div>
                       <span className="name">{f.name}</span><small>{f.text}</small>
                       <div style={{ marginTop: 6 }}><Meter value={have} max={f.n} kind="gold" size="lg" className="pre-sweep" name={f.name} label={`${have} / ${f.n}`} /></div>

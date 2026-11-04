@@ -113,7 +113,7 @@ function Fight({ boss, game }: { boss: BossView; game: Game }) {
         <div className="boss-stage" ref={stage}>
           <img ref={sprite} src={spritePath(boss.form)} alt="" width={120} height={120} className={`sprite ${boss.caught || boss.fled ? 'gone' : ''}`} />
           {busy && <span className="boss-ball"><BallItem id={busy} size={44} /></span>}
-          {boss.caught && <span className="boss-caught"><ItemIcon id="poke-ball" size={44} /></span>}
+          {boss.caught && <span className="boss-caught"><ItemIcon id="poke-ball" size={48} /></span>}
         </div>
         <div className="boss-info">
           <div className="boss-hp" title="Each segment is one task on the card">
@@ -133,7 +133,7 @@ function Fight({ boss, game }: { boss: BossView; game: Game }) {
       <ul className="boss-tasks">
         {boss.tasks.map((t, i) => (
           <li key={i} className={t.p >= 1 ? 'done' : ''}>
-            <ItemIcon id={ICON[t.kind]} size={30} />
+            <ItemIcon id={ICON[t.kind]} size={24} />
             <span className="boss-task">
               <b>{t.text}</b>
               <small>{BOSS_WHERE[t.kind]} · {pct(t.share)} of its HP</small>

@@ -90,7 +90,7 @@ export function CollectButton({ game, today }: { game: Game; today: string }) {
         aria-label={held.length ? `Collect: ${held.length} ${held.length === 1 ? 'reward' : 'rewards'} waiting` : 'Collect: nothing waiting'}
         title={held.length ? 'Rewards waiting' : 'Nothing to collect'}
       >
-        <ItemIcon id="loot-sack" size={30} />
+        <ItemIcon id="loot-sack" size={24} />
         {held.length > 0 && <i className="tb-count">{held.length}</i>}
       </button>
       {open && (

@@ -3,30 +3,32 @@
    Layers, lowest first:
 
      tokens   every colour, face and size (tokens.css). Nothing else defines one.
-     legacy   all the CSS written before the overhaul, in the order it has always
-              cascaded in: index (the cream-window game), the kit, the skin laid
-              over both, motion, and the shop/economy screens. Kept as one layer
-              ON PURPOSE. The skin retints the cream screens by out-ranking them
-              on specificity (a plain `.kind` over `.kind.k-catch`, and so on),
-              and a layer beats specificity, so splitting these into layers
-              would flip them. Screenshots under every fixture confirm that one
-              layer behaves exactly as the files did.
+     legacy   empty since UI-AUDIT-2026-11-04 phase 9 (kept declared so the order
+              stays fixed). The five files written before the overhaul (index,
+              kit, skin, motion, economy) now open the screens layer, first and in
+              the order they always cascaded in, so they still lose to every
+              rebuilt screen that comes after them on equal specificity. Moving
+              them was checked two ways: the screenshots, and every element's
+              computed style in ~100 app states, old order against new. The few
+              old declarations that only lost because of the layer were deleted.
+              What is left in them is still used; retiring them (and the cream
+              palette in tokens.css that they read) is rewriting, not moving.
      screens  the rebuilt screens, one small file each (phase 2 of UI-OVERHAUL.md).
-              A screen moves here when it is rebuilt on the kit, and its old
-              rules are deleted from legacy in the same change. Beats legacy.
+              A screen's old rules are deleted from the five old files when it
+              is rebuilt.
      motion   keyframes and the moving parts of the rebuilt screens (presets.css,
               the shared motion: UI-AUDIT-2026-11-04). Beats all.
 
-   When a screen is rebuilt it needs no long selector to win: being in a later
-   layer is enough. When the last screen has moved, legacy is empty and goes. */
+   Watch specificity when adding a rule: an old rule in the same layer with a
+   longer selector beats a new short one (tools/css-unused.mjs and the shots help). */
 @layer tokens, legacy, screens, motion;
 
 @import './tokens.css' layer(tokens);
-@import '../index.css' layer(legacy);
-@import '../kit.css' layer(legacy);
-@import '../skin.css' layer(legacy);
-@import '../motion.css' layer(legacy);
-@import '../economy.css' layer(legacy);
+@import '../index.css' layer(screens);
+@import '../kit.css' layer(screens);
+@import '../skin.css' layer(screens);
+@import '../motion.css' layer(screens);
+@import '../economy.css' layer(screens);
 @import '../screens/screens.css' layer(screens);
 @import '../screens/frame.css' layer(screens);
 @import '../screens/today.css' layer(screens);

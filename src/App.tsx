@@ -282,7 +282,7 @@ function Talk({ game, pillars, sleepH }: { game: Game; pillars: HabitFact[]; sle
           const st = stateOf(h)
           return (
             <li key={h.id} className={`pillar ${st}`} data-tag={h.tag} style={{ ['--p' as string]: h.frac }} title={`${label(h)}: ${Math.round(h.worth * h.frac)} of ${h.worth} XP`}>
-              <span className="pillar-ring"><ItemIcon id={pillarIcon(h.tag)} size={30} />{st === 'done' && <i className="pillar-tick" aria-hidden />}</span>
+              <span className="pillar-ring"><ItemIcon id={pillarIcon(h.tag)} size={24} />{st === 'done' && <i className="pillar-tick" aria-hidden />}</span>
               <b>{h.tag === 'sleep' ? 'Sleep' : label(h)}</b>
               <small>{st === 'done' ? `+${h.worth}` : st === 'part' ? `${Math.round(h.frac * 100)}%` : `${h.worth} XP`}</small>
             </li>
@@ -291,7 +291,7 @@ function Talk({ game, pillars, sleepH }: { game: Game; pillars: HabitFact[]; sle
         {/* Sleep is always on the board while its habit is on today's list. With a band it is a pillar paid by last night's score; until the reading arrives it waits here (never a miss); with no band it is a habit ticked by hand */}
         {showSleep && (
           <li className={`pillar ${sleepDone ? 'done' : 'waiting'}`} data-tag="sleep" title={game.sleep.band ? "Last night's reading has not arrived. The band syncs about 07:00; a night with no reading is never a zero." : 'No band yet: tick Sleep by hand in Life OS. With a band it is paid by last night\'s score, and a good night pays Bells.'}>
-            <span className="pillar-ring"><ItemIcon id={pillarIcon('sleep')} size={30} />{sleepDone && <i className="pillar-tick" aria-hidden />}</span>
+            <span className="pillar-ring"><ItemIcon id={pillarIcon('sleep')} size={24} />{sleepDone && <i className="pillar-tick" aria-hidden />}</span>
             <b>Sleep</b>
             <small>{sleepDone ? `+${sleepH?.worth ?? 30}` : game.sleep.band ? 'Waiting for the band' : `No band · ${sleepH?.worth ?? 30} XP`}</small>
           </li>
@@ -626,17 +626,17 @@ function SegRing({ parts, total, size = 84, label, children }: { parts: [number,
   const R = size / 2 - 5, C = 2 * Math.PI * R
   let at = 0
   return (
-    <span className="ring seg" style={{ width: size, height: size }} role="img" aria-label={label}>
+    <span className="dexring" style={{ width: size, height: size }} role="img" aria-label={label}>
       <svg viewBox={`0 0 ${size} ${size}`} aria-hidden>
-        <circle cx={size / 2} cy={size / 2} r={R} className="ring-track" />
+        <circle cx={size / 2} cy={size / 2} r={R} className="dexring-track" />
         {parts.map(([n, color], i) => {
           const len = total > 0 ? (C * Math.max(0, n)) / total : 0
-          const el = len > 0 ? <circle key={i} cx={size / 2} cy={size / 2} r={R} className="ring-part" style={{ stroke: color }} strokeDasharray={`${len} ${C}`} strokeDashoffset={-at} transform={`rotate(-90 ${size / 2} ${size / 2})`} /> : null
+          const el = len > 0 ? <circle key={i} cx={size / 2} cy={size / 2} r={R} className="dexring-part" style={{ stroke: color }} strokeDasharray={`${len} ${C}`} strokeDashoffset={-at} transform={`rotate(-90 ${size / 2} ${size / 2})`} /> : null
           at += len
           return el
         })}
       </svg>
-      <span className="ring-in">{children}</span>
+      <span className="dexring-in">{children}</span>
     </span>
   )
 }
@@ -910,7 +910,7 @@ function TrainerTab({ game }: { game: Game }) {
       <nav className="pmenu" style={{ ['--n' as string]: menu.length } as CSSProperties} role="tablist" aria-label="Journey" data-noswipe>
         {menu.map(([id, name, icon, badge]) => (
           <button key={id} type="button" role="tab" aria-selected={view === id} className={`pmenu-btn ${view === id ? 'on' : ''}`} onClick={() => { setView(id); play('tap') }}>
-            <span className="pmenu-icon"><ItemIcon id={icon} size={30} />{badge !== null && <i className="pmenu-badge">{badge}</i>}</span>
+            <span className="pmenu-icon"><ItemIcon id={icon} size={24} />{badge !== null && <i className="pmenu-badge">{badge}</i>}</span>
             <b>{name}</b>
           </button>
         ))}
@@ -1071,7 +1071,7 @@ function RulesTab({ onTour }: { onTour: () => void }) {
           <Rule title="Quests and the week" tone="gold" pic={<><span className="rule-chip sm">5</span><Arrow /><Coin size={24} /><Gem size={24} /></>}>
             Only the week has quests: five days with two pillars, and catch a Pokemon. The day itself pays its own coins, and a perfect day pays {GEMS.perfect} gems.
           </Rule>
-          <Rule title="Eggs and chests" tone="blue" pic={<><ItemIcon id="rare-egg" size={32} /><ItemIcon id="loot-sack" size={32} /></>}>
+          <Rule title="Eggs and chests" tone="blue" pic={<><ItemIcon id="rare-egg" size={24} /><ItemIcon id="loot-sack" size={24} /></>}>
             An egg is warmed by the steps the band counts, every one of them, and one is kept warm at a time (with two kinds waiting you choose). A Mystery Egg ({EGG_KINDS['rare-egg'].steps.toLocaleString()} steps, a rare Pokemon) comes from a boss, every fifth research rank or {RARE_EGG_GEMS} gems. Walking finds a Trail Egg for every {TRAIL_EGG_STEPS.toLocaleString()} steps ({EGG_KINDS['trail-egg'].steps.toLocaleString()} steps, an uncommon Pokemon that starts with {EGG_KINDS['trail-egg'].hearts} hearts), and each kind of work's shop sells its own egg for marks ({EGG_KINDS['egg-code'].steps.toLocaleString()} steps, a Pokemon of that work). An Old Charm takes a fifth off every egg. A day with no band reading adds nothing. A chest opens on the spot.
           </Rule>
           <Rule title="Regions, legendaries, shiny" tone="purple" pic={<><ItemIcon id="star-piece" size={24} /><span className="rule-chip sm">1/{SHINY_ODDS}</span></>}>
@@ -1103,7 +1103,7 @@ function RulesTab({ onTour }: { onTour: () => void }) {
           </Rule>
         </div>
         <div className="kit-row" style={{ marginTop: 14 }}>
-          <button type="button" className="k-btn" onClick={onTour}>Show the tour</button>
+          <button type="button" className="pill-btn" onClick={onTour}>Show the tour</button>
           <button type="button" className={`k-btn ${sound ? 'ok' : ''}`} aria-pressed={sound} onClick={() => { setSoundOn(!sound); setSound(!sound); if (!sound) play('buy') }}>Sound and buzz: {sound ? 'on' : 'off'}</button>
           <span className="muted">Rules version 11. The game began {fmtDay(GAME_START)}.</span>
         </div>
@@ -1144,7 +1144,7 @@ function TopBar({ game, today, status, loading, onHelp }: { game: Game; today: s
           <circle cx="32" cy="32" r={R} className="track" />
           <circle cx="32" cy="32" r={R} className="fill" strokeDasharray={`${C * into} ${C}`} transform="rotate(-90 32 32)" />
         </svg>
-        {v5 ? (nx.coins ? <Coin size={30} /> : nx.gems ? <Gem size={30} /> : nx.item ? <ItemIcon id={nx.item} size={34} /> : <Ball ball="poke" size={32} />) : <Ball ball="poke" size={32} />}
+        {v5 ? (nx.coins ? <Coin size={30} /> : nx.gems ? <Gem size={30} /> : nx.item ? <ItemIcon id={nx.item} size={24} /> : <Ball ball="poke" size={32} />) : <Ball ball="poke" size={32} />}
         {v5 && <b className="tb-lv">Step {game.season.step}</b>}
       </span>
       <div className="tb-main">

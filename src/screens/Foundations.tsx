@@ -45,15 +45,15 @@ export function Foundations() {
         <div className="found-panel">
           <span className="k-label">Slot: the Bag&apos;s, and the same on the night page</span>
           <div className="slot-grid found-slots">
-            <Slot icon={<ItemIcon id="ultra-ball" size={32} />} n="16" tip={{ title: 'Ultra Ball', note: '×16' }} />
-            <Slot icon={<ItemIcon id="exp-share" size={32} />} on tip={{ title: 'Exp. Share', note: 'Equipped' }} />
-            <Slot icon={<ItemIcon id="big-pearl" size={32} />} n="2" stamp="×2" tip={{ title: 'Big Pearl', note: 'Wanted today' }} />
+            <Slot icon={<ItemIcon id="ultra-ball" size={24} />} n="16" tip={{ title: 'Ultra Ball', note: '×16' }} />
+            <Slot icon={<ItemIcon id="exp-share" size={24} />} on tip={{ title: 'Exp. Share', note: 'Equipped' }} />
+            <Slot icon={<ItemIcon id="big-pearl" size={24} />} n="2" stamp="×2" tip={{ title: 'Big Pearl', note: 'Wanted today' }} />
             <Slot as="span" className="blank" aria-hidden />
           </div>
           <div className="slot-grid found-slots glassrow">
-            <Slot material="glass" icon={<ItemIcon id="ultra-ball" size={32} />} n="16" tip={{ title: 'Ultra Ball', note: '×16' }} />
-            <Slot material="glass" icon={<ItemIcon id="exp-share" size={32} />} on tip={{ title: 'Exp. Share', note: 'Equipped' }} />
-            <Slot material="glass" icon={<ItemIcon id="big-pearl" size={32} />} n="2" stamp="×2" tip={{ title: 'Big Pearl', note: 'Wanted today' }} />
+            <Slot material="glass" icon={<ItemIcon id="ultra-ball" size={24} />} n="16" tip={{ title: 'Ultra Ball', note: '×16' }} />
+            <Slot material="glass" icon={<ItemIcon id="exp-share" size={24} />} on tip={{ title: 'Exp. Share', note: 'Equipped' }} />
+            <Slot material="glass" icon={<ItemIcon id="big-pearl" size={24} />} n="2" stamp="×2" tip={{ title: 'Big Pearl', note: 'Wanted today' }} />
             <Slot material="glass" icon={<Gem size={32} />} n="2.5k" tip={{ title: 'Gems' }} />
           </div>
           <p className="kit-note">A thing is its icon and a number. Stone is the Bag; glass is the same slot for the Collector, Collect and battle prep.</p>

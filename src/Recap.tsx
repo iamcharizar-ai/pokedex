@@ -131,7 +131,7 @@ function Art({ t }: { t: Told }) {
   if (t.art === 'mon' && t.form) return <img src={spritePath(t.form, t.shiny)} alt="" />
   if (t.art === 'badge') return t.badge ? <img src={t.badge} alt="" className="gymbadge pix" style={{ width: 120, height: 120 }} /> : <span className="badgeslot on" style={{ width: 96, height: 96 }}>★</span>
   if (t.art === 'key') return <KeyStone size={110} />
-  if (t.art === 'item' && t.item) return <ItemIcon id={t.item} size={110} />
+  if (t.art === 'item' && t.item) return <ItemIcon id={t.item} size={120} />
   return STAR
 }
 

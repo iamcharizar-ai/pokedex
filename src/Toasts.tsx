@@ -97,7 +97,7 @@ function Banner({ title, line }: { title: string; line: string }) {
   }, [])
   return (
     <div className="levelbanner">
-      <span ref={i} className="lb-star"><ItemIcon id="star-piece" size={44} /></span>
+      <span ref={i} className="lb-star"><ItemIcon id="star-piece" size={48} /></span>
       <span className="lb-txt"><b ref={t} className="k-type">{title}</b><small>{line}</small></span>
       <b ref={b} className="lb-ok k-type">Nice</b>
     </div>

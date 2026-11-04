@@ -32,7 +32,7 @@ export function SigBadge({ m }: { m: Mon }) {
   const lvl = bondLevel(heartsOf(m))
   return (
     <span className={`sigbadge ${lvl ? '' : 'dim'}`} title={`${s.name} (${FAMILY_NAME[s.family]}), bond ${lvl}`} aria-hidden>
-      <ItemIcon id={s.icon} size={18} /><i>{lvl}</i>
+      <ItemIcon id={s.icon} size={16} /><i>{lvl}</i>
     </span>
   )
 }
@@ -49,7 +49,7 @@ export function SigLine({ m, game }: { m: Mon; game: Game }) {
   const where = partner ? 'as partner, in full' : inParty ? 'in the party, at half' : 'only as partner or in the party'
   return (
     <div className="sigline" style={{ ['--fc' as string]: `var(--tag-${s.tag})` } as CSSProperties}>
-      <span className="sigline-ico"><ItemIcon id={s.icon} size={34} /></span>
+      <span className="sigline-ico"><ItemIcon id={s.icon} size={24} /></span>
       <span className="sigline-txt">
         <b>{s.name} <small>{FAMILY_NAME[s.family]} · {s.type}</small></b>
         <small>{lvl === 0 ? `Wakes at bond 1 (${HEART_LEVELS[0]} ♥): ${sigText(s.family, sigStrength(1, partner || !inParty))}` : `${sigText(s.family, partner || inParty ? now : lvl)} (${where})`}</small>

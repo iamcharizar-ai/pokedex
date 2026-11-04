@@ -219,7 +219,7 @@ export function FeedBlock({ game, m }: { game: Game; m: Mon }) {
         <div className="mp-berries" role="radiogroup" aria-label="Which berry">
           {treats.map((b) => (
             <button key={b} type="button" role="radio" aria-checked={b === berry} title={`${itemName(b)}: +${BERRY_HEARTS[b]} hearts`} onClick={() => { setChosen(b); play('tap') }}>
-              <ItemIcon id={b} size={28} /><i>{game.inv[b]}</i>
+              <ItemIcon id={b} size={24} /><i>{game.inv[b]}</i>
             </button>
           ))}
         </div>
@@ -234,7 +234,7 @@ export function FeedBlock({ game, m }: { game: Game; m: Mon }) {
         onPointerCancel={stop}
         onClick={(e) => { if (e.detail === 0) feed() }}
       >
-        {full ? 'Nothing left to feed' : berry ? <>Feed <span className="cost"><ItemIcon id={berry} size={20} />×1</span> +{gain} ♥{twice ? ` (×${BERRY_DOMAIN_MULT} today)` : ''}</> : 'No berries'}
+        {full ? 'Nothing left to feed' : berry ? <>Feed <span className="cost"><ItemIcon id={berry} size={16} />×1</span> +{gain} ♥{twice ? ` (×${BERRY_DOMAIN_MULT} today)` : ''}</> : 'No berries'}
       </button>
       {!berry && !full && <small className="muted">Berries are at the Mart and the Garden; Pickup finds them too. They are in the Items tab.</small>}
       {berry && !full && <small className="muted">Hold the button to keep feeding. {game.inv[berry] ?? 0} left.</small>}

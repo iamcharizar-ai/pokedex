@@ -191,7 +191,7 @@ export function IncenseWin({ game }: { game: Game }) {
         <div className="baggrid">
           {owned.map((id) => (
             <button key={id} type="button" className={`bagtile ${id === sel ? 'on' : ''}`} onClick={() => setOpen(id)} title={ITEMS[id].text}>
-              <ItemIcon id={id} size={40} /><b>{itemName(id)}</b><small>×{game.inv[id]} · {id === 'full-incense' ? 'any type' : `${TAG_NAME[LURES[id]]} types`}</small>
+              <ItemIcon id={id} size={48} /><b>{itemName(id)}</b><small>×{game.inv[id]} · {id === 'full-incense' ? 'any type' : `${TAG_NAME[LURES[id]]} types`}</small>
             </button>
           ))}
         </div>
@@ -348,7 +348,7 @@ function TrainingKit({ game }: { game: Game }) {
           const n = game.inv[g] ?? 0
           return (
             <span key={g} className={`gear ${n > 0 ? 'on' : ''}`} title={`${itemName(g)}: ${ITEMS[g].text}`}>
-              <ItemIcon id={g} size={34} />{n > 1 && <i>×{n}</i>}<small>{itemName(g)}</small>
+              <ItemIcon id={g} size={24} />{n > 1 && <i>×{n}</i>}<small>{itemName(g)}</small>
             </span>
           )
         })}
@@ -653,7 +653,7 @@ export function Bag({ game }: { game: Game }) {
     ...(game.v13 || game.wallet.bp > 0 ? [[<BpIcon size={30} />, 'Battle Points · spent at the BP Exchange', game.wallet.bp, game.wallet.bpToday] as [ReactNode, string, number, number]] : []),
   ]
   return (
-    <Win title="Bag" tone="purple" aside={balls || berries ? <>{balls > 0 && `${balls} ${balls === 1 ? 'ball' : 'balls'}`}{balls > 0 && berries > 0 && ' · '}{berries > 0 && `${berries} ${berries === 1 ? 'berry' : 'berries'}`}</> : game.keyStone ? <><ItemIcon id="key-stone" size={22} /> Key Stone</> : undefined}>
+    <Win title="Bag" tone="purple" aside={balls || berries ? <>{balls > 0 && `${balls} ${balls === 1 ? 'ball' : 'balls'}`}{balls > 0 && berries > 0 && ' · '}{berries > 0 && `${berries} ${berries === 1 ? 'berry' : 'berries'}`}</> : game.keyStone ? <><ItemIcon id="key-stone" size={24} /> Key Stone</> : undefined}>
       <div className="inv">
         {(owned.length > 0 || badges > 0) && (
           <div className="inv-tabs" role="tablist" aria-label="Bag pockets" data-noswipe>
@@ -734,7 +734,7 @@ export function Bag({ game }: { game: Game }) {
               return fits.length ? (
                 <div className="kit-row">{fits.slice(0, 8).map((m) => {
                   const into = kind === 'evo' ? evolutionsFor(game, m).find((e) => e.item === card)?.form : undefined
-                  return <button key={m.uid} type="button" className="k-btn" onClick={() => { useItem(card, m.uid, kind === 'evo' ? 'evolve' : 'candy', into); play(kind === 'evo' ? 'catch' : 'feed'); if (kind === 'evo') setOpen(null) }}><img src={still(m.form, m.shiny)} alt="" width={28} height={28} className="sprite" />{nameOf(m.form)}{into ? ` → ${nameOf(into)}` : ` Lv ${levelOf(m.xp)}`}</button>
+                  return <button key={m.uid} type="button" className="pill-btn" onClick={() => { useItem(card, m.uid, kind === 'evo' ? 'evolve' : 'candy', into); play(kind === 'evo' ? 'catch' : 'feed'); if (kind === 'evo') setOpen(null) }}><img src={still(m.form, m.shiny)} alt="" width={28} height={28} className="sprite" />{nameOf(m.form)}{into ? ` → ${nameOf(into)}` : ` Lv ${levelOf(m.xp)}`}</button>
                 })}</div>
               ) : <small className="muted">{kind === 'evo' ? `Nobody in My Pokemon would evolve with it: the form it becomes must be ${EVO_ITEMS[card].types.join(' or ')}.` : 'Nobody in My Pokemon to give it to.'}</small>
             })()}
@@ -800,7 +800,7 @@ export function MonPage({ m, game, onClose }: { m: Mon; game: Game; onClose: () 
           <MonExtras game={game} m={m} onDone={onClose} />
           {game.v14 && trained && !isPartner && <p className="muted">{levelOf(m.xp) >= MAX_LEVEL ? 'Level 100: it has nothing left to learn as a partner.' : `Fully trained. It can lead again to go on to level ${MAX_LEVEL}, or grow with the party's Exp. Share.`}</p>}
           <div className="kit-row">
-            {inBox && !game.v14 && v5 && <button type="button" className="k-btn ok" onClick={() => act('transfer')}>To the Professor <Price coins={sell} /></button>}
+            {inBox && !game.v14 && v5 && <button type="button" className="pill-btn green" onClick={() => act('transfer')}>To the Professor <Price coins={sell} /></button>}
             {game.v14 && !isPartner && !inTeam && <KButton tone={onDesk ? 'neutral' : 'main'} onClick={() => { putOnDesk(game, m.uid, !onDesk); play('tap'); onClose() }}>{onDesk ? 'Off the research desk' : `On the research desk (+${studyValue(m)}/day)`}</KButton>}
           </div>
         </div>
@@ -865,7 +865,7 @@ function BallBox({ mons, onOpen, note, actions, empty }: { mons: Mon[]; onOpen: 
               <b>{nameOf(picked.form)}{picked.shiny && <i className="pslot-shiny">★</i>}</b>
               <small>Lv {levelOf(picked.xp)} · {[SPECIES[picked.form].t, SPECIES[picked.form].t2].filter(Boolean).join(' / ')}{said ? <> · {said}</> : null}</small>
               <span className="bbox-panel-acts">
-                <button type="button" className="k-btn" onClick={() => onOpen(picked.uid)}>Its page</button>
+                <button type="button" className="pill-btn" onClick={() => onOpen(picked.uid)}>Its page</button>
                 {actions?.(picked)}
               </span>
             </span>
@@ -899,7 +899,7 @@ export function TeamTab({ game, under, choices }: { game: Game; under: ReactNode
       <nav className="pmenu" style={{ ['--n' as string]: menu.length } as CSSProperties} role="tablist" aria-label="Party" data-noswipe>
         {menu.map(([id, name, icon, badge]) => (
           <button key={id} type="button" role="tab" aria-selected={view === id} title={id === 'items' && todo ? todo : undefined} className={`pmenu-btn ${view === id ? 'on' : ''} ${id === 'items' && todo && view !== id ? 'todo' : ''}`} onClick={() => { setView(id); play('tap') }}>
-            <span className="pmenu-icon"><ItemIcon id={icon} size={30} />{badge !== null && <i className="pmenu-badge">{badge}</i>}</span>
+            <span className="pmenu-icon"><ItemIcon id={icon} size={24} />{badge !== null && <i className="pmenu-badge">{badge}</i>}</span>
             <b>{name}</b>
           </button>
         ))}

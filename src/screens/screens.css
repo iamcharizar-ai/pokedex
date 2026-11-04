@@ -42,7 +42,7 @@
 .nursery-txt { flex: 1; min-width: 0; display: grid; gap: var(--s-2); line-height: 1.2; }
 .nursery-txt b { font-family: var(--k-face); font-weight: 400; font-size: var(--t-title); }
 .nursery-txt small { color: var(--k-dim); }
-.nursery-txt .k-btn { justify-self: start; min-height: 40px; }
+.nursery-txt .pill-btn { justify-self: start; }
 
 /* ── Party: the Forge ── */
 @media (prefers-reduced-motion: reduce) { .sheet, .sheet-back, .nursery.tomorrow .nursery-egg, .forge-row.ready { animation: none; } }

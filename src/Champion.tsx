@@ -62,7 +62,7 @@ export function BondPerks({ game }: { game: Game }) {
         {BOND_PERKS.map((q, i) => (
           <li key={q}>
             <button type="button" className={`perk-node ${hasPerk(bond, q) ? 'on' : ''} ${i === shown ? 'sel' : ''}`} aria-pressed={i === shown} aria-label={`${PERK[q].name}, at ${steps[i]} hearts${hasPerk(bond, q) ? ', earned' : ''}`} onClick={() => setPick(i)}>
-              <span className="perk-ico"><ItemIcon id={PERK[q].icon} size={30} /></span>
+              <span className="perk-ico"><ItemIcon id={PERK[q].icon} size={24} /></span>
               <small>{hasPerk(bond, q) ? (rank(q) > 0 ? rankName(q, rank(q)).split(' ').pop() : '✓') : `${steps[i]}♥`}</small>
             </button>
           </li>
@@ -89,14 +89,14 @@ export function TodayEffects({ game }: { game: Game }) {
   if (t.max) chips.push(<span key="max" className="fxchip max">{t.max === 'gigantamax' ? `Gigantamax ×${GIGANTAMAX}` : `Dynamax ×${DYNAMAX}`}</span>)
   if (t.crit) chips.push(<span key="crit" className="fxchip crit">Critical hit ×1.5</span>)
   for (const [tag, add] of Object.entries(t.boost ?? {})) chips.push(<span key={tag} className="fxchip boost" data-tag={tag}>{TAG_NAME[tag] ?? tag} +{pct(add ?? 0)}</span>)
-  if (t.find) chips.push(<span key="find" className="fxchip find"><ItemIcon id={t.find} size={18} />Found {itemName(t.find)}</span>)
-  if (game.guard) chips.push(<span key="guard" className="fxchip guard"><ItemIcon id="guard-spec" size={18} />On guard</span>)
+  if (t.find) chips.push(<span key="find" className="fxchip find"><ItemIcon id={t.find} size={16} />Found {itemName(t.find)}</span>)
+  if (game.guard) chips.push(<span key="guard" className="fxchip guard"><ItemIcon id="guard-spec" size={16} />On guard</span>)
   // version 16: what the signatures did today
   const st = game.sigToday
-  if (game.v16 && st.charm > 0) chips.push(<span key="charm" className="fxchip sig"><ItemIcon id="pink-scarf" size={18} />Charm −{st.charm} HP</span>)
-  if (game.v16 && st.insight > 0) chips.push(<span key="insight" className="fxchip sig"><ItemIcon id="twistedspoon" size={18} />Insight +{st.insight} research</span>)
-  if (game.v16 && st.forage) chips.push(<span key="forage" className="fxchip sig"><ItemIcon id={st.forage} size={18} />Forage: {itemName(st.forage)}</span>)
-  if (game.v16 && st.dream > 0) chips.push(<span key="dream" className="fxchip sig"><ItemIcon id="blackglasses" size={18} />Dream: {st.dream} ♥</span>)
+  if (game.v16 && st.charm > 0) chips.push(<span key="charm" className="fxchip sig"><ItemIcon id="pink-scarf" size={16} />Charm −{st.charm} HP</span>)
+  if (game.v16 && st.insight > 0) chips.push(<span key="insight" className="fxchip sig"><ItemIcon id="twistedspoon" size={16} />Insight +{st.insight} research</span>)
+  if (game.v16 && st.forage) chips.push(<span key="forage" className="fxchip sig"><ItemIcon id={st.forage} size={16} />Forage: {itemName(st.forage)}</span>)
+  if (game.v16 && st.dream > 0) chips.push(<span key="dream" className="fxchip sig"><ItemIcon id="blackglasses" size={16} />Dream: {st.dream} ♥</span>)
   return chips.length ? <div className="fxchips">{chips}</div> : null
 }
 
@@ -149,7 +149,7 @@ function FacilityCard({ f, game }: { f: Facility; game: Game }) {
   const target = r.silver ? f.gold : f.silver
   return (
     <div className={`facility ${r.silver ? 'silver' : ''}`} title={`${f.brain}, the ${f.name}'s Brain`}>
-      <span className="facility-ico"><ItemIcon id={f.icon} size={40} /></span>
+      <span className="facility-ico"><ItemIcon id={f.icon} size={48} /></span>
       <div className="facility-txt">
         <b>{f.name}</b>
         <small>{winLine(f)}</small>
@@ -176,7 +176,7 @@ export function FrontierWin({ game }: { game: Game }) {
           {done.length > 0 && (
             <div className="facility-done-row" aria-label="Both Symbols won">
               <span className="k-label">Both Symbols won</span>
-              {done.map((f) => <span key={f.id} className="facility-chip" title={`${f.name}: best run ${game.frontier.find((x) => x.id === f.id)!.best}`}><ItemIcon id={f.icon} size={22} />{f.name.replace('Battle ', '')}</span>)}
+              {done.map((f) => <span key={f.id} className="facility-chip" title={`${f.name}: best run ${game.frontier.find((x) => x.id === f.id)!.best}`}><ItemIcon id={f.icon} size={24} />{f.name.replace('Battle ', '')}</span>)}
             </div>
           )}
         </>
@@ -296,10 +296,10 @@ export function LabWin({ game }: { game: Game }) {
           const form = FOSSILS[id].species
           return (
             <div key={id} className={`trade ${n ? '' : 'dim'}`}>
-              <ItemIcon id={id} size={40} />
+              <ItemIcon id={id} size={48} />
               <img src={still(form)} alt="" width={44} height={44} className={`sprite ${game.dex[form]?.own ? '' : 'unseen'}`} />
               <span><b>{itemName(id)}{n ? ` ×${n}` : ''}</b><small>{game.dex[form] ? nameOf(form) : '???'}</small></span>
-              {n > 0 && <button type="button" className="k-btn main" disabled={game.wallet.coins < REVIVE_COST} onClick={() => { useItem(id, '', 'fossil'); play('catch') }}>Revive</button>}
+              {n > 0 && <button type="button" className="pill-btn gold" disabled={game.wallet.coins < REVIVE_COST} onClick={() => { useItem(id, '', 'fossil'); play('catch') }}>Revive</button>}
             </div>
           )
         })}
@@ -335,7 +335,7 @@ export function MonExtras({ game, m, onDone }: { game: Game; m: Mon; onDone: () 
             {owned.map((v) => {
               const tag = VITAMINS[v] as MarkTag
               const full = (m.vits?.[tag] ?? 0) >= VITAMIN_MAX
-              return <button key={v} type="button" className="k-btn" disabled={full} onClick={() => { useItem(v, m.uid, 'vitamin'); play('feed') }} title={ITEMS[v].text}><ItemIcon id={v} size={22} />{itemName(v)} ({m.vits?.[tag] ?? 0}/{VITAMIN_MAX})</button>
+              return <button key={v} type="button" className="pill-btn" disabled={full} onClick={() => { useItem(v, m.uid, 'vitamin'); play('feed') }} title={ITEMS[v].text}><ItemIcon id={v} size={24} />{itemName(v)} ({m.vits?.[tag] ?? 0}/{VITAMIN_MAX})</button>
             })}
           </div>
           {game.partner.uid !== m.uid && given.length > 0 && <small className="muted">{game.v14 ? `Vitamins count in full while this Pokemon is your partner, and a third while it stands in the party${game.team.some((x) => x.uid === m.uid) ? ' (it does now)' : ''}.` : 'Vitamins count while this Pokemon is your partner.'}</small>}
@@ -343,8 +343,8 @@ export function MonExtras({ game, m, onDone }: { game: Game; m: Mon; onDone: () 
       )}
       {(evos.length > 0 || candy) && (
         <div className="kit-row">
-          {evos.map(({ item, form }) => <button key={item} type="button" className="k-btn main" onClick={() => { useItem(item, m.uid, 'evolve', form); play('catch'); onDone() }}><ItemIcon id={item} size={22} />{itemName(item)}: into {nameOf(form)}</button>)}
-          {candy && <button type="button" className="k-btn ok" onClick={() => { useItem('rare-candy', m.uid, 'candy'); play('feed') }}><ItemIcon id="rare-candy" size={22} />Rare Candy (Lv {levelOf(m.xp)} → {levelOf(m.xp) + 1})</button>}
+          {evos.map(({ item, form }) => <button key={item} type="button" className="pill-btn gold" onClick={() => { useItem(item, m.uid, 'evolve', form); play('catch'); onDone() }}><ItemIcon id={item} size={24} />{itemName(item)}: into {nameOf(form)}</button>)}
+          {candy && <button type="button" className="pill-btn green" onClick={() => { useItem('rare-candy', m.uid, 'candy'); play('feed') }}><ItemIcon id="rare-candy" size={24} />Rare Candy (Lv {levelOf(m.xp)} → {levelOf(m.xp) + 1})</button>}
         </div>
       )}
     </div>

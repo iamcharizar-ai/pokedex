@@ -33,7 +33,7 @@ export function ResearchLab({ game, desk }: { game: Game; desk: ReactNode }) {
             <circle cx="100" cy="100" r={R} className="lab-fill" strokeDasharray={`${C * into} ${C}`} transform="rotate(-90 100 100)" />
           </svg>
           <span className="lab-core">
-            <ItemIcon id="scanner" size={30} />
+            <ItemIcon id="scanner" size={24} />
             <b>{r.rank}</b>
             <small>Rank</small>
           </span>
@@ -43,7 +43,7 @@ export function ResearchLab({ game, desk }: { game: Game; desk: ReactNode }) {
 
         {/* the desk: three places, drawn by the Research tab (src/Research.tsx) */}
         {desk}
-        {r.chosen && <button type="button" className="k-btn lab-auto" onClick={() => { useItem('', '', 'study', 'auto'); play('tap') }}>Let the Professor choose the strongest</button>}
+        {r.chosen && <button type="button" className="pill-btn lab-auto" onClick={() => { useItem('', '', 'study', 'auto'); play('tap') }}>Let the Professor choose the strongest</button>}
 
         {/* where a day's study comes from */}
         <dl className="lab-ledger">
@@ -64,7 +64,7 @@ export function ResearchLab({ game, desk }: { game: Game; desk: ReactNode }) {
         {/* the next gift, on a pedestal */}
         <div className="lab-gift">
           <span className="lab-pedestal">
-            {gift.items[0] ? <ItemIcon id={gift.items[0][0]} size={40} /> : gift.gems ? <Gem size={36} /> : <Coin size={36} />}
+            {gift.items[0] ? <ItemIcon id={gift.items[0][0]} size={48} /> : gift.gems ? <Gem size={36} /> : <Coin size={36} />}
           </span>
           <span className="lab-gift-txt">
             <span className="k-label">Gift at rank {r.rank + 1}</span>

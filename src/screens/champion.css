@@ -56,12 +56,12 @@
 .trade > span { flex: 1; display: grid; line-height: 1.2; min-width: 0; }
 .trade b { font-family: var(--k-face); font-weight: 400; font-size: 15px; color: #fff; }
 .trade small { color: var(--k-dim); font-size: 12.5px; }
-.trade .k-btn { flex: none; display: inline-flex; align-items: center; gap: 4px; min-height: 44px; }
+.trade .k-btn, .trade .pill-btn { flex: none; display: inline-flex; align-items: center; gap: 4px; min-height: 44px; }
 
 /* ── one Pokemon's page: vitamins, candy, items ── */
 .mon-extras { display: grid; gap: var(--s-2); margin: var(--s-2) 0; }
-.mon-extras .k-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
-.mon-extras .k-btn img { image-rendering: pixelated; }
+.mon-extras .pill-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
+.mon-extras .pill-btn img { image-rendering: pixelated; }
 .vits { display: grid; gap: 6px; }
 
 /* ── Mega Stones (drawn: the sheet has none). The Key Stone is the item picture; each Pokemon's stone is an orb in its colours ── */

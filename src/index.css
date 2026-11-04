@@ -126,9 +126,6 @@ details.fold .list { padding-left: 14px; }
 .path-step { display: inline-flex; align-items: center; gap: 4px; }
 .arrow { color: var(--muted); font-family: var(--lbl); }
 .notice { margin: 10px 0 0; padding: 8px 12px; border: 2px solid var(--edge); border-radius: 6px; background: var(--win-2); }
-.notice.warn { background: #fbd9d5; }
-.notice.good { background: #d5ecff; }
-.notice.gmax { background: #fbd5e8; }
 .care { display: flex; align-items: center; gap: 14px; }
 .egg { flex: none; width: 72px; height: 72px; image-rendering: pixelated; animation: wobble 3s steps(3, end) infinite; transform-origin: 50% 90%; }
 @keyframes wobble { 0%, 80%, 100% { transform: rotate(0); } 86% { transform: rotate(-6deg); } 93% { transform: rotate(6deg); } }

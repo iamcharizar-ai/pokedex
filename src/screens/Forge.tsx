@@ -199,7 +199,7 @@ export function Forge({ game }: { game: Game }) {
             const ghost = fair ? (i < placed.length ? kindOf(placed[i]) : have ? toward[i] : SHARDS[i]) : shard ?? (sel ? wants(sel)[0] : 'red-shard')
             return (
               <span key={a} ref={(el) => { sockets.current[i] = el }} className={`socket3 ${full ? 'full' : ''} ${have ? 'have' : ''}`} style={{ ['--a' as string]: `${a}deg` } as CSSProperties}>
-                {st === 'done' ? <i className="socket3-glow" /> : <ItemIcon id={fair ? ghost : i < placed.length && shard ? shard : ghost} size={30} />}
+                {st === 'done' ? <i className="socket3-glow" /> : <ItemIcon id={fair ? ghost : i < placed.length && shard ? shard : ghost} size={24} />}
               </span>
             )
           })}
@@ -221,7 +221,7 @@ export function Forge({ game }: { game: Game }) {
                 title={`${itemName(r.kind)}: ${game.inv[r.kind]}`}
                 onClick={(e) => void place(r.key, e.currentTarget)}
               >
-                <ItemIcon id={r.kind} size={34} />
+                <ItemIcon id={r.kind} size={24} />
                 {r.extra > 0 && <i className="orb-more">+{r.extra}</i>}
               </button>
             )
@@ -288,7 +288,7 @@ function NextShards({ game }: { game: Game }) {
       <span className="k-label">Where the next shards come from</span>
       {rows.map((r) => (
         <div key={r.name} className="nextshard">
-          <ItemIcon id={r.icon} size={28} />
+          <ItemIcon id={r.icon} size={24} />
           <span><b>{r.name}</b><small>{r.note}</small>{r.bar && <Meter value={r.bar[0]} max={r.bar[1]} size="lg" name={r.name} label={`${r.bar[0]} / ${r.bar[1]}`} />}</span>
         </div>
       ))}

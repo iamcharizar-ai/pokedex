@@ -152,7 +152,7 @@ export function ChestOpener({ game }: { game: Game }) {
   }
   return (
     <Capsule key={c.n} box={<ItemIcon id="chest" size={120} />} rarity={rare} title={c.coins ? `${c.coins} coins` : `${c.count > 1 ? `${c.count} × ` : ''}${itemName(c.item)}`} line={`Chest ${c.n}`} onDone={done}>
-      {c.coins ? <Coin size={110} /> : <ItemIcon id={c.item} size={110} />}
+      {c.coins ? <Coin size={110} /> : <ItemIcon id={c.item} size={120} />}
     </Capsule>
   )
 }
@@ -182,7 +182,7 @@ export function HatchOpener({ game }: { game: Game }) {
   const turn = useOverlay(Boolean(h), RANK.hatch)
   if (!h || !turn) return null
   return (
-    <Capsule key={h.uid} box={<ItemIcon id={h.egg ?? 'rare-egg'} size={130} />} rarity="epic" title={`${nameOf(h.form)}!`} line="The egg hatched. It is in My Pokemon." onDone={() => setQueue((q) => q.slice(1))}>
+    <Capsule key={h.uid} box={<ItemIcon id={h.egg ?? 'rare-egg'} size={120} />} rarity="epic" title={`${nameOf(h.form)}!`} line="The egg hatched. It is in My Pokemon." onDone={() => setQueue((q) => q.slice(1))}>
       <img src={spritePath(h.form)} alt="" width={128} height={128} className="sprite" />
     </Capsule>
   )

@@ -30,7 +30,7 @@ function TrailLine({ game }: { game: Game }) {
   const into = walked % every
   return (
     <span className="nest-chips">
-      <span className="nest-chip"><ItemIcon id="trail-egg" size={18} /> <b>{(every - into).toLocaleString()}</b> steps to the next Trail Egg</span>
+      <span className="nest-chip"><ItemIcon id="trail-egg" size={16} /> <b>{(every - into).toLocaleString()}</b> steps to the next Trail Egg</span>
     </span>
   )
 }
@@ -43,13 +43,13 @@ export function Nursery({ game, onShop }: { game: Game; onShop: () => void }) {
       return (
         <Win title="Nursery" tone="green" aside={`${waiting.length} kinds waiting`}>
           <div className="nursery empty">
-            <span className="nest empty"><span className="nursery-egg dim"><ItemIcon id={waiting[0]} size={56} /></span></span>
+            <span className="nest empty"><span className="nursery-egg dim"><ItemIcon id={waiting[0]} size={48} /></span></span>
             <span className="nursery-txt">
               <b>Which egg goes in first?</b>
               <small>One egg is warmed at a time. Its steps count from tomorrow, and the others wait in your Bag.</small>
               <span className="nest-chips">
                 {waiting.map((id) => (
-                  <button key={id} type="button" className="k-btn" onClick={() => { useItem(id, '', 'warm'); play('tap') }} title={`${itemName(id)}: ${EGG_KINDS[id].steps.toLocaleString()} steps, hatches ${hatchesInto(id)}`}>
+                  <button key={id} type="button" className="pill-btn" onClick={() => { useItem(id, '', 'warm'); play('tap') }} title={`${itemName(id)}: ${EGG_KINDS[id].steps.toLocaleString()} steps, hatches ${hatchesInto(id)}`}>
                     <ItemIcon id={id} size={24} />{itemName(id)}{(game.inv[id] ?? 0) > 1 ? ` ×${game.inv[id]}` : ''}
                   </button>
                 ))}
@@ -64,12 +64,12 @@ export function Nursery({ game, onShop }: { game: Game; onShop: () => void }) {
     return (
       <Win title="Nursery" tone="green" aside="Empty">
         <div className="nursery empty">
-          <span className="nest empty"><span className="nursery-egg dim"><ItemIcon id={waiting[0] ?? 'rare-egg'} size={56} /></span></span>
+          <span className="nest empty"><span className="nursery-egg dim"><ItemIcon id={waiting[0] ?? 'rare-egg'} size={48} /></span></span>
           <span className="nursery-txt">
             <b>{held > 0 ? 'An egg is in your Bag' : 'No egg is warming'}</b>
             <small>{held > 0 ? 'It is set to incubate: warming begins tomorrow, and its steps count from the next day.' : game.today.day >= V19_START ? 'Walking finds Trail Eggs. A boss, a research rank or the Rare shop gives a Mystery Egg, and each kind of work\'s shop sells its own for marks.' : 'A boss you beat can drop one, or it is 150 gems in the Rare shop. Walking hatches it, into a rare Pokemon.'}</small>
             <TrailLine game={game} />
-            {held === 0 && <button type="button" className="k-btn" onClick={onShop}><Gem size={20} />Shop</button>}
+            {held === 0 && <button type="button" className="pill-btn" onClick={onShop}><Gem size={20} />Shop</button>}
           </span>
         </div>
       </Win>
