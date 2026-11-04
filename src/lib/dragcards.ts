@@ -58,8 +58,11 @@ function glide(g: HTMLElement, left: number, top: number): Promise<void> {
 export function startPress(init: { x: number; y: number; id: number; type: string; button: number }, uid: string, card: HTMLElement, hooks: DragHooks): void {
   if (busy || (init.type === 'mouse' && init.button !== 0)) return
   const touch = init.type !== 'mouse'
-  const rect = card.getBoundingClientRect()
-  const ox = init.x - rect.left, oy = init.y - rect.top
+  // a Bag slot lifts only its picture (the tile stays where it is); a card lifts whole
+  const icon = card.classList.contains('mc-slot') ? card.querySelector('img') : null
+  const lift = icon ?? card
+  const rect = lift.getBoundingClientRect()
+  const ox = icon ? rect.width / 2 : init.x - rect.left, oy = icon ? rect.height / 2 : init.y - rect.top
   let x = init.x, y = init.y, lastX = init.x, tilt = 0
   let active = false, ghost: HTMLElement | null = null, raf = 0, timer = 0, cue = 0, hover = '', over: Target | null = null
 
@@ -85,8 +88,9 @@ export function startPress(init: { x: number; y: number; id: number; type: strin
     clearTimeout(timer)
     clearTimeout(cue)
     card.classList.remove('pressing')
-    ghost = card.cloneNode(true) as HTMLElement
+    ghost = lift.cloneNode(true) as HTMLElement
     ghost.classList.add('mc-ghost')
+    if (icon) ghost.classList.add('mc-ghost-icon')
     ghost.removeAttribute('aria-haspopup')
     ghost.style.width = `${rect.width}px`
     ghost.style.height = `${rect.height}px`
@@ -136,7 +140,7 @@ export function startPress(init: { x: number; y: number; id: number; type: strin
     hooks.hover(null)
     await frames(2)
     const to = rectOf(uid)
-    if (to && to.bottom > 0 && to.top < innerHeight) await glide(g, to.left, to.top)
+    if (to && to.bottom > 0 && to.top < innerHeight) await glide(g, to.left + (icon ? (to.width - rect.width) / 2 : 0), to.top + (icon ? (to.height - rect.height) / 2 : 0))
     if (landed) navigator.vibrate?.(10)
     g.remove()
     hooks.end()

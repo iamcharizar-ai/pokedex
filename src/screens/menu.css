@@ -187,11 +187,11 @@ span.pslot.empty, button.pslot.empty:disabled { cursor: default; }
 
 /* ── arranging the Bag: drag a thing, or Arrange and tap ── */
 .mc-slot { touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
-.mc-slot.held { opacity: 0.25; }
+.mc-slot.held > img, .mc-slot.held > .swatch, .mc-slot.held > .mc-n, .mc-slot.held > .mc-on { visibility: hidden; }
 .mc-slot.over { background: #c9defa; outline: 2px solid #fff; outline-offset: -2px; }
 .mc-slot.carried { outline: 3px solid #ffd84a; outline-offset: -3px; background: #b9aa6a; }
 .mc-grid.arranging .mc-slot:not(.blank) { cursor: grab; }
 .mc-slot.blank.drop { cursor: pointer; background: #7f7f7f; }
 .mc-slot.blank.drop.over { background: #c9defa; }
 body.dragging .mc-slot:hover .mc-tip { display: none; }
-body > .mc-ghost.mc-slot { position: fixed; background: #b9b9b9; box-shadow: inset 2px 2px 0 #373737, inset -2px -2px 0 #fff, 0 10px 14px rgba(0, 0, 0, 0.5); }
+body > .mc-ghost.mc-ghost-icon { position: fixed; max-width: none; image-rendering: pixelated; filter: drop-shadow(0 8px 5px rgba(0, 0, 0, 0.55)); }
