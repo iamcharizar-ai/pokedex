@@ -10,7 +10,7 @@ import { foldGame, isGym, leaderOf, statsOf } from './fold.ts'
 import { LEAGUES, lineup } from './gyms.ts'
 import { beats, weakDomains } from './types.ts'
 import {
-  BALL_MULT, CLAIM_AUTO, DAILY_PAY, PAY_STREAK, REVIEW_GEMS, EGG_STEPS, STEPS_GOAL, GAME_START, GEMS, KIT_IRON, LEADER_HP, MEGA_BONUS, REPEL_DAYS, SEASON_STEP, SLEEP_DEEP, SLIP, STAKES_FROM, TEAM_BONUS, TEAM_NATURE, TEAM_OPEN_FROM, TEAM_LEVEL, TEAM_SIZE, WEAK_MULT, WILD_HP, WILD_STAY,
+  BALL_MULT, CLAIM_AUTO, DAILY_PAY, PAY_STREAK, REVIEW_GEMS, EGG_STEPS, STEPS_GOAL, GAME_START, GEMS, KIT_IRON, LEADER_HP, MEGA_BONUS, REPEL_DAYS, SEASON_STEP, SLEEP_DEEP, SLIP, STAKES_FROM, TEAM_BONUS, TEAM_NATURE, TEAM_OPEN_FROM, TEAM_LEVEL, TEAM_HOLE, TEAM_SIZE, WEAK_MULT, WILD_HP, WILD_STAY,
   V13_START, ballFor, bondLevel, evolveAt, graduateAt, levelOf, momentumMult, regionsOpen, wildHit, xpForLevel,
   DEEP_SLEEP_FROM, DEEP_SLEEP_MIN,
 } from './rules.ts'
@@ -722,6 +722,21 @@ test('the team is open to My Pokemon from TEAM_OPEN_FROM: any Pokemon you own ca
   assert.deepEqual(fold(use(facts, facts.length - 1, { what: 'team', to: 'nobody' })).team.map((m) => m.uid), g.team.map((m) => m.uid))
   // choosing nobody leaves the places to fill themselves (a team place nobody chose is never left empty)
   assert.equal(fold(use(facts, facts.length - 1, { what: 'team', to: '' })).team.length, TEAM_SIZE)
+})
+
+test('a hole in a team list is a place left open on purpose: nothing fills it, the places stay in order, and a list without a hole fills as it always did', () => {
+  const facts = openDays()
+  const g = fold(facts)
+  const [a, b, c] = g.queue
+  const holey = fold(use(facts, facts.length - 1, { what: 'team', to: [a.uid, TEAM_HOLE, c.uid, TEAM_HOLE, TEAM_HOLE].join(',') }))
+  assert.deepEqual(holey.teamSlots.map((m) => m?.uid ?? null), [a.uid, null, c.uid, null, null])
+  assert.deepEqual(holey.team.map((m) => m.uid), [a.uid, c.uid], 'the team is the same without the gaps, and b is not put in')
+  assert.ok(holey.power.team < g.power.team, 'open places add nothing to the strike')
+  assert.ok(holey.queue.some((m) => m.uid === b.uid))
+  // no hole: the empty places still fill themselves, and slots show the same members in order
+  assert.deepEqual(g.teamSlots.map((m) => m?.uid ?? null), g.team.map((m) => m.uid))
+  const short = fold(use(facts, facts.length - 1, { what: 'team', to: c.uid }))
+  assert.equal(short.team.length, TEAM_SIZE)
 })
 
 test('before TEAM_OPEN_FROM the team is what it always was: fully trained Pokemon only, and an untrained one cannot be chosen', () => {

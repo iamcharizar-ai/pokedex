@@ -8,7 +8,7 @@ import {
   BALLS, battleShelf, BERRY_HEARTS, treasurePrice, BOOST, BP_SHELF, DOMAIN_SHOPS, DOMAIN_V13, EVO_ITEMS, FOSSILS, GEAR_ITEMS, HELD, ITEMS, LEGEND_KEYS, LURES, MARKS, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, masteryCost, RARE_SHELF, RARE_SHELF_V13, REVIVE_COST, SELL, TM_SLOTS, TREASURE, itemName, throwHp, tmType,
   type MarkTag, type Offer, type ShopId,
 } from '../core/economy.ts'
-import { DAILY_PAY, MAX_LEVEL, REPEL_DAYS, RESEARCH_SLOTS, TEAM_BONUS, TEAM_NATURE, TEAM_OPEN_FROM, TEAM_SIZE, levelOf, studyPoints, xpForLevel, type Rarity } from '../core/rules.ts'
+import { DAILY_PAY, MAX_LEVEL, REPEL_DAYS, RESEARCH_SLOTS, TEAM_BONUS, TEAM_NATURE, TEAM_SIZE, levelOf, studyPoints, type Rarity } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
 import { BadgeCase, TAG_NAME, Win, badgesWon, plural } from './App.tsx'
 import { Ball, BallItem, MegaStone, megaStoneName } from './Ball.tsx'
@@ -16,10 +16,8 @@ import { Forge } from './screens/Forge.tsx'
 import { Sheet } from './screens/Sheet.tsx'
 import { Nursery } from './screens/Nursery.tsx'
 import { tabTodo } from './screens/Today.tsx'
-import { Deck, SigBadge, SigLine } from './Bond.tsx'
-import { ResearchLab } from './screens/Lab.tsx'
-import { FAMILY_NAME, signatureOf } from '../core/bond.ts'
-import { bondLevel } from '../core/rules.ts'
+import { Deck, SigLine } from './Bond.tsx'
+import { ResearchTab } from './Research.tsx'
 import { Coin, EggIcon, Gem, ItemIcon, MarkIcon } from './Item.tsx'
 import { KBar, KButton } from './Kit.tsx'
 import { aBall, fmtDay, still } from './lib/art.ts'
@@ -28,7 +26,7 @@ import { play } from './lib/sfx.ts'
 import { useItem } from './lib/store.ts'
 import { BpIcon, CollectorWin, LabWin, MonExtras, evolutionsFor } from './Champion.tsx'
 import { FeedSheet, treatsIn } from './Feed.tsx'
-import { typeColor } from './screens/types.ts'
+import { FeedBlock, PartyToast, RoleControl, TeamScreen } from './Team.tsx'
 
 export { Coin, EggIcon, Gem }
 
@@ -611,9 +609,6 @@ export function MonPage({ m, game, onClose }: { m: Mon; game: Game; onClose: () 
   const inTeam = game.team.some((x) => x.uid === m.uid)
   const hearts = (m.together ?? 0) + (m.fed ?? 0)
   const v5 = true
-  const open = game.today.day >= TEAM_OPEN_FROM
-  const canTeam = !isPartner && (trained || (open && inBox))
-  const setTeam = () => putOnTeam(game, m.uid, !inTeam)
   const act = (what: string) => { useItem('', m.uid, what); play('tap'); onClose() }
   const megas = rec.m ?? []
   const sell = SELL[rec.r ?? 'C'] ?? SELL.C
@@ -637,6 +632,8 @@ export function MonPage({ m, game, onClose }: { m: Mon; game: Game; onClose: () 
             <div className="k-tile"><span className="k-label">{m.origin === 'egg' ? 'Hatched' : m.origin === 'starter' ? 'Starter' : m.origin === 'fossil' ? 'Revived' : 'Caught'}</span><b>{fmtDay(m.from)}</b></div>
             {m.held && <div className="k-tile"><span className="k-label">Holding</span><b className="holdline"><ItemIcon id={m.held} size={22} />{itemName(m.held)}</b></div>}
           </div>
+          {(game.v14 || isPartner) && <FeedBlock game={game} m={m} />}
+          <RoleControl game={game} m={m} onDone={onClose} />
           {game.v16 && <SigLine m={m} game={game} />}
           {m.nature?.up && m.nature.down && <p className="muted">Raised most on {TAG_NAME[m.nature.up]}, least on {TAG_NAME[m.nature.down]}.</p>}
           {m.nature?.up && trained && <p className="muted">On the team it adds {Math.round(TEAM_BONUS * 100)}% to every strike and {Math.round(TEAM_NATURE * 100)}% more to {TAG_NAME[m.nature.up]} work.</p>}
@@ -650,10 +647,7 @@ export function MonPage({ m, game, onClose }: { m: Mon; game: Game; onClose: () 
           <MonExtras game={game} m={m} onDone={onClose} />
           {game.v14 && trained && !isPartner && <p className="muted">{levelOf(m.xp) >= MAX_LEVEL ? 'Level 100: it has nothing left to learn as a partner.' : `Fully trained. It can lead again to go on to level ${MAX_LEVEL}, or grow with the party's Exp. Share.`}</p>}
           <div className="kit-row">
-            {inBox && <KButton tone="main" disabled={m.uid === game.nextUp} onClick={() => act('next')}>{m.uid === game.nextUp ? 'Next up' : 'Make next'}</KButton>}
-            {(inBox || (game.v14 && trained && !isPartner && levelOf(m.xp) < MAX_LEVEL)) && <KButton onClick={() => act('lead')}>Partner now</KButton>}
             {inBox && !game.v14 && v5 && <button type="button" className="k-btn ok" onClick={() => act('transfer')}>To the Professor <Price coins={sell} /></button>}
-            {canTeam && <KButton tone={inTeam ? 'neutral' : 'main'} onClick={() => { setTeam(); play('tap'); onClose() }}>{inTeam ? 'Take out of the party' : 'Add to the party'}</KButton>}
             {game.v14 && !isPartner && !inTeam && <KButton tone={onDesk ? 'neutral' : 'main'} onClick={() => { putOnDesk(game, m.uid, !onDesk); play('tap'); onClose() }}>{onDesk ? 'Off the research desk' : `On the research desk (+${studyValue(m)}/day)`}</KButton>}
           </div>
         </div>
@@ -669,83 +663,6 @@ export const studyValue = (m: Mon): number => studyPoints(levelOf(m.xp), (SPECIE
 function putOnDesk(game: Game, uid: string, on: boolean): void {
   const rest = game.research.desk.map((x) => x.uid).filter((id) => id !== uid)
   useItem('', '', 'study', (on ? [uid, ...rest].slice(0, RESEARCH_SLOTS) : rest).join(','))
-}
-
-// ── team ────────────────────────────────────────────────────────────────────
-/** Put someone in the party (first in line: the newest choice pushes the last one out when it is full) or take them out. One `team` event holds the whole choice. */
-function putOnTeam(game: Game, uid: string, on: boolean): void {
-  const rest = game.team.map((x) => x.uid).filter((id) => id !== uid)
-  useItem('', '', 'team', (on ? [uid, ...rest].slice(0, TEAM_SIZE) : rest).join(','))
-}
-
-/** Everyone who can join the party and is not in it: from the day the team opened, My Pokemon as well as the fully trained. */
-function Joiners({ game, onPick, onClose }: { game: Game; onPick: (uid: string) => void; onClose: () => void }) {
-  const open = game.today.day >= TEAM_OPEN_FROM
-  const inTeam = new Set(game.team.map((m) => m.uid))
-  const trained = game.graduates.filter((m) => !inTeam.has(m.uid))
-  const waiting = open ? game.queue.filter((m) => !inTeam.has(m.uid)) : []
-  // version 16: what each would bring to the party's signatures
-  const sigNote = (m: Mon): ReactNode | undefined => {
-    if (!game.v16) return undefined
-    const s = signatureOf(m.form)
-    return <span className="joinsig"><ItemIcon id={s.icon} size={16} />{FAMILY_NAME[s.family]} · bond {bondLevel((m.together ?? 0) + (m.fed ?? 0))}</span>
-  }
-  return (
-    <Sheet title="Add to the party" onClose={onClose}>
-      <div className="joiners">
-        <h2 className="k-type">Add to the party</h2>
-        <p className="muted">{game.team.length >= TEAM_SIZE ? 'The party is full: the one you add comes first and the last place is given up.' : `${TEAM_SIZE - game.team.length} ${TEAM_SIZE - game.team.length === 1 ? 'place is' : 'places are'} open.`} Each one adds {Math.round(TEAM_BONUS * 100)}% to every strike{game.v16 ? ', and its signature at half strength' : ''}.</p>
-        {trained.length > 0 && (
-          <>
-            <span className="k-label">Fully trained</span>
-            <div className="boxgrid">{trained.map((m) => <Standee key={m.uid} m={m} size={52} note={sigNote(m)} onClick={() => { onPick(m.uid); onClose() }} />)}</div>
-          </>
-        )}
-        {waiting.length > 0 && (
-          <>
-            <span className="k-label">In My Pokemon</span>
-            <div className="boxgrid">{waiting.map((m) => <Standee key={m.uid} m={m} size={52} note={sigNote(m)} onClick={() => { onPick(m.uid); onClose() }} />)}</div>
-          </>
-        )}
-        {trained.length === 0 && waiting.length === 0 && <p className="muted">Nobody else is free to join. Catch more Pokemon, or finish training one.</p>}
-        {!open && <p className="muted">Pokemon still being raised can join the party from {fmtDay(TEAM_OPEN_FROM)}.</p>}
-      </div>
-    </Sheet>
-  )
-}
-
-/** One Pokemon as it stands on the Party tab: the sprite on its shadow, its name and level under it. No frame. */
-function Standee({ m, size = 64, note, onClick, title }: { m: Mon; size?: number; note?: ReactNode; onClick: () => void; title?: string }) {
-  return (
-    <button type="button" className={`standee ${m.megas?.length ? 'mega' : ''}`} onClick={onClick} title={title ?? nameOf(m.form)}>
-      <span className="standee-art" style={{ width: size + 12, height: size + 8 }}>
-        <img src={still(m.form, m.shiny)} alt="" width={size} height={size} className="sprite" loading="lazy" decoding="async" />
-        {m.ball && <Ball ball={m.ball} size={16} className="standee-ball" />}
-        {m.nature?.up && <i className="standee-gem" data-tag={m.nature.up} title={`${m.nature.name}: raised most on ${TAG_NAME[m.nature.up]}`} />}
-      </span>
-      <b>{nameOf(m.form)}</b>
-      <small>{note ?? `Lv ${levelOf(m.xp)}`}</small>
-    </button>
-  )
-}
-
-/** One Pokemon as a slot on the party screen: its sprite in a round well, its name and level, and how far into the level it is. */
-function Slot({ m, tag, lead, onClick, title, sig }: { m: Mon; tag?: ReactNode; lead?: boolean; onClick: () => void; title?: string; /** version 16: show its signature */ sig?: boolean }) {
-  const rec = SPECIES[m.form]
-  const lv = levelOf(m.xp)
-  const into = lv >= MAX_LEVEL || m.graduated ? 1 : (m.xp - xpForLevel(lv)) / Math.max(1, xpForLevel(lv + 1) - xpForLevel(lv))
-  return (
-    <button type="button" className={`pslot ${lead ? 'lead' : ''} ${m.megas?.length ? 'mega' : ''}`} style={{ ['--tc' as string]: typeColor(rec.t) } as CSSProperties} onClick={onClick} title={title ?? `${nameOf(m.form)}: open its page`}>
-      <span className="pslot-art"><img src={still(m.form, m.shiny)} alt="" width={64} height={64} className="sprite" loading="lazy" decoding="async" />{sig && <SigBadge m={m} />}</span>
-      <span className="pslot-info">
-        <b className="pslot-name">{nameOf(m.form)}{m.shiny && <i className="pslot-shiny" title="Shiny">★</i>}</b>
-        <span className="pslot-lv">Lv {lv}{tag && <em>{tag}</em>}</span>
-        <span className={`pslot-bar ${m.graduated ? 'full' : ''}`} aria-hidden><i style={{ width: `${Math.max(0, Math.min(1, into)) * 100}%` }} /></span>
-      </span>
-      {m.nature?.up && <i className="pslot-gem" data-tag={m.nature.up} title={`${m.nature.name}: raised most on ${TAG_NAME[m.nature.up]}`} />}
-      {m.thrown ? <BallItem id={m.thrown} size={18} className="pslot-ball" /> : m.ball ? <Ball ball={m.ball} size={18} className="pslot-ball" /> : null}
-    </button>
-  )
 }
 
 /** The ball a Pokemon came in: what the box shows until it is opened. */
@@ -811,14 +728,10 @@ type PartyView = 'team' | 'lab' | 'items'
 /** Party: three screens: the team (and the partner), the lab (or the box), and items (the Bag, the Forge, the Nursery, incense and choices). */
 export function TeamTab({ game, partnerCard, choices, onShop }: { game: Game; partnerCard: (open: () => void) => ReactNode; choices: ReactNode; onShop: () => void }) {
   const [page, setPage] = useState<string | null>(null)
-  const [joining, setJoining] = useState(false)
   const [view, setView] = useState<PartyView>('team')
   const inTeam = new Set(game.team.map((m) => m.uid))
   const shown = [game.partner, ...game.queue, ...game.graduates].find((m) => m.uid === page)
   const cap = TEAM_SIZE
-  const open = game.today.day >= TEAM_OPEN_FROM
-  // who could still join: the fully trained, and from the day the team opened, everyone in My Pokemon
-  const free = game.graduates.filter((m) => !inTeam.has(m.uid)).length + (open ? game.queue.filter((m) => !inTeam.has(m.uid)).length : 0)
   const bench = game.graduates.filter((m) => !inTeam.has(m.uid))
   const items = Object.keys(game.inv).filter((id) => (game.inv[id] ?? 0) > 0 && ITEMS[id]).length
   const todo = tabTodo(game).team
@@ -840,21 +753,7 @@ export function TeamTab({ game, partnerCard, choices, onShop }: { game: Game; pa
       <div className="pview" key={view}>
         {view === 'team' && (
           <>
-            <Win title="Your party" tone="gold" aside={game.team.length ? `+${Math.round(game.power.team * 100)}% to every strike` : `${1 + game.team.length} of ${cap + 1}`}>
-              <div className="pslots">
-                <Slot m={game.partner} lead tag="Partner" sig={game.v16} onClick={() => setPage(game.partner.uid)} />
-                {Array.from({ length: cap }, (_, i) => {
-                  const m = game.team[i]
-                  return m
-                    ? <Slot key={m.uid} m={m} sig={game.v16} tag={m.graduated ? undefined : m.uid === game.nextUp ? 'next up' : 'raising'} onClick={() => setPage(m.uid)} title={`${nameOf(m.form)}${m.nature ? ` · ${m.nature.name}` : ''}`} />
-                    : <button key={i} type="button" className="pslot empty" disabled={free === 0} onClick={() => { setJoining(true); play('tap') }} aria-label={free ? 'Add someone to the party' : 'Empty place in the party'}><span className="pslot-art" aria-hidden /><b>{free ? '+ Add' : 'Empty'}</b></button>
-                })}
-              </div>
-              <div className="party-actions">
-                <button type="button" className="k-btn main" disabled={free === 0} onClick={() => { setJoining(true); play('tap') }}>Add to the party</button>
-                <small>{free === 0 ? 'Nobody else is free to join yet.' : `${free} could join. A place nobody chose fills itself with the oldest ${game.v14 ? 'in the lab' : 'in My Pokemon'}.`}</small>
-              </div>
-            </Win>
+            <TeamScreen game={game} onInfo={setPage} />
             <Deck game={game} />
             {partnerCard(() => setPage(game.partner.uid))}
             {!game.v14 && bench.length > 0 && (
@@ -868,7 +767,7 @@ export function TeamTab({ game, partnerCard, choices, onShop }: { game: Game; pa
         {view === 'items' && <><Bag game={game} /><Nursery game={game} onShop={onShop} /><Forge game={game} /><IncenseWin game={game} />{choices}</>}
       </div>
       {shown && <MonPage m={shown} game={game} onClose={() => setPage(null)} />}
-      {joining && <Joiners game={game} onPick={(uid) => putOnTeam(game, uid, true)} onClose={() => setJoining(false)} />}
+      <PartyToast />
     </div>
   )
 }
@@ -879,20 +778,7 @@ export function TeamTab({ game, partnerCard, choices, onShop }: { game: Game; pa
  * Pokemon is either fighting in the party (leaders and the boss) or helping you catch (the desk). Nobody is sold.
  */
 function ProfessorLab({ game, onOpen }: { game: Game; onOpen: (uid: string) => void }) {
-  const r = game.research
-  const inTeam = new Set(game.team.map((m) => m.uid))
-  const onDesk = new Set(r.desk.map((m) => m.uid))
-  const box = [...game.graduates, ...game.queue].filter((m) => !inTeam.has(m.uid) && !onDesk.has(m.uid)).sort((a, b) => studyValue(b) - studyValue(a) || b.xp - a.xp)
-  return (
-    <>
-      <ResearchLab game={game} onOpen={onOpen} studyValue={studyValue} />
-      <Win title="Lab box" tone="dark" aside={plural(box.length, 'Pokemon', 'Pokemon')}>
-        <BallBox mons={box} onOpen={onOpen} note={(m) => `+${studyValue(m)}/day on the desk${m.uid === game.nextUp ? ' · next up' : ''}`}
-          actions={(m) => <button type="button" className="k-btn main" onClick={() => { putOnDesk(game, m.uid, true); play('tap') }}>On the desk</button>}
-          empty={game.queue.length + game.graduates.length ? 'Everyone else is in your party or on the desk.' : 'Empty. Catch the wild Pokemon and it comes here.'} />
-      </Win>
-    </>
-  )
+  return <ResearchTab game={game} onOpen={onOpen} studyValue={studyValue} />
 }
 
 /** Everything caught and not yet raised, oldest first, as balls in a box. */
@@ -902,7 +788,7 @@ function MyPokemon({ game, onOpen }: { game: Game; onOpen: (uid: string) => void
   const waiting = game.queue.filter((m) => !inTeam.has(m.uid))
   return (
     <Win title="My Pokemon" tone="dark" aside={plural(waiting.length, 'Pokemon', 'Pokemon')}>
-      <BallBox mons={waiting} onOpen={onOpen} note={(m) => (m.uid === game.nextUp ? 'next up' : null)}
+      <BallBox mons={waiting} onOpen={onOpen}
         empty={game.queue.length ? 'Everyone you have caught is in your party.' : 'Empty. Catch the wild Pokemon and it comes here.'} />
     </Win>
   )

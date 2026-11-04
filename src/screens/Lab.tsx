@@ -3,19 +3,18 @@
 // middle, the desk as three specimen jars, a ledger of where each day's study
 // comes from, the HP every rank takes off wild Pokemon as a row of pips, and the
 // next rank's gift on a pedestal. What it shows is game.research as folded.
-import type { CSSProperties } from 'react'
+import type { ReactNode } from 'react'
 import { researchReward, itemName } from '../../core/economy.ts'
-import { nameOf, type Game, type Mon } from '../../core/fold.ts'
-import { RESEARCH_SLOTS, RESEARCH_WILD, RESEARCH_WILD_MAX } from '../../core/rules.ts'
+import type { Game } from '../../core/fold.ts'
+import { RESEARCH_WILD, RESEARCH_WILD_MAX } from '../../core/rules.ts'
 import { Win } from '../App.tsx'
 import { Coin, Gem, ItemIcon } from '../Item.tsx'
-import { still } from '../lib/art.ts'
 import { play } from '../lib/sfx.ts'
 import { useItem } from '../lib/store.ts'
 
 const R = 84, C = 2 * Math.PI * R
 
-export function ResearchLab({ game, onOpen, studyValue }: { game: Game; onOpen: (uid: string) => void; studyValue: (m: Mon) => number }) {
+export function ResearchLab({ game, desk }: { game: Game; desk: ReactNode }) {
   const r = game.research
   const into = r.need > 0 ? Math.min(1, r.points / r.need) : 0
   const gift = researchReward(r.rank + 1)
@@ -42,23 +41,8 @@ export function ResearchLab({ game, onOpen, studyValue }: { game: Game; onOpen: 
         </div>
         <p className="lab-say">{days === null ? 'Nothing is being studied. Put a Pokemon on the desk.' : days <= 1 ? `Rank ${r.rank + 1} comes with the next day of work.` : `About ${days} days of work to rank ${r.rank + 1}.`}</p>
 
-        {/* the desk: three jars */}
-        <div className="lab-desk">
-          {Array.from({ length: RESEARCH_SLOTS }, (_, i) => {
-            const m = r.desk[i]
-            return m ? (
-              <button key={m.uid} type="button" className="jar full" onClick={() => { onOpen(m.uid); play('tap') }} aria-label={`${nameOf(m.form)} on the desk, ${studyValue(m)} points a day. Open its page`} style={{ ['--i' as string]: i } as CSSProperties}>
-                <span className="jar-glass"><img src={still(m.form, m.shiny)} alt="" width={56} height={56} className="sprite" /></span>
-                <b>{nameOf(m.form)}</b><small>+{studyValue(m)} a day</small>
-              </button>
-            ) : (
-              <span key={i} className="jar">
-                <span className="jar-glass" aria-hidden><i>?</i></span>
-                <b>Empty jar</b><small>from the box below</small>
-              </span>
-            )
-          })}
-        </div>
+        {/* the desk: three places, drawn by the Research tab (src/Research.tsx) */}
+        {desk}
         {r.chosen && <button type="button" className="k-btn lab-auto" onClick={() => { useItem('', '', 'study', 'auto'); play('tap') }}>Let the Professor choose the strongest</button>}
 
         {/* where a day's study comes from */}

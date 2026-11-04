@@ -2,8 +2,10 @@
 // shows them all (open the Pokedex with ?kit). Nothing here reads the game or
 // the ledger. The page uses stand-in art drawn here, so the look can be judged
 // before any real screen changes.
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ComponentProps, type CSSProperties, type ReactNode } from 'react'
 import { Ball, KeyStone } from './Ball.tsx'
+import { useBoxes } from './Fit.tsx'
+import { MonCard } from './MonCard.tsx'
 
 // ── pieces ──────────────────────────────────────────────────────────────────
 type Tone = 'neutral' | 'main' | 'ok'
@@ -110,6 +112,20 @@ const Star = ({ size = 30 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden><path d="M12 2l3 6.6 7 .8-5.2 4.8 1.5 7L12 17.6 5.7 21.2l1.5-7L2 9.4l7-.8z" fill="#fff3a8" stroke="#141a33" strokeWidth="2" strokeLinejoin="round" /></svg>
 )
 const TABS = ['Partner', 'Box', 'Pokedex', 'League', 'Trainer']
+const base = { level: 14, into: 0.4, hearts: 7, need: 10 }
+/** Every state a team card can be in, with made-up numbers (the page reads no game). */
+const GALLERY: [string, ComponentProps<typeof MonCard>][] = [
+  ['Partner', { role: 'partner', ribbon: 'Partner', mon: { ...base, form: 'omanyte', name: 'Omanyte', type: 'Rock', sig: { icon: 'hard-stone', name: 'Sturdy' } } }],
+  ['Party', { role: 'party', mon: { ...base, form: 'meowth', name: 'Meowth', type: 'Normal', sig: { icon: 'silk-scarf', name: 'Serene Grace' } } }],
+  ['Lab', { role: 'lab', mon: { ...base, form: 'dratini', name: 'Dratini', type: 'Dragon', level: 3, hearts: 0, sig: { icon: 'dragon-fang', name: 'Rough Skin' } } }],
+  ['Can take a berry', { role: 'party', mon: { ...base, form: 'porygon', name: 'Porygon', type: 'Normal', hearts: 9, canFeed: true } }],
+  ['Fully trained', { role: 'party', mon: { ...base, form: 'aerodactyl', name: 'Aerodactyl', type: 'Rock', level: 50, trained: true, hearts: 61, need: 100 } }],
+  ['Elite (all hearts)', { role: 'party', mon: { ...base, form: 'kabuto', name: 'Kabuto', type: 'Rock', hearts: 150, need: null } }],
+  ['Shiny', { role: 'lab', mon: { ...base, form: 'charmander', name: 'Charmander', type: 'Fire', shiny: true } }],
+  ['Mega', { role: 'lab', mon: { ...base, form: 'charizard-megax', name: 'Charizard', type: 'Fire', mega: true, level: 50, trained: true } }],
+  ['Open place', { state: 'empty' }],
+  ['Not found', { state: 'locked', mon: { ...base, form: 'mewtwo', name: 'Mewtwo', type: 'Psychic' } }],
+]
 
 // ── the page ────────────────────────────────────────────────────────────────
 export function KitPage() {
@@ -118,6 +134,7 @@ export function KitPage() {
   const [tier, setTier] = useState<Tier>('ordinary')
   const [replay, setReplay] = useState(0)
   const [open, setOpen] = useState(true)
+  const boxes = useBoxes()
   const show = (t: Tier) => { setTier(t); setReplay((r) => r + 1) }
   return (
     <main className="kit">
@@ -170,6 +187,28 @@ export function KitPage() {
           <KCard missing art={<Blob />} />
         </div>
         <p className="kit-note">The frame is the stage: bronze, silver, gold, and a shimmering one once a Mega is registered. The corner gem is the nature (the stat it raises). The ball it was caught in sits on the other corner. Grey with "Not found" is a promise, not a hole.</p>
+      </KPanel>
+
+      <KRibbon metal="gold">Team cards: every state</KRibbon>
+      <KPanel>
+        <div className="mon-grid" style={{ paddingTop: 14 }}>
+          {GALLERY.map(([label, props]) => (
+            <div key={label} style={{ display: 'grid', gap: 8, justifyItems: 'center' }}>
+              <div style={{ width: '100%' }}><MonCard {...props} /></div>
+              <span className="k-label" style={{ textAlign: 'center' }}>{label}</span>
+            </div>
+          ))}
+        </div>
+        <span className="k-label" style={{ marginTop: 14, display: 'block' }}>Full art (to try): the art covers the card, no name, hearts under it</span>
+        <div className="mon-grid" style={{ paddingTop: 14 }}>
+          {GALLERY.map(([label, props]) => (
+            <div key={label} style={{ display: 'grid', gap: 8, justifyItems: 'center' }}>
+              <div style={{ width: '100%' }}><MonCard {...props} look="full" box={props.mon ? boxes?.[props.mon.form] : undefined} /></div>
+              <span className="k-label" style={{ textAlign: 'center' }}>{label}</span>
+            </div>
+          ))}
+        </div>
+        <p className="kit-note">One card, six looks. Level sits on the banner under the art (its fill is how far into the level). Under it, bond hearts as x/y with a green arrow when a berry in the bag can take it up a level. Gold frame and ribbon: the partner. Shining gold with "Elite": every bond level reached. Purple: a Mega registered. Dashed: an open place. Grey: not found yet. Sprites are 96px pixel art drawn at exactly 1x, never blurred.</p>
       </KPanel>
 
       <div className="kit-grid">
@@ -233,7 +272,7 @@ export function KitPage() {
               <div style={{ flex: '1 1 220px', display: 'grid', gap: 8 }}>
                 <span className="k-type" style={{ fontSize: 28 }}>Stand-in</span>
                 <div className="kit-row"><div className="k-tile"><span className="k-label">Nature</span><b>Modest</b></div><div className="k-tile"><span className="k-label">Together</span><b>12 days</b></div></div>
-                <div className="kit-row"><KButton tone="main">Make next</KButton><KButton>Evolution line</KButton></div>
+                <div className="kit-row"><KButton tone="main">Feed</KButton><KButton>Evolution line</KButton></div>
               </div>
             </div>
           </KPanel>

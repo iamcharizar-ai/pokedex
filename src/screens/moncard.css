@@ -1,0 +1,180 @@
+/* The Pokemon card (MonCard.tsx) and the Team screen built from it (Team.tsx): the party as a deck of
+   six places, the lab as the collection under it. Portrait cards of one size, art on the type's colour,
+   the level on a banner UNDER the art, bond hearts under that. Sprites are 96px pixel art: drawn at 96
+   (1x) and never scaled to a fraction. */
+
+/* ── the card ── */
+.mc { --tc: var(--tone-blue); --m: var(--k-silver); --m-hi: #eef2fa; position: relative; display: block; width: 100%; min-width: 0; padding: 0; font: inherit; color: var(--text); text-align: left; background: none; border: 0; cursor: pointer; touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; transition: transform var(--t-pop) var(--ease-out), opacity var(--t-slide), filter var(--t-slide); }
+.mc:hover { transform: translateY(-3px); }
+.mc:active { transform: translateY(1px); }
+.mc:focus-visible { outline: 3px solid #fff; outline-offset: 3px; border-radius: 14px; }
+.mc-f { display: grid; gap: 3px; padding: 3px; border: 2px solid var(--k-edge); border-radius: 12px; background: linear-gradient(160deg, var(--m-hi), var(--m) 55%, var(--m-hi)); box-shadow: 0 4px 0 var(--k-edge); }
+.mc-art { position: relative; height: 108px; display: grid; place-items: center; overflow: hidden; border-radius: 8px 8px 3px 3px; background: radial-gradient(circle at 50% 44%, color-mix(in srgb, var(--tc) 60%, #fff 14%) 0 18%, color-mix(in srgb, var(--tc) 72%, #0c1230) 80%); box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.35); }
+.mc-art::after { content: ''; position: absolute; left: 22%; right: 22%; bottom: 21px; height: 10px; border-radius: 50%; background: rgba(0, 0, 0, 0.28); }
+.mc-sprite.smooth { image-rendering: auto; }
+.mc-sprite { position: relative; z-index: 1; width: 96px; height: 96px; image-rendering: pixelated; object-fit: contain; max-width: none; animation: mc-bob 2.4s steps(1, end) var(--bob, 0s) infinite; }
+@keyframes mc-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+.mc-type { position: absolute; left: 4px; top: 4px; z-index: 2; width: 24px; height: 24px; display: grid; place-items: center; border: 2px solid var(--k-edge); border-radius: 50%; background: var(--tc); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.4); }
+.mc-type img { image-rendering: auto; }
+.mc-sig { position: absolute; right: 4px; top: 4px; z-index: 2; width: 24px; height: 24px; display: grid; place-items: center; border: 2px solid var(--k-edge); border-radius: 50%; background: rgba(10, 14, 40, 0.72); }
+.mc-sig .itemimg { width: 16px; height: 16px; }
+.mc-shiny { position: absolute; left: 50%; top: 6px; z-index: 2; translate: -50% 0; color: var(--k-gold-hi); filter: drop-shadow(0 1px 0 var(--k-edge)); }
+.mc-name { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; padding: 9px 4px 2px; overflow: hidden; text-align: center; text-overflow: ellipsis; white-space: nowrap; font-family: var(--k-face); font-size: 13px; line-height: 1.1; color: #fff; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.7), 0 0 4px rgba(0, 0, 0, 0.5); background: linear-gradient(transparent, rgba(8, 12, 30, 0.72)); }
+
+/* the level banner, its fill = how far into the level */
+.mc-lv { position: relative; height: 22px; display: grid; place-items: center; overflow: hidden; border-radius: 3px; background: #1b2350; }
+.mc-lv::before { content: ''; position: absolute; inset: 0 auto 0 0; width: var(--into, 0%); background: color-mix(in srgb, var(--tc) 70%, #1b2350); opacity: 0.9; }
+.mc-lv b { position: relative; font-family: var(--k-face); font-weight: 400; font-size: 14px; line-height: 1; color: #fff; -webkit-text-stroke: 3px var(--k-edge); paint-order: stroke fill; }
+.mc-lv.trained { background: #4a3a05; }
+.mc-lv.trained::before { background: linear-gradient(90deg, var(--k-gold), var(--k-gold-hi)); }
+
+/* bond hearts under the banner: x/y, a green arrow when a berry in the bag can take it up a level */
+.mc-hearts { position: relative; height: 19px; display: grid; place-items: center; overflow: hidden; border-radius: 3px 3px 8px 8px; background: #3a4a94; box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.35); }
+.mc-hearts > i { position: absolute; inset: 0 auto 0 0; background: var(--k-pink); box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.3); }
+.mc-hearts.ready > i { background: var(--k-green); }
+.mc-hearts-t { position: relative; display: inline-flex; align-items: center; gap: 3px; font-family: var(--k-face); font-size: 12px; line-height: 1; color: #fff; -webkit-text-stroke: 3px var(--k-edge); paint-order: stroke fill; }
+.mc-hearts-t .ico { -webkit-text-stroke: 0; filter: drop-shadow(0 1px 0 var(--k-edge)); }
+.mc-hearts.ready .mc-hearts-t .ico:first-child { color: #c9ffd9; animation: mc-nudge 1.2s ease-in-out infinite; }
+@keyframes mc-nudge { 50% { transform: translateY(-2px); } }
+.mc-hearts.elite { grid-auto-flow: column; justify-content: center; gap: 4px; font-family: var(--k-face); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--k-edge); background: linear-gradient(90deg, var(--k-gold), var(--k-gold-hi), var(--k-gold)); box-shadow: none; }
+
+/* ── frames: the metal says the state ── */
+.mc.r-partner { --m: var(--k-gold); --m-hi: var(--k-gold-hi); }
+.mc.r-partner .mc-f { box-shadow: 0 4px 0 var(--k-edge), 0 0 20px var(--gold-glow); }
+.mc.elite { --m: var(--k-gold); --m-hi: #fff3a8; }
+.mc.elite .mc-f { background: linear-gradient(120deg, #fff3a8, var(--k-gold) 30%, #fff3a8 50%, var(--k-gold) 70%, #fff3a8); background-size: 260% 100%; animation: mc-shine 5s linear infinite; }
+@keyframes mc-shine { to { background-position: -260% 0; } }
+.mc.mega .mc-f { background: linear-gradient(135deg, #7fe3ff, var(--k-purple), var(--k-pink), var(--k-gold-hi), #7fe3ff); background-size: 300% 300%; animation: mc-shine 6s linear infinite; }
+.mc.dim { opacity: 0.45; filter: saturate(0.5); }
+.mc.sel .mc-f { box-shadow: 0 4px 0 var(--k-edge), 0 0 0 3px #fff; }
+.mc.locked .mc-f { background: linear-gradient(160deg, #8d93a8, #5d647c); }
+.mc.locked .mc-art { background: #2a3050; }
+.mc.locked .mc-sprite { filter: brightness(0) opacity(0.45); animation: none; }
+.mc.locked .mc-name { color: var(--text-2); }
+.mc.locked .mc-lv { background: #1b2350; }
+
+.mc-ribbon { position: absolute; left: 50%; top: -11px; z-index: 3; translate: -50% 0; padding: 1px 10px 2px; font-family: var(--k-face); font-size: 11px; line-height: 1.2; letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap; color: var(--k-edge); background: var(--k-gold); border: 2px solid var(--k-edge); border-radius: 99px; box-shadow: 0 2px 0 var(--k-edge); }
+
+/* an open place: a dashed card the same size, with a plus */
+.mc.empty .mc-f { background: none; border: 2px dashed var(--hair-hi); box-shadow: none; }
+.mc.empty .mc-f::after { content: ''; height: 19px; }
+.mc.empty .mc-art { background: var(--surface-1); box-shadow: none; }
+.mc.empty .mc-art::after { display: none; }
+.mc-plus { display: grid; place-items: center; width: 52px; height: 52px; color: var(--text-3); border: 2px dashed var(--hair-hi); border-radius: 50%; }
+.mc.empty .mc-lv { background: none; }
+.mc.empty .mc-lv::before { display: none; }
+.mc.empty .mc-lv b { color: var(--text-3); -webkit-text-stroke: 0; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; }
+.mc.empty:not(:disabled):hover .mc-plus { color: var(--tone-gold); border-color: var(--tone-gold); }
+.mc.empty:not(:disabled):hover .mc-lv b { color: var(--tone-gold); }
+.mc:disabled { cursor: default; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mc, .mc-sprite, .mc-hearts-t .ico, .mc.elite .mc-f, .mc.mega .mc-f { animation: none !important; transition: none; }
+}
+
+/* ── the team screen: six places, then the lab ── */
+.mc-zone { container-type: inline-size; }
+.mc-party { display: grid; grid-template-columns: repeat(3, minmax(0, 148px)); justify-content: center; gap: 18px 10px; padding: 12px 2px 6px; }
+@container (min-width: 760px) { .mc-party { grid-template-columns: repeat(6, minmax(0, 138px)); gap: 18px 12px; } }
+.mon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 138px)); gap: 16px 12px; padding: 6px 2px 8px; }
+@container (max-width: 400px) { .mon-grid { grid-template-columns: repeat(3, minmax(0, 148px)); justify-content: center; gap: 16px 10px; } }
+.mc-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.mc-head .k-label:nth-of-type(2) { margin-left: auto; }
+.mc-chip { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 11px; font-family: var(--k-face); font-size: 14px; color: var(--k-edge); background: var(--tone-gold); border-radius: 99px; }
+.mc-note { margin: 4px 0 0; font-size: 12.5px; color: var(--text-2); }
+.mc-sort { margin-left: 0; display: inline-flex; align-items: center; gap: 4px; padding: 3px; background: var(--well); border: 1px solid var(--hair); border-radius: 99px; }
+.mc-sort button { min-height: 28px; padding: 0 10px; font-family: var(--k-face); font-size: 12.5px; color: var(--text-2); background: none; border: 0; border-radius: 99px; cursor: pointer; }
+.mc-sort button[aria-pressed='true'] { color: var(--k-edge); background: var(--tone-gold); }
+.mc-sort button:focus-visible { outline: 2px solid #fff; }
+.mc-emptylab { grid-column: span 2; align-content: center; display: grid; justify-items: center; gap: 6px; padding: 18px 12px; text-align: center; color: var(--text-2); border: 2px dashed var(--hair-hi); border-radius: var(--r-3); }
+.mc-emptylab b { font-family: var(--k-face); font-weight: 400; font-size: 17px; color: var(--text); }
+.mc-emptylab small { max-width: 34ch; font-size: 13px; line-height: 1.4; }
+
+/* a menu that opens on a card */
+.mc-menu { position: fixed; z-index: 90; display: grid; gap: 6px; min-width: 160px; padding: 8px; background: #1a2250; border: 2px solid var(--hair-hi); border-radius: var(--r-3); box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55); animation: mc-pop var(--t-slide) var(--ease-out); }
+.mc-menu .k-btn { width: 100%; min-height: 40px; font-size: 15px; }
+.mc-menu-t { margin: 0 2px 2px; font-family: var(--k-face); font-size: 14px; color: var(--text); white-space: nowrap; }
+@keyframes mc-pop { from { opacity: 0; transform: translateY(4px) scale(0.96); } }
+
+/* the pick and the chooser: cards in a sheet */
+.mc-pick { display: grid; gap: var(--s-3); }
+.mc-pick h2 { margin: 0; font-size: var(--t-display); }
+.mc-pick .mc-party, .mc-pick .mon-grid { padding-top: 14px; }
+.mc-pick-lab { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; font-family: var(--k-face); font-size: 16px; color: var(--text); background: var(--surface-2); border: 2px dashed var(--hair-hi); border-radius: var(--r-3); cursor: pointer; }
+.mc-pick-lab:hover { border-color: var(--tone-gold); color: var(--tone-gold); }
+
+/* a short message that does not block anything */
+.mc-toast { position: fixed; left: 50%; bottom: calc(86px + env(safe-area-inset-bottom, 0px)); z-index: 95; translate: -50% 0; max-width: min(92vw, 420px); padding: 10px 16px; font-size: 14px; line-height: 1.35; color: var(--text); background: #1a2250; border: 2px solid var(--hair-hi); border-radius: 99px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); animation: mc-pop var(--t-slide) var(--ease-out); }
+.mc-toast.bad { border-color: #ee6a5e; }
+
+/* ── a Pokemon's page: where it stands, and feeding ── */
+.mp-role { display: grid; gap: 6px; }
+.mp-seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 3px; background: var(--well); border: 1px solid var(--hair); border-radius: 99px; }
+.mp-seg button { min-height: 40px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-family: var(--k-face); font-size: 15px; color: var(--text-2); background: none; border: 0; border-radius: 99px; cursor: pointer; }
+.mp-seg button[aria-pressed='true'] { color: var(--k-edge); background: var(--tone-gold); }
+.mp-seg button:disabled:not([aria-pressed='true']) { opacity: 0.4; cursor: default; }
+.mp-seg button:focus-visible { outline: 2px solid #fff; }
+.mp-feed { display: grid; gap: var(--s-2); padding: var(--s-3); background: var(--surface-1); border: 1px solid var(--hair); border-radius: var(--r-3); }
+.mp-feed-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-family: var(--k-face); font-size: 15px; }
+.mp-feed-top small { display: inline-flex; align-items: center; gap: 3px; font-family: inherit; font-size: 13px; color: var(--text-2); }
+.mp-feed-top small.up { color: #9dffbf; animation: mc-nudge 1.2s ease-in-out infinite; }
+.mp-feed .k-btn.big { width: 100%; min-height: 54px; justify-content: center; gap: 8px; user-select: none; touch-action: manipulation; }
+.mp-feed .k-btn .cost { display: inline-flex; align-items: center; gap: 3px; padding: 0 8px 0 4px; font-size: 13px; background: rgba(0, 0, 0, 0.25); border-radius: 99px; }
+.mp-berries { display: flex; flex-wrap: wrap; gap: 6px; }
+.mp-berries button { position: relative; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; background: var(--surface-2); border: 2px solid transparent; border-radius: 12px; cursor: pointer; }
+.mp-berries button[aria-checked='true'] { border-color: var(--tone-gold); background: rgba(255, 200, 40, 0.15); }
+.mp-berries i { position: absolute; right: -3px; bottom: -3px; min-width: 18px; padding: 0 4px; font-style: normal; font-family: var(--k-face); font-size: 11px; line-height: 16px; text-align: center; color: var(--k-edge); background: var(--tone-gold); border-radius: 99px; }
+
+/* ── the chain: one link for each heart the next bond level takes ── */
+.chain { display: flex; align-items: stretch; height: 22px; padding: 4px 5px; background: #3a4a94; border-radius: 11px; box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.35), 0 0 0 2px rgba(255, 255, 255, 0.14); }
+.chain .cell { position: relative; flex: 1 1 0; min-width: 0; margin-right: 2px; border-radius: 3px; background: rgba(12, 17, 38, 0.45); }
+.chain .cell:last-child { margin-right: 0; }
+.chain .cell:not(:last-child)::after { content: ''; position: absolute; left: 100%; top: 50%; width: 2px; height: 2px; translate: 0 -50%; background: rgba(255, 255, 255, 0.22); }
+.chain .cell.on { background: linear-gradient(var(--k-pink) 0 45%, #b83a78 45%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45); }
+.chain .cell.on:not(:last-child)::after { background: #b83a78; }
+.chain .cell.pre { background: repeating-linear-gradient(135deg, rgba(224, 85, 154, 0.8) 0 3px, rgba(224, 85, 154, 0.3) 3px 6px); animation: chain-pulse 1s ease-in-out infinite; }
+@keyframes chain-pulse { 50% { opacity: 0.55; } }
+.chain .cell.grow { animation: chain-fill 360ms cubic-bezier(0.2, 0.9, 0.3, 1.3) both; }
+@keyframes chain-fill { from { background: rgba(224, 85, 154, 0.45); transform: scaleY(0.55); } 60% { transform: scaleY(1.35); filter: brightness(1.5); } to { transform: none; } }
+.chain.full .cell.on { background: linear-gradient(var(--k-gold-hi) 0 45%, var(--k-gold) 45%); }
+.chain.lvlup { animation: chain-up 900ms ease-out; }
+@keyframes chain-up { 30% { box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.5), 0 0 18px var(--k-green); } }
+@media (prefers-reduced-motion: reduce) { .chain .cell, .chain, .mp-feed-top small.up { animation: none !important; } }
+
+/* ── dragging a card ── */
+body.dragging { user-select: none; -webkit-user-select: none; cursor: grabbing; }
+body.dragging .mc, body.dragging .mc:hover { transform: none; cursor: grabbing; }
+.mc-ghost { position: fixed; left: 0; top: 0; z-index: 200; margin: 0; pointer-events: none; will-change: transform; filter: drop-shadow(0 16px 14px rgba(0, 0, 0, 0.5)); transition: none; }
+.mc-ghost.mc:hover { transform: none; }
+.mc.held .mc-f { background: none; border: 2px dashed var(--hair-hi); box-shadow: none; animation: none; }
+.mc.held .mc-f > * { visibility: hidden; }
+.mc.held .mc-ribbon { visibility: hidden; }
+.pl { border-radius: 14px; transition: box-shadow var(--t-slide), background var(--t-slide); }
+.pl.can { box-shadow: 0 0 0 2px rgba(255, 201, 58, 0.45); background: rgba(255, 201, 58, 0.06); }
+.pl.drop-ok { box-shadow: 0 0 0 3px var(--tone-gold), 0 0 18px var(--gold-glow); background: rgba(255, 201, 58, 0.16); }
+.pl.drop-bad { box-shadow: 0 0 0 3px #ee6a5e; background: rgba(238, 106, 94, 0.12); }
+.mc-labzone { border-radius: var(--r-3); transition: box-shadow var(--t-slide), background var(--t-slide); }
+.mc-labzone.can { box-shadow: 0 0 0 2px rgba(255, 201, 58, 0.45); background: rgba(255, 201, 58, 0.06); }
+.mc-labzone.drop-ok { box-shadow: 0 0 0 3px var(--tone-gold), 0 0 18px var(--gold-glow); background: rgba(255, 201, 58, 0.14); }
+.mc-labzone.drop-bad { box-shadow: 0 0 0 3px #ee6a5e; }
+
+/* ── the full look (to try): the art covers the whole face, no name, the hearts bar under the card ── */
+.mc.full .mc-f { position: relative; display: block; padding: 2px; border-radius: 11px; }
+.mc.full .mc-art { height: 172px; border-radius: 8px; box-shadow: none; background: radial-gradient(circle at 50% 46%, color-mix(in srgb, var(--tc) 55%, #fff 18%) 0 14%, color-mix(in srgb, var(--tc) 78%, #0c1230) 85%); }
+.mc.full .mc-art::after { display: none; }
+.mc.full .mc-fit { position: relative; z-index: 1; display: grid; place-items: center; width: 96px; height: 96px; transform-origin: 50% 50%; }
+.mc.full .mc-sprite { filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.3)); }
+.mc.full .mc-name { display: none; }
+.mc.full .mc-lv { position: absolute; left: 2px; right: 2px; bottom: 2px; z-index: 2; height: 26px; border-radius: 0 0 8px 8px; background: color-mix(in srgb, var(--tc) 45%, rgba(10, 14, 40, 0.88)); }
+.mc.full .mc-lv::before { height: 3px; inset: auto auto 0 0; background: #fff; opacity: 0.85; }
+.mc.full .mc-lv.trained { background: linear-gradient(rgba(255, 216, 74, 0.95), rgba(245, 184, 0, 0.95)); }
+.mc.full .mc-lv.trained b { -webkit-text-stroke-color: #5a3d00; }
+.mc.full .mc-lv b { font-size: 15px; }
+.mc.full .mc-hearts { height: 19px; margin-top: 7px; border-radius: 7px; background: #4a5bb0; box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.3), 0 0 0 2px var(--k-edge), 0 0 0 3px rgba(255, 255, 255, 0.22); }
+.mc.full .mc-hearts.elite { background: linear-gradient(90deg, var(--k-gold), var(--k-gold-hi), var(--k-gold)); }
+.mc.full.empty .mc-art { height: 172px; }
+.mc.full.empty .mc-f::after { display: none; }
+.mc.full.empty::after { content: ''; display: block; height: 25px; }
+.mc.full.empty .mc-lv { position: absolute; }
+.mc.full.held .mc-hearts { visibility: hidden; }
+.mc.full.locked .mc-fit { filter: brightness(0) opacity(0.45); }

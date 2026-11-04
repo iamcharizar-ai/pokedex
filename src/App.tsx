@@ -37,6 +37,7 @@ import { BOSS_HEAL, KILL_CAP, THROWS, THROW_AT } from '../core/boss.ts'
 import { KIT_SHARD_EVERY } from '../core/rules.ts'
 import { CollectButton } from './Claim.tsx'
 import { Toasts } from './Toasts.tsx'
+import { PartyAutoFill } from './Team.tsx'
 import { FeedSheet, treatsIn } from './Feed.tsx'
 import { aBall, badgeArt, badgeWon, badgeName, fmtDay, leagueName, still } from './lib/art.ts'
 import { play, setSoundOn, soundOn } from './lib/sfx.ts'
@@ -1239,6 +1240,7 @@ export default function App() {
       {FIXTURE && <a className="fixturetag" href={location.pathname} title={`${FIXTURE.note} Nothing here is your game, and nothing is saved. Tap to leave.`}>Fixture: {FIXTURE.name} · {fmtDay(FIXTURE.today)} · not your game ✕</a>}
       <TopBar game={game} today={view.today} status={status} loading={loading} onHelp={() => setHelp(true)} />
       {!loading && <Toasts game={game} today={view.today} />}
+      {!loading && <PartyAutoFill game={game} />}
       {!loading && <ChestOpener game={game} />}
       {!loading && <HatchOpener game={game} />}
       {!loading && tour && <Tour onClose={closeTour} />}

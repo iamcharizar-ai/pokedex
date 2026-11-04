@@ -16,7 +16,11 @@
 .lab-pts { position: absolute; bottom: 4%; padding: 2px 10px; font: normal 12px/1.4 var(--k-face); color: var(--text); background: rgba(8, 14, 34, 0.8); border: 1px solid rgba(126, 240, 208, 0.35); border-radius: 99px; }
 .lab-say { margin: 0; text-align: center; font-family: var(--k-face); font-size: 16px; color: var(--text); }
 
-/* the desk: three jars of glowing liquid */
+/* the desk: three places for cards (Research.tsx) */
+.lab-desk.mc-zone { display: block; padding-top: 14px; }
+.lab-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 148px)); justify-content: center; gap: 12px 10px; }
+.lab-pay { display: block; margin-top: 4px; text-align: center; font-family: var(--k-face); font-size: 13px; color: #9ff3dc; }
+/* the older jars, kept for the look of the desk's shelf */
 .lab-desk { width: 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-2); padding: var(--s-3) var(--s-2) var(--s-2); border-radius: 18px; background: linear-gradient(transparent 62%, rgba(126, 240, 208, 0.08) 62%), linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent); border-bottom: 3px solid rgba(126, 240, 208, 0.25); }
 .jar { display: grid; justify-items: center; gap: 2px; min-width: 0; padding: 0; color: var(--text-3); background: none; border: 0; text-align: center; }
 button.jar { cursor: pointer; color: var(--text); }
