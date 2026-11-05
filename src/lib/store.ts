@@ -14,6 +14,7 @@ import { createLedger, type LedgerStatus } from './ledger.ts'
 import { measure, planCard } from './boss.ts'
 import { FIXTURE } from './fixture-boot.ts'
 import { TYPES, ingest } from './ingest.ts'
+import { keyOf } from './eventkey.ts'
 
 const env = import.meta.env
 // a fixture is a canned ledger: the real one is never read or written while it is loaded
@@ -44,9 +45,18 @@ export interface View {
 const events: LedgerEvent[] = FIXTURE ? [...FIXTURE.events] : []
 /** what the last compute read from the ledger: the boss is planned and measured from it (declared before the first compute below) */
 let input: FactsInput | null = null
-const keyOf = (e: LedgerEvent): string => `${e.device}|${e.at}|${e.type}|${JSON.stringify(e.payload)}`
 const seen = new Set<string>()
-let config: LedgerEvent | undefined = FIXTURE?.config
+/**
+ * The habit library, kept on this device so a reload has it at once. It is read apart from the ledger (pullConfig), and a game
+ * folded without it is a different game: on 5 Nov 2026 it moved two badges a day and beat Erika, and that game was told as news.
+ */
+const CONFIG_KEY = 'pokedex.config.v1'
+const keptConfig = (): LedgerEvent | undefined => {
+  try { const v = JSON.parse(localStorage.getItem(CONFIG_KEY) ?? 'null'); return v && typeof v.at === 'string' && v.payload ? v as LedgerEvent : undefined } catch { return undefined }
+}
+let config: LedgerEvent | undefined = FIXTURE ? FIXTURE.config : OFF ? undefined : keptConfig()
+/** The server has answered for the habit library at least once this visit (or failed to: offline, the kept copy stands). */
+let configAsked = OFF || !URL_ || !KEY
 /**
  * A fixture carries its own date; the real game uses the waking day (core/day.ts): after midnight it stays yesterday until the band
  * reads the night (a sleep score filed under the date), the day is started in Life OS, or the day's start time (two hours before you
@@ -73,7 +83,8 @@ function compute(): View {
     body = { day: last }
     for (const e of vit) if (e.day === last) for (const k of ['sleepMin', 'steps', 'weightKg'] as const) if (typeof e.payload[k] === 'number') body[k] = e.payload[k] as number
   }
-  return { nights: sleepOf(settled(events)), body, game: foldGame(facts), facts, status, today }
+  // until the habit library has been asked for, the game is still loading: nothing is drawn, told or auto-filled from a game without it
+  return { nights: sleepOf(settled(events)), body, game: foldGame(facts), facts, status: status === 'live' && !configAsked ? 'connecting' : status, today }
 }
 function refresh(): void {
   view = compute()
@@ -107,7 +118,7 @@ let bossMemory: { sent: Record<string, string>; at: number[] } | null = null
  */
 function syncBoss(): void {
   // a fixture is frozen: its card and its days are part of it
-  if (FIXTURE || bossBusy || status === 'connecting' || status === 'error' || !input) return
+  if (FIXTURE || bossBusy || status === 'connecting' || status === 'error' || !configAsked || !input) return
   const today = view.today, week = mondayOf(today)
   const wrote: LedgerEvent[] = []
   const mem = (bossMemory ??= bossWrote())
@@ -155,10 +166,14 @@ async function pullConfig(): Promise<void> {
     const [row] = (await res.json()) as LedgerEvent[]
     if (row && row.at !== config?.at) {
       config = row
+      try { localStorage.setItem(CONFIG_KEY, JSON.stringify(row)) } catch { /* no storage: it is read again next visit */ }
+      configAsked = true
       refresh()
     }
   } catch {
     /* offline: keep what we have */
+  } finally {
+    if (!configAsked) { configAsked = true; refresh() }
   }
 }
 

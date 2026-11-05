@@ -57,7 +57,11 @@ export function freshMoments(game: Game, today: string): Moment[] {
   const fresh = unseen.filter((m) => !(m.kind === 'mega' && told.has(`mega:${m.form}`)))
   if (!seen || unseen.length) {
     try {
-      localStorage.setItem(SEEN_KEY, JSON.stringify(recent.map(keyOf)))
+      // added to, never replaced: a game read before all of its data has landed can lack (or date differently) a badge already told,
+      // and replacing the list with that game's moments forgot it, so the Cascade and Thunder Badges were told again on every open.
+      // Keys start with the day, so what has aged out of the news window is dropped.
+      const kept = [...(seen ?? [])].filter((k) => k.slice(0, 10) >= floor)
+      localStorage.setItem(SEEN_KEY, JSON.stringify([...new Set([...kept, ...recent.map(keyOf)])]))
     } catch {
       /* no storage: the worst case is the same news twice */
     }
