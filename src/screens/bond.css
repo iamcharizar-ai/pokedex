@@ -50,3 +50,9 @@
 .sig-say b small { font-size: 12px; color: var(--text-3); }
 .sig-who { display: flex; align-items: flex-end; gap: 4px; margin-left: auto; }
 .sig-who .crop { filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.35)); }
+
+/* version 21: the six of the party as hearts that fill as each becomes a Best Friend (Champion.tsx PerksV21) */
+.perk-best { display: flex; align-items: center; gap: 6px; justify-content: center; padding-top: var(--s-2); }
+.perk-best i { font-style: normal; font-size: 20px; line-height: 1; color: var(--well); text-shadow: 0 0 0 transparent; -webkit-text-stroke: 1px var(--hair); }
+.perk-best i.on { color: #ff6b8a; -webkit-text-stroke: 0; text-shadow: 0 0 8px rgba(255, 107, 138, 0.6); }
+.perk-best small { margin-left: 4px; font-size: 12px; color: var(--text-2); }

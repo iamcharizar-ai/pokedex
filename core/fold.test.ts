@@ -16,6 +16,8 @@ import {
 } from './rules.ts'
 import { PLATES, plateFor, forgeFair, BALLS, BOND_PARTY, CHEST, rng, DOMAIN_SHOPS, FEATS, FORGE_COST, GEAR, GEAR_ITEMS, LURES, MART_POOL, SELL, STANDING, forgeShard, lureTypes, martDeals, throwHp } from './economy.ts'
 import { SPECIES } from './species.ts'
+import { setV21Start } from './rules.ts'
+setV21Start('2099-01-01') // this file tests the rules before version 21: keep them in force on every date
 
 const H = (id: string, tag: HabitFact['tag'], worth: number, frac: number): HabitFact =>
   ({ id, tag, worth, pillar: worth === 100, frac, done: frac >= 1 })

@@ -1,73 +1,16 @@
-// Each domain in its own unit, read from what Strong and Woodshed already
-// record: workouts and the lifts that beat every earlier session, guitar items
-// played clean and song parts owned. These feed the field notes on the trainer
-// card. Nothing in the game depends on them yet.
+// Each domain in its own unit, read from what Strong and Woodshed already record: workouts and the lifts that beat every earlier
+// session (core/strong.ts, shared with Life OS since version 21 makes a Gym day a logged workout), guitar items played clean and song
+// parts owned. These feed the field notes, the Iron and Tones extras, and from version 21 the Gym pillar itself.
 import type { DayMarks } from '../../core/facts.ts'
+import { strongMarks } from '../../core/strong.ts'
 import type { LedgerEvent } from '../linked/arbor-model.ts'
 import { ITEMS } from '../linked/woodshed/course.ts'
 import { statsOf, type ShedState } from '../linked/woodshed/model.ts'
 
-interface DoneSet { kg: number | null; reps: number }
-interface Workout { id: string; finishedAt: string; routineId?: string | null; exercises: { exerciseId: string; sets: DoneSet[] }[] }
-type ExType = 'weight' | 'bodyweight' | 'weighted' | 'assisted' | 'duration'
-
-const parse = <T>(raw: unknown): T | null => {
-  try {
-    return JSON.parse(String(raw)) as T
-  } catch {
-    return null
-  }
-}
-
-// the same reading of a set as Strong's own records (strong/src/lib/stats.ts)
-const e1rm = (kg: number, reps: number) => (reps <= 1 ? kg : kg * (1 + reps / 30))
-const loaded = (t: ExType) => t === 'weight' || t === 'weighted'
-function best(type: ExType, sets: DoneSet[]): number[] {
-  let heaviest = -Infinity, rm = -Infinity, volume = -Infinity, reps = -Infinity, longest = -Infinity
-  for (const s of sets) {
-    if (type === 'duration') { longest = Math.max(longest, s.reps); continue }
-    if (!loaded(type)) reps = Math.max(reps, s.reps)
-    else if (s.kg != null) {
-      heaviest = Math.max(heaviest, s.kg)
-      rm = Math.max(rm, e1rm(s.kg, s.reps))
-      volume = Math.max(volume, s.kg * s.reps)
-    }
-  }
-  return [heaviest, rm, volume, reps, longest]
-}
-
 /** Pass events oldest first, and the folded Woodshed state. */
 export function marksOf(events: LedgerEvent[], shed: ShedState): Record<string, DayMarks> {
-  const out: Record<string, DayMarks> = {}
-  const add = (day: string, k: Exclude<keyof DayMarks, 'gear'>, n = 1) => { (out[day] ??= {})[k] = (out[day][k] ?? 0) + n }
-
-  // ── Strong: a deleted workout is gone, and the same workout sent twice counts once ──
-  const gone = new Set(events.filter((e) => e.type === 'workout_delete').map((e) => String(e.payload?.id)))
-  const types: Record<string, ExType> = {}
-  const workouts = new Map<string, { day: string; w: Workout }>()
-  for (const ev of events) {
-    if (ev.type !== 'workout') continue
-    const w = parse<Workout>(ev.payload?.gear)
-    if (!w?.id || !Array.isArray(w.exercises) || gone.has(w.id)) continue
-    for (const [id, x] of Object.entries(parse<Record<string, { type?: ExType }>>(ev.payload?.lib) ?? {})) if (x?.type) types[id] = x.type
-    workouts.set(w.id, { day: ev.day, w })
-  }
-  const before: Record<string, DoneSet[]> = {}
-  for (const { day, w } of [...workouts.values()].sort((a, b) => (a.w.finishedAt < b.w.finishedAt ? -1 : 1))) {
-    add(day, 'workouts')
-    // the routine this workout was, so the Dojo can drop its piece of gear (core/economy.ts GEAR)
-    if (w.routineId) (out[day] ??= {}).gear = [...((out[day] ?? {}).gear ?? []), w.routineId]
-    for (const e of w.exercises) {
-      const type = types[e.exerciseId] ?? 'weight'
-      const old = before[e.exerciseId]
-      // a first session sets the mark; it does not beat one
-      if (old?.length) {
-        const was = best(type, old), now = best(type, e.sets)
-        if (now.some((v, i) => v > was[i] + 1e-9)) add(day, 'records')
-      }
-      ;(before[e.exerciseId] ??= []).push(...e.sets)
-    }
-  }
+  const out: Record<string, DayMarks> = strongMarks(events)
+  const add = (day: string, k: 'clean' | 'owned', n = 1) => { (out[day] ??= {})[k] = (out[day][k] ?? 0) + n }
 
   // ── Woodshed: a clean day is a log that felt clean at the target tempo; a song part is owned on the day its last clean day fell ──
   for (const item of ITEMS) {

@@ -9,6 +9,8 @@ import { CRIT_MULT, GIGANTAMAX, DYNAMAX, HEART_LEVELS, LEADER_HP, LEVEL_POWER, V
 import { BOOST, ITEMS, EVO_ITEMS, FOSSILS, LEGEND_KEYS, PICKUP, REVIVE_COST, TREASURE, VITAMINS, forgeFair, legendFor, pickupFind } from './economy.ts'
 import { FACILITIES, bpFor } from './frontier.ts'
 import { SPECIES } from './species.ts'
+import { setV21Start } from './rules.ts'
+setV21Start('2099-01-01') // this file tests the rules before version 21: keep them in force on every date
 
 const H = (id: string, tag: HabitFact['tag'], worth: number, frac: number): HabitFact => ({ id, tag, worth, pillar: worth === 100, frac, done: frac >= 1 })
 type O = { code?: number; gym?: number; guitar?: number; arbor?: number; sleep?: number; chores?: number }

@@ -8,13 +8,13 @@
 // Nothing here is random at run time: every draw is seeded by the week, so two
 // devices opened at the same moment write the same card.
 import {
-  BOSS_CARD_REV, BOSS_KINDS, BOSS_NO_REPEAT, BOSS_POOL_MIN, BOSS_SHARE, BOSS_TAG, bossNeed, LEGENDARY_EVERY_BOSS, bossLevel,
+  BOSS_CARD_REV, BOSS_CARD_REV_V21, BOSS_KINDS, tasksV21, type CardHistory, BOSS_NO_REPEAT, BOSS_POOL_MIN, BOSS_SHARE, BOSS_TAG, bossNeed, LEGENDARY_EVERY_BOSS, bossLevel,
   type BossCard, type BossKind, type BossTask,
 } from '../../core/boss.ts'
 import { rng } from '../../core/economy.ts'
 import { addDays, factsFor, liveTags, type FactsInput } from '../../core/facts.ts'
 import type { Game } from '../../core/fold.ts'
-import { SLEEP_DONE, SLEEP_HABIT, V18_START, levelOf } from '../../core/rules.ts'
+import { EFFORT_TAGS, SLEEP_DONE, SLEEP_HABIT, V18_START, V21_START, levelOf, type Tag } from '../../core/rules.ts'
 import { SPECIES } from '../../core/species.ts'
 import type { LedgerEvent } from '../linked/arbor-model.ts'
 import { ITEMS } from '../linked/woodshed/course.ts'
@@ -58,6 +58,20 @@ function pick<T>(xs: T[], n: number, r: () => number): T[] {
   return out
 }
 
+// ── version 21: what a day did, as the fold counts it ───────────────────────
+/** The kinds of work behind the V21 effortful tasks. */
+const KIND_TAG: Record<'code' | 'gym' | 'arbor' | 'shed', Tag> = { code: 'code', gym: 'fitness', arbor: 'arbor', shed: 'guitar' }
+interface DaySeen { did: Partial<Record<Tag, boolean>>; night: boolean; steady: boolean }
+/** One day as the V21 card reads it: which effortful pillars were done, a good night on a day of work, three-quarters ticked. */
+function seen(input: FactsInput, d: string): DaySeen {
+  const f = factsFor(input, d)
+  const did: Partial<Record<Tag, boolean>> = {}
+  for (const h of f.habits) if (h.pillar && EFFORT_TAGS.includes(h.tag) && (h.done || h.frac >= 1)) did[h.tag] = true
+  const mine = f.habits.filter((h) => !h.measured)
+  const work = Object.keys(did).length > 0
+  return { did, night: work && f.habits.some((h) => h.tag === 'sleep' && h.measured === true && h.done), steady: mine.length > 0 && mine.filter((h) => h.done).length / mine.length >= 0.75 }
+}
+
 // ── the card ────────────────────────────────────────────────────────────────
 /** The last form of a line (a branch is chosen by the seed), and a Mega of it when one is asked for. */
 function lastForm(base: string, r: () => number, mega: boolean): { form: string; mega: boolean } {
@@ -92,7 +106,7 @@ export function planCard(week: string, today: string, game: Game, input: FactsIn
   if (v18) {
     // with one region open there is a single rare line: top the pool up with uncommon ones, and keep off the last few bosses and the party's own lines
     if (rarity === 'R' && pool.length < BOSS_POOL_MIN) pool = [...pool, ...open('U')].sort()
-    const recent = Object.values(input.boss?.cards ?? {}).filter((c) => c.week < week || (c.week === week && (c.rev ?? 1) < BOSS_CARD_REV)).sort((a, b) => (a.week < b.week ? -1 : 1)).slice(-BOSS_NO_REPEAT).map((c) => c.species)
+    const recent = Object.values(input.boss?.cards ?? {}).filter((c) => c.week < week || (c.week === week && (c.rev ?? 1) < (week >= V21_START ? BOSS_CARD_REV_V21 : BOSS_CARD_REV))).sort((a, b) => (a.week < b.week ? -1 : 1)).slice(-BOSS_NO_REPEAT).map((c) => c.species)
     const mine = new Set([game.partner, ...game.team].map((m) => m.base))
     for (const out of [new Set([...recent, ...mine]), new Set(recent)]) {
       const fresh = pool.filter((id) => !out.has(id))
@@ -104,6 +118,18 @@ export function planCard(week: string, today: string, game: Game, input: FactsIn
   const level = bossLevel([game.partner, ...game.team].reduce((sum, m) => sum + levelOf(m.xp), 0))
 
   const back = daysOf(addDays(week, -LOOK_BACK), addDays(week, -1))
+  // version 21: the card is drawn from what the last three weeks hold (core/boss.ts tasksV21): every effortful pillar done on 3+ days,
+  // and always the one done least, with a small target; the night and the chores after them
+  if (week >= V21_START) {
+    const days = back.map((d) => seen(input, d))
+    const h: CardHistory = { done: {}, nights: days.filter((x) => x.night).length, steady: days.filter((x) => x.steady).length, days: days.length }
+    for (const [k, t] of Object.entries(KIND_TAG) as ['code' | 'gym' | 'arbor' | 'shed', Tag][]) h.done[k] = days.filter((x) => x.did[t]).length
+    // a kind of work counts only while a habit stands for it on the Life OS list (an empty list leaves out none but Guitar's, which has no habit by default)
+    const listed = (k: BossKind): boolean => k === 'life' || (live ? live.has(BOSS_TAG[k]) : k !== 'shed')
+    const v21Tasks = tasksV21(h, listed)
+    if (!v21Tasks) return null
+    return { week, rev: BOSS_CARD_REV_V21, species, form: shown.form, rarity, mega: shown.mega, level, tasks: v21Tasks }
+  }
   const tasks: Omit<BossTask, 'share'>[] = []
 
   // gym: sized to the sets you have been logging
@@ -172,8 +198,13 @@ export function measure(card: BossCard, input: FactsInput, events: LedgerEvent[]
     const done = hs.filter((h) => h.done).length
     return { ticked: hs.length ? done / hs.length : 0, perfect: hs.length > 0 && done === hs.length }
   }
+  // version 21: a task of days counts the days its pillar was done; the night counts good nights on a day of work
+  const week = days.map((d) => seen(input, d))
+  const daysDone = (k: BossKind) => week.filter((x) => x.did[KIND_TAG[k as 'code' | 'gym' | 'arbor' | 'shed']]).length
   const by: Record<BossKind, (t: BossTask) => number> = {
+    code: (t) => daysDone('code') / t.target,
     gym: (t) => {
+      if (t.template === 'days') return daysDone('gym') / t.target
       const sets = days.reduce((n, d) => n + (gym[d]?.sets ?? 0), 0)
       if (t.template === 'volume') return sets / t.target
       if (t.template === 'sessions') return days.reduce((n, d) => n + (gym[d]?.long ?? 0), 0) / t.target
@@ -181,6 +212,7 @@ export function measure(card: BossCard, input: FactsInput, events: LedgerEvent[]
       return 0.5 * clamp(records / t.target) + 0.5 * clamp(sets / 16)
     },
     arbor: (t) => {
+      if (t.template === 'days') return daysDone('arbor') / t.target
       const ids = t.items ?? []
       if (!ids.length) return 0
       const did = (d: string, id: string) => Boolean(input.arbor?.practice[d]?.[id]?.done)
@@ -188,12 +220,13 @@ export function measure(card: BossCard, input: FactsInput, events: LedgerEvent[]
       return ids.reduce((n, id) => n + Math.min(t.target, days.filter((d) => did(d, id)).length), 0) / (t.target * ids.length)
     },
     shed: (t) => {
+      if (t.template === 'days') return daysDone('shed') / t.target
       const ids = t.items ?? []
       if (!ids.length) return 0
       const clean = (id: string) => days.filter((d) => { const l = input.shed?.logs[id]?.[d] as { done: boolean; feel?: number } | undefined; return l?.done && l.feel === 2 }).length
       return ids.reduce((n, id) => n + Math.min(t.target, clean(id)), 0) / (t.target * ids.length)
     },
-    sleep: (t) => (t.template === 'score'
+    sleep: (t) => (t.template === 'bonus' ? week.filter((x) => x.night).length : t.template === 'score'
       ? days.filter((d) => (input.body?.[d]?.sleepScore ?? 0) >= SLEEP_DONE).length
       : days.filter((d) => Boolean(input.ticks[d]?.[SLEEP_HABIT])).length) / t.target,
     life: (t) => {

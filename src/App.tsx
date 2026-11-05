@@ -1,11 +1,12 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from 'react'
+import { OPEN_COUNTER } from './lib/deeplink.ts'
 import { flushSync } from 'react-dom'
 import { isGym, isShelved, leaderOf, nameOf, spritePath, type Game, type Mon, type Moment } from '../core/fold.ts'
 import type { DayFacts, HabitFact } from '../core/facts.ts'
 import { LEAGUES, lineup } from '../core/gyms.ts'
 import {
   ADVANTAGE_MULT, GEMS, SEASON_STEP, BALL_MULT, BALL_NAME, GAME_START, GRADUATES_PER_REGION, LEADER_HP, MOMENTUM_WINDOW,
-  CLAIM_AUTO, SLEEP_HABIT, HEART_LEVELS, momentumMult, levelOf, LEGENDARY_EVERY_WILD, PAY_STREAK, REGIONS, REPEL_DAYS, SHINY_ODDS, SHINY_ODDS_WORN, SLEEP_AFTER, SLIP, STAKES_FROM, STEPS_GOAL, TEAM_SIZE, TRAIL_EGG_STEPS, WILD_STAY, TIER_XP, WEAK_MULT, evolveAt, graduateAt, xpForLevel,
+  CLAIM_AUTO, SLEEP_HABIT, HEART_LEVELS, momentumMult, MOMENTUM_PILLARS, MOMENTUM_STEPS, levelOf, LEGENDARY_EVERY_WILD, PAY_STREAK, REGIONS, REPEL_DAYS, SHINY_ODDS, SHINY_ODDS_WORN, SLEEP_AFTER, SLIP, STAKES_FROM, STEPS_GOAL, TEAM_SIZE, TRAIL_EGG_STEPS, WILD_STAY, TIER_XP, WEAK_MULT, evolveAt, graduateAt, xpForLevel,
 } from '../core/rules.ts'
 import { MARKS, EGG_KINDS, RARE_EGG_GEMS, BOND_STEP, MASTERY_MAX, MASTERY_STEP, SELL, itemName as econName, masteryCost } from '../core/economy.ts'
 import { MILESTONE_EVERY, CRIT_MULT, DYNAMAX, GIGANTAMAX, LEVEL_POWER, MAX_LEVEL, MEGA_BONUS, MEGA_BOND, RESEARCH_SLOTS, RESEARCH_WILD, RESEARCH_WILD_MAX, TEAM_BONUS, TEAM_LEVEL, TEAM_NATURE, type Tag as TagKind } from '../core/rules.ts'
@@ -318,6 +319,23 @@ function Pace({ game }: { game: Game }) {
   const boxes = useBoxes()
   return (
     <div className="pace">
+      {game.tier.v21 ? (
+        // version 21: momentum slides, a step at a time: four steps, the one it is on lit, the next ghosted
+        <div className="pace-cell pace-mo" title={`A day with ${MOMENTUM_PILLARS} pillars moves it up a step, any other day down one, but one rest day a week is free.`}>
+          <span className="k-label">Momentum</span>
+          <span className="mo-pips mo-steps" role="meter" aria-valuemin={1} aria-valuemax={MOMENTUM_STEPS.length} aria-valuenow={MOMENTUM_STEPS.indexOf(momentum.mult as (typeof MOMENTUM_STEPS)[number]) + 1} aria-label={`Momentum: XP ×${momentum.mult}`}>
+            {MOMENTUM_STEPS.map((x, i) => {
+              const at = MOMENTUM_STEPS.indexOf(momentum.mult as (typeof MOMENTUM_STEPS)[number])
+              return (
+                <span key={x} className={`mo-pip ${i <= at ? 'on' : ''} ${i === at + 1 ? 'next' : ''}`}>
+                  <i />
+                  <b className={i <= at ? 'got' : i === at + 1 ? 'next' : ''}>×{x}</b>
+                </span>
+              )
+            })}
+          </span>
+        </div>
+      ) : (
       <div className="pace-cell pace-mo" title={`Days with two pillars in the last seven: ${steps.map(([d, m]) => `${d} make XP ×${m}`).join(', ')}. It slides back a day at a time, never resets.`}>
         <span className="k-label">Momentum</span>
         <span className="mo-pips" role="meter" aria-valuemin={0} aria-valuemax={MOMENTUM_WINDOW} aria-valuenow={momentum.days} aria-label={`${momentum.days} of the last ${MOMENTUM_WINDOW} days counted: XP ×${momentum.mult}${next ? `; ${next[0] - momentum.days} more for ×${next[1]}` : ''}`}>
@@ -332,6 +350,7 @@ function Pace({ game }: { game: Game }) {
           })}
         </span>
       </div>
+      )}
       <div className="pace-cell pace-evo" title={`${toLevel.toLocaleString('en-IN')} XP to Lv ${game.next.level}`}>
         <span className="k-label">{game.next.what === 'evolve' ? 'Evolves' : game.next.what === 'master' ? 'Level 100' : 'Fully trained'} at Lv {game.next.level}</span>
         <span className="evo-way">
@@ -1172,7 +1191,7 @@ function swipeable(el: EventTarget | null): boolean {
 
 export default function App() {
   const view = useView()
-  const [tab, setTab] = useState<Tab>('partner')
+  const [tab, setTab] = useState<Tab>(OPEN_COUNTER ? 'shop' : 'partner')
   const [help, setHelp] = useState(false)
   const [tourOpen, setTourOpen] = useState<boolean | null>(null)
   useEffect(() => start(), [])
