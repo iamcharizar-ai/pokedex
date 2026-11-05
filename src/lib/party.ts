@@ -96,9 +96,12 @@ export function planMove(g: PartyState, uid: string, to: Target): Plan {
   return ok([teamOp(slots)])
 }
 
-/** The plan that fills every open place from the lab, the oldest first, or null when there is nothing to fill or nobody to fill with. */
-export function planFill(g: PartyState): Plan | null {
-  const pool = labOf(g)
+/**
+ * The plan that fills every open place from the lab, the oldest first, or null when there is nothing to fill or nobody to fill with.
+ * Never from the Professor's desk: the fold drops a party member from the desk, so filling from it would empty a jar without a word.
+ */
+export function planFill(g: PartyState & { research?: { desk: Mon[] } }): Plan | null {
+  const pool = g.research ? boxOf({ ...g, research: g.research }) : labOf(g)
   if (!hasOpen(g) || pool.length === 0) return null
   const slots = g.teamSlots.map((m) => m?.uid ?? null)
   let next = 0

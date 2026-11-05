@@ -96,6 +96,14 @@ test('filling the open places takes the oldest in the lab, in order, and does no
   assert.equal(planFill(bare), null, 'nobody in the lab')
 })
 
+test('filling an open place never takes a Pokemon off the desk (B2): it fills from the box, or waits', () => {
+  // X is the oldest in the lab and on the desk: the fill skips it and takes Y
+  const g = { ...game(['A', 'B', 'C', 'D', null]), queue: ['A', 'B', 'C', 'D', 'X', 'Y'].map((u) => mon(u)), graduates: [], research: { desk: [mon('X')] } }
+  assert.deepEqual(team(planFill(g)), ['A', 'B', 'C', 'D', 'Y'])
+  // everyone in the lab is on the desk: nothing to fill with, so the place stays open
+  assert.equal(planFill({ ...g, research: { desk: [mon('X'), mon('Y')] } }), null)
+})
+
 test('the desk: the box is the lab less the desk; a box card onto the desk adds, onto a jar swaps; off the desk goes back to the box', () => {
   const g = { ...game(), research: { desk: [mon('X'), mon('Y')] } }
   assert.deepEqual(boxOf(g).map((m) => m.uid), ['Z'])

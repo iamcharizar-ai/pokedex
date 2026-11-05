@@ -15,6 +15,8 @@
 .lab-core small { font: normal 11px/1 var(--k-face); letter-spacing: 0.18em; text-transform: uppercase; color: #9ff3dc; }
 .lab-pts { position: absolute; bottom: 4%; padding: 2px 10px; font: normal 12px/1.4 var(--k-face); color: var(--text); background: rgba(8, 14, 34, 0.8); border: 1px solid rgba(126, 240, 208, 0.35); border-radius: 99px; }
 .lab-say { margin: 0; text-align: center; font-family: var(--k-face); font-size: 16px; color: var(--text); }
+.lab-today { margin: -4px 0 0; text-align: center; font-size: 13px; color: #ffd45c; }
+.lab-today.on { color: #9ff3dc; }
 
 /* the desk: three places for cards (Research.tsx) */
 .lab-desk.mc-zone { display: block; padding-top: 14px; }

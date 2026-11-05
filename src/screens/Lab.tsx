@@ -5,7 +5,7 @@
 // next rank's gift on a pedestal. What it shows is game.research as folded.
 import type { ReactNode } from 'react'
 import { researchReward, itemName } from '../../core/economy.ts'
-import type { Game } from '../../core/fold.ts'
+import { isShelved, type Game } from '../../core/fold.ts'
 import { RESEARCH_WILD, RESEARCH_WILD_MAX } from '../../core/rules.ts'
 import { Win } from '../App.tsx'
 import { Coin, Gem, ItemIcon } from '../Item.tsx'
@@ -13,6 +13,20 @@ import { play } from '../lib/sfx.ts'
 import { useItem } from '../lib/store.ts'
 
 const R = 84, C = 2 * Math.PI * R
+
+/** The kinds of work that make a day count for the Professor (Sleep alone does not), as the Life OS list has them today. */
+const WORK_NAME: [string, string][] = [['code', 'Code'], ['fitness', 'Gym'], ['arbor', 'Arbor'], ['guitar', 'Guitar']]
+const orWords = (xs: string[]): string => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} or ${xs[xs.length - 1]}` : xs[0] ?? 'a pillar')
+
+/** Whether today studies, and why not when it does not: the fold's `research.counts` in words. */
+export function todayLine(game: Game): string {
+  const r = game.research
+  if (r.counts === 'pillar') return r.today > 0 ? `Today counts: +${r.today} research.` : 'Today counts, but nobody is studying: put a Pokemon on the desk.'
+  const work = orWords(WORK_NAME.filter(([t]) => !isShelved(game, t)).map(([, n]) => n))
+  return r.counts === 'sleep'
+    ? `Today doesn't count yet: Sleep alone isn't a day of work. Do ${work} and the Professor studies.`
+    : `Today doesn't count yet: do ${work} and the Professor studies.`
+}
 
 export function ResearchLab({ game, desk }: { game: Game; desk: ReactNode }) {
   const r = game.research
@@ -40,6 +54,7 @@ export function ResearchLab({ game, desk }: { game: Game; desk: ReactNode }) {
           <span className="lab-pts">{r.points.toLocaleString('en-IN')} / {r.need.toLocaleString('en-IN')}</span>
         </div>
         <p className="lab-say">{days === null ? 'Nothing is being studied. Put a Pokemon on the desk.' : days <= 1 ? `Rank ${r.rank + 1} comes with the next day of work.` : `About ${days} days of work to rank ${r.rank + 1}.`}</p>
+        <p className={`lab-today ${r.counts === 'pillar' ? 'on' : 'off'}`}>{todayLine(game)}</p>
 
         {/* the desk: three places, drawn by the Research tab (src/Research.tsx) */}
         {desk}
