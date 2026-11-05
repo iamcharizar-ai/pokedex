@@ -25,7 +25,7 @@ import { EASE, K, dropIn, floatNote, hit, motionConfig, party, ring, run, stamp 
 import { play } from './lib/sfx.ts'
 import { useItem } from './lib/store.ts'
 
-const ICON: Record<BossKind, string> = { gym: 'iron', arbor: 'grn-apricorn', shed: 'poke-flute', sleep: 'lunar-wing', life: 'journal' }
+const ICON: Record<BossKind, string> = { gym: 'iron', arbor: 'grn-apricorn', shed: 'poke-flute', sleep: 'lunar-wing', life: 'journal', code: 'machine-part' }
 const pct = (x: number): string => `${Math.round(x * 100)}%`
 
 /** Before there is a boss: what it takes, so the goal is in view. */
