@@ -703,8 +703,8 @@ export function Bag({ game }: { game: Game }) {
           <div className="ware-sheet">
             {/* the thing itself as a card: its kind is the field's colour, how many you hold the banner, in use the gold frame */}
             <div className="item-hero">
-              <ObjCard className="item-card" look="full" tc={catColor(kind)} metal={game.partner.held === card || equipped.includes(card) || game.theme === card ? 'gold' : 'silver'}
-                art={<ItemIcon id={card} size={72} className="mc-item" />} banner={have(card) > 0 ? `×${have(card)}` : 'Held'} disabled tabIndex={-1} aria-hidden />
+              <ObjCard className={`item-card ${kind === 'theme' ? 'wcard theme' : ''}`} look="full" tc={catColor(kind)} metal={game.partner.held === card || equipped.includes(card) || game.theme === card ? 'gold' : 'silver'}
+                art={kind === 'theme' ? <MiniScene theme={card} w={58} h={70} /> : <ItemIcon id={card} size={72} className="mc-item" />} banner={kind === 'theme' ? (game.theme === card ? 'In use' : 'Owned') : have(card) > 0 ? `×${have(card)}` : 'Held'} disabled tabIndex={-1} aria-hidden />
               <div className="item-hero-txt">
                 <h2 className="k-type">{itemName(card)}</h2>
                 <p>{ITEMS[card].text}</p>
