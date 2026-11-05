@@ -81,9 +81,11 @@ function tell(m: Moment, game: Game): Told {
     case 'hatch': return { title: 'The egg hatched!', line: `${nameOf(m.form)} is in My Pokemon.`, art: 'mon', form: m.form }
     case 'partner': return { title: m.origin === 'egg' ? 'An egg hatched' : 'New partner', line: `${nameOf(m.form)} is your partner now.`, art: 'mon', form: m.form }
     case 'catch': {
+      // the ball thrown is on the moment itself: a repeat of a Pokemon you own (version 21) is never in the queue to look up
       const mon = [...game.queue, ...game.graduates, game.partner].find((x) => x.uid === m.uid)
+      const thrown = m.thrown ?? mon?.thrown
       const ball = mon?.ball ?? game.days.find((d) => d.day === m.day)?.ball ?? 'poke'
-      return { title: m.how === 'perfect' ? 'Perfect day: caught!' : 'Gotcha!', line: `${m.shiny ? 'A shiny ' : ''}${nameOf(m.form)} was caught in ${mon?.thrown ? `a ${itemName(mon.thrown)}` : aBall(ball)} and is in My Pokemon.`, art: 'catch', form: m.form, shiny: m.shiny, ball, thrown: mon?.thrown }
+      return { title: m.how === 'perfect' ? 'Perfect day: caught!' : 'Gotcha!', line: `${m.shiny ? 'A shiny ' : ''}${nameOf(m.form)} was caught in ${thrown ? `a ${itemName(thrown)}` : aBall(ball)} and is in My Pokemon.`, art: 'catch', form: m.form, shiny: m.shiny, ball, thrown }
     }
     case 'form': return { title: m.what === 'mega' ? 'Mega form' : 'Gigantamax', line: `${nameOf(m.form)} is registered in the Pokedex.`, art: 'mon', form: m.form }
     case 'mega': return { title: 'Mega Stone forged', line: `${nameOf(m.form)} is registered to this Pokemon and never runs out.`, art: 'mon', form: m.form }

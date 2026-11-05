@@ -1150,3 +1150,22 @@ test('sleep: 90 minutes of deep sleep pays a Bell of its own, from DEEP_SLEEP_FR
   // deep minutes without a measured night pay nothing
   assert.equal(at({ [d]: { deepMin: 120 } }, d).wallet.marks.sleep, 0)
 })
+
+test('a catch by a thrown ball is said to be in that ball; one by the habits of the day is in its poke, great or ultra', () => {
+  const facts = run(40, PAYING) // each day earns an Ultra Ball class
+  const k = 15 // the wild Pokemon stands at 16 HP: one Net Ball (class poke, never the day's class) finishes it
+  const base = fold(facts.slice(0, k + 1))
+  assert.ok(base.wild && !base.wild.caught && base.wild.hp <= 40)
+  const buy = { what: 'buy', item: 'net-ball', to: 'mart' }
+  const g = fold(use(facts.slice(0, k + 1), k, buy, { what: 'throw', item: 'net-ball' }))
+  const m = caught(g).find((c) => c.how === 'ball')
+  assert.ok(m, 'the throw caught it')
+  assert.equal(m.thrown, 'net-ball', 'the moment names the ball that was thrown, so a repeat catch (never in the queue) is told right too')
+  const mon = [...g.queue, g.partner].find((x) => x.uid === m.uid)
+  assert.equal(mon?.thrown, 'net-ball')
+  assert.equal(mon?.ball, 'poke', 'its class is the ball it counts as, not the Ultra Ball of the day')
+  // a catch made by the day's habits has no thrown ball: it is said to be in the ball of the day
+  const worn = caught(fold(facts)).filter((c) => c.how !== 'ball')
+  assert.ok(worn.length > 0)
+  for (const c of worn) assert.equal(c.thrown, undefined)
+})

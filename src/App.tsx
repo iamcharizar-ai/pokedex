@@ -11,7 +11,7 @@ import {
 import { MARKS, EGG_KINDS, RARE_EGG_GEMS, BOND_STEP, MASTERY_MAX, MASTERY_STEP, SELL, itemName as econName, masteryCost } from '../core/economy.ts'
 import { MILESTONE_EVERY, CRIT_MULT, DYNAMAX, GIGANTAMAX, LEVEL_POWER, MAX_LEVEL, MEGA_BONUS, MEGA_BOND, RESEARCH_SLOTS, RESEARCH_WILD, RESEARCH_WILD_MAX, TEAM_BONUS, TEAM_LEVEL, TEAM_NATURE, type Tag as TagKind } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
-import { Ball, KeyStone } from './Ball.tsx'
+import { Ball, BallItem, KeyStone } from './Ball.tsx'
 import { ObjCard } from './ObjCard.tsx'
 import { FeatsWin } from './Feats.tsx'
 import { SleepWin } from './Sleep.tsx'
@@ -679,7 +679,7 @@ function DexEntry({ game, id, owned, onClose }: { game: Game; id: string; owned:
           <div><dt>First seen</dt><dd>{e ? fmtDay(e.first) : 'Not yet'}</dd></div>
           <div><dt>Yours since</dt><dd>{e?.own ? fmtDay(e.own) : e ? 'Seen, not caught' : '—'}</dd></div>
           {mon?.graduated && <div><dt>Fully trained</dt><dd>{fmtDay(mon.graduated)}, after {plural(mon.together ?? 0, 'day')}</dd></div>}
-          {mon?.ball && <div><dt>Caught in</dt><dd className="ballname"><Ball ball={mon.ball} size={16} />{aBall(mon.ball)}</dd></div>}
+          {mon?.ball && <div><dt>Caught in</dt><dd className="ballname">{mon.thrown ? <BallItem id={mon.thrown} size={16} /> : <Ball ball={mon.ball} size={16} />}{mon.thrown ? `a ${itemName(mon.thrown)}` : aBall(mon.ball)}</dd></div>}
         </dl>
         {mon?.nature && <p className="muted">{natureLine(mon)}</p>}
         {sel.e && sel.e.length > 1 && <p className="muted">Branches by what you do most while raising it: {sel.e.map((x, i) => `${game.dex[x] ? SPECIES[x].n : '???'} (${TAG_NAME[sel.bt?.[i] ?? ''] ?? '?'})`).join(', ')}.</p>}
