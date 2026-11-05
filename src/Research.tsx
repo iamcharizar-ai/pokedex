@@ -15,6 +15,7 @@ import { IcInfo, IcLab, IcSwap } from './lib/icons.tsx'
 import { boxOf, planDesk, type Target } from './lib/party.ts'
 import { play } from './lib/sfx.ts'
 import { applyPlan, monCardOf, say } from './Team.tsx'
+import { deskShare } from './Play.tsx'
 
 
 interface Drag { uid: string; over: Target | null; can: { places: boolean[]; box: boolean } }
@@ -85,7 +86,7 @@ export function ResearchTab({ game, onOpen, studyValue }: { game: Game; onOpen: 
               {m
                 ? <>
                   <MonCard {...cp(m)} role="party" held={drag?.uid === m.uid} onClick={openMenu(m, true)} onPointerDown={press(m)} aria-haspopup="menu" />
-                  <small className="lab-pay">+{studyValue(m)} a day</small>
+                  <small className="lab-pay">{game.tier.v21 ? `+${Math.round(deskShare(m) * 100)}% research` : `+${studyValue(m)} a day`}</small>
                 </>
                 : <MonCard state="empty" look={look} emptyText={box.length ? 'Add' : 'Empty'} disabled={box.length === 0} onClick={() => { setPick(i); play('tap') }} aria-label={box.length ? 'Empty place on the desk: pick someone from the box' : 'Empty place on the desk'} />}
             </div>

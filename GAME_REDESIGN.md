@@ -52,7 +52,7 @@
 | `DAY_XP_MULT` | 1 / 1 / 1.1 / 1.25 / 1.5 | **1 / 1 / 1 / 1.1 / 1.15** | Momentum ×1.5 stacks, plus Best friends. The v3 curve trained 9 partners in 6 months against today's 7; this gives 8 |
 | `RANK_V21` | 1,200 | **1,500** | The first-pillar research made ranks a third faster; now about 8.7 a month at normal pace |
 | `BOUNTY` | ×1.25 / ×1.5 | **×3 / ×4** | Point 2 |
-| `TARGET_STRETCH` (boss) | 1.25 | **1.4** | Normal pace won 96% of weeks; now 92% (the 6-a-week cap and the Max-day boost hold it there). Real pace stays 27% |
+| Boss card (`core/boss.ts`) | stretch 1.25, targets 1 to 6, Max day ×1.5 | **stretch 1.3, targets 2 to 9, Max day ×1.45; every effortful pillar on the card, a neglected one at 2** | Normal pace won 90% of weeks and strong 100% (three seeds each). Now 77% normal, 23% real, 96% strong. No target below 2, so no card falls on its first day |
 
 **Real-code numbers** (`tools/sim-life.mjs --rules v21`, 182 days):
 

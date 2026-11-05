@@ -40,16 +40,18 @@ All numbers live in `core/rules.ts`, `core/boss.ts` and `core/economy.ts`, under
 
 ## The boss
 - **The card** (`core/boss.ts tasksV21`, drawn by `src/lib/boss.ts`):
-  - every effortful pillar done on 3+ of the last 21 days gets a task (Code now has one);
-  - **the pillar done least always keeps a task, with a target of 1 or 2**;
+  - **every effortful pillar on the list always has a task**, so a neglected pillar never drops off (Code now has one too);
+  - a pillar done on 3+ of the last 21 days gets a target sized to them; one done on fewer gets a target of 2;
+  - **no task asks for fewer than 2**, so no single day finishes a task and no card is beaten on its first day;
   - effortful tasks share 70% of its HP;
   - one task for good nights on a day of work and one for days with ¾ ticked, 15% each;
   - at most 5 tasks (the chores task goes first);
-  - targets are the last 21 days' rate × 1.4, from 1 to 6 a week.
+  - targets are the last 21 days' rate × 1.3, from 2 to 9 a week.
+  - A V21 card is revision 3: it replaces a card an older app drew for the same week (`src/lib/store.ts` draws it again).
 - **The fight:**
   - The card is its HP.
   - Power multiplies the work: a Mega +5% per bond level (half from the party), +5% per party member whose type beats it, and the Rocky Helmet.
-  - A Max day's progress counts ×1.5.
+  - A Max day's progress counts ×1.45.
   - No heal on rest days, no throws, no party minimum.
 - **Payouts:** 25% pays 100 coins and a Great Ball; 50% pays 5 gems and an Oran Berry; 75% pays 10 gems and an Ultra Ball. **Beaten:** 20 gems, its shard, and **it joins you**.
 
@@ -67,3 +69,21 @@ All numbers live in `core/rules.ts`, `core/boss.ts` and `core/economy.ts`, under
 - **Tiles:** `game.tiles` for Life OS, one per effortful pillar on the list: `{ iconId, fill, ready, bountyActive, bounty }`. The aim (shard or egg) can be switched with an `aim` use.
 
 Tests: `core/v21.test.ts`.
+
+## Start day
+
+`V21_START` will be a **Monday**, so the boss's week starts with the rules. This was checked by folding the real ledger plus synthetic days (6 to 15 Nov 2026) with `V21_START` set to Mon 9 Nov in a scratch copy of the code.
+
+| What | On the first day |
+|---|---|
+| **The Lab** | The points are scaled to the flat rank so the dial keeps its fill: **23 of 500 becomes 69 of 1,500**. From then the day's research is by tier |
+| **The wild Pokemon** | Nothing changes. One mid-fight keeps its HP (Venonat 326/700 carried on and was caught later that week). Catching is untouched |
+| **The boss** | The week before closes on Sunday as it always would. Monday's card is drawn by the V21 planner from the last 21 days: in the run, Code, Gym and Arbor at 2 each (Gym and Arbor neglected), good nights at 2, steady days at 2. A comeback Monday (a Max day) took it to 72%, and Tuesday beat it |
+| **Momentum** | Starts at the step nearest the old multiplier (yours was ×1, so ×1). It does not drop to ×1 from a higher one |
+| **Hearts** | Partner and Trainer hearts carry over. The first Max day gave 12 (10, the first pillar's 1, a good night's 1) |
+| **Trainer perks** | The ladder changes. At 83 hearts you are level 2, which is now the neglect bounty: **Endure moves to 100 hearts**, so it is off until then (two days in the run) |
+| **Neglect bounty** | Counted from your real history. Every pillar idle since 27 Oct pays ×4 the first day it is done (it did, on Monday) |
+| **Bells** | From the first day, only on a night of 80+ with an effortful pillar done |
+| **Coins** | From the first day, the tier's coins, not the old pay by share |
+| **Gym** | From the first day, a logged Strong workout. A Gym tick without one is a basic habit |
+| **Life OS tiles** | Appear on the first day, one per effortful pillar on the list |

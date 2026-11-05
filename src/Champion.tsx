@@ -5,11 +5,11 @@
 // Every action here is one small ledger event (store.useItem), the same as a
 // ball thrown or a berry fed; the game is still the ledger, folded.
 import { useState, type ReactNode } from 'react'
-import { STAR_ENDURE_MIN, STAR_EVERY, STAR_FOCUS, STAR_FRIENDS, STAR_MAX, STAR_PICKUP, STAR_SHARE, TRAINER_LEVELS, rankName } from '../core/bond.ts'
+import { PERKS_V21, hasPerkV21, type PerkV21, STAR_ENDURE_MIN, STAR_EVERY, STAR_FOCUS, STAR_FRIENDS, STAR_MAX, STAR_PICKUP, STAR_SHARE, TRAINER_LEVELS, rankName } from '../core/bond.ts'
 import { isShelved, nameOf, type Game, type Mon } from '../core/fold.ts'
 import { BOOST, DIRE_HIT, EVO_ITEMS, FOSSILS, ITEMS, LEGEND_KEYS, LEGEND_KEY_BP, COLLECTOR_MULT, REVIVE_COST, TREASURE, collectorWants, treasurePrice, VITAMINS, VITAMIN_MAX, VITAMIN_STEP, itemName, type MarkTag } from '../core/economy.ts'
 import { FACILITIES, type Facility } from '../core/frontier.ts'
-import { BOND_PERKS, CRIT_BASE, DYNAMAX, ENDURE_DAYS, FRIENDS_XP, GIGANTAMAX, HEART_LEVELS, PICKUP_BASE, PICKUP_STEP, SHARE_XP, V13_START, bondLevel, hasPerk, levelOf, type BondPerk } from '../core/rules.ts'
+import { BOUNTY, DAY_HIT_MULT, HEART_CAP, TEAM_SIZE, BOND_PERKS, CRIT_BASE, DYNAMAX, ENDURE_DAYS, FRIENDS_XP, GIGANTAMAX, HEART_LEVELS, PICKUP_BASE, PICKUP_STEP, SHARE_XP, V13_START, bondLevel, hasPerk, levelOf, type BondPerk } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
 import { TAG_NAME, Win } from './App.tsx'
 import { Coin, ItemIcon } from './Item.tsx'
@@ -40,8 +40,54 @@ const PERK: Record<BondPerk, { name: string; icon: string; text: (bond: number, 
   share: { name: 'Exp. Share', icon: 'exp-share', text: (_, k = 0) => `Everyone in the party below level 100 gets ${pct(SHARE_XP + STAR_SHARE * k)} of its XP, the fully trained as well.` },
 }
 
+// ── version 21: the Trainer's ladder (core/bond.ts PERKS_V21) ───────────────
+const PERK21: Record<PerkV21, { name: string; icon: string; text: (level: number) => string }> = {
+  pickup: { name: 'Pickup', icon: 'itemfinder', text: (b) => `On a day with a pillar it may find something on the walk: ${pct(Math.min(0.95, PICKUP_BASE + PICKUP_STEP * Math.max(0, b - 1)))} at this level.` },
+  bounty: { name: 'Bounty', icon: 'star-piece', text: () => `A pillar back after 2 idle days pays its own XP and marks ×${BOUNTY.two}, after 3 or more ×${BOUNTY.three}.` },
+  endure: { name: 'Endure', icon: 'guard-spec', text: () => `One empty day in ${ENDURE_DAYS} costs nothing.` },
+  friends: { name: 'Best friends', icon: 'soothe-bell', text: () => `+${pct(FRIENDS_XP - 1)} XP every day.` },
+  sharing: { name: 'Sharing', icon: 'heart-scale', text: () => `Hearts a Pokemon cannot take go to the party member with the fewest. At ${HEART_CAP} a Pokemon is a Best Friend, its signature in full from the party.` },
+}
+
+/** Version 21: five steps of the Trainer's hearts, then the party's Best Friends filling in, one heart each. */
+function PerksV21({ game }: { game: Game }) {
+  const level = game.trainer.level
+  const [pick, setPick] = useState<number | null>(null)
+  const shown = pick ?? Math.min(level, PERKS_V21.length - 1)
+  const p = PERKS_V21[shown]
+  const on = hasPerkV21(level, p)
+  const six = [game.partner, ...game.team]
+  const best = six.filter((m) => heartsOf(m) >= HEART_CAP).length
+  return (
+    <section className="perks" aria-label="Trainer perks">
+      <span className="k-label">Trainer perks · {game.trainer.hearts} ♥ across all your Pokemon</span>
+      <ol className="perk-track">
+        {PERKS_V21.map((q, i) => (
+          <li key={q}>
+            <button type="button" className={`perk-node ${hasPerkV21(level, q) ? 'on' : ''} ${i === shown ? 'sel' : ''}`} aria-pressed={i === shown} aria-label={`${PERK21[q].name}, at ${TRAINER_LEVELS[i]} hearts${hasPerkV21(level, q) ? ', earned' : ''}`} onClick={() => setPick(i)}>
+              <span className="perk-ico"><ItemIcon id={PERK21[q].icon} size={24} /></span>
+              <small>{hasPerkV21(level, q) ? '✓' : `${TRAINER_LEVELS[i]}♥`}</small>
+            </button>
+          </li>
+        ))}
+      </ol>
+      <p className="perk-say"><b>{PERK21[p].name}</b> {on ? PERK21[p].text(level) : `At ${TRAINER_LEVELS[shown]} hearts in all: ${PERK21[p].text(shown + 1)}`}</p>
+      {/* the bond's endgame: every one of the six a Best Friend (then Ribbons), drawn as six hearts that fill */}
+      <div className="perk-best" role="meter" aria-valuemin={0} aria-valuemax={1 + TEAM_SIZE} aria-valuenow={best} aria-label={`${best} of ${1 + TEAM_SIZE} in the party are Best Friends`} title={`A Pokemon with ${HEART_CAP} hearts is a Best Friend. With all six, every 150 more hearts is a Ribbon.`}>
+        {Array.from({ length: 1 + TEAM_SIZE }, (_, i) => <i key={i} className={i < best ? 'on' : ''}>♥</i>)}
+        <small>Best Friends</small>
+      </div>
+    </section>
+  )
+}
+
 /** The partner's hearts as five steps, each unlocking something. */
 export function BondPerks({ game }: { game: Game }) {
+  if (game.tier.v21) return <PerksV21 game={game} />
+  return <BondPerksOld game={game} />
+}
+
+function BondPerksOld({ game }: { game: Game }) {
   // version 16: the five perks are the trainer's, from every heart across every Pokemon; before it, the partner's
   const v16 = game.v16
   const bond = v16 ? game.trainer.level : bondLevel(heartsOf(game.partner))
@@ -86,7 +132,9 @@ export function BondPerks({ game }: { game: Game }) {
 export function TodayEffects({ game }: { game: Game }) {
   const t = game.today
   const chips: ReactNode[] = []
-  if (t.max) chips.push(<span key="max" className="fxchip max">{t.max === 'gigantamax' ? `Gigantamax ×${GIGANTAMAX}` : `Dynamax ×${DYNAMAX}`}</span>)
+  if (t.max) chips.push(<span key="max" className="fxchip max">{game.tier.v21 ? `${t.max === 'gigantamax' ? 'Gigantamax' : 'Dynamax'}: Max day ×${DAY_HIT_MULT[4]}` : t.max === 'gigantamax' ? `Gigantamax ×${GIGANTAMAX}` : `Dynamax ×${DYNAMAX}`}</span>)
+  // version 21: a pillar back after idle days paid its comeback bonus
+  for (const [tag, x] of Object.entries(game.tier.bounty)) chips.push(<span key={`bounty-${tag}`} className="fxchip find" data-tag={tag}>✦ {TAG_NAME[tag] ?? tag} bounty ×{x}</span>)
   if (t.crit) chips.push(<span key="crit" className="fxchip crit">Critical hit ×1.5</span>)
   for (const [tag, add] of Object.entries(t.boost ?? {})) chips.push(<span key={tag} className="fxchip boost" data-tag={tag}>{TAG_NAME[tag] ?? tag} +{pct(add ?? 0)}</span>)
   if (t.find) chips.push(<span key="find" className="fxchip find"><ItemIcon id={t.find} size={16} />Found {itemName(t.find)}</span>)

@@ -2,12 +2,12 @@
 // Everything you see is earned in Life OS; the one thing written here is an
 // item being used from the Bag.
 import { useSyncExternalStore } from 'react'
-import { BOSS_CARD_REV, BOSS_DAY_EVENT, CARD_EVENT, bossDayChanged } from '../../core/boss.ts'
+import { BOSS_CARD_REV, BOSS_CARD_REV_V21, BOSS_DAY_EVENT, CARD_EVENT, bossDayChanged } from '../../core/boss.ts'
 import { addDays, buildFacts, mondayOf, type DayFacts, type FactsInput } from '../../core/facts.ts'
 import { USE_EVENT, sleepOf, type SleepNight } from '../../core/events.ts'
 import { settled } from '../../core/order.ts'
 import { foldGame, type Game } from '../../core/fold.ts'
-import { V18_START } from '../../core/rules.ts'
+import { V18_START, V21_START } from '../../core/rules.ts'
 import type { LedgerEvent } from '../linked/arbor-model.ts'
 import { DAY_START_EVENT, dayStartsAt, localDate, wakingDay } from '../../core/day.ts'
 import { createLedger, type LedgerStatus } from './ledger.ts'
@@ -119,7 +119,8 @@ function syncBoss(): void {
   let card = input.boss?.cards[week]
   // the week version 18 began had its card drawn by the old planner, which had one rare line to pick from and so brought the same boss again:
   // drawn once more by the new one, whatever is done on it (the work is measured from the raw events, so it carries over to the new card)
-  const stale = Boolean(card) && week === V18_START && (card?.rev ?? 1) < BOSS_CARD_REV
+  // and version 21's weeks are drawn by its planner (core/boss.ts tasksV21): a card an older app drew for one of them (opened before the deploy) is drawn again
+  const stale = Boolean(card) && ((week === V18_START && (card?.rev ?? 1) < BOSS_CARD_REV) || (week >= V21_START && (card?.rev ?? 1) < BOSS_CARD_REV_V21))
   if (!card || stale) {
     const before = Object.keys(input.boss?.cards ?? {}).filter((w) => w < week).length
     const drawn = planCard(week, today, view.game, input, events, before, FORCE_BOSS)

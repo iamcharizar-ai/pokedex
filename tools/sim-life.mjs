@@ -7,6 +7,7 @@
 //                         --first 1,40,2 the first pillar's hearts, research, gems (FIRST_PILLAR); --first 0 for none
 //                         --skip week|2days|3days [--pillar code]  skip one pillar a whole week every other week, or Tuesday and Wednesday (to Thursday) every week
 //                         --xp 1,1,1.1,1.25,1.5  the XP multiplier by tier (DAY_XP_MULT)
+//                         --boss 7,1.5,1.4,effort  the boss's weekly target cap, a Max day's progress multiplier, the target stretch, and 'effort' to boost only effortful tasks (core/boss.ts)
 //                         --json          one line of totals, for comparing runs
 //
 // The paces are ASSUMPTIONS, not data:
@@ -24,7 +25,7 @@
 // (core/boss.ts tasksV21); before V21 a stand-in for src/lib/boss.ts (four tasks of four days each).
 import { foldGame, nameOf, leaderOf } from '../core/fold.ts'
 import { addDays } from '../core/facts.ts'
-import { bossLevel, tasksV21 } from '../core/boss.ts'
+import { MAX_DAY_BOSS, TARGET_STRETCH, TARGET_V21, bossLevel, tasksV21 } from '../core/boss.ts'
 import { BOUNTY, DAY_GEMS, DAY_XP_MULT, FIRST_PILLAR, LEADER_GEMS_V21, V21_START, levelOf } from '../core/rules.ts'
 import { isGym } from '../core/fold.ts'
 import { SILVER_GEMS, GOLD_GEMS } from '../core/frontier.ts'
@@ -41,6 +42,7 @@ const mondayFrom = (d) => { let x = d; while (new Date(x + 'T12:00:00').getDay()
 const START = arg('start', V21 ? mondayFrom(V21_START) : '2026-11-09')
 const SKIP = arg('skip', ''), SKIP_PILLAR = arg('pillar', 'code'), JSON_OUT = process.argv.includes('--json')
 if (arg('bounty', '')) { const [a, b] = arg('bounty').split(',').map(Number); BOUNTY.two = a; BOUNTY.three = b ?? a }
+if (arg('boss', '')) { const [cap, maxDay, stretch, effortOnly] = arg('boss').split(','); TARGET_V21[1] = Number(cap); if (maxDay) MAX_DAY_BOSS.mult = Number(maxDay); if (stretch) TARGET_STRETCH.x = Number(stretch); if (effortOnly) MAX_DAY_BOSS.effortOnly = effortOnly === 'effort' }
 if (arg('xp', '')) arg('xp').split(',').map(Number).forEach((x, i) => { DAY_XP_MULT[i] = x })
 if (arg('first', '')) { const [h, r = 0, g = 0] = arg('first').split(',').map(Number); Object.assign(FIRST_PILLAR, { hearts: h, research: r, gems: g }) }
 let seed = Number(arg('seed', 1)) * 7919 + PACE.length * 99

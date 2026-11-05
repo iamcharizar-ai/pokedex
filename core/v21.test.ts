@@ -4,7 +4,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { addDays, factsFor, mondayOf, type DayFacts, type HabitFact } from './facts.ts'
 import { foldGame } from './fold.ts'
-import { tasksV21, type BossCard } from './boss.ts'
+import { MAX_DAY_BOSS, tasksV21, type BossCard } from './boss.ts'
 import { BOUNTY, DAY_HEARTS, DAY_RESEARCH, FIRST_PILLAR, MOMENTUM_STEPS, RANK_V21, V21_START, bountyMult } from './rules.ts'
 
 const START = V21_START
@@ -110,12 +110,12 @@ test('the V21 card: every pillar done on 3+ of 21 days, and always the one done 
   assert.equal(tasksV21({ done: {}, nights: 0, steady: 0, days: 21 }, (k) => k === 'life' || k === 'sleep'), null, 'no effortful pillar on the list, no card')
 })
 
-test('the boss: the card is its HP, a Max day counts half again, and a beaten boss joins you', () => {
+test('the boss: the card is its HP, a Max day counts more, and a beaten boss joins you', () => {
   const card: BossCard = { week: mondayOf(START), rev: 2, species: 'dratini', form: 'dragonite', rarity: 'R', mega: false, level: 20, tasks: [{ kind: 'code', template: 'days', target: 2, share: 1, text: 'Code on 2 days' }] }
   const one = fold([{ ...day(0, { code: true }), boss: { card, p: [0.5] } }])
   assert.ok(one.boss && Math.abs(one.boss.taken - 0.5 * (1 + one.boss.common)) < 0.01, 'half the card is half its HP, times its power')
   const max = fold([{ ...day(0, all), boss: { card, p: [0.5] } }])
-  assert.ok(max.boss && Math.abs(max.boss.taken - 0.5 * (1 + max.boss.common) * 1.5) < 0.01, 'on a Max day the same work counts ×1.5')
+  assert.ok(max.boss && Math.abs(max.boss.taken - 0.5 * (1 + max.boss.common) * MAX_DAY_BOSS.mult) < 0.01, 'on a Max day the same work counts more')
   const won = fold([{ ...day(0, { code: true }), boss: { card, p: [0.5] } }, { ...day(1, { code: true }), boss: { card, p: [1] } }])
   assert.equal(won.boss?.killed, true)
   assert.ok(won.queue.some((m) => m.base === 'dratini'), 'it joins the Box')
@@ -136,4 +136,22 @@ test('tiles: one per effortful pillar on the list, a shard until a Mega Stone, t
   assert.equal(g.tiles.code?.ready, false)
   // before V21 there are no tiles
   assert.deepEqual(fold([{ ...day(0, all), day: '2026-11-05' }]).tiles, {})
+})
+
+test("V21's first day: the Lab dial keeps its fill, and momentum starts at the step nearest the old multiplier", () => {
+  // a week of perfect days before V21 (the party fills, studies and counts for momentum), then a chores-only first day of V21
+  const pre = Array.from({ length: 8 }, (_, k) => ({ ...day(0, all), day: addDays(START, k - 8) }))
+  const before = fold(pre)
+  assert.ok(before.research.points > 0 && before.research.need !== RANK_V21, 'research under the old cost')
+  const first = fold([...pre, day(0, {}, 70, 8)])
+  assert.equal(first.research.points, Math.round((before.research.points * RANK_V21) / before.research.need), 'the same share of the dial, now of 1,500')
+  assert.equal(first.research.need, RANK_V21)
+  assert.ok(before.momentum.mult > 1)
+  assert.equal(first.momentum.mult, MOMENTUM_STEPS.reduce((b, x) => (Math.abs(x - before.momentum.mult) < Math.abs(b - before.momentum.mult) ? x : b), 1), "the old multiplier carries into the slide, not back to ×1")
+})
+
+test('a card is never beaten on its first day: no task asks for fewer than 2', () => {
+  for (const h of [{ done: { code: 0, gym: 0, arbor: 0 }, nights: 0, steady: 0, days: 21 }, { done: { code: 21, gym: 21, arbor: 21 }, nights: 21, steady: 21, days: 21 }]) {
+    for (const t of tasksV21(h, (k) => k !== 'shed')!) assert.ok(t.target >= 2, `${t.kind} asks for ${t.target}`)
+  }
 })

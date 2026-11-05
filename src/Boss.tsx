@@ -7,7 +7,7 @@
 // can know it a moment early and play the right ending.
 import { useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
-import { BOSS_KINDS, BOSS_TAG, BOSS_WHERE, bossNeed, KILL_CAP, THROW_AT, catchChance, type BossKind } from '../core/boss.ts'
+import { BOSS_KINDS, BOSS_TAG, BOSS_WHERE, MAX_DAY_BOSS, bossNeed, KILL_CAP, THROW_AT, catchChance, type BossKind } from '../core/boss.ts'
 import { BALLS, itemName, rng } from '../core/economy.ts'
 import { isShelved, nameOf, spritePath, type BossView, type Game } from '../core/fold.ts'
 import { SPECIES } from '../core/species.ts'
@@ -30,6 +30,13 @@ const pct = (x: number): string => `${Math.round(x * 100)}%`
 
 /** Before there is a boss: what it takes, so the goal is in view. */
 function Locked({ game }: { game: Game }) {
+  // version 21: there is no party to fill: a boss comes every Monday, drawn from your last three weeks
+  if (game.tier.v21) return (
+    <div className="duel static bosslock" title="A boss is a week-long fight: a card of tasks drawn from your last three weeks. Finish the card and it joins you.">
+      <ItemIcon id="master-ball" size={24} />
+      <span><b>A boss comes on Monday</b></span>
+    </div>
+  )
   const need = bossNeed(game.today.day || '9999-99-99')
   const have = Math.min(need, game.bossParty)
   // a card is drawn only in the first PLAN_BY days of a week (lib/boss.ts)
@@ -108,7 +115,7 @@ function Fight({ boss, game }: { boss: BossView; game: Game }) {
   // where each task's share of the bar ends
   const edges = boss.tasks.slice(0, -1).map((_, i) => boss.tasks.slice(0, i + 1).reduce((n, t) => n + t.share, 0))
   return (
-    <Win title={`Boss: ${nameOf(boss.form)}`} tone="purple" aside={boss.caught ? 'Caught' : boss.fled ? 'Gone' : `Lv ${boss.level} · ${boss.daysLeft === 0 ? 'last day' : `${boss.daysLeft} ${boss.daysLeft === 1 ? 'day' : 'days'} left`}`}>
+    <Win title={`Boss: ${nameOf(boss.form)}`} tone="purple" aside={boss.caught ? (game.tier.v21 ? 'Joined you' : 'Caught') : boss.fled ? 'Gone' : `Lv ${boss.level} · ${boss.daysLeft === 0 ? 'last day' : `${boss.daysLeft} ${boss.daysLeft === 1 ? 'day' : 'days'} left`}`}>
       <div className={`boss r-${boss.rarity} ${boss.mega ? 'mega' : ''}`}>
         <div className="boss-stage" ref={stage}>
           <img ref={sprite} src={spritePath(boss.form)} alt="" width={120} height={120} className={`sprite ${boss.caught || boss.fled ? 'gone' : ''}`} />
@@ -121,9 +128,16 @@ function Fight({ boss, game }: { boss: BossView; game: Game }) {
           </div>
           <p className="boss-line">
             {type && <><img src={`/sprites/types/${type}.png`} alt="" width={14} height={14} /> {type} · </>}
-            {boss.rarity === 'L' ? (boss.mega ? 'Mega legendary' : 'Legendary') : 'Rare'} · your party hits at <b>{pct(boss.strike)}</b>{boss.common > 0 ? <>, +{pct(boss.common)} from the team</> : null}
+            {boss.rarity === 'L' ? (boss.mega ? 'Mega legendary' : 'Legendary') : 'Rare'}{game.tier.v21 ? null : <> · your party hits at <b>{pct(boss.strike)}</b>{boss.common > 0 ? <>, +{pct(boss.common)} from the team</> : null}</>}
           </p>
-          {boss.strike < 0.999 && !boss.caught && <p className="muted">It is levelled to your party and stronger than it. Finishing stronger Pokemon, a Mega and a higher bond all raise the hit.</p>}
+          {/* version 21: the card is its HP; power (a Mega by bond, type edges, the Rocky Helmet) multiplies the work, a Max day counts more */}
+          {game.tier.v21 && (
+            <p className="boss-power">
+              <span className="chip" title="A Mega (by its bond), each party member whose type beats it, and the Rocky Helmet">Power +{pct(boss.common)}</span>
+              <span className={`chip ${game.tier.tier === 4 ? 'mega' : ''}`} title="On a Max day, the day's progress on the card counts more">✦ Max day ×{MAX_DAY_BOSS.mult}</span>
+            </p>
+          )}
+          {!game.tier.v21 && boss.strike < 0.999 && !boss.caught && <p className="muted">It is levelled to your party and stronger than it. Finishing stronger Pokemon, a Mega and a higher bond all raise the hit.</p>}
         </div>
       </div>
 
@@ -143,10 +157,11 @@ function Fight({ boss, game }: { boss: BossView; game: Game }) {
         ))}
       </ul>
 
-      {!boss.caught && !boss.fled && boss.taken >= KILL_CAP - 1e-9 && !boss.allDone && <p className="notice warn">The last of its HP only falls when every task on the card is done.</p>}
-      {boss.caught && <p className="notice good">Caught. It is in My Pokemon.</p>}
+      {!game.tier.v21 && !boss.caught && !boss.fled && boss.taken >= KILL_CAP - 1e-9 && !boss.allDone && <p className="notice warn">The last of its HP only falls when every task on the card is done.</p>}
+      {boss.caught && <p className="notice good">{game.tier.v21 ? 'Beaten. It joined you in My Pokemon.' : 'Caught. It is in My Pokemon.'}</p>}
       {boss.fled && <p className="notice warn">It broke free three times and left. Another comes on Monday.</p>}
-      {!boss.caught && !boss.fled && (boss.canThrow
+      {game.tier.v21 && !boss.caught && <p className="muted">Finish the card and it joins you.</p>}
+      {!game.tier.v21 && !boss.caught && !boss.fled && (boss.canThrow
         ? (
           <div className="boss-throws">
             <p className="muted">It is weak enough to throw at. {boss.throwsLeft} {boss.throwsLeft === 1 ? 'throw' : 'throws'} left. A finished card, less HP on it and a stronger party all raise the chance.</p>
@@ -175,7 +190,7 @@ export function BossTile({ game }: { game: Game }) {
   // how last week ended, so a boss that left is not a week that vanished
   const prev = game.bossLog[game.bossLog.length - 1]
   const lastWeek = prev && prev.week === addDays(b.week, -7) ? prev : null
-  const state = b.caught ? 'Caught' : b.fled ? 'It left' : b.canThrow ? 'Throw now' : b.daysLeft === 0 ? 'Last day' : `${b.daysLeft} ${b.daysLeft === 1 ? 'day' : 'days'} left`
+  const state = b.caught ? (game.tier.v21 ? 'Joined you' : 'Caught') : b.fled ? 'It left' : b.canThrow ? 'Throw now' : b.daysLeft === 0 ? 'Last day' : `${b.daysLeft} ${b.daysLeft === 1 ? 'day' : 'days'} left`
   return (
     <>
       <button type="button" className={`duel boss-duel ${b.canThrow ? 'hot' : ''}`} style={{ ['--tc' as string]: typeColor(SPECIES[b.form]?.t) }} onClick={() => setOpen(true)} aria-label={`Boss ${nameOf(b.form)}, level ${b.level}, ${b.hp} HP left. Open the fight`}>

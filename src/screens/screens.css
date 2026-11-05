@@ -150,3 +150,6 @@ details.win.folded[open] .chev { transform: rotate(180deg); }
 .tour-six i { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; background: var(--well); box-shadow: inset 0 0 0 2px var(--hair-hi); }
 .tour-six i.on { background: var(--surface-2); box-shadow: inset 0 0 0 2px var(--tone-purple); }
 .tour-six img { image-rendering: pixelated; }
+
+/* version 21: the boss's power and a Max day, as chips under its name (Boss.tsx) */
+.boss-power { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 0; }

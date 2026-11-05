@@ -8,7 +8,7 @@
 // Nothing here is random at run time: every draw is seeded by the week, so two
 // devices opened at the same moment write the same card.
 import {
-  BOSS_CARD_REV, BOSS_KINDS, tasksV21, type CardHistory, BOSS_NO_REPEAT, BOSS_POOL_MIN, BOSS_SHARE, BOSS_TAG, bossNeed, LEGENDARY_EVERY_BOSS, bossLevel,
+  BOSS_CARD_REV, BOSS_CARD_REV_V21, BOSS_KINDS, tasksV21, type CardHistory, BOSS_NO_REPEAT, BOSS_POOL_MIN, BOSS_SHARE, BOSS_TAG, bossNeed, LEGENDARY_EVERY_BOSS, bossLevel,
   type BossCard, type BossKind, type BossTask,
 } from '../../core/boss.ts'
 import { rng } from '../../core/economy.ts'
@@ -106,7 +106,7 @@ export function planCard(week: string, today: string, game: Game, input: FactsIn
   if (v18) {
     // with one region open there is a single rare line: top the pool up with uncommon ones, and keep off the last few bosses and the party's own lines
     if (rarity === 'R' && pool.length < BOSS_POOL_MIN) pool = [...pool, ...open('U')].sort()
-    const recent = Object.values(input.boss?.cards ?? {}).filter((c) => c.week < week || (c.week === week && (c.rev ?? 1) < BOSS_CARD_REV)).sort((a, b) => (a.week < b.week ? -1 : 1)).slice(-BOSS_NO_REPEAT).map((c) => c.species)
+    const recent = Object.values(input.boss?.cards ?? {}).filter((c) => c.week < week || (c.week === week && (c.rev ?? 1) < (week >= V21_START ? BOSS_CARD_REV_V21 : BOSS_CARD_REV))).sort((a, b) => (a.week < b.week ? -1 : 1)).slice(-BOSS_NO_REPEAT).map((c) => c.species)
     const mine = new Set([game.partner, ...game.team].map((m) => m.base))
     for (const out of [new Set([...recent, ...mine]), new Set(recent)]) {
       const fresh = pool.filter((id) => !out.has(id))
@@ -128,7 +128,7 @@ export function planCard(week: string, today: string, game: Game, input: FactsIn
     const listed = (k: BossKind): boolean => k === 'life' || (live ? live.has(BOSS_TAG[k]) : k !== 'shed')
     const v21Tasks = tasksV21(h, listed)
     if (!v21Tasks) return null
-    return { week, rev: BOSS_CARD_REV, species, form: shown.form, rarity, mega: shown.mega, level, tasks: v21Tasks }
+    return { week, rev: BOSS_CARD_REV_V21, species, form: shown.form, rarity, mega: shown.mega, level, tasks: v21Tasks }
   }
   const tasks: Omit<BossTask, 'share'>[] = []
 

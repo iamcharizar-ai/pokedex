@@ -5,10 +5,10 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { isShelved, nameOf, type Game, type Mon, type Quest } from '../core/fold.ts'
 import {
-  BALLS, battleShelf, BERRY_HEARTS, treasurePrice, BOOST, BP_SHELF, DOMAIN_SHOPS, DOMAIN_V13, EVO_ITEMS, FOSSILS, GEAR_ITEMS, HELD, ITEMS, LEGEND_KEYS, LURES, MARKS, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, masteryCost, RARE_SHELF, RARE_SHELF_V13, REVIVE_COST, SELL, TM_SLOTS, TREASURE, itemName, throwHp, tmType,
+  COUNTER_V21, DOMAIN_V21, workEgg, BALLS, battleShelf, BERRY_HEARTS, treasurePrice, BOOST, BP_SHELF, DOMAIN_SHOPS, DOMAIN_V13, EVO_ITEMS, FOSSILS, GEAR_ITEMS, HELD, ITEMS, LEGEND_KEYS, LURES, MARKS, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, masteryCost, RARE_SHELF, RARE_SHELF_V13, REVIVE_COST, SELL, TM_SLOTS, TREASURE, itemName, throwHp, tmType,
   type MarkTag, type Offer, type ShopId,
 } from '../core/economy.ts'
-import { DAILY_PAY, MAX_LEVEL, REPEL_DAYS, RESEARCH_SLOTS, TEAM_BONUS, TEAM_NATURE, TEAM_SIZE, levelOf, studyPoints, type Rarity } from '../core/rules.ts'
+import { DESK_BONUS, DAILY_PAY, MAX_LEVEL, REPEL_DAYS, RESEARCH_SLOTS, TEAM_BONUS, TEAM_NATURE, TEAM_SIZE, levelOf, studyPoints, type Rarity } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
 import { GymBadge, TAG_NAME, Win, badgesWon, plural } from './App.tsx'
 import { Ball, BallItem, MegaStone, megaStoneName } from './Ball.tsx'
@@ -34,6 +34,7 @@ import { buyPop } from './lib/fx.ts'
 import { play } from './lib/sfx.ts'
 import { useItem } from './lib/store.ts'
 import { aim } from './lib/aim.ts'
+import { OPEN_COUNTER } from './lib/deeplink.ts'
 import { BondPerks, BpIcon, CollectorWin, LabWin, MonExtras, evolutionsFor } from './Champion.tsx'
 import { FeedSheet, treatsIn } from './Feed.tsx'
 import { FeedBlock, RoleControl, TeamScreen, monCardOf } from './Team.tsx'
@@ -357,10 +358,44 @@ function TrainingKit({ game }: { game: Game }) {
   )
 }
 
+/**
+ * Version 21: a pillar's counter, the object its Life OS tile shows. The egg or shard it reaches for, filling with its marks (the
+ * numbers are here, never on the tile), the comeback bonus doing it today would pay, and the aim: its shard or its egg.
+ */
+function PillarCounter({ game, tag }: { game: Game; tag: MarkTag }) {
+  const tile = game.tiles[tag as keyof Game['tiles']]
+  if (!tile) return null
+  const have = game.wallet.marks[tag], need = COUNTER_V21
+  const egg = workEgg(tag), shard = MARKS[tag].shard
+  const aimed = tile.iconId === egg ? 'egg' : 'shard'
+  const choose = (to: 'egg' | 'shard') => { if (to !== aimed) { useItem(tag, '', 'aim', to); play('tap') } }
+  return (
+    <div className={`pcount ${tile.ready ? 'is-ready' : ''}`}>
+      <span className="pcount-ghost" aria-hidden>
+        <span className="pcount-dark"><ItemIcon id={tile.iconId} size={64} /></span>
+        <span className="pcount-fill" style={{ clipPath: `inset(${((1 - tile.fill) * 100).toFixed(1)}% 0 0 0)` }}><ItemIcon id={tile.iconId} size={64} /></span>
+        <i className={`pcount-badge ${tile.bountyActive ? 'on' : ''}`}>✦</i>
+      </span>
+      <span className="pcount-txt">
+        <b>{itemName(tile.iconId)}</b>
+        <Meter kind="gold" value={Math.min(have, need)} max={need} name={`${MARKS[tag].name} toward ${itemName(tile.iconId)}`} label={tile.ready ? `Ready · ${have} held` : `${have} / ${need}`} />
+        {tile.bountyActive && <small className="pcount-bounty">✦ Bounty: {TAG_NAME[tag].toLowerCase()} today pays ×{tile.bounty}</small>}
+      </span>
+      {shard && (
+        <span className="pcount-aim" role="radiogroup" aria-label="What this counter reaches for">
+          <Slot material="glass" icon={<ItemIcon id={shard} size={34} />} on={aimed === 'shard'} role="radio" aria-checked={aimed === 'shard'} tip={{ title: itemName(shard), note: 'For a Mega Stone: three of different colours' }} onClick={() => choose('shard')} />
+          <Slot material="glass" icon={<ItemIcon id={egg} size={34} />} on={aimed === 'egg'} role="radio" aria-checked={aimed === 'egg'} tip={{ title: itemName(egg), note: `Hatches a Pokemon of the ${TAG_NAME[tag].toLowerCase()} types` }} onClick={() => choose('egg')} />
+        </span>
+      )}
+    </div>
+  )
+}
+
 /** One domain's shop: its mastery, what its marks buy, and its TMs. */
 export function DomainShop({ game, tag, open }: { game: Game; tag: MarkTag; /** shown on its own (a tab of its own), so it does not fold */ open?: boolean }) {
   const shop = DOMAIN_SHOPS[tag]
-  const goods = [...shop.stock.filter((o) => ITEMS[o.item]?.kind !== 'tm'), ...(game.v13 ? DOMAIN_V13[tag] : [])]
+  // version 21: each pillar's shop leads with its egg and its shard, at its counter's price
+  const goods = [...(game.tier.v21 ? DOMAIN_V21[tag] : []), ...shop.stock.filter((o) => ITEMS[o.item]?.kind !== 'tm'), ...(game.v13 ? DOMAIN_V13[tag] : [])]
   const tms = shop.stock.filter((o) => ITEMS[o.item]?.kind === 'tm')
   const lv = game.mastery[tag]
   return (
@@ -376,6 +411,7 @@ export function DomainShop({ game, tag, open }: { game: Game; tag: MarkTag; /** 
           {lv >= MASTERY_MAX ? 'Full' : <>Train <MarkIcon tag={tag} size={18} />{masteryCost(lv)}</>}
         </button>
       </div>
+      {game.tiles[tag as keyof Game['tiles']] && <PillarCounter game={game} tag={tag} />}
       {tag === 'fitness' && <TrainingKit game={game} />}
       <Shelf game={game} offers={goods} shop={tag} />
       {tms.length > 0 && (
@@ -397,7 +433,7 @@ function MarkShops({ game }: { game: Game }) {
   const live = openMarks(game)
   const off = MARK_TAGS.filter((t) => !live.includes(t))
   const richest = [...live].sort((a, b) => game.wallet.marks[b] - game.wallet.marks[a])[0]
-  const [chosen, setTag] = useState<MarkTag>(richest)
+  const [chosen, setTag] = useState<MarkTag>(OPEN_COUNTER && live.includes(OPEN_COUNTER) ? OPEN_COUNTER : richest)
   const tag = live.includes(chosen) ? chosen : richest
   return (
     <>
@@ -430,7 +466,7 @@ type Place = ShopId | 'collector' | 'lab'
 type Counter = 'coins' | 'gems' | 'marks'
 const COUNTER: Record<Counter, Place[]> = { coins: ['mart', 'collector'], gems: ['rare', 'bp', 'lab'], marks: [...MARK_TAGS] }
 export function ShopTab({ game }: { game: Game }) {
-  const [which, setWhich] = useState<Counter>('coins')
+  const [which, setWhich] = useState<Counter>(OPEN_COUNTER ? 'marks' : 'coins')
   const show = (s: Place) => COUNTER[which].includes(s) && (game.v13 || !['bp', 'collector', 'lab'].includes(s))
   // a dot on the counter where something is waiting (screens/Today.tsx)
   const { shop: waiting, shopAt } = tabTodo(game)
@@ -801,7 +837,7 @@ export function MonPage({ m, game, onClose }: { m: Mon; game: Game; onClose: () 
           {game.v14 && trained && !isPartner && <p className="muted">{levelOf(m.xp) >= MAX_LEVEL ? 'Level 100: it has nothing left to learn as a partner.' : `Fully trained. It can lead again to go on to level ${MAX_LEVEL}, or grow with the party's Exp. Share.`}</p>}
           <div className="kit-row">
             {inBox && !game.v14 && v5 && <button type="button" className="pill-btn green" onClick={() => act('transfer')}>To the Professor <Price coins={sell} /></button>}
-            {game.v14 && !isPartner && !inTeam && <KButton tone={onDesk ? 'neutral' : 'main'} onClick={() => { putOnDesk(game, m.uid, !onDesk); play('tap'); onClose() }}>{onDesk ? 'Off the research desk' : `On the research desk (+${studyValue(m)}/day)`}</KButton>}
+            {game.v14 && !isPartner && !inTeam && <KButton tone={onDesk ? 'neutral' : 'main'} onClick={() => { putOnDesk(game, m.uid, !onDesk); play('tap'); onClose() }}>{onDesk ? 'Off the research desk' : `On the research desk (${deskPay(game, m)})`}</KButton>}
           </div>
         </div>
       </div>
@@ -812,6 +848,10 @@ export function MonPage({ m, game, onClose }: { m: Mon; game: Game; onClose: () 
 // ── the Professor's research desk (version 14) ─────────────────────────────
 /** What one Pokemon adds to the day's research on the desk (studyPoints in rules.ts). */
 export const studyValue = (m: Mon): number => studyPoints(levelOf(m.xp), (SPECIES[m.form]?.r ?? 'C') as Rarity, m.shiny)
+/** Version 21: what a Pokemon on the desk adds to a day's research, as a share (by rarity, a shiny half again). */
+export const deskShare = (m: Mon): number => DESK_BONUS[(SPECIES[m.form]?.r ?? 'C') as Rarity] * (m.shiny ? 1.5 : 1)
+/** The desk's pay for one Pokemon, in the words of the rules in force. */
+export const deskPay = (game: Game, m: Mon): string => (game.tier.v21 ? `+${Math.round(deskShare(m) * 100)}%` : `+${studyValue(m)}/day`)
 /** Put someone on the desk (the newest choice first: a full desk gives up its last place) or take them off. One `study` event holds the whole desk. */
 function putOnDesk(game: Game, uid: string, on: boolean): void {
   const rest = game.research.desk.map((x) => x.uid).filter((id) => id !== uid)
