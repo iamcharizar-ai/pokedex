@@ -47,14 +47,13 @@ test('late: trained Pokemon, feats, a full Box, an egg warming and chests opened
   assert.ok(g.keyStone)
 })
 
-test('boss: a full party, a boss in its week, weak enough to throw at, and balls to throw', () => {
+test('boss: a full party, a boss in its week with some of its card done, no throws (version 21), and balls in the bag', () => {
   const { g } = play('boss')
   assert.equal(g.bossParty, BOSS_PARTY)
   assert.ok(g.boss, 'there is a boss this week')
-  assert.ok(g.boss.hpLeft <= THROW_AT && g.boss.hpLeft > 0, 'it is wounded but standing')
-  assert.ok(g.boss.canThrow)
-  assert.ok(Object.entries(g.inv).some(([id, n]) => id.endsWith('-ball') && n > 0))
+  assert.equal(g.boss.canThrow, false, 'from version 21 a boss is beaten, not thrown at')
   assert.ok(g.boss.tasks.some((t) => t.p >= 1) && g.boss.tasks.some((t) => t.p < 1), 'some tasks done, some not')
+  assert.ok(Object.entries(g.inv).some(([id, n]) => id.endsWith('-ball') && n > 0))
 })
 
 test('a band turns Sleep into a measured pillar and gives the Last night section a night to show', () => {

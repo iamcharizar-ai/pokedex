@@ -7,6 +7,8 @@ import { foldGame } from './fold.ts'
 import { HEART_LEVELS, V16_START, bondLevel } from './rules.ts'
 import { SIG_CAP, SIG_PARTY, STAR_EVERY, STAR_MAX, TRAINER_LEVELS, didWork, nextStarAt, signatureOf, starOptions, starsFor, trainerLevel } from './bond.ts'
 import { BATTLE_SHELF_V16, PRICED_BY_HEARTS, battleShelf, martDeals, offerFor } from './economy.ts'
+import { setV21Start } from './rules.ts'
+setV21Start('2099-01-01') // this file tests the rules before version 21: keep them in force on every date
 
 const H = (id: string, tag: HabitFact['tag'], worth: number, frac: number, extra: Partial<HabitFact> = {}): HabitFact => ({ id, tag, worth, pillar: worth === 100, frac, done: frac >= 1, ...extra })
 type Kinds = Partial<Record<'code' | 'gym' | 'guitar' | 'arbor' | 'sleep' | 'routine', boolean>>

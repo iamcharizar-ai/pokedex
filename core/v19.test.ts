@@ -7,6 +7,8 @@ import { foldGame } from './fold.ts'
 import { EGG_IDS, EGG_KINDS, DOMAIN_V19, eggNeed, lureTypes, offerFor, workEgg } from './economy.ts'
 import { EGG_STEPS, TRAIL_EGG_STEPS, V19_START } from './rules.ts'
 import { SPECIES } from './species.ts'
+import { setV21Start } from './rules.ts'
+setV21Start('2099-01-01') // this file tests the rules before version 21: keep them in force on every date
 
 const H = (id: string, tag: HabitFact['tag'], worth: number): HabitFact => ({ id, tag, worth, pillar: worth === 100, frac: 1, done: true })
 const START = '2026-10-03'

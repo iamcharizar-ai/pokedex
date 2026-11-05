@@ -5,6 +5,8 @@ import assert from 'node:assert/strict'
 import { addDays, type DayFacts, type HabitFact } from './facts.ts'
 import { foldGame } from './fold.ts'
 import { V20_START } from './rules.ts'
+import { setV21Start } from './rules.ts'
+setV21Start('2099-01-01') // this file tests the rules before version 21: keep them in force on every date
 
 const H = (id: string, tag: HabitFact['tag'], worth: number, done = true): HabitFact => ({ id, tag, worth, pillar: worth === 100, frac: done ? 1 : 0, done })
 const START = '2026-10-20'

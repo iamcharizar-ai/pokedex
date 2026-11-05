@@ -1,6 +1,6 @@
 # Rules version 21: effort tiers (built, not live)
 
-`V21_START = 2099-01-01` is a **placeholder**. No real day folds under these rules until it is set to the deploy day, with your approval.
+`V21_START = 2026-11-05`: **live from 5 Nov 2026**, the day it shipped (a Thursday, so this week's boss is still the card the old planner drew; the first V21 card is drawn on Monday 9 Nov). Days before it fold as they did.
 
 - **Your real ledger** folds exactly as before (checked against the committed core on 20 Oct, 1 Nov, 4 Nov and 5 Nov).
 - **To play it:** `node tools/sim-life.mjs --pace normal --rules v21`.

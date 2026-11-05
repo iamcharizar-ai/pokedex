@@ -135,7 +135,7 @@ test('tiles: one per effortful pillar on the list, a shard until a Mega Stone, t
   assert.ok((g.tiles.code?.fill ?? 0) > 0 && (g.tiles.code?.fill ?? 1) < 1)
   assert.equal(g.tiles.code?.ready, false)
   // before V21 there are no tiles
-  assert.deepEqual(fold([{ ...day(0, all), day: '2026-11-05' }]).tiles, {})
+  assert.deepEqual(fold([{ ...day(0, all), day: addDays(V21_START, -1) }]).tiles, {})
 })
 
 test("V21's first day: the Lab dial keeps its fill, and momentum starts at the step nearest the old multiplier", () => {
