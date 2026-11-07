@@ -1,0 +1,9 @@
+# Pokedex
+
+> One of the small apps in the owner's private Life OS system (habits, Strong, Arbor, Woodshed, Pokedex, Google Health). This site is a JavaScript app and its data is private, so the page you fetched is an empty shell.
+
+## How to read the data
+
+Ask the owner for their read-only snapshot link. On this site it is `/ai/<secret>`, which returns the habits, the months and the game state as plain text (Markdown; add `?format=json` for JSON). The whole system is at `https://redesign-life-os-ui.vercel.app/api/ai/<secret>`, and its own /llms.txt explains the options and the MCP server.
+
+Do not guess the secret. Everything behind these links is read-only.

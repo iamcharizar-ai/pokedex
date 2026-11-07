@@ -104,7 +104,7 @@ self.addEventListener('fetch', (e) => {
   const req = e.request
   const url = new URL(req.url)
   if (req.method !== 'GET' || url.origin !== self.location.origin) return
-  if (url.pathname.startsWith('/api/')) return
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/ai/')) return
 
   const fixed = url.pathname.startsWith('/sprites/') ? SPRITES : url.pathname.startsWith('/assets/') ? CACHE : null
   if (fixed) {
