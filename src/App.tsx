@@ -6,10 +6,10 @@ import type { DayFacts, HabitFact } from '../core/facts.ts'
 import { LEAGUES, lineup } from '../core/gyms.ts'
 import {
   ADVANTAGE_MULT, GEMS, SEASON_STEP, BALL_MULT, BALL_NAME, GAME_START, GRADUATES_PER_REGION, LEADER_HP, MOMENTUM_WINDOW,
-  CLAIM_AUTO, SLEEP_HABIT, HEART_LEVELS, momentumMult, MOMENTUM_PILLARS, MOMENTUM_STEPS, levelOf, LEGENDARY_EVERY_WILD, PAY_STREAK, REGIONS, REPEL_DAYS, SHINY_ODDS, SHINY_ODDS_WORN, SLEEP_AFTER, SLIP, STAKES_FROM, STEPS_GOAL, TEAM_SIZE, TRAIL_EGG_STEPS, WILD_STAY, TIER_XP, WEAK_MULT, evolveAt, graduateAt, xpForLevel,
+  CLAIM_AUTO, SLEEP_HABIT, HEART_LEVELS, MOMENTUM_OLD_STEPS, MOMENTUM_WINDOW_STEPS, MOMENTUM_PILLARS, MOMENTUM_STEPS, DAY_COINS, DAY_HEARTS, DAY_HIT_MULT, FIRST_PILLAR, levelOf, LEGENDARY_EVERY_WILD, REGIONS, REPEL_DAYS, SHINY_ODDS, SHINY_ODDS_WORN, SLEEP_AFTER, SLIP, STAKES_FROM, STEPS_GOAL, TEAM_SIZE, TRAIL_EGG_STEPS, WILD_STAY, TIER_XP, WEAK_MULT, evolveAt, graduateAt, xpForLevel,
 } from '../core/rules.ts'
 import { MARKS, EGG_KINDS, RARE_EGG_GEMS, BOND_STEP, MASTERY_MAX, MASTERY_STEP, SELL, itemName as econName, masteryCost } from '../core/economy.ts'
-import { MILESTONE_EVERY, CRIT_MULT, DYNAMAX, GIGANTAMAX, LEVEL_POWER, MAX_LEVEL, MEGA_BONUS, MEGA_BOND, RESEARCH_SLOTS, RESEARCH_WILD, RESEARCH_WILD_MAX, TEAM_BONUS, TEAM_LEVEL, TEAM_NATURE, type Tag as TagKind } from '../core/rules.ts'
+import { MILESTONE_EVERY, CRIT_MULT, DYNAMAX, LEVEL_POWER, MAX_LEVEL, MEGA_BONUS, MEGA_BOND, RESEARCH_SLOTS, RESEARCH_WILD, RESEARCH_WILD_MAX, TEAM_BONUS, TEAM_LEVEL, TEAM_NATURE, type Tag as TagKind } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
 import { Ball, BallItem, KeyStone } from './Ball.tsx'
 import { ObjCard } from './ObjCard.tsx'
@@ -23,7 +23,7 @@ import { Recap } from './Recap.tsx'
 import { BossLog, BossTile } from './Boss.tsx'
 import { useBoxes } from './Fit.tsx'
 import { Calendar } from './screens/Calendar.tsx'
-import { SIG_CAP, STAR_EVERY, TRAINER_LEVELS } from '../core/bond.ts'
+import { SIG_CAP, TRAINER_LEVELS } from '../core/bond.ts'
 import { reachNote, tabTodo } from './screens/Today.tsx'
 import { Nursery } from './screens/Nursery.tsx'
 import { HpBar } from './screens/HpBar.tsx'
@@ -310,7 +310,8 @@ function Talk({ game, pillars, sleepH }: { game: Game; pillars: HabitFact[]; sle
  *  between the form it is and the form it becomes (or a star for level 100). */
 function Pace({ game }: { game: Game }) {
   const { momentum, partner } = game
-  const steps: [number, number][] = [[3, momentumMult(3)], [5, momentumMult(5)], [7, momentumMult(7)]]
+  // the steps are the rule's own (core/rules.ts), so this and the Life OS card cannot draw different ones
+  const steps: [number, number][] = momentum.steps ?? MOMENTUM_OLD_STEPS
   const next = steps.find(([d]) => d > momentum.days)
   const startXp = xpForLevel(levelOf(partner.xp)), goalXp = xpForLevel(game.next.level)
   const toLevel = Math.max(0, Math.ceil(goalXp - partner.xp))
@@ -319,8 +320,8 @@ function Pace({ game }: { game: Game }) {
   const boxes = useBoxes()
   return (
     <div className="pace">
-      {game.tier.v21 ? (
-        // version 21: momentum slides, a step at a time: four steps, the one it is on lit, the next ghosted
+      {!momentum.steps ? (
+        // version 21 as it first shipped (5 to 9 Nov 2026): momentum slid, a step at a time: four steps, the one it is on lit, the next ghosted
         <div className="pace-cell pace-mo" title={`A day with ${MOMENTUM_PILLARS} pillars moves it up a step, any other day down one, but one rest day a week is free.`}>
           <span className="k-label">Momentum</span>
           <span className="mo-pips mo-steps" role="meter" aria-valuemin={1} aria-valuemax={MOMENTUM_STEPS.length} aria-valuenow={MOMENTUM_STEPS.indexOf(momentum.mult as (typeof MOMENTUM_STEPS)[number]) + 1} aria-label={`Momentum: XP ×${momentum.mult}`}>
@@ -336,7 +337,7 @@ function Pace({ game }: { game: Game }) {
           </span>
         </div>
       ) : (
-      <div className="pace-cell pace-mo" title={`Days with two pillars in the last seven: ${steps.map(([d, m]) => `${d} make XP ×${m}`).join(', ')}. It slides back a day at a time, never resets.`}>
+      <div className="pace-cell pace-mo" title={`Days that counted in the last seven: ${steps.map(([d, m]) => `${d} make XP ×${m}`).join(', ')}. A day counts with two pillars; a good night can be one of them, never the only one. It slides back a day at a time, never resets.`}>
         <span className="k-label">Momentum</span>
         <span className="mo-pips" role="meter" aria-valuemin={0} aria-valuemax={MOMENTUM_WINDOW} aria-valuenow={momentum.days} aria-label={`${momentum.days} of the last ${MOMENTUM_WINDOW} days counted: XP ×${momentum.mult}${next ? `; ${next[0] - momentum.days} more for ×${next[1]}` : ''}`}>
           {Array.from({ length: MOMENTUM_WINDOW }, (_, i) => {
@@ -1004,7 +1005,7 @@ function RulesTab({ onTour }: { onTour: () => void }) {
             Half the day's habits ticked: ×{BALL_MULT.great}. Four-fifths: ×{BALL_MULT.ultra}. Every habit ticked catches it on the spot.
           </Rule>
           <Rule title="Coins are not XP" tone="gold" pic={<><Coin size={24} /><Arrow /><ItemIcon id="great-ball" size={24} /></>}>
-            Showing up pays coins (more the more you tick, and {PAY_STREAK.coins} more on a second day running at {Math.round(PAY_STREAK.share * 100)}% or more), and so do the weekly quests, the season, chests and the Professor. The Mart sells three deals a day, and two guards always.
+            A day pays coins by its pillars: {DAY_COINS[1]} for one, {DAY_COINS[2]} for two, {DAY_COINS[3]} for three, {DAY_COINS[4]} for a Max day (every pillar and three-quarters of the chores). Chores alone pay up to 60. So do the weekly quests, the season, chests and the Professor. The Mart sells three deals a day, and two guards always.
           </Rule>
           <Rule title="Each work, its mark" tone="blue" pic={<>{(['code', 'fitness', 'guitar', 'arbor', 'sleep'] as const).map((t) => <ItemIcon key={t} id={{ code: 'machine-part', fitness: 'iron', guitar: 'poke-flute', arbor: 'grn-apricorn', sleep: 'lunar-wing' }[t]} size={26} />)}</>}>
             A day of coding, gym, guitar, Arbor or good sleep pays one mark, spent only in that kind's own shop.
@@ -1028,7 +1029,7 @@ function RulesTab({ onTour }: { onTour: () => void }) {
             Every level of your partner adds {Math.round(LEVEL_POWER * 100)}% to every strike, and every member of the party {Math.round(TEAM_BONUS * 100)}% plus {(TEAM_LEVEL * 100).toFixed(1)}% a level. Leaders grow too: 15% more HP for every league further on, a quarter more for the Elite Four, 60% more for a Champion.
           </Rule>
           <Rule title="Critical hits and Dynamax" tone="red" pic={<><ItemIcon id="scope-lens" size={24} /><ItemIcon id="dire-hit" size={24} /><span className="rule-chip sm">×{DYNAMAX}</span></>}>
-            From bond level 3 about one day in eight is a critical hit: the day's strike ×{CRIT_MULT}. A Dire Hit or a Scope Lens raises the chance. A perfect day Dynamaxes your partner: ×{DYNAMAX}, or ×{GIGANTAMAX} for one with a Gigantamax form.
+            The more pillars in a day, the harder it strikes the leader: two ×{DAY_HIT_MULT[2]}, three ×{DAY_HIT_MULT[3]}, and a Max day (every pillar and three-quarters of the chores) Dynamaxes your partner: ×{DAY_HIT_MULT[4]}. A Scope Lens or a Dire Hit gives the day a chance of a critical hit: its strike ×{CRIT_MULT}.
           </Rule>
           <Rule title="Battle items" tone="red" pic={<><ItemIcon id="x-attack" size={24} /><ItemIcon id="x-special" size={24} /><ItemIcon id="guard-spec" size={24} /></>}>
             An X item, used any time in the day, makes one kind of work strike the leader harder for the whole day: +20%, +40% or +60% from the Mart, +120% from the Battle Frontier. A Guard Spec stands guard over the next empty day.
@@ -1076,16 +1077,16 @@ function RulesTab({ onTour }: { onTour: () => void }) {
             Every {MILESTONE_EVERY} levels your partner reaches, Collect offers two rewards and you keep one: balls, a shard in the colour you hold least of, a Rare Candy, coins or gems. Left alone, the first pays itself.
           </Rule>
           <Rule title="Hearts and bond" tone="green" pic={<><ItemIcon id="heart-scale" size={24} /><ItemIcon id="oran-berry" size={24} /><ItemIcon id="sitrus-berry" size={24} /></>}>
-            Your partner gets a heart for every pillar you finish. A party member gets one on each day you do its kind of work. Berries add more to anyone (Oran one, Sitrus three, a friendship berry five), and twice that on a day you did that Pokemon's kind of work. Hearts belong to the Pokemon and only count up, to {HEART_LEVELS[HEART_LEVELS.length - 1]}. At {HEART_LEVELS.join(', ')} hearts a Pokemon's bond steps up: as partner each step adds {Math.round(BOND_STEP * 100)}% to every strike, and its signature grows.
+            Your partner gets hearts by the pillars in the day: {DAY_HEARTS[1] + FIRST_PILLAR.hearts} for one, {DAY_HEARTS[2] + FIRST_PILLAR.hearts} for two, {DAY_HEARTS[3] + FIRST_PILLAR.hearts} for three, {DAY_HEARTS[4] + FIRST_PILLAR.hearts} for a Max day, and one more after a good night. A party member gets one on each day you do its kind of work. Berries add more to anyone (Oran one, Sitrus three, a friendship berry five), and twice that on a day you did that Pokemon's kind of work. Hearts belong to the Pokemon and only count up, to {HEART_LEVELS[HEART_LEVELS.length - 1]}. At {HEART_LEVELS.join(', ')} hearts a Pokemon's bond steps up: as partner each step adds {Math.round(BOND_STEP * 100)}% to every strike, and its signature grows.
           </Rule>
           <Rule title="Trainer perks" tone="gold" pic={<><ItemIcon id="itemfinder" size={24} /><ItemIcon id="scope-lens" size={24} /><ItemIcon id="exp-share" size={24} /></>}>
-            Pickup, Endure, Focus, Best friends and Exp. Share are yours, not one Pokemon's. They unlock from every heart across every Pokemon you own, at {TRAINER_LEVELS.join(', ')} hearts, and stay whoever leads. After that, every {STAR_EVERY} hearts is a Trainer star: Collect offers two perks, and you rank one up (from I to VI).
+            Pickup, the comeback bounty, Endure, Best friends and Sharing are yours, not one Pokemon's. They unlock from every heart across every Pokemon you own, at {TRAINER_LEVELS.join(', ')} hearts, and stay whoever leads. Once all six of the party have {HEART_LEVELS[HEART_LEVELS.length - 1]} hearts, every {HEART_LEVELS[HEART_LEVELS.length - 1]} more is a Ribbon: a choice of two rewards.
           </Rule>
           <Rule title="Signatures" tone="purple" pic={<><ItemIcon id="charcoal" size={24} /><ItemIcon id="twistedspoon" size={24} /><ItemIcon id="miracle-seed" size={24} /><ItemIcon id="blackglasses" size={24} /></>}>
             Every Pokemon has a signature from its first type, in one of six families, one for each kind of work. Power (gym) makes gym work strike harder; Insight (code) studies for the Professor; Charm (guitar) wears the wild Pokemon down; Forage (Arbor) finds berries; Dream (sleep) turns a good night into hearts for the party; Flow (routine) pays routine habits more. Its strength is its bond level as partner and half that in the party, and one family adds up to {SIG_CAP}. A party is a deck: mix the families you want behind you.
           </Rule>
           <Rule title="Momentum" tone="blue" pic={<><span className="rule-chip sm">×1.2</span><span className="rule-chip sm">×1.35</span><span className="rule-chip">×1.5</span></>}>
-            Of the last seven days, three with two pillars make XP ×1.2, five ×1.35, seven ×1.5. It slides back one day at a time, never resets. {SLEEP_AFTER} days with no pillar at all and the partner dozes off until you finish one.
+            Of the last seven days, {MOMENTUM_WINDOW_STEPS.map(([d, m]) => `${d} that counted make XP ×${m}`).join(', ')}. A day counts with two pillars, and a good night can be one of them but never the only one. It slides back one day at a time, never resets. {SLEEP_AFTER} days with no pillar at all and the partner dozes off until you finish one.
           </Rule>
           <Rule title="Quests and the week" tone="gold" pic={<><span className="rule-chip sm">5</span><Arrow /><Coin size={24} /><Gem size={24} /></>}>
             Only the week has quests: five days with two pillars, and catch a Pokemon. The day itself pays its own coins, and a perfect day pays {GEMS.perfect} gems.

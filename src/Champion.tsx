@@ -6,7 +6,7 @@
 // ball thrown or a berry fed; the game is still the ledger, folded.
 import { useState, type ReactNode } from 'react'
 import { PERKS_V21, hasPerkV21, type PerkV21, STAR_ENDURE_MIN, STAR_EVERY, STAR_FOCUS, STAR_FRIENDS, STAR_MAX, STAR_PICKUP, STAR_SHARE, TRAINER_LEVELS, rankName } from '../core/bond.ts'
-import { isShelved, nameOf, type Game, type Mon } from '../core/fold.ts'
+import { canCandy, isShelved, nameOf, type Game, type Mon } from '../core/fold.ts'
 import { BOOST, DIRE_HIT, EVO_ITEMS, FOSSILS, ITEMS, LEGEND_KEYS, LEGEND_KEY_BP, COLLECTOR_MULT, REVIVE_COST, TREASURE, collectorWants, treasurePrice, VITAMINS, VITAMIN_MAX, VITAMIN_STEP, itemName, type MarkTag } from '../core/economy.ts'
 import { FACILITIES, type Facility } from '../core/frontier.ts'
 import { BOUNTY, DAY_HIT_MULT, HEART_CAP, TEAM_SIZE, BOND_PERKS, CRIT_BASE, DYNAMAX, ENDURE_DAYS, FRIENDS_XP, GIGANTAMAX, HEART_LEVELS, PICKUP_BASE, PICKUP_STEP, SHARE_XP, V13_START, bondLevel, hasPerk, levelOf, type BondPerk } from '../core/rules.ts'
@@ -156,7 +156,8 @@ export function BattlePrep({ game }: { game: Game }) {
   const boosts = Object.keys(BOOST).filter((id) => have(id) > 0 && !isShelved(game, BOOST[id].tag))
   const dires = Object.keys(DIRE_HIT).filter((id) => have(id) > 0)
   const bond = game.v16 ? game.trainer.level : bondLevel(heartsOf(game.partner))
-  const crit = (hasPerk(bond, 'focus') ? CRIT_BASE : 0) + (game.partner.held === 'scope-lens' ? 0.1 : 0)
+  // version 21 has no Focus perk: a critical hit comes only from a Scope Lens or the day's Dire Hit
+  const crit = (!game.tier.v21 && hasPerk(bond, 'focus') ? CRIT_BASE : 0) + (game.partner.held === 'scope-lens' ? 0.1 : 0)
   const today = game.today.boost ?? {}
   const items = [...boosts, ...dires, ...(have('guard-spec') ? ['guard-spec'] : []), ...(have('honey') ? ['honey'] : [])]
   const use = (id: string) => {
@@ -372,7 +373,7 @@ export function MonExtras({ game, m, onDone }: { game: Game; m: Mon; onDone: () 
   const vits = Object.keys(VITAMINS)
   const owned = vits.filter((v) => (game.inv[v] ?? 0) > 0)
   const evos = inBox ? evolutionsFor(game, m) : []
-  const candy = inBox && (game.inv['rare-candy'] ?? 0) > 0
+  const candy = (game.inv['rare-candy'] ?? 0) > 0 && canCandy(game, m.uid, game.today.day)
   const given = Object.entries(m.vits ?? {}).filter(([, n]) => (n ?? 0) > 0)
   return (
     <div className="mon-extras">

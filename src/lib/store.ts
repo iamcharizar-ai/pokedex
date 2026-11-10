@@ -15,6 +15,7 @@ import { measure, planCard } from './boss.ts'
 import { FIXTURE } from './fixture-boot.ts'
 import { TYPES, ingest } from './ingest.ts'
 import { keyOf } from './eventkey.ts'
+import { note } from './toast.ts'
 
 const env = import.meta.env
 // a fixture is a canned ledger: the real one is never read or written while it is loaded
@@ -215,11 +216,53 @@ export function start(): void {
 }
 
 /** Something chosen by hand: who is next, a branch, who leads, which form shows. None of it costs anything from version 4; `item` is only sent for a stone spent under version 3. */
-export function useItem(item: string, uid: string, what: string, to?: string): void {
-  const ev = ledger.emit(USE_EVENT, { ...(item ? { item } : {}), uid, what, ...(to ? { to } : {}), n: Math.random().toString(36).slice(2, 10) }, view.today)
+/**
+ * Asked first: would the game be any different? The rules ignore whatever does not apply (core/fold.ts `spend`), and until 10 Nov 2026
+ * the screen was never told: a Rare Candy tapped seven times on a Pokemon that could not take one made the sound and did nothing.
+ * So the action is folded here before it is written. One that would change nothing is not written at all, and the reason is said.
+ * Returns whether it was done.
+ */
+export function useItem(item: string, uid: string, what: string, to?: string): boolean {
+  const payload = { ...(item ? { item } : {}), uid, what, ...(to ? { to } : {}), n: Math.random().toString(36).slice(2, 10) }
+  const trial: LedgerEvent = { device: 'trial', at: new Date().toISOString(), day: view.today, type: USE_EVENT, payload }
+  const would = foldGame(buildFacts(ingest([...events, trial], config, view.today)))
+  if (digest(would) === digest(view.game)) {
+    // arranging the same way again is not worth a word; anything else is
+    if (!QUIET.has(what)) note(REFUSED[what] ?? 'Nothing happened: that cannot be done right now.', true)
+    return false
+  }
+  const ev = ledger.emit(USE_EVENT, payload, view.today)
   seen.add(keyOf(ev))
   events.push(ev)
   refresh()
+  return true
+}
+/** What an action can change, as one string: every day but the last is history, which no action today rewrites. */
+const digest = (g: Game): string => JSON.stringify({ ...g, days: g.days.length })
+/** Actions that only arrange or choose: one that leaves things as they are is dropped without a word. */
+const QUIET = new Set(['team', 'study', 'aim', 'theme', 'show', 'next', 'move', 'hold'])
+/** Why the rules ignored it, in the player's words. */
+const REFUSED: Record<string, string> = {
+  candy: 'That Pokemon cannot take a Rare Candy: it has no level left to gain.',
+  feed: 'Nothing happened: it has all the hearts it can hold, or the berry is gone.',
+  throw: 'Nothing to throw at: there is no wild Pokemon in front of you, or the ball is gone.',
+  buy: 'Not bought: you cannot afford it, it is sold out today, or it is yours already.',
+  vitamin: 'That Pokemon has had all it can take of that vitamin.',
+  evolve: 'That item does not evolve this Pokemon.',
+  fossil: 'Not revived: the fossil is gone, or the Lab asks for more coins than you have.',
+  forge: 'Not forged: it takes the Key Stone and three shards of three different colours.',
+  train: 'Not trained: not enough marks, or that mastery is full.',
+  lead: 'That Pokemon cannot lead right now.',
+  claim: 'That reward has been collected already.',
+  wish: 'Another Pokemon is already on its way: the incense is kept.',
+  honey: 'Another Pokemon is already on its way: the Honey is kept.',
+  summon: 'Another Pokemon is already on its way: the key is kept.',
+  repel: 'A Max Repel is already on this Pokemon, or there is none in front of you.',
+  revive: 'The leader has won nothing back: the Revive is kept.',
+  guard: 'A Guard Spec is already standing guard.',
+  boost: 'That boost is already on today.',
+  warm: 'The Nursery already has an egg.',
+  sell: 'Nothing to sell.',
 }
 
 export const useView = (): View =>

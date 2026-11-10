@@ -3,12 +3,12 @@
 // team, the Professor, quests. Every one is written to the ledger as one small
 // event (store.useItem), so the game is still recomputed from the ledger alone.
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
-import { isShelved, nameOf, type Game, type Mon, type Quest } from '../core/fold.ts'
+import { canCandy, isShelved, nameOf, type Game, type Mon, type Quest } from '../core/fold.ts'
 import {
   COUNTER_V21, DOMAIN_V21, workEgg, BALLS, battleShelf, BERRY_HEARTS, treasurePrice, BOOST, BP_SHELF, DOMAIN_SHOPS, DOMAIN_V13, EVO_ITEMS, FOSSILS, GEAR_ITEMS, HELD, ITEMS, LEGEND_KEYS, LURES, MARKS, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, masteryCost, RARE_SHELF, RARE_SHELF_V13, REVIVE_COST, SELL, TM_SLOTS, TREASURE, itemName, throwHp, tmType,
   type MarkTag, type Offer, type ShopId,
 } from '../core/economy.ts'
-import { DESK_BONUS, DAILY_PAY, MAX_LEVEL, REPEL_DAYS, RESEARCH_SLOTS, TEAM_BONUS, TEAM_NATURE, TEAM_SIZE, levelOf, studyPoints, type Rarity } from '../core/rules.ts'
+import { DESK_BONUS, DAILY_PAY, DAY_COINS, MAX_LEVEL, REPEL_DAYS, RESEARCH_SLOTS, TEAM_BONUS, TEAM_NATURE, TEAM_SIZE, levelOf, studyPoints, type Rarity } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
 import { GymBadge, TAG_NAME, Win, badgesWon, plural } from './App.tsx'
 import { Ball, BallItem, MegaStone, megaStoneName } from './Ball.tsx'
@@ -165,9 +165,12 @@ export function Quests({ game }: { game: Game }) {
     <Win title="Pay and quests" tone="green" aside={t.pay > 0 ? <><Coin size={20} /> +{t.pay} today</> : `${done} / ${game.quests.weekly.length} this week`}>
       <div className="questcols">
         <div>
-          <span className="k-label">Today's pay: the share of your habits ticked</span>
+          <span className="k-label">{game.tier.v21 ? "Today's pay: by the pillars done" : "Today's pay: the share of your habits ticked"}</span>
           <div className="paytiers">
-            {DAILY_PAY.map((p) => <span key={p.share} className={`paytier ${t.ticked >= p.share ? 'on' : ''}`}><b>{Math.round(p.share * 100)}%</b><Price coins={p.coins} /></span>)}
+            {game.tier.v21
+              // version 21: the day pays by its tier (one, two, three pillars, a Max day), not by the share ticked
+              ? ([1, 2, 3, 4] as const).map((k) => <span key={k} className={`paytier ${game.tier.tier >= k ? 'on' : ''}`}><b>{k === 4 ? 'Max' : k}</b><Price coins={DAY_COINS[k]} /></span>)
+              : DAILY_PAY.map((p) => <span key={p.share} className={`paytier ${t.ticked >= p.share ? 'on' : ''}`}><b>{Math.round(p.share * 100)}%</b><Price coins={p.coins} /></span>)}
           </div>
           <Meter value={t.done} max={Math.max(1, t.total)} size="lg" name="Habits ticked today" label={`${t.done} / ${t.total} habits ticked`} />
         </div>
@@ -533,11 +536,11 @@ export function ShopTab({ game }: { game: Game }) {
 // ── the bag: what is held, carried and burning ──────────────────────────────
 /** Where each kind of thing is used, in a line: shown on its card. */
 const USED: Record<string, string> = {
-  ball: 'Thrown at the wild Pokemon, or at the weekly boss once it is weak, from Today.',
+  ball: 'Thrown at the wild Pokemon, from Today.',
   berry: 'Fed to any of your Pokemon for hearts.',
   held: 'Held by your partner, one at a time: it adds to its kind of work.',
   tm: 'Carried by your partner: each counts as one of its types against a leader.',
-  shard: 'Three of one colour forge a Mega Stone in the Forge on this tab.',
+  shard: 'Three shards of three different colours forge a Mega Stone, in the Forge on this tab.',
   key: 'Needed before the Forge can make a Mega Stone.',
   unique: 'Kept for good: no shop sells it.',
   gear: "A piece of Strong's training kit: a full set of seven pays gems and Iron.",
@@ -553,7 +556,7 @@ const USED: Record<string, string> = {
   vitamin: 'Given to a Pokemon from its page (or here, to your partner): for good.',
   battle: 'Used on Today, under Battle prep: it counts for the whole day.',
   field: 'Used here or on Today: the next wild Pokemon is a rare one.',
-  candy: 'Given to a Pokemon in My Pokemon, from its page.',
+  candy: 'Given to any of your Pokemon, your partner too, here or from its page.',
   legend: 'Used here or under Legend quests on the Journey tab.',
 }
 const GROUPS: [string, (id: string) => boolean][] = [
@@ -766,13 +769,14 @@ export function Bag({ game }: { game: Game }) {
             {kind === 'field' && <button type="button" className="k-btn main big" disabled={Boolean(game.wish.chosen)} onClick={() => { useItem(card, '', 'honey'); play('tap'); setOpen(null) }}>{game.wish.chosen ? `${nameOf(game.wish.chosen)} is coming next` : 'Spread it'}</button>}
             {kind === 'legend' && <button type="button" className="k-btn main big" disabled={Boolean(game.wish.chosen)} onClick={() => { useItem(card, '', 'summon'); play('catch'); setOpen(null) }}>{game.wish.chosen ? `${nameOf(game.wish.chosen)} is coming next` : `Call ${LEGEND_KEYS[card].forms.length > 1 ? 'a legend' : nameOf(LEGEND_KEYS[card].forms[0])}`}</button>}
             {(kind === 'evo' || kind === 'candy') && (() => {
-              const fits = game.queue.filter((m) => (kind === 'candy' ? true : evolutionsFor(game, m).some((e) => e.item === card)))
+              // a candy: whoever the rules will take it from (core/fold.ts canCandy), the partner first; an evolution item: My Pokemon
+              const fits = kind === 'candy' ? [game.partner, ...game.queue, ...game.graduates].filter((m) => canCandy(game, m.uid, game.today.day)) : game.queue.filter((m) => evolutionsFor(game, m).some((e) => e.item === card))
               return fits.length ? (
                 <div className="kit-row">{fits.slice(0, 8).map((m) => {
                   const into = kind === 'evo' ? evolutionsFor(game, m).find((e) => e.item === card)?.form : undefined
                   return <button key={m.uid} type="button" className="pill-btn" onClick={() => { useItem(card, m.uid, kind === 'evo' ? 'evolve' : 'candy', into); play(kind === 'evo' ? 'catch' : 'feed'); if (kind === 'evo') setOpen(null) }}><img src={still(m.form, m.shiny)} alt="" width={28} height={28} className="sprite" />{nameOf(m.form)}{into ? ` → ${nameOf(into)}` : ` Lv ${levelOf(m.xp)}`}</button>
                 })}</div>
-              ) : <small className="muted">{kind === 'evo' ? `Nobody in My Pokemon would evolve with it: the form it becomes must be ${EVO_ITEMS[card].types.join(' or ')}.` : 'Nobody in My Pokemon to give it to.'}</small>
+              ) : <small className="muted">{kind === 'evo' ? `Nobody in My Pokemon would evolve with it: the form it becomes must be ${EVO_ITEMS[card].types.join(' or ')}.` : 'Nobody can take it: everyone you own is at their last level.'}</small>
             })()}
             {card === 'revive' && <button type="button" className="k-btn main big" disabled={game.league.slipped <= 0} onClick={() => { useItem('revive', '', 'revive'); play('tap'); setOpen(null) }}>Use on the leader</button>}
           </div>
@@ -834,7 +838,7 @@ export function MonPage({ m, game, onClose }: { m: Mon; game: Game; onClose: () 
           </div>
           {megas.length > 0 && <p className="muted megaline">{(m.megas ?? []).length ? <>It holds {(m.megas ?? []).map((f) => <span key={f} className="megachip"><MegaStone mega={f} size={18} />{megaStoneName(f)}</span>)}, forged and kept for good.</> : <>It can hold {megas.map((f) => <span key={f} className="megachip"><MegaStone mega={f} size={18} />{megaStoneName(f)}</span>)}. Mega Stones are forged in the Forge on the Party tab, once the Key Stone is yours.</>}</p>}
           <MonExtras game={game} m={m} onDone={onClose} />
-          {game.v14 && trained && !isPartner && <p className="muted">{levelOf(m.xp) >= MAX_LEVEL ? 'Level 100: it has nothing left to learn as a partner.' : `Fully trained. It can lead again to go on to level ${MAX_LEVEL}, or grow with the party's Exp. Share.`}</p>}
+          {game.v14 && trained && !isPartner && <p className="muted">{levelOf(m.xp) >= MAX_LEVEL ? 'Level 100: it has nothing left to learn as a partner.' : `Fully trained. It can lead again to go on to level ${MAX_LEVEL}${game.tier.v21 ? ', and takes a Rare Candy' : ", or grow with the party's Exp. Share"}.`}</p>}
           <div className="kit-row">
             {inBox && !game.v14 && v5 && <button type="button" className="pill-btn green" onClick={() => act('transfer')}>To the Professor <Price coins={sell} /></button>}
             {game.v14 && !isPartner && !inTeam && <KButton tone={onDesk ? 'neutral' : 'main'} onClick={() => { putOnDesk(game, m.uid, !onDesk); play('tap'); onClose() }}>{onDesk ? 'Off the research desk' : `On the research desk (${deskPay(game, m)})`}</KButton>}

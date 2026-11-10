@@ -87,3 +87,13 @@ Tests: `core/v21.test.ts`.
 | **Coins** | From the first day, the tier's coins, not the old pay by share |
 | **Gym** | From the first day, a logged Strong workout. A Gym tick without one is a basic habit |
 | **Life OS tiles** | Appear on the first day, one per effortful pillar on the list |
+
+## Version 21.1: the fixes of 10 Nov 2026
+
+`V21_FIX = 2026-11-10` (`core/rules.ts`). Earlier days fold as they did. Found in `AUDIT-2026-11-10.md`; tests in `core/v21fix.test.ts`.
+
+- **Rare Candy** is for any Pokemon you own with a level still to gain, the partner too. `canCandy` in `core/fold.ts` is the one rule; the fold and both screens that offer a candy read it. The partner evolves or finishes training on the spot, and whoever leads at the end of the day's actions evolves that day.
+- **Momentum** is the seven days again: 3 days that counted ×1.2, 5 ×1.35, **6** ×1.5. A day counts with two pillars; a good night can be one of them, never the only one. `game.momentum.steps` carries the steps, and both apps draw from it.
+- **Endure** is read from version 21's own ladder (100 Trainer hearts), as its screen says.
+- **A tap the rules would ignore is not written.** `useItem` in `src/lib/store.ts` folds the action first; if the game would be no different it says why and writes nothing.
+- Screens corrected: the pay table on Goals, the rule book, Battle prep's critical chance, the shard and ball texts, the Mega bonus in the strike breakdown.

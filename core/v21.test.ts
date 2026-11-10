@@ -5,7 +5,9 @@ import assert from 'node:assert/strict'
 import { addDays, factsFor, mondayOf, type DayFacts, type HabitFact } from './facts.ts'
 import { foldGame } from './fold.ts'
 import { MAX_DAY_BOSS, tasksV21, type BossCard } from './boss.ts'
-import { BOUNTY, DAY_HEARTS, DAY_RESEARCH, FIRST_PILLAR, MOMENTUM_STEPS, RANK_V21, V21_START, bountyMult } from './rules.ts'
+import { BOUNTY, DAY_HEARTS, DAY_RESEARCH, FIRST_PILLAR, MOMENTUM_STEPS, RANK_V21, V21_START, bountyMult, setV21Fix } from './rules.ts'
+
+setV21Fix('2099-01-01') // this file tests version 21 as it first shipped; the fixes of 10 Nov 2026 have their own (v21fix.test.ts)
 
 const START = V21_START
 const H = (id: string, tag: HabitFact['tag'], worth: number, done: boolean, extra: Partial<HabitFact> = {}): HabitFact => ({ id, tag, worth, pillar: worth === 100, frac: done ? 1 : 0, done, ...extra })
