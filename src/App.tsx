@@ -915,7 +915,8 @@ function HallOfFame({ game }: { game: Game }) {
 
 /** Journey: where you are going, and what is next to earn. Roads first; the log is folded away at the bottom. */
 function TrainerTab({ game }: { game: Game }) {
-  const events = [...game.moments].reverse().filter((m) => m.kind !== 'quest').filter((m, i, all) => m.kind !== 'level' || all.findIndex((x) => x.kind === 'level' && x.day === m.day) === i).slice(0, 80)
+  // choosing who leads is your own tap, so it is not news (a branch choice still is)
+  const events = [...game.moments].reverse().filter((m) => m.kind !== 'quest' && !(m.kind === 'use' && m.what === 'lead')).filter((m, i, all) => m.kind !== 'level' || all.findIndex((x) => x.kind === 'level' && x.day === m.day) === i).slice(0, 80)
   const grouped = events.reduce<[string, Moment[]][]>((acc, m) => {
     const last = acc[acc.length - 1]
     if (last && last[0] === m.day) last[1].push(m)
