@@ -458,6 +458,17 @@ Nothing else is added to a tile. The leader's weakness on a tile is the single m
 
 Keep unchanged and shared: `facts.ts`, `events.ts`, `order.ts`, `day.ts`, `strong.ts`, `species.ts`, `gyms.ts`, `types.ts`, `boss.ts` (apart from 3.5).
 
+### 12.1a Amendment, 12 Nov 2026: an engine with an oracle, not a state hand-over
+
+Built differently from 12.1, on purpose. A v22 day needs the whole game running (leagues, boss, eggs, evolution, Pickup, claims), so a new fold that resumes from a converted state is a full rewrite before any v22 day works, and it cannot be built in slices. The same guarantee, that no day already lived can change, is kept another way:
+
+- `core/legacy/` is the frozen rules. **Never edit it.** It is the oracle.
+- `core/fold.ts` is the live engine: a copy of `legacy/fold.ts` with the version 22 rules gated by `v22On(day)` (`V22_START`, in `core/rules.ts`). Only version 22's behaviour is behind a gate; everything else is the legacy code.
+- **`core/oracle.test.ts`** folds every fixture with the engine and with `legacy/fold.ts` and requires them identical with version 22 off. Run it after every change. (Also run `node tools/...` against the real ledger: the fold of the whole ledger must match byte for byte.)
+- Migration happens inside the fold on the first v22 day (`v22Begun`), the way version 21's did: marks and kit pieces become pips.
+- Pure arithmetic lives in `core/v22.ts` and constants in `core/rules.ts`, `core/economy.ts` (the wrappers that re-export legacy and add v22).
+- When version 22 is finished and has run for a while, the engine can be refactored into the state-carrying design as a pure cleanup, with the oracle as its safety net. It is not needed to ship.
+
 ### 12.2 Migration: nothing earned is lost
 
 | Old | Becomes |
@@ -506,6 +517,19 @@ Extend `tools/sim-life.mjs` with `--rules v22` and report, at the "real", "norma
 Then set the starred numbers. Targets: at the owner's real pace (about 1 effort pillar a day) a first track fills inside three weeks, a first Mega inside three months, and a week never passes with nothing visible happening.
 
 ### 12.5 Order of work
+
+**Build status (12 Nov 2026)**
+
+| Step | State |
+|---|---|
+| 1 Freeze | Done (`core/legacy/`, oracle) |
+| 2 Words and the day | Done in the fold: tier by pillars done with a good night beside a pillar; one tick one HP (wild HP fixed by rarity, balls in ticks); the leader's hit; party power; no tier XP, no tier gems, no bounty; the boss's power is party power at `BOSS_POWER`. Tests: `core/v22.test.ts` |
+| 3 Tracks and berries | Done in the fold and on the Pokedex pillar pages: seven-pip tracks (Gym = routines of the split), a shard-or-egg choice in Collect, berries dropped by pillars and fed for 2 or 5 hearts, no marks earned, no kit pieces, marks and pieces converted on the first day, boss tasks pay coins |
+| 4 to 7 | Not started |
+
+**Calibration done (tools/sim-life.mjs --rules v22, 182 days, against v21):** leaders a half-year 19 / 53 / 60 against 23 / 60 / 68 (real / normal / strong) before the +15% base hit, catches a month 4.3 / 7.1 / 13.2 against 4.8 / 11.2 / 17.5, boss wins 27% / 92% / 96% against 15% / 69% / 96% (before the 0.6 boss damping). The wild Pokemon's HP is calibrated to the owner's real ledger, where one tick is about a quarter of an old HP. A busier player ticks more, and linear ticks pay them less than the old curve did: this is the cost of "one tick, one HP", and it is the owner's rule.
+
+**Known gaps for the next builder:** the marks shops' goods (Silph Co., Dojo and so on) are still listed and cannot be afforded: step 5 replaces them. The Sleep track has data (`game.tracks.sleep`) but no page, as Sleep has no tile. The Life OS tile does not draw the pips or the leader's badge yet (the data is `game.tracks` and `game.tiles`): it needs the owner's look. Ribbons, Trainer perks and the old research still run as in version 21 until step 4. `?v22` in the dev server turns version 22 on for a fixture.
 
 Each step ships on its own and leaves the game working.
 

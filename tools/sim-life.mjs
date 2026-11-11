@@ -26,7 +26,7 @@
 import { foldGame, nameOf, leaderOf } from '../core/fold.ts'
 import { addDays } from '../core/facts.ts'
 import { MAX_DAY_BOSS, TARGET_STRETCH, TARGET_V21, bossLevel, tasksV21 } from '../core/boss.ts'
-import { BOUNTY, DAY_GEMS, DAY_XP_MULT, FIRST_PILLAR, LEADER_GEMS_V21, V21_START, levelOf } from '../core/rules.ts'
+import { BOUNTY, DAY_GEMS, DAY_XP_MULT, FIRST_PILLAR, LEADER_GEMS_V21, V21_START, levelOf, setV22Start } from '../core/rules.ts'
 import { isGym } from '../core/fold.ts'
 import { SILVER_GEMS, GOLD_GEMS } from '../core/frontier.ts'
 import { SPECIES } from '../core/species.ts'
@@ -35,11 +35,13 @@ import { BALLS, BERRY_HEARTS, COUNTER_V21, EGG_IDS, EGG_WAIT_MAX, FOSSILS, MARKS
 const arg = (name, dflt) => { const i = process.argv.indexOf(`--${name}`); return i > 0 ? process.argv[i + 1] : dflt }
 const PACE = arg('pace', 'normal')
 if (!['normal', 'real', 'strong'].includes(PACE)) { console.error('--pace normal | real | strong'); process.exit(1) }
-const V21 = arg('rules', '') === 'v21'
+const V22 = arg('rules', '') === 'v22' // version 22 (GAME-SPEC-V22.md): version 21's list and boss, with version 22's day on from the first day
+const V21 = arg('rules', '') === 'v21' || V22
 const DAYS = Number(arg('days', 182))
 /** a Monday: the one after every rules version so far, or the first on or after V21_START */
 const mondayFrom = (d) => { let x = d; while (new Date(x + 'T12:00:00').getDay() !== 1) x = addDays(x, 1); return x }
 const START = arg('start', V21 ? mondayFrom(V21_START) : '2026-11-09')
+if (V22) setV22Start(START)
 const SKIP = arg('skip', ''), SKIP_PILLAR = arg('pillar', 'code'), JSON_OUT = process.argv.includes('--json')
 if (arg('bounty', '')) { const [a, b] = arg('bounty').split(',').map(Number); BOUNTY.two = a; BOUNTY.three = b ?? a }
 if (arg('boss', '')) { const [cap, maxDay, stretch, effortOnly] = arg('boss').split(','); TARGET_V21[1] = Number(cap); if (maxDay) MAX_DAY_BOSS.mult = Number(maxDay); if (stretch) TARGET_STRETCH.x = Number(stretch); if (effortOnly) MAX_DAY_BOSS.effortOnly = effortOnly === 'effort' }
@@ -210,7 +212,7 @@ const allWeeks = Math.floor(DAYS / 7)
 totals.floor = `${[...winWeeks].filter((w) => w < allWeeks).length}/${allWeeks}`
 if (JSON_OUT) { console.log(JSON.stringify(totals)); process.exit(0) }
 
-console.log(`# ${PACE} pace, ${DAYS} days from ${START}, ${V21 ? 'version 21 rules' : "today's rules"}${SKIP ? `, skipping ${SKIP_PILLAR} (${SKIP})` : ''}\n`)
+console.log(`# ${PACE} pace, ${DAYS} days from ${START}, ${V22 ? 'version 22 rules' : V21 ? 'version 21 rules' : "today's rules"}${SKIP ? `, skipping ${SKIP_PILLAR} (${SKIP})` : ''}\n`)
 console.log('month  XP      coins   gems  BP    marks code/gym/arbor/sleep  pillar-days perfect  catches eggs  Trainer hearts')
 const catches = per('catch'), hatches = per('hatch')
 months.forEach((m, k) => {

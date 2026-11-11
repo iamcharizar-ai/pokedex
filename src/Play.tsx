@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { canCandy, isShelved, nameOf, type Game, type Mon, type Quest } from '../core/fold.ts'
 import {
-  COUNTER_V21, DOMAIN_V21, workEgg, BALLS, battleShelf, BERRY_HEARTS, treasurePrice, BOOST, BP_SHELF, DOMAIN_SHOPS, DOMAIN_V13, EVO_ITEMS, FOSSILS, GEAR_ITEMS, HELD, ITEMS, LEGEND_KEYS, LURES, MARKS, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, masteryCost, RARE_SHELF, RARE_SHELF_V13, REVIVE_COST, SELL, TM_SLOTS, TREASURE, itemName, throwHp, tmType,
+  COUNTER_V21, DOMAIN_V21, workEgg, BALLS, battleShelf, BERRY_HEARTS, treasurePrice, BOOST, BP_SHELF, DOMAIN_SHOPS, DOMAIN_V13, EVO_ITEMS, FOSSILS, GEAR_FOR, GEAR_ITEMS, HELD, ITEMS, LEGEND_KEYS, LURES, MARKS, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, masteryCost, RARE_SHELF, RARE_SHELF_V13, REVIVE_COST, SELL, TM_SLOTS, TREASURE, itemName, throwHp, tmType,
   type MarkTag, type Offer, type ShopId,
 } from '../core/economy.ts'
 import { DESK_BONUS, DAILY_PAY, DAY_COINS, MAX_LEVEL, REPEL_DAYS, RESEARCH_SLOTS, TEAM_BONUS, TEAM_NATURE, TEAM_SIZE, levelOf, studyPoints, type Rarity } from '../core/rules.ts'
@@ -343,13 +343,16 @@ function Shelf({ game, offers: all, shop, fold, what = 'items' }: { game: Game; 
 
 /** Strong's seven pieces of gear, and how close the next full set (and the next Red Shard) is. */
 function TrainingKit({ game }: { game: Game }) {
-  const have = GEAR_ITEMS.filter((g) => (game.inv[g] ?? 0) > 0).length
+  // version 22: a routine of the split is a pip on the Gym track, not a piece in the bag
+  const kit = game.v22 ? new Set(game.tracks.fitness.kit) : null
+  const held = (g: string): number => (kit ? Number(kit.has(GEAR_FOR[g])) : (game.inv[g] ?? 0))
+  const have = GEAR_ITEMS.filter((g) => held(g) > 0).length
   return (
     <div className="kit">
-      <span className="k-label">Strong's training kit: {have} of {GEAR_ITEMS.length}</span>
+      <span className="k-label">{kit ? `Strong's split: ${have} of ${GEAR_ITEMS.length} routines done on this track` : `Strong's training kit: ${have} of ${GEAR_ITEMS.length}`}</span>
       <div className="kitrow">
         {GEAR_ITEMS.map((g) => {
-          const n = game.inv[g] ?? 0
+          const n = held(g)
           return (
             <span key={g} className={`gear ${n > 0 ? 'on' : ''}`} title={`${itemName(g)}: ${ITEMS[g].text}`}>
               <ItemIcon id={g} size={24} />{n > 1 && <i>×{n}</i>}<small>{itemName(g)}</small>
@@ -368,7 +371,9 @@ function TrainingKit({ game }: { game: Game }) {
 function PillarCounter({ game, tag }: { game: Game; tag: MarkTag }) {
   const tile = game.tiles[tag as keyof Game['tiles']]
   if (!tile) return null
-  const have = game.wallet.marks[tag], need = COUNTER_V21
+  // version 22: the counter is the pillar's track, seven pips (core: game.tracks); before it, the marks held
+  const track = game.tracks[tag]
+  const have = game.v22 ? track.pips : game.wallet.marks[tag], need = game.v22 ? track.of : COUNTER_V21
   const egg = workEgg(tag), shard = MARKS[tag].shard
   const aimed = tile.iconId === egg ? 'egg' : 'shard'
   const choose = (to: 'egg' | 'shard') => { if (to !== aimed) { useItem(tag, '', 'aim', to); play('tap') } }
@@ -381,10 +386,10 @@ function PillarCounter({ game, tag }: { game: Game; tag: MarkTag }) {
       </span>
       <span className="pcount-txt">
         <b>{itemName(tile.iconId)}</b>
-        <Meter kind="gold" value={Math.min(have, need)} max={need} name={`${MARKS[tag].name} toward ${itemName(tile.iconId)}`} label={tile.ready ? `Ready · ${have} held` : `${have} / ${need}`} />
+        <Meter kind="gold" value={Math.min(have, need)} max={need} name={game.v22 ? `${TAG_NAME[tag]} track toward ${itemName(tile.iconId)}` : `${MARKS[tag].name} toward ${itemName(tile.iconId)}`} label={game.v22 ? (tile.ready ? 'Full: choose its prize in Collect' : `${have} / ${need}`) : tile.ready ? `Ready · ${have} held` : `${have} / ${need}`} />
         {tile.bountyActive && <small className="pcount-bounty">✦ Bounty: {TAG_NAME[tag].toLowerCase()} today pays ×{tile.bounty}</small>}
       </span>
-      {shard && (
+      {shard && !game.v22 && (
         <span className="pcount-aim" role="radiogroup" aria-label="What this counter reaches for">
           <Slot material="glass" icon={<ItemIcon id={shard} size={34} />} on={aimed === 'shard'} role="radio" aria-checked={aimed === 'shard'} tip={{ title: itemName(shard), note: 'For a Mega Stone: three of different colours' }} onClick={() => choose('shard')} />
           <Slot material="glass" icon={<ItemIcon id={egg} size={34} />} on={aimed === 'egg'} role="radio" aria-checked={aimed === 'egg'} tip={{ title: itemName(egg), note: `Hatches a Pokemon of the ${TAG_NAME[tag].toLowerCase()} types` }} onClick={() => choose('egg')} />
@@ -403,7 +408,7 @@ export function DomainShop({ game, tag, open }: { game: Game; tag: MarkTag; /** 
   const lv = game.mastery[tag]
   return (
     <Win title={shop.name} tone={tag === 'sleep' ? 'purple' : tag === 'code' ? 'blue' : tag === 'fitness' ? 'red' : tag === 'guitar' ? 'gold' : 'green'} fold={!open} aside={<><MarkIcon tag={tag} size={22} /> {game.wallet.marks[tag]} {MARKS[tag].name}</>}>
-      <div className="mastery">
+      {!game.v22 && <div className="mastery">
         <span className="mastery-mark"><MarkIcon tag={tag} size={34} /></span>
         <span className="mastery-txt">
           <b>{TAG_NAME[tag]} mastery {lv} <small>of {MASTERY_MAX}</small></b>
@@ -413,7 +418,7 @@ export function DomainShop({ game, tag, open }: { game: Game; tag: MarkTag; /** 
         <button type="button" className="k-btn main" disabled={lv >= MASTERY_MAX || game.wallet.marks[tag] < masteryCost(lv)} onClick={() => { useItem('', '', 'train', tag); play('buy') }}>
           {lv >= MASTERY_MAX ? 'Full' : <>Train <MarkIcon tag={tag} size={18} />{masteryCost(lv)}</>}
         </button>
-      </div>
+      </div>}
       {game.tiles[tag as keyof Game['tiles']] && <PillarCounter game={game} tag={tag} />}
       {tag === 'fitness' && <TrainingKit game={game} />}
       <Shelf game={game} offers={goods} shop={tag} />

@@ -36,7 +36,7 @@ import { SeasonRoad } from './Road.tsx'
 import { BattlePrep, FrontierWin, LegendWin, TodayEffects } from './Champion.tsx'
 import { FACILITIES } from '../core/frontier.ts'
 import { BOSS_HEAL, KILL_CAP, THROWS, THROW_AT } from '../core/boss.ts'
-import { KIT_SHARD_EVERY } from '../core/rules.ts'
+import { KIT_SHARD_EVERY, v22On } from '../core/rules.ts'
 import { CollectButton } from './Claim.tsx'
 import { Toasts } from './Toasts.tsx'
 import { PartyAutoFill } from './Team.tsx'
@@ -800,7 +800,7 @@ function DexTab({ game }: { game: Game }) {
 }
 
 // ── Journey (the Trainer tab's old name in the code) ───────────────────────
-const KIND: Record<Moment['kind'], string> = { level: 'Level', evolve: 'Evolved', graduate: 'Trained', partner: 'Partner', catch: 'Caught', appear: 'Wild', form: 'Form', region: 'Region', gym: 'Gym', league: 'League', use: 'Choice', key: 'Key Stone', review: 'Review', boss: 'Boss', mega: 'Mega', transfer: 'Professor', quest: 'Quest', season: 'Season', hatch: 'Hatched', chest: 'Chest', feat: 'Feat', gear: 'Gear', kit: 'Kit', flee: 'Fled', slip: 'Slipped', pickup: 'Pickup', forage: 'Forage', dream: 'Dream', endure: 'Endured', symbol: 'Frontier', summon: 'Legend', fossil: 'Lab', itemevo: 'Evolved', lap: 'Rematch', research: 'Professor', master: 'Lv 100' }
+const KIND: Record<Moment['kind'], string> = { track: 'Track', level: 'Level', evolve: 'Evolved', graduate: 'Trained', partner: 'Partner', catch: 'Caught', appear: 'Wild', form: 'Form', region: 'Region', gym: 'Gym', league: 'League', use: 'Choice', key: 'Key Stone', review: 'Review', boss: 'Boss', mega: 'Mega', transfer: 'Professor', quest: 'Quest', season: 'Season', hatch: 'Hatched', chest: 'Chest', feat: 'Feat', gear: 'Gear', kit: 'Kit', flee: 'Fled', slip: 'Slipped', pickup: 'Pickup', forage: 'Forage', dream: 'Dream', endure: 'Endured', symbol: 'Frontier', summon: 'Legend', fossil: 'Lab', itemevo: 'Evolved', lap: 'Rematch', research: 'Professor', master: 'Lv 100' }
 const aOrAn = (w: string): string => `${/^[AEIOU]/i.test(w) ? 'an' : 'a'} ${w}`
 function line(m: Moment): string {
   switch (m.kind) {
@@ -833,7 +833,8 @@ function line(m: Moment): string {
     case 'flee': return `The wild ${nameOf(m.form)} got away`
     case 'slip': return `An empty day (${fmtDay(m.empty)}): ${[m.leader ? `the leader won back ${m.leader} HP` : '', m.wild ? `the wild Pokemon ${m.wild} HP` : '', m.xp ? `${m.xp} XP faded` : ''].filter(Boolean).join(', ')}`
     case 'chest': return `Chest ${m.n}: ${m.coins ? `${m.coins} coins` : `${itemName(m.item)}${m.count > 1 ? ` ×${m.count}` : ''}`}`
-    case 'gear': return `${itemName(m.item)} dropped by a Strong workout`
+    case 'gear': return v22On(m.day) ? `${itemName(m.item)}: a new routine of Strong's split, one pip on the Gym track` : `${itemName(m.item)} dropped by a Strong workout`
+    case 'track': return `${TAG_NAME[m.tag]} track ${m.n} full: its shard or its egg is waiting in Collect`
     case 'kit': return m.shard ? `A full set of gear (set ${m.n}) became a Red Shard` : `A full set of gear (set ${m.n}) paid gems and Iron`
     case 'pickup': return `${nameOf(m.form)} found ${aOrAn(itemName(m.item))} on the day's walk`
     case 'forage': return `Forage: ${aOrAn(itemName(m.item))} found on the Arbor morning`

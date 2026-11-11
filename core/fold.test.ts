@@ -413,7 +413,7 @@ test('every entry in the species table can be reached', async () => {
 
 test('Life OS runs the same core', { skip: !fs.existsSync(new URL('../../lifeos/src/game-core', import.meta.url)) }, () => {
   const read = (u: URL) => fs.readFileSync(u, 'utf8').replace(/\r\n/g, '\n')
-  for (const f of ['rules.ts', 'facts.ts', 'fold.ts', 'order.ts', 'species.ts', 'gyms.ts', 'events.ts', 'types.ts', 'economy.ts', 'boss.ts'])
+  for (const f of ['rules.ts', 'facts.ts', 'fold.ts', 'order.ts', 'species.ts', 'gyms.ts', 'events.ts', 'types.ts', 'economy.ts', 'boss.ts', 'v22.ts'])
     assert.ok(read(new URL(`../../lifeos/src/game-core/${f}`, import.meta.url)) === read(new URL(`./${f}`, import.meta.url)), `${f} differs: run npm run core`)
   // the frozen rules too: Life OS folds with them
   for (const f of fs.readdirSync(new URL('./legacy/', import.meta.url)).filter((x) => x.endsWith('.ts')))

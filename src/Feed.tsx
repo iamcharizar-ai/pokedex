@@ -15,6 +15,7 @@ import { useLook } from './lib/cardkit.tsx'
 import { nameOf, type Game, type Mon } from '../core/fold.ts'
 import { BERRY_HEARTS, itemName } from '../core/economy.ts'
 import { BERRY_DOMAIN_MULT, signatureOf } from '../core/bond.ts'
+import { berryGain, likesBerry } from '../core/v22.ts'
 import { HEART_CAP } from '../core/rules.ts'
 import { ItemIcon } from './Item.tsx'
 import { Sheet } from './screens/Sheet.tsx'
@@ -36,9 +37,10 @@ export function FeedSheet({ game, only, onClose }: { game: Game; only?: string; 
   const seen = new Set<string>()
   const all = [game.partner, ...game.team, ...game.queue, ...game.graduates].filter((m) => (seen.has(m.uid) ? false : (seen.add(m.uid), true)))
   // version 16: a berry pays double for whoever's kind of work was done today; they come first, after the partner
-  const twice = (m: Mon) => Boolean(game.v16 && game.worked[signatureOf(m.form).tag] && heartsOf(m) < HEART_CAP)
+  // version 22: a berry's favourite takes 5 hearts and anyone else 2, whatever was done today; they come first
+  const twice = (m: Mon) => Boolean(game.v22 ? berry && likesBerry(berry, m.form, game.today.day) && heartsOf(m) < HEART_CAP : game.v16 && game.worked[signatureOf(m.form).tag] && heartsOf(m) < HEART_CAP)
   const sorted = [all[0], ...all.slice(1).filter(twice), ...all.slice(1).filter((m) => !twice(m))]
-  const gainOf = (m: Mon) => (berry ? Math.min(BERRY_HEARTS[berry] * (twice(m) ? BERRY_DOMAIN_MULT : 1), game.v16 ? HEART_CAP - heartsOf(m) : Infinity) : 0)
+  const gainOf = (m: Mon) => (berry ? Math.min(berryGain(berry, m.form, game.today.day, !game.v22 && twice(m)), game.v16 ? HEART_CAP - heartsOf(m) : Infinity) : 0)
   const feed = (m: Mon) => { if (!berry || heartsOf(m) >= HEART_CAP) return; useItem(berry, m.uid, 'feed'); play('feed') }
   return (
     <Sheet title={only ? `Feed: ${itemName(only)}` : 'Feed a Pokemon'} onClose={onClose}>

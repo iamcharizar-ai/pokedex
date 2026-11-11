@@ -89,6 +89,7 @@ function tell(m: Moment, game: Game): Told {
     }
     case 'form': return { title: m.what === 'mega' ? 'Mega form' : 'Gigantamax', line: `${nameOf(m.form)} is registered in the Pokedex.`, art: 'mon', form: m.form }
     case 'mega': return { title: 'Mega Stone forged', line: `${nameOf(m.form)} is registered to this Pokemon and never runs out.`, art: 'mon', form: m.form }
+    case 'track': return { title: 'A track is full', line: `Seven pips: its shard or its egg is waiting in Collect. You choose.`, art: 'item', item: m.tag === 'sleep' ? 'egg-sleep' : `egg-${m.tag}` }
     case 'kit': return m.shard
       ? { title: 'Training kit complete', line: 'A full set of Strong gear became a Red Shard, and paid gems and Iron.', art: 'item', item: 'red-shard' }
       : { title: 'Training kit complete', line: 'A full set of Strong gear paid gems and Iron. Every third set is a Red Shard too.', art: 'item', item: 'iron' }

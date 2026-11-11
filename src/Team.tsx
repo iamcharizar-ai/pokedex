@@ -6,6 +6,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { nameOf, type Game, type Mon } from '../core/fold.ts'
 import { BERRY_DOMAIN_MULT, signatureOf } from '../core/bond.ts'
+import { berryGain, likesBerry } from '../core/v22.ts'
 import { BERRY_HEARTS, itemName } from '../core/economy.ts'
 import { HEART_CAP, HEART_LEVELS, MAX_LEVEL, bondLevel, levelOf, xpForLevel } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
@@ -28,7 +29,7 @@ import { useItem } from './lib/store.ts'
 const bestBerry = (game: Game, m: Mon): number => {
   const top = treatsIn(game)[0]
   if (!top) return 0
-  return BERRY_HEARTS[top] * (game.v16 && game.worked[signatureOf(m.form).tag] ? BERRY_DOMAIN_MULT : 1)
+  return berryGain(top, m.form, game.today.day, Boolean(game.v16 && game.worked[signatureOf(m.form).tag]))
 }
 
 export function monCardOf(m: Mon, game: Game): MonCardData {
@@ -145,8 +146,8 @@ export function FeedBlock({ game, m }: { game: Game; m: Mon }) {
   const [chosen, setChosen] = useState<string | null>(null)
   const berry = chosen && treats.includes(chosen) ? chosen : treats[0] ?? null
   const sig = signatureOf(m.form)
-  const twice = Boolean(game.v16 && game.worked[sig.tag] && !full)
-  const gain = berry ? Math.min(BERRY_HEARTS[berry] * (twice ? BERRY_DOMAIN_MULT : 1), game.v16 ? HEART_CAP - hearts : Infinity) : 0
+  const twice = Boolean(game.v22 ? berry && likesBerry(berry, m.form, game.today.day) && !full : game.v16 && game.worked[sig.tag] && !full)
+  const gain = berry ? Math.min(berryGain(berry, m.form, game.today.day, !game.v22 && twice), game.v16 ? HEART_CAP - hearts : Infinity) : 0
   const can = Boolean(berry) && !full
 
   // the links of a bond level: one for each heart it takes

@@ -11,7 +11,7 @@ import { spawnSync } from 'node:child_process'
 
 const ROOT = path.resolve(import.meta.dirname, '..')
 const DEST = path.resolve(ROOT, '../lifeos/src/game-core')
-const FILES = ['rules.ts', 'bond.ts', 'facts.ts', 'fold.ts', 'order.ts', 'species.ts', 'gyms.ts', 'events.ts', 'types.ts', 'economy.ts', 'boss.ts', 'frontier.ts', 'day.ts', 'strong.ts']
+const FILES = ['rules.ts', 'bond.ts', 'facts.ts', 'fold.ts', 'order.ts', 'species.ts', 'gyms.ts', 'events.ts', 'types.ts', 'economy.ts', 'boss.ts', 'frontier.ts', 'day.ts', 'strong.ts', 'v22.ts']
 
 if (!fs.existsSync(path.dirname(DEST))) {
   console.error('Life OS not found next to this repo; nothing copied.')

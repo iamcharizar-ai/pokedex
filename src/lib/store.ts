@@ -7,7 +7,7 @@ import { addDays, buildFacts, mondayOf, type DayFacts, type FactsInput } from '.
 import { USE_EVENT, sleepOf, type SleepNight } from '../../core/events.ts'
 import { settled } from '../../core/order.ts'
 import { foldGame, type Game } from '../../core/fold.ts'
-import { V18_START, V21_START } from '../../core/rules.ts'
+import { V18_START, V21_START, setV22Start } from '../../core/rules.ts'
 import type { LedgerEvent } from '../linked/arbor-model.ts'
 import { DAY_START_EVENT, dayStartsAt, localDate, wakingDay } from '../../core/day.ts'
 import { createLedger, type LedgerStatus } from './ledger.ts'
@@ -92,6 +92,9 @@ function refresh(): void {
   syncBoss()
   listeners.forEach((l) => l())
 }
+
+/** In the dev preview, `?v22` (or `?v22=2026-10-20`) turns version 22 on from that day, so its screens can be seen on a fixture. Never in the real game. */
+if (env.DEV && typeof location !== 'undefined' && new URLSearchParams(location.search).has('v22')) setV22Start(new URLSearchParams(location.search).get('v22') || '2000-01-01')
 
 /** In the dev preview, `?boss` brings a boss whatever the party is, so the screens can be seen. */
 const FORCE_BOSS = env.DEV && typeof location !== 'undefined' && new URLSearchParams(location.search).has('boss')
