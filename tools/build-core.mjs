@@ -19,11 +19,14 @@ if (!fs.existsSync(path.dirname(DEST))) {
 }
 fs.mkdirSync(DEST, { recursive: true })
 for (const f of FILES) fs.copyFileSync(path.join(ROOT, 'core', f), path.join(DEST, f))
+// the frozen rules (version 22, section 12.1) come along: the fold reads them
+fs.mkdirSync(path.join(DEST, 'legacy'), { recursive: true })
+for (const f of fs.readdirSync(path.join(ROOT, 'core', 'legacy')).filter((x) => x.endsWith('.ts'))) fs.copyFileSync(path.join(ROOT, 'core', 'legacy', f), path.join(DEST, 'legacy', f))
 fs.writeFileSync(
   path.join(DEST, 'README.md'),
   '# game-core\n\nCopied from the pokedex repo (`core/`) by `npm run core` there. Do not edit it here.\n\nRules, the day list and the fold that turns days into a partner, a queue and a collection. Names and numbers only: the sprites are served by the Pokedex site.\n',
 )
-console.log(`copied ${FILES.length} files to ${DEST}`)
+console.log(`copied ${FILES.length} files (and legacy/) to ${DEST}`)
 const lifeos = path.resolve(ROOT, '../lifeos')
 const tsc = spawnSync(process.execPath, [path.join(lifeos, 'node_modules', 'typescript', 'bin', 'tsc'), '-b'], { cwd: lifeos, encoding: 'utf8' })
 if (tsc.status !== 0) {

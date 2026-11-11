@@ -199,7 +199,7 @@ test('an empty day from before the stakes began costs nothing, even when it is s
 })
 
 test('a boss that is caught counts as a catch: the weekly quest, and the legendary feat for a legendary', () => {
-  const src = fs.readFileSync(new URL('./fold.ts', import.meta.url), 'utf8')
+  const src = fs.readFileSync(new URL('./legacy/fold.ts', import.meta.url), 'utf8') // the rules fold lives in legacy/ (version 22, section 12.1)
   const block = src.slice(src.indexOf("b.caught = true"), src.indexOf("what: 'catch', shiny, uid: mon.uid"))
   assert.match(block, /weekCatch\[weekOf\(day\)\]/)
   assert.match(block, /bump\('legend'\)/)
@@ -415,6 +415,9 @@ test('Life OS runs the same core', { skip: !fs.existsSync(new URL('../../lifeos/
   const read = (u: URL) => fs.readFileSync(u, 'utf8').replace(/\r\n/g, '\n')
   for (const f of ['rules.ts', 'facts.ts', 'fold.ts', 'order.ts', 'species.ts', 'gyms.ts', 'events.ts', 'types.ts', 'economy.ts', 'boss.ts'])
     assert.ok(read(new URL(`../../lifeos/src/game-core/${f}`, import.meta.url)) === read(new URL(`./${f}`, import.meta.url)), `${f} differs: run npm run core`)
+  // the frozen rules too: Life OS folds with them
+  for (const f of fs.readdirSync(new URL('./legacy/', import.meta.url)).filter((x) => x.endsWith('.ts')))
+    assert.ok(read(new URL(`../../lifeos/src/game-core/legacy/${f}`, import.meta.url)) === read(new URL(`./legacy/${f}`, import.meta.url)), `legacy/${f} differs: run npm run core`)
 })
 
 // ── version 6 ────────────────────────────────────────────────────────────────

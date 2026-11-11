@@ -36,7 +36,7 @@ test('tidy lays everything down again with no gaps', () => {
 
 test('every currency in the wallet has a slot in the Bag\'s "Money and marks" row', async () => {
   const { readFileSync } = await import('node:fs')
-  const fold = readFileSync(new URL('../core/fold.ts', import.meta.url), 'utf8')
+  const fold = readFileSync(new URL('../core/legacy/fold.ts', import.meta.url), 'utf8')
   const wallet = fold.match(/^\s*wallet: \{([^}]*)\}/m)?.[1] ?? ''
   // a currency is a field with a "…Today" twin (coins/coinsToday, gems, marks, bp)
   const currencies = [...wallet.matchAll(/(\w+)Today:/g)].map((m) => m[1])
