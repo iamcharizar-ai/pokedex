@@ -2,10 +2,9 @@
    line with a node for each stop, and only the stop you are on is lit. Lists are
    rows with hairlines between them, not a stack of boxes. */
 
-.journeypage { display: grid; gap: var(--s-6); }
-@media (min-width: 900px) {
-  .journeypage { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
-  }
+/* one column at every width: the tab strip on top, then the view, which is two columns of its own on a desktop (.pview.two).
+   Splitting this grid as well put the strip in the left half and squeezed both columns into the right one. */
+.journeypage { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-4); }
 
 /* ── a road: the trail, a node per stop ── */
 .sec .k-road { gap: 0; padding-left: 44px; }
