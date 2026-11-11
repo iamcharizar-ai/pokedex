@@ -2,6 +2,8 @@
 
 Written 10 Nov 2026 for whoever builds it (Opus or Sonnet). It replaces section 5 of `AUDIT-2026-11-10.md`, with the owner's answers of 10 Nov folded in. Read `AUDIT-2026-11-10.md` sections 2 to 4 first for why each cut is made.
 
+**Revised 12 Nov 2026** with the owner's second round of answers: the wild Pokemon is worn down by ticks alone, the Lab pays rewards for research, the Trainer never runs out of levels, the comeback is cut, coins have more to do. Section 1.1 is the rule that came out of it.
+
 **Status:** design only. Nothing here is built. The fixes of 10 Nov ("version 21.1", `RULES-V21.md`) are built and are the starting point.
 
 Numbers marked * are first values. Tune them in `tools/sim-life.mjs` before a start date is set (section 12).
@@ -27,11 +29,11 @@ And one test for anything that stretches a system: **a second step must be a dif
 
 **Your day**
 
-> Every tick trains your partner. The share you ticked catches the wild Pokemon. Pillars fight the gym leader. The week's card fights the boss.
+> Every tick trains your partner and takes one HP off the wild Pokemon. Pillars fight the gym leader. The week's card fights the boss.
 
 **Your Pokemon**
 
-> Caught Pokemon wait in the Box. One at a time is your partner and grows. A fully trained Pokemon either fights (the party) or helps you catch (the Lab).
+> One Pokemon is your partner and grows. Five more stand in the party and fight. Everyone else is with the Professor, researching, and the research pays you.
 
 **Your pillars**
 
@@ -43,12 +45,30 @@ And one test for anything that stretches a system: **a second step must be a dif
 
 | What you do | What it moves | Where you see it |
 |---|---|---|
-| Tick anything | Partner XP | Life OS card |
-| Tick more of the list | Wild Pokemon's HP | Life OS card |
-| Do a pillar | Gym leader's HP, that pillar's track, a berry | Life OS card and pillar tile |
+| Tick anything | Partner XP, and 1 HP off the wild Pokemon | Life OS card |
+| Do a pillar | Gym leader's HP, that pillar's track, a berry, the Lab's research | Life OS card and pillar tile |
 | Hit the week's targets | Boss's HP | Life OS card |
 | Sleep 80+ on a work day | Counts as a pillar | Sleep tile |
 | Walk | The egg or fossil in the Nursery | Pokedex, Today |
+| Feed a berry | That Pokemon's hearts, and your Trainer level | Pokedex, Party |
+
+### 1.1 Nothing ever runs out
+
+The owner's rule: no part of the game may be finished. Every system either repeats or has no top. Whoever builds this must keep the table true.
+
+| System | How it goes on |
+|---|---|
+| Partner | Fully trained at 50, then the next one. There is always another to raise |
+| Wild Pokemon | Caught, and another stands there the next morning |
+| Gym leaders | Ten leagues, then all of them again one rank stronger, without end (the Rematch) |
+| Boss | A new one every Monday |
+| Pillar tracks | Seven pips, a prize, and it starts again |
+| The Lab | Research ranks have no last rank (5.4) |
+| The Trainer | Trainer levels have no last level (section 8) |
+| Hearts | Each Pokemon tops out at 150, and there is always another Pokemon |
+| The Frontier | The only one with an end (seven Gold Symbols). It is a set of trophies, not a loop, and that is said on its screen |
+
+And everything in the table moves only when something is ticked, slept or walked in Life OS.
 
 ---
 
@@ -81,20 +101,23 @@ Every habit pays its XP (pillar 100, core 30, standard 3, basic 1; Sleep by its 
 
 Of the last seven days, how many counted: 3 is ×1.2, 5 is ×1.35, 6 is ×1.5. `game.momentum.steps` is what screens draw.
 
-### 3.3 The wild Pokemon (formula unchanged: the catch pace stays)
+### 3.3 The wild Pokemon: one tick, one HP
 
-- Hit for the day: `100 × (share of habits ticked)^1.5 × ball`, where the ball is the day's own (half ticked ×1.3, four-fifths ×1.6). Unchanged.
-- A perfect day catches it on the spot, shiny one time in 10. Unchanged.
+The owner's rule: catching is the simple one. No multipliers, no powers, nothing from the Lab or the party. Fights with numbers belong to the gym leader.
+
+- **Every habit ticked takes 1 HP off the wild Pokemon.** That is the whole rule.
+- **Every habit on the list ticked** (a perfect day) catches it on the spot, shiny one time in 10, and the partner Dynamaxes.
+- Its HP is a number of ticks, by rarity: common 140*, uncommon 220*, rare 320*, legendary 600*. **These are set in the simulator so that a catch takes the same number of days as it does today** (the catch pace stays; today's medians are in `tools/replay.mjs`). They are fixed numbers per rarity, never scaled by anything.
+- A thrown ball takes a fixed number of HP (9.5). That is the only other thing that touches it.
 - It flees after 21, 28 or 42 days by rarity. Unchanged.
-- **Removed:** Max Repel, Quick Claw's 25%, the Charm signature, research ranks.
-- **Changed:** the Lab desk takes HP off as it appears (section 5.4).
+- **Removed:** the `share^1.5` curve, the day's ball multiplier (Poke, Great, Ultra by share), Max Repel, Quick Claw, the Charm signature, and every research cut to wild HP.
 
 ### 3.4 The gym leader
 
 `hit = sum over pillars done of (100, or 150 if the leader is weak to that pillar) × tier × (1 + party power)`
 
 - Tier multiplier: 1 pillar ×1, 2 ×1.25, 3 ×1.5, Max ×2 (as `DAY_HIT_MULT` today). A Max day still draws the partner Dynamaxed.
-- Party power: section 5.3.
+- Party power: section 5.3. This is the one fight in the game with numbers behind it: type, level, hearts, Mega, the Trainer's level.
 - Chores do not hit the leader. On a day with no effort pillar the leader is untouched.
 - Leader HP, the leagues, the Elite Four, badges, regions opening: unchanged.
 - **Removed from the hit:** bond level, partner level, mastery, vitamins, natures, signatures, held stat items, TMs, Type Plates, Expert Belt, X items, Dire Hit, critical hits, Life Orb. Natures stay as a name on the card.
@@ -137,7 +160,7 @@ Each pillar has a track of **7*** pips. A full track is a prize waiting in Colle
 - **The choice is real:** a shard is power (towards a Mega Stone), an egg is a new Pokemon. Until the Key Stone is earned the choice still shows both, with the shard marked "needs the Key Stone to use".
 - An egg can only be chosen while fewer than 3 wait (as now).
 - **Removed:** all five mark currencies, the five marks shops' goods, mastery, kit Iron, "every third set", the aim switch, shards from bosses, milestones, Ribbons and feats.
-- The Dojo, Silph Co., the Garden, the Music Hall and the Dream House stay as places. Each one **is** its pillar's track: seven pips, the prize, and its berry count. Shelved pillars hide theirs (`isShelved`), as now.
+- The Dojo, Silph Co., the Garden, the Music Hall and the Dream House stay as places, with nothing to buy in them. Each one **is** its pillar's track: seven pips, the prize, and its berry count. Shelved pillars hide theirs (`isShelved`), as now.
 
 ### 4.2 The berry: every pillar done drops one
 
@@ -158,24 +181,24 @@ Why this is the right berry system:
 
 ### 5.1 The path
 
-**Box → Partner → Party or Lab → Collection.**
+**Lab → Partner → Party or back to the Lab.**
 
 | Where | Its job | Why you would put it there |
 |---|---|---|
-| **Box** | Waiting | Everything caught, hatched or revived starts here at Lv 1. Most stay: catching fills the Pokedex and opens regions |
 | **Partner** (1) | Grows | The only one that gains XP. Evolves at 16 and 36 (25 for a two-stage line), **fully trained at 50** (30 for a line that does not evolve). It also counts double in party power |
 | **Party** (5) | Fights | Adds to every hit on the leader and the boss |
-| **Lab desk** (3) | Catches | Fully trained only. Each takes 15%* off a wild Pokemon's HP as it appears |
-| **Collection** | Bench | Everyone else trained. Swapped in when its type is the one you need |
+| **The Lab** (everyone else) | Researches | Every Pokemon you own that is not in the party is with the Professor, and all of them research. The stronger it is, the more it adds (5.4) |
+
+There is no Box, no desk with seats and no bench. A Pokemon is in exactly one of three places and each place has a job. Everything caught, hatched or revived goes to the Lab at Lv 1 and starts researching at once.
 
 ### 5.2 The partner
 
 - **Level 50 is the end.** `MAX_LEVEL` 100 and "lead again" are removed. A fully trained Pokemon cannot be partner again.
-- When a partner is fully trained, **the game asks who is next** (a choice waiting in Collect that names the Box). Until answered, the first party member that is not fully trained steps up, else the oldest in the Box.
+- When a partner is fully trained, **the game asks who is next** (a choice waiting in Collect). Until answered, the first party member that is not fully trained steps up, else the oldest in the Lab.
 - **Changing partner is free and loses nothing.** XP and hearts stay with each Pokemon. The reasons to change: its type beats the current leader (it counts double), or you want a different one evolved first. The reason not to: the one you set down stops growing.
 - **Evolution** is the milestone of training. It happens by level, it can change the Pokemon's type (which changes its match-ups and its favourite berry), and only a final form can Mega. Branching by what you did stays.
 - **Rare Candy:** one level for any Pokemon not fully trained (built in 21.1; under this spec the cap is fully trained).
-- **Evolution stones** evolve a Box Pokemon one stage without raising it, for the Pokedex. Keep the ten stones, cut the sixteen other evolution items.
+- **Evolution stones** evolve a Lab Pokemon one stage without raising it: a Pokedex entry, and a stronger researcher (5.4). Keep the ten stones, cut the sixteen other evolution items.
 - **Everstone** stays.
 
 ### 5.3 Party power: the one fighting number
@@ -188,16 +211,49 @@ For each of the six (partner and five):
 - **Doubled again if it holds a Mega Stone.**
 - **The partner's share counts twice.**
 
-Party power is the sum. A Lv 1 Pokemon adds almost nothing, which is honest: the party is worth what you have raised. Finishing a partner no longer costs anything, because it keeps adding its share from the party.
+Party power is the sum of the six, **plus 2%* for every Trainer level** (section 8).
 
-This is the only place level, hearts, type and Mega touch a fight.
+A Lv 1 Pokemon adds almost nothing, which is honest: the party is worth what you have raised. Finishing a partner no longer costs anything, because it keeps adding its share from the party.
 
-### 5.4 The Lab desk
+This is the only place level, hearts, type, Mega and the Trainer's level touch a fight.
 
-Three seats, fully trained Pokemon only. Each seated Pokemon takes **15%*** off every wild Pokemon's HP when it appears (45% with three, the cap research has today). A Pokemon in the party cannot sit.
+### 5.4 The Lab: research that pays
 
-- **Removed:** research points, ranks, rank rewards, the desk bonus table, Insight, "the party studies".
-- The choice: a trained Pokemon either fights or catches. With none trained the desk is empty and the catch pace is exactly today's.
+The owner's design, kept whole: everyone outside the party researches, a stronger Pokemon researches more, and research pays rewards. It never touches a wild Pokemon's HP.
+
+**The Lab's strength** is the sum of what each Lab Pokemon is worth:
+
+`worth = its level, + 10* if it is in its final form, × 1.5 if it is shiny`
+
+So a freshly caught Lv 1 is worth 1, and a fully trained, fully evolved one is worth 60. Catching many helps a little. Raising one helps a lot. Both count, as the owner asked.
+
+**A day's research** is earned only by work:
+
+`research = pillars done × (20* + the Lab's strength)`
+
+No effort pillar, no research. More pillars, more research. The 20 means the Lab works from day one with nobody in it.
+
+**Ranks have no end.** Rank `n` costs `400 + 100 × n`* points. Each rank pays a find, in a cycle the screen shows in advance, so you can see what the next three ranks bring:
+
+| Rank | Pays |
+|---|---|
+| 1st of every five | 200* coins |
+| 2nd | A berry of your choice (any of the six) |
+| 3rd | A Rare Candy |
+| 4th | An Incense (choose the next wild Pokemon from three) |
+| 5th | A Mystery Egg |
+| every 10th, on top | A Comet Shard, and a find from the next region's list of evolution stones and fossils |
+
+The Comet every tenth rank is the one long-game exception to "shards come from tracks": it is the wildcard, it is rare, and it gives the Lab a prize worth chasing.
+
+**Why this holds together, as a player:**
+
+- **Party or Lab is a real choice for every strong Pokemon.** In the party a Lv 50 adds 10 to 15% to your fights. In the Lab it adds 60 to every pillar's research. You have five party places and want your best in both.
+- **Nobody is useless.** Every catch, every hatch, every revived fossil makes the Lab a little stronger for good. This answers "what are my other Pokemon doing".
+- **Rare Candy and evolution stones get a second use.** Spent on a Lab Pokemon they raise its worth, which is the only way to strengthen one without making it the partner.
+- **It loops.** Ranks cost more as they go, and the Lab grows as you catch and raise, so it keeps paying at a steady pace for ever.
+
+**Removed:** the three-seat desk, the desk bonus by rarity, research cutting wild HP, Insight, "the party studies", rank rewards of gems.
 
 ### 5.5 What a second of the same line does
 
@@ -218,82 +274,78 @@ Hearts belong to one Pokemon, 0 to 150, drawn as five hearts (levels at 10, 30, 
 ### 6.2 Mega: the proof you did every pillar
 
 - **Key Stone:** from the feat it comes from today (any one kind of work, seven days running).
-- **Mega Stone:** three shards of three different colours, forged at the Forge (unchanged altar). A Comet stands in for a missing colour.
+- **Mega Stone:** three shards of three different colours **and 1,500* coins**, forged at the Forge (unchanged altar). A Comet stands in for a missing colour.
 - **Who can hold one:** a fully trained Best Friend whose form has a Mega. X or Y is chosen at the Forge.
 - **What it does:** doubles that Pokemon's party share, and it fights as its Mega form's types.
 
-So the chain is: train it (XP), befriend it (berries, which come from pillars), do every pillar (shards). Each link is a different kind of act. That is the diversity the owner asked for.
+So the chain is: train it (XP), befriend it (berries, which come from pillars), do every pillar (shards), and pay the Forge (coins, which come from showing up). Each link is a different kind of act. That is the diversity the owner asked for.
 
 ---
 
 ## 7. Eggs, fossils and the Nursery (one place for everything walked)
 
-Steps do one thing: they fill whatever is in the Nursery. One thing is in it at a time, and which one goes in is your choice.
+Steps do one thing: they fill whatever is in the Nursery. One thing is in it at a time (two once the second place is bought, 9.1), and which one goes in is your choice.
 
 | Goes in the Nursery | From | Steps |
 |---|---|---|
 | Pillar egg | A full track (4.1) | 40,000 |
 | Trail Egg | Every 100,000 steps walked | 30,000 |
 | Mystery Egg | Rare things shop, for gems | 60,000 |
-| **Fossil** | Pickup only | **20,000*** |
+| **Fossil** | Pickup, or a Lab rank | **20,000*** |
 
 **Fossils are no longer bought and then paid for again.** A fossil is found by Pickup and revived by walking: it goes in the Nursery like an egg. No Battle Points, no 150 coins, no Lab counter. It competes with eggs for the one Nursery place, which is a real choice.
 
 ---
 
-## 8. Trainer perks
+## 8. The Trainer: a level with no top
 
-Three perks, from the total of every heart across every Pokemon (it never goes down):
+**Trainer hearts** are every heart across every Pokemon you own, and the total never goes down. A Pokemon stops at 150, but there is always another Pokemon, so the total has no ceiling.
 
-| Hearts | Perk |
+**Every 100* Trainer hearts is a Trainer level.** There is no last level. Each one pays three things:
+
+1. **+2%* party power, for good** (5.3). This is the "constantly making my stuff stronger" the owner asked for: it is small, it is permanent, and it comes only from bonding, which comes only from berries, which come only from pillars.
+2. **A choice of two** from: two Rare Candies, a Mystery Egg, 400* coins, an Incense.
+3. On the way, three one-time **perks**:
+
+| Trainer hearts | Perk |
 |---|---|
-| 10 | **Pickup**: on a work day the partner may find something (section 9.3) |
-| 50* | **Endure**: one empty day a week costs nothing |
-| 150* | **Close bond**: +10% XP |
+| 10 | **Pickup**: on a work day the partner may find something (9.3) |
+| 100 (level 1) | **Endure**: one empty day a week costs nothing |
+| 300 (level 3) | **Close bond**: +10% XP |
 
-After the third perk the long game is **Best Friends**: each Pokemon taken to 150 hearts is a Ribbon, and the Trainer card counts them. That is the answer to "what after the perks".
+Beside the level, the Trainer card counts **Best Friends** (Pokemon at 150 hearts, each with its Ribbon). Reaching 150 on one Pokemon is not the end of anything: it is 1.5 Trainer levels, a Ribbon, and a Pokemon that can now hold a Mega Stone. Then the berries go to the next one.
 
-**Removed:** the neglect bounty (section 8.1), Sharing, Focus, Exp. Share, Trainer stars, Ribbon rewards every 150 hearts.
+**Removed:** the neglect bounty, any comeback bonus (the owner cut it on 12 Nov: a pillar pays the same whenever it is done), Sharing, Focus, Exp. Share, Trainer stars, Ribbon rewards every 150 hearts.
 
-### 8.1 The neglect bounty: verdict
-
-The owner asked for a careful look. **Cut the ×3 and ×4 bounty. Replace it with one visible comeback.**
-
-What the bounty is: a pillar left for 2 days pays its own XP and its marks ×3 when you return, ×4 after 3 days.
-
-Why it should go:
-
-1. **You cannot see it where you decide.** It is drawn only in the Pokedex. The owner opens Life OS. A reward nobody knows about changes no behaviour, so today it does nothing except move numbers.
-2. **It pays for staying away.** It had to be tuned to sit just under the point where skipping beats showing up (`GAME_REDESIGN.md` section 0). A reward that must be capped so it never quite works is a weak reward by design.
-3. **It is not a comeback in practice.** Gym was done on 3 of 39 days, so every Gym day was a ×4 day. It became a permanent multiplier on the rarest pillar, not a welcome back.
-4. **It breaks tracks.** ×4 on a seven-pip track is more than half the prize for one day.
-5. **The same job is already done better.** The boss card keeps a neglected pillar on it with a small target of 2 (the owner's own rule). That is visible, it asks for the pillar twice rather than once, and it pays through the boss.
-
-What replaces it, because the instinct behind it is right (coming back should feel good, not punished):
-
-- **Comeback:** an effort pillar done after 3 or more idle days pays **double its own XP** that day. Nothing else doubles: one pip, one berry.
-- **It must be shown on that pillar's Life OS tile** as a small mark while it is on offer. If it cannot be shown in Life OS, do not build it.
+The boss card still keeps a neglected pillar on it with a small target (version 21, the owner's rule). That is the game's one nudge towards a pillar you have been skipping, and it is visible.
 
 ---
 
 ## 9. Money, shops and the Bag
 
-### 9.1 Two currencies
+### 9.1 Two currencies, each with enough to do
 
-| | Earned by | Spent at |
+| | Earned by | Spent on |
 |---|---|---|
-| **Coins** | The day (3.6), Pickup, level milestones | The Mart |
-| **Gems** | Things that happen once or rarely: a catch 3, a shiny 20, an evolution 10, fully trained 15, a gym 10, Elite Four 15, a league 25, a boss 20, a feat, a Frontier Symbol | Rare things |
+| **Coins** (everyday) | The day (3.6), Pickup, level milestones, Lab ranks, Trainer levels | The Mart, the Forge's fee, the second Nursery place |
+| **Gems** (rare) | Things that happen once or rarely: a catch 3, a shiny 20, an evolution 10, fully trained 15, a gym 10, Elite Four 15, a league 25, a boss 20, a feat, a Frontier Symbol | Rare things |
 
 Battle Points, the BP Exchange, the Collector and the fossil Lab counter are removed.
 
+**What coins are for.** With the marks shops and the junk gone, coins need real uses or they pile up. Four, each a different kind of spend:
+
+1. **Balls** (9.5): the everyday spend. Coins turn into a faster catch.
+2. **Evolution stones**: 600* each. Coins turn into a Pokedex entry and a stronger Lab.
+3. **The Forge's fee: 1,500* coins to forge a Mega Stone**, on top of the three shards (6.2). The owner's idea. Shards prove the pillars; coins are the months of showing up. This is the big thing to save for.
+4. **A second Nursery place: 5,000* coins, once.** Two things warm at the same time. A long-term goal that makes walking worth twice as much.
+
 ### 9.2 Two shops
 
-**The Mart (coins):** Great Ball, Quick Ball, Timer Ball, Incense. Always in stock, no daily deals.
+**The Mart (coins):** Great Ball, Quick Ball, Timer Ball, Incense, the ten evolution stones. Always in stock, no daily deals.
 
-**Rare things (gems):** Mystery Egg, Rare Candy, the ten evolution stones, the three scenes, and the held items of 9.4.
+**Rare things (gems):** Mystery Egg, Rare Candy, the three scenes, and the held items of 9.4.
 
-Prices are for the simulator (section 12). The rule for setting them: **a bigger or stronger thing is never the worse buy**, and no two things on a shelf do the same job.
+Prices are for the simulator (section 12). The rule for setting them: **a bigger or stronger thing is never the worse buy**, and no two things on a shelf do the same job. The simulator must also show that at the real pace **something is affordable every week and the Forge's fee takes about as long to save as three shards take to earn**.
 
 ### 9.3 Pickup (kept: the owner likes it)
 
@@ -318,7 +370,7 @@ Old Charm, Lucky Egg and Amulet Coin were always-on keepsakes. Making them held 
 
 ### 9.5 Balls: a choice of timing
 
-Great (50 HP, any day), Quick (100 on the day it appears, 25 after), Timer (15, and 15 more a day it has waited, up to ten days), Master (earned, never sold, catches anything). The other ten are removed.
+HP here is in ticks, the same unit as 3.3. Great (10* HP, any day), Quick (20* on the day it appears, 5* after), Timer (3*, and 3* more a day it has waited, up to ten days), Master (earned, never sold, catches anything). A ball is worth a fixed number of ticks and nothing multiplies it. The other ten are removed.
 
 ### 9.6 What is in the Bag afterwards
 
@@ -380,11 +432,17 @@ The owner decides what to do in Life OS, so anything meant to change a decision 
 |---|---|
 | `game.momentum` `{ days, mult, steps }` | The seven dots (built) |
 | `game.foes` `{ wild: { form, hp, max, leavesIn }, leader: { name, hp, max, weak: Tag[] }, boss: { form, taken } | null }` | One line under the XP bar: the three things today is moving |
-| `game.tracks[tag]` `{ pips, of, ready, comeback, berries }` | Each pillar tile: how far its track is, a prize waiting, the comeback on offer |
+| `game.lab` `{ rank, points, need, strength, next: string[] }` and `game.trainer` `{ hearts, level, toNext }` | Shown in the Pokedex; Life OS needs them only for news ("Research rank 12", "Trainer level 4") |
+| `game.tracks[tag]` `{ pips, of, ready, berries }` | Each pillar tile: how far its track is, and a prize waiting |
 | `game.today.tier`, `pillarsDone`, `counts` | "One more pillar makes today count" |
 | `game.weakToday: Tag[]` | Which pillar hits the current leader hardest, marked on that tile |
 
-The single most useful line in Life OS is the last: **the leader's weakness marked on a pillar tile** turns the league into a reason to pick one pillar over another today.
+**On the pillar tile itself, and with no words** (the owner's decision, 12 Nov):
+
+- **The track** is seven small pips on the tile, filled as the track fills. A full track glows until its prize is collected.
+- **The weakness mark** is the current gym leader's badge, small, in a corner of the tile whose pillar that leader is weak to. No label, no number.
+
+Nothing else is added to a tile. The leader's weakness on a tile is the single most useful thing Life OS can show: it turns the league into a reason to pick one pillar over another today.
 
 ---
 
@@ -407,7 +465,7 @@ Keep unchanged and shared: `facts.ts`, `events.ts`, `order.ts`, `day.ts`, `stron
 | Each Pokemon's level, XP, hearts, form, Megas, shiny, nature | Unchanged |
 | A fully trained Pokemon above Lv 50 | Stays at its level for show; counts as 50 |
 | Badges, league position and leader HP, regions, Hall of Fame, Rematch lap | Unchanged |
-| Wild Pokemon and its HP, the egg in the Nursery, trail steps | Unchanged |
+| The egg in the Nursery, trail steps | Unchanged |
 | Boss of the week | Unchanged |
 | Marks of a pillar | Pips on its track: 1 pip for every 3 marks*, at most 6 |
 | Kit pieces held | Kept: they are the Gym track's pips (duplicates dropped) |
@@ -415,14 +473,15 @@ Keep unchanged and shared: `facts.ts`, `events.ts`, `order.ts`, `day.ts`, `stron
 | Coins, gems | Unchanged |
 | Battle Points | 2 gems each* |
 | Mastery levels | 5 gems a level* |
-| Research rank and points | 10 gems a rank* |
+| Research rank and points | The rank is kept and counts on from there; points start at 0 |
 | Berries of removed kinds | 1 pillar-less berry each: converted to Tamato |
 | Removed balls | Great Balls, one for one |
 | Removed held items, TMs, vitamins, X items, guards, lures, treasures, plates | Bought back: their coin or gem price, or the Collector's price |
 | Fossils, evolution stones, Rare Candy, eggs, incense | Unchanged (lures become Incense) |
 | Frontier runs and Symbols | Unchanged; the Pyramid's count carries over |
 | Feats won | Stay won |
-| The research desk | Emptied (it now takes only the fully trained) |
+| The research desk and the Box | Gone: everyone not in the party is in the Lab |
+| Wild Pokemon's HP | Rescaled to ticks: the same share of the new maximum is left |
 
 Write the migration as a pure function with a test that folds the real ledger (see memory `real-ledger-replay`) and asserts: every Pokemon is still there with the same level and hearts, coins did not go down, and no item id survives that the new `ITEMS` does not know.
 
@@ -440,7 +499,9 @@ Extend `tools/sim-life.mjs` with `--rules v22` and report, at the "real", "norma
 - Pokemon fully trained, Best Friends, leaders beaten, boss win rate;
 - gems earned and spent a month (version 21 over-pays gems about 2.5 times; v22 must not end six months with thousands unspent);
 - hearts a day and berries a day;
-- the comeback's effect: doing a pillar every fourth day must earn less of everything than doing it daily.
+- days to catch a common, uncommon and rare Pokemon, against today's (`tools/replay.mjs` on the real ledger): they must match within a day;
+- Lab ranks a month and Trainer levels a month, in month 1 and in month 6: both must still be arriving in month 6, about one Lab rank a week and one Trainer level a month at the real pace;
+- coins earned and spent a month, and the weeks it takes to save the Forge's fee.
 
 Then set the starred numbers. Targets: at the owner's real pace (about 1 effort pillar a day) a first track fills inside three weeks, a first Mega inside three months, and a week never passes with nothing visible happening.
 
@@ -449,9 +510,9 @@ Then set the starred numbers. Targets: at the owner's real pace (about 1 effort 
 Each step ships on its own and leaves the game working.
 
 1. **Freeze and migrate** (12.1, 12.2) with v22 rules equal to today's. Proves the split changes nothing. No visible change.
-2. **Words and the day** (sections 2, 3): tier, the leader's hit, party power, coins.
+2. **Words and the day** (sections 2, 3): tier, one tick one HP, the leader's hit, party power, coins.
 3. **Tracks and berries** (section 4), with the track pages in place of the marks shops.
-4. **The Pokemon's life** (sections 5, 6): level cap, who is next, the desk, hearts, Mega.
+4. **The Pokemon's life** (sections 5, 6, 8): level cap, who is next, the Lab, hearts, Trainer levels, Mega.
 5. **Shops, Bag, Nursery fossils** (sections 7, 9).
 6. **The long road** (section 10): Rematch pay, Champions' keys, Frontier, feats, Collect.
 7. **Life OS fields** (section 11), then the screens, then the rule book rewritten from this file.
@@ -460,9 +521,10 @@ Run `npm test`, `npm run core`, and both builds at every step. Every memory rule
 
 ---
 
-## 13. What is still the owner's to decide
+## 13. Decided, and what is left
 
-1. **The track length** (7). Shorter is more generous; the simulator will show what 7 means at the real pace.
-2. **Where the track and the weakness mark go on a Life OS tile** (section 11). Data is specified; the drawing needs approval.
-3. **The comeback** (8.1): double XP shown on the tile, or nothing at all.
-4. **Coins for removed items** (12.2): bought back at price, as written, or simply dropped.
+**Decided by the owner (10 and 12 Nov):** berries are bond, never bait. Momentum is the seven dots. Sleep is a pillar only beside another. The track is 7. The wild Pokemon loses 1 HP a tick and nothing else touches it. The Lab pays rewards for research and everyone outside the party researches. No comeback bonus. Removed items are bought back in coins. The track and the weakness mark go on the pillar tile, drawn, with no text. Forging a Mega Stone costs coins as well as shards.
+
+**Left for the simulator, not for the owner:** every number marked *.
+
+**Left for the owner, when it is drawn:** the look of the pips and the badge on a Life OS tile, before it ships.
