@@ -52,7 +52,7 @@ import { biomeOf, layoutFor, lightAt, litFilter, lookOf } from './screens/stage.
 import { Meter } from './Meter.tsx'
 import { useAim } from './lib/aim.ts'
 import { IcStar } from './lib/icons.tsx'
-import { CropSprite, PixelSprite } from './lib/pixel.tsx'
+import { CropSprite, GridSprite, PixelSprite } from './lib/pixel.tsx'
 import { ChestOpener, HatchOpener } from './Reveal.tsx'
 
 type Tab = 'partner' | 'team' | 'shop' | 'dex' | 'trainer'
@@ -174,7 +174,6 @@ function Scene({ game }: { game: Game }) {
   const [cw, ch] = useBox(stage)
   const k = cw < 480 ? 2 : 3
   const lay = layoutFor(Math.max(1, Math.ceil(cw / k)), Math.max(1, Math.ceil(ch / k)))
-  const narrow = cw < 480
   const wildRec = wild ? SPECIES[wild.form] : null
   const meRec = SPECIES[game.display] ?? SPECIES[partner.form]
   const stageState = {
@@ -184,11 +183,16 @@ function Scene({ game }: { game: Game }) {
   }
   const look = lookOf({ ...stageState, t: 0 })
   const light = look.cave ? { b: 0.82, s: 0.85, warm: 0 } : lightAt(look.minutes, look.wx.gloom)
-  // the wild Pokemon: what is drawn in its picture, enlarged by a whole number to about two thirds of the partner's height
+  // both Pokemon are drawn on the stage's own pixel grid (every pixel k x k, like the place behind them): each at its own
+  // pixel size, so a small one is small, and only one too big for its room is redrawn on a coarser grid (never stretched)
   const boxes = useBoxes()
-  const [bl, bt, br, bb] = (wild && boxes?.[wild.form]) || [0, 0, 96, 96]
-  let kf = Math.max(1, Math.round((narrow ? 84 : 112) / Math.max(1, bb - bt)))
-  while (kf > 1 && (br - bl) * kf > (narrow ? 150 : 190)) kf--
+  const art = (form: string, shiny?: boolean) => {
+    const path = spritePath(form, shiny)
+    const gif = path.endsWith('.gif')
+    return { path, gif, hold: !gif && !boxes, crop: !gif ? boxes?.[form] : undefined }
+  }
+  const foeArt = wild ? art(wild.form, wild.shiny) : null
+  const meArt = art(game.display, partner.shiny)
   // the partner's experience: today's part drawn brighter, and what today paid beside it
   const gained = Math.max(0, game.into - game.intoBeforeToday)
   const at = (sp: { x: number; y: number }) => ({ left: sp.x * k, top: (sp.y + 1) * k })
@@ -217,8 +221,8 @@ function Scene({ game }: { game: Game }) {
             )}
           </div>
           <div className="pad foe-pad" style={at(lay.foe)} role="button" tabIndex={0} aria-label={`Poke the wild ${nameOf(wild.form)}`} onClick={() => pat('foe')} onKeyDown={press('foe')}>
-            <span className="lit foe-fit" style={{ width: (br - bl) * kf, height: (bb - bt) * kf }}>
-              <img src={still(wild.form, wild.shiny)} alt="" width={96 * kf} height={96 * kf} className={`sprite ${wild.caught ? 'got' : ''}`} style={{ left: -bl * kf, top: -bt * kf, width: 96 * kf, height: 96 * kf }} draggable={false} />
+            <span className="lit">
+              {foeArt && <GridSprite src={foeArt.path} k={k} maxW={Math.round(cw * 0.4)} maxH={Math.round(ch * 0.5)} crop={foeArt.crop} hold={foeArt.hold} className={wild.caught ? 'got' : ''} />}
             </span>
             {wild.caught && <Ball ball={today.ball} size={34} className="caughtball" />}
             {!wild.caught && <Pop value={today.hit} />}
@@ -227,7 +231,7 @@ function Scene({ game }: { game: Game }) {
       )}
       <div className="pad me-pad" style={at(lay.me)} role="button" tabIndex={0} aria-label={`Pat ${nameOf(game.display)}`} onClick={() => pat('me')} onKeyDown={press('me')}>
         {/* a perfect day: a Gigantamax form when it has one, else it Dynamaxes (the same Pokemon, the next whole size up, glowing red) */}
-        <span className="lit"><Sprite form={game.display} shiny={partner.shiny} size={narrow ? 150 : 200} up={aura === 'gmax' && game.display === partner.form} upMax={Math.round(cw * 0.62)} className={`${game.asleep ? 'asleep' : ''} ${aura === 'gmax' && game.display === partner.form ? 'dynamax' : ''}`} /></span>
+        <span className="lit"><GridSprite src={meArt.path} k={k} maxW={Math.round(cw * 0.6)} maxH={Math.round(ch * 0.78)} animated={meArt.gif} crop={meArt.crop} hold={meArt.hold} className={`${game.asleep ? 'asleep' : ''} ${aura === 'gmax' && game.display === partner.form ? 'dynamax' : ''}`} /></span>
         {game.asleep && <span className="zzz" aria-hidden>Zzz</span>}
       </div>
       <div className={`np np-me ${aura ?? ''}`}>

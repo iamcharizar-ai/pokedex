@@ -13,10 +13,8 @@
 .scene.v2 .pad { left: auto; right: auto; top: auto; bottom: auto; z-index: 2; display: grid; justify-items: center; align-items: end; min-width: 48px; min-height: 48px; transform: translate(-50%, -100%); } /* a thumb's target even for a thin Pokemon */
 .scene.v2 .pad::before, .scene.v2 .pad::after { display: none; }
 .scene.v2 .pad .lit { display: block; filter: var(--lit, none); }
-.scene.v2 .foe-fit { position: relative; }
-.scene.v2 .foe-fit > img { position: absolute; max-width: none; image-rendering: pixelated; }
 .scene.v2 .me-pad img.sprite { display: block; }
-/* a Dynamax is the next whole size up (Scene), so the old fractional scale goes; the red glow stays */
+/* a Dynamax keeps the red glow but not a bigger size: every pixel on this stage is the same size, so nothing is enlarged on its own */
 .scene.v2 .sprite.dynamax { transform: none; animation: none; }
 
 /* ── the nameplates ── */
