@@ -126,9 +126,11 @@ for (let i = 0; i < DAYS; i++) {
   const inv = { ...g.inv }, wallet = { coins: g.wallet.coins, gems: g.wallet.gems, marks: { ...g.wallet.marks } }
   for (const h of g.held) use('claim', h.choice ? '0' : '', '', h.key)
   let hp = g.wild && !g.wild.caught ? g.wild.hp : 0
+  // version 22: the Mart is always in stock: a Great Ball while a wild Pokemon stands and the coins allow, three a day at most
+  if (V22) for (let k = 0; k < 3 && hp > 0 && wallet.coins >= 450; k++) { use('buy', 'great-ball', '', 'mart'); wallet.coins -= 150; inv['great-ball'] = (inv['great-ball'] ?? 0) + 1 }
   for (const o of g.mart.deals) if ((o.item === 'great-ball' || o.item === 'ultra-ball') && hp > 0 && wallet.coins >= o.coins + 150) { use('buy', o.item, '', 'mart'); wallet.coins -= o.coins; inv[o.item] = (inv[o.item] ?? 0) + 1 }
   if (!V21 && g.boss?.canThrow) for (const b of ['ultra-ball', 'great-ball']) for (let k = 0; k < Math.min(3, inv[b] ?? 0); k++) use('boss-throw', b)
-  else for (const b of ['ultra-ball', 'great-ball', 'premier-ball', 'luxury-ball', 'poke-ball']) while ((inv[b] ?? 0) > 0 && hp > 0) { use('throw', b); inv[b]--; hp -= BALLS[b].hp }
+  else for (const b of ['ultra-ball', 'great-ball', 'premier-ball', 'luxury-ball', 'poke-ball']) while ((inv[b] ?? 0) > 0 && hp > 0) { use('throw', b); inv[b]--; hp -= V22 ? 12 : BALLS[b].hp }
   for (const b of Object.keys(BERRY_HEARTS)) for (let k = 0; k < (inv[b] ?? 0); k++) use('feed', b, g.partner.uid)
   for (const t of Object.keys(TREASURE)) if (inv[t]) use('sell', t, '', String(inv[t]))
   for (const fo of Object.keys(FOSSILS)) if (inv[fo] && wallet.coins >= 150) { use('fossil', fo); wallet.coins -= 150 }

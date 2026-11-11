@@ -396,6 +396,8 @@ const pct = (x: number): string => `${Math.round(x * 100)}%`
 const POWER_COLOUR: Record<string, string> = { Level: 'var(--tone-gold)', Team: 'var(--tone-blue)', Bond: 'var(--k-pink)', Mega: 'var(--tone-purple)', 'Life Orb': 'var(--tone-red)' }
 function PowerLine({ game }: { game: Game }) {
   const { power } = game
+  // version 22: one number, the party's power (level, bond, type match-up, Mega, the Trainer's levels), against the leader who is up
+  if (game.v22) return <div className="power" aria-label="What raises a strike"><span className="power-bar" role="img" aria-label={`Party power +${pct(game.partyPower)}`} title="Each of the six adds its level and bond, doubled when its type beats the leader's, doubled again with a Mega Stone, the partner's counted twice; the Trainer's levels add on top."><i style={{ flexGrow: 1, background: 'var(--tone-blue)' }} /><b>+{pct(game.partyPower)}</b></span></div>
   const parts: [string, number][] = [['Level', power.level], ['Team', power.team], ['Bond', power.bond], ['Mega', power.mega], ['Life Orb', power.item]]
   const common = parts.reduce((n, [, v]) => n + v, 0)
   const shown = parts.filter(([, v]) => v > 0)

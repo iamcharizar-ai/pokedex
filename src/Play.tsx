@@ -3,9 +3,10 @@
 // team, the Professor, quests. Every one is written to the ledger as one small
 // event (store.useItem), so the game is still recomputed from the ledger alone.
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
+import { LabV22 } from './screens/LabV22.tsx'
 import { canCandy, isShelved, nameOf, type Game, type Mon, type Quest } from '../core/fold.ts'
 import {
-  COUNTER_V21, DOMAIN_V21, workEgg, BALLS, battleShelf, BERRY_HEARTS, treasurePrice, BOOST, BP_SHELF, DOMAIN_SHOPS, DOMAIN_V13, EVO_ITEMS, FOSSILS, GEAR_FOR, GEAR_ITEMS, HELD, ITEMS, LEGEND_KEYS, LURES, MARKS, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, masteryCost, RARE_SHELF, RARE_SHELF_V13, REVIVE_COST, SELL, TM_SLOTS, TREASURE, itemName, throwHp, tmType,
+  COUNTER_V21, DOMAIN_V21, workEgg, RARE_V22, NURSERY_PLACE, BALLS, battleShelf, BERRY_HEARTS, treasurePrice, BOOST, BP_SHELF, DOMAIN_SHOPS, DOMAIN_V13, EVO_ITEMS, FOSSILS, GEAR_FOR, GEAR_ITEMS, HELD, ITEMS, LEGEND_KEYS, LURES, MARKS, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, masteryCost, RARE_SHELF, RARE_SHELF_V13, REVIVE_COST, SELL, TM_SLOTS, TREASURE, itemName, throwHp, tmType,
   type MarkTag, type Offer, type ShopId,
 } from '../core/economy.ts'
 import { DESK_BONUS, DAILY_PAY, DAY_COINS, MAX_LEVEL, REPEL_DAYS, RESEARCH_SLOTS, TEAM_BONUS, TEAM_NATURE, TEAM_SIZE, levelOf, studyPoints, type Rarity } from '../core/rules.ts'
@@ -217,6 +218,9 @@ export function IncenseWin({ game }: { game: Game }) {
 }
 
 // ── shops ───────────────────────────────────────────────────────────────────
+/** The picture of a ware: the second Nursery place has none of its own, so it wears an egg. */
+const iconOf = (id: string): string => (id === NURSERY_PLACE ? 'rare-egg' : id)
+
 /** Can this be bought now, and with what is it paid. */
 function canBuy(game: Game, o: Offer, shop: ShopId): boolean {
   const once = ITEMS[o.item]?.kind === 'tm' || ITEMS[o.item]?.kind === 'theme' || ONCE.has(o.item)
@@ -295,7 +299,7 @@ function Shelf({ game, offers: all, shop, fold, what = 'items' }: { game: Game; 
             <ObjCard key={o.item} data-ware={`${shop}:${o.item}`} className={`wcard ${def?.kind === 'theme' ? 'theme' : ''} ${bump === o.item ? 'pre-pop' : ''}`}
               metal={done ? 'silver' : afford ? 'gold' : 'locked'} tc={field}
               art={<>
-                {def?.kind === 'theme' ? <MiniScene theme={o.item} /> : <ItemIcon id={o.item} size={72} className="mc-item" />}
+                {def?.kind === 'theme' ? <MiniScene theme={o.item} /> : <ItemIcon id={iconOf(o.item)} size={72} className="mc-item" />}
                 {have > 0 && !once && <i className="wcard-have">×{have}</i>}
               </>}
               corners={work ? { tr: <MarkIcon tag={work} size={16} />, trTitle: `For ${TAG_NAME[work].toLowerCase()}` } : undefined}
@@ -317,11 +321,11 @@ function Shelf({ game, offers: all, shop, fold, what = 'items' }: { game: Game; 
             <div className="ware-sheet">
               <div className="item-hero">
                 <ObjCard className={`item-card wcard ${def?.kind === 'theme' ? 'theme' : ''}`} look="full" tc={tt ? typeColor(tt) : def?.kind === 'theme' ? 'var(--cat-other)' : catColor(def?.kind)} metal={canBuy(game, o, shop) ? 'gold' : 'silver'}
-                  art={def?.kind === 'theme' ? <MiniScene theme={o.item} w={58} h={70} /> : <ItemIcon id={o.item} size={72} className="mc-item" />}
+                  art={def?.kind === 'theme' ? <MiniScene theme={o.item} w={58} h={70} /> : <ItemIcon id={iconOf(o.item)} size={72} className="mc-item" />}
                   banner={owned ? (def?.kind === 'tm' || def?.kind === 'theme' ? 'Owned' : `×${game.inv[o.item]}`) : <Tag o={o} shop={shop} />} disabled tabIndex={-1} aria-hidden />
                 <div className="item-hero-txt">
                   <h2 className="k-type">{itemName(o.item)}</h2>
-                  <p>{def?.text}</p>
+                  <p>{def?.text ?? (o.item === NURSERY_PLACE ? 'A second place in the Nursery: two eggs or fossils are warmed by the same steps. Bought once.' : '')}</p>
                   {owned && def?.kind !== 'tm' && def?.kind !== 'theme' && <small className="ware-sheet-have">You have {game.inv[o.item]}</small>}
                 </div>
               </div>
@@ -369,7 +373,8 @@ function TrainingKit({ game }: { game: Game }) {
  * numbers are here, never on the tile), the comeback bonus doing it today would pay, and the aim: its shard or its egg.
  */
 function PillarCounter({ game, tag }: { game: Game; tag: MarkTag }) {
-  const tile = game.tiles[tag as keyof Game['tiles']]
+  // version 22: Sleep has no tile on Life OS, but it has a track
+  const tile = game.tiles[tag as keyof Game['tiles']] ?? (game.v22 ? { iconId: workEgg(tag), fill: game.tracks[tag].ready ? 1 : game.tracks[tag].pips / game.tracks[tag].of, ready: game.tracks[tag].ready, bountyActive: false, bounty: 1 } : undefined)
   if (!tile) return null
   // version 22: the counter is the pillar's track, seven pips (core: game.tracks); before it, the marks held
   const track = game.tracks[tag]
@@ -407,7 +412,7 @@ export function DomainShop({ game, tag, open }: { game: Game; tag: MarkTag; /** 
   const tms = shop.stock.filter((o) => ITEMS[o.item]?.kind === 'tm')
   const lv = game.mastery[tag]
   return (
-    <Win title={shop.name} tone={tag === 'sleep' ? 'purple' : tag === 'code' ? 'blue' : tag === 'fitness' ? 'red' : tag === 'guitar' ? 'gold' : 'green'} fold={!open} aside={<><MarkIcon tag={tag} size={22} /> {game.wallet.marks[tag]} {MARKS[tag].name}</>}>
+    <Win title={shop.name} tone={tag === 'sleep' ? 'purple' : tag === 'code' ? 'blue' : tag === 'fitness' ? 'red' : tag === 'guitar' ? 'gold' : 'green'} fold={!open} aside={game.v22 ? <><MarkIcon tag={tag} size={22} /> {game.tracks[tag].pips} / {game.tracks[tag].of}</> : <><MarkIcon tag={tag} size={22} /> {game.wallet.marks[tag]} {MARKS[tag].name}</>}>
       {!game.v22 && <div className="mastery">
         <span className="mastery-mark"><MarkIcon tag={tag} size={34} /></span>
         <span className="mastery-txt">
@@ -419,10 +424,10 @@ export function DomainShop({ game, tag, open }: { game: Game; tag: MarkTag; /** 
           {lv >= MASTERY_MAX ? 'Full' : <>Train <MarkIcon tag={tag} size={18} />{masteryCost(lv)}</>}
         </button>
       </div>}
-      {game.tiles[tag as keyof Game['tiles']] && <PillarCounter game={game} tag={tag} />}
+      {(game.tiles[tag as keyof Game['tiles']] || game.v22) && <PillarCounter game={game} tag={tag} />}
       {tag === 'fitness' && <TrainingKit game={game} />}
-      <Shelf game={game} offers={goods} shop={tag} />
-      {tms.length > 0 && (
+      {!game.v22 && <Shelf game={game} offers={goods} shop={tag} />}
+      {!game.v22 && tms.length > 0 && (
         <>
           <ShelfHead icon={<ItemIcon id={tms[0].item} size={24} />} word="TMs" tip={`Each is yours for good, and ${nameOf(game.partner.form)} carries ${TM_SLOTS}`} />
           <Shelf game={game} offers={tms} shop={tag} />
@@ -440,7 +445,7 @@ function MarkShops({ game }: { game: Game }) {
   // version 18: a shop whose kind of work has no habit on the Life OS list is shelved (hidden, not gone: its marks are kept)
   const live = openMarks(game)
   const off = MARK_TAGS.filter((t) => !live.includes(t))
-  const richest = [...live].sort((a, b) => game.wallet.marks[b] - game.wallet.marks[a])[0]
+  const richest = [...live].sort((a, b) => (game.v22 ? game.tracks[b].pips - game.tracks[a].pips : game.wallet.marks[b] - game.wallet.marks[a]))[0]
   const [chosen, setTag] = useState<MarkTag>(OPEN_COUNTER && live.includes(OPEN_COUNTER) ? OPEN_COUNTER : richest)
   const tag = live.includes(chosen) ? chosen : richest
   return (
@@ -448,7 +453,7 @@ function MarkShops({ game }: { game: Game }) {
       <nav className="pmenu sub" style={{ ['--n' as string]: live.length } as CSSProperties} role="tablist" aria-label="Shops paid in marks" data-noswipe>
         {live.map((t) => (
           <button key={t} type="button" role="tab" aria-selected={tag === t} className={`pmenu-btn ${tag === t ? 'on' : ''}`} data-tag={t} onClick={() => { setTag(t); play('tap') }}>
-            <span className="pmenu-icon"><MarkIcon tag={t} size={24} /><i className="pmenu-badge">{game.wallet.marks[t]}</i></span>
+            <span className="pmenu-icon"><MarkIcon tag={t} size={24} /><i className="pmenu-badge">{game.v22 ? game.tracks[t].pips : game.wallet.marks[t]}</i></span>
             <b>{DOMAIN_SHOPS[t].name.replace(/^The /, '')}</b>
           </button>
         ))}
@@ -475,14 +480,15 @@ type Counter = 'coins' | 'gems' | 'marks'
 const COUNTER: Record<Counter, Place[]> = { coins: ['mart', 'collector'], gems: ['rare', 'bp', 'lab'], marks: [...MARK_TAGS] }
 export function ShopTab({ game }: { game: Game }) {
   const [which, setWhich] = useState<Counter>(OPEN_COUNTER ? 'marks' : 'coins')
-  const show = (s: Place) => COUNTER[which].includes(s) && (game.v13 || !['bp', 'collector', 'lab'].includes(s))
+  // version 22: the Mart and Rare things, and the pillars' tracks; no BP Exchange, Collector or fossil Lab
+  const show = (s: Place) => COUNTER[which].includes(s) && (game.v13 || !['bp', 'collector', 'lab'].includes(s)) && !(game.v22 && ['bp', 'collector', 'lab'].includes(s))
   // a dot on the counter where something is waiting (screens/Today.tsx)
   const { shop: waiting, shopAt } = tabTodo(game)
   const dot: Record<Counter, string | null> = { coins: shopAt === 'coins' ? waiting : null, gems: shopAt === 'gems' ? waiting : null, marks: null }
   const chips: [Counter, string, ReactNode][] = [
     ['coins', 'Coins', <Coin key="m" size={30} />],
-    ['gems', game.v13 ? 'Gems & BP' : 'Gems', <Gem key="r" size={30} />],
-    ['marks', 'Marks', <MarkIcon key="k" tag="fitness" size={30} />],
+    ['gems', game.v22 ? 'Gems' : game.v13 ? 'Gems & BP' : 'Gems', <Gem key="r" size={30} />],
+    ['marks', game.v22 ? 'Tracks' : 'Marks', <MarkIcon key="k" tag="fitness" size={30} />],
   ]
   return (
     <>
@@ -498,7 +504,7 @@ export function ShopTab({ game }: { game: Game }) {
       )}
       {show('mart') && (
         <Win title="The Mart" tone="gold" aside={<><Coin size={22} /> <Count value={game.wallet.coins} /></>}>
-          {game.mart.deals[0] && <ShelfHead icon={<ItemIcon id={game.mart.deals[0].item} size={24} />} word="Deals" tip="One of each, new every morning" />}
+          {!game.v22 && game.mart.deals[0] && <ShelfHead icon={<ItemIcon id={game.mart.deals[0].item} size={24} />} word="Deals" tip="One of each, new every morning" />}
           <Shelf game={game} offers={game.mart.deals} shop="mart" />
           {game.mart.standing.length > 0 && (
             <>
@@ -506,7 +512,7 @@ export function ShopTab({ game }: { game: Game }) {
               <Shelf game={game} offers={game.mart.standing} shop="mart" />
             </>
           )}
-          {game.v13 && (
+          {game.v13 && !game.v22 && (
             <>
               <ShelfHead icon={<ItemIcon id="x-attack" size={24} />} word="Battle" tip="X items boost one kind of work for a day; Dire Hit, Guard Spec, Honey" />
               <Shelf game={game} offers={battleShelf(game.today.day).filter((o) => !isShelved(game, BOOST[o.item]?.tag ?? ''))} shop="mart" fold={game.v16 ? 6 : 3} what="battle items" />
@@ -516,7 +522,7 @@ export function ShopTab({ game }: { game: Game }) {
       )}
       {show('rare') && (
         <Win title="Rare things" tone="blue" aside={<><Gem size={22} /> <Count value={game.wallet.gems} /></>}>
-          <Shelf game={game} offers={game.v13 ? [...RARE_SHELF, ...RARE_SHELF_V13] : RARE_SHELF} shop="rare" />
+          <Shelf game={game} offers={game.v22 ? RARE_V22 : game.v13 ? [...RARE_SHELF, ...RARE_SHELF_V13] : RARE_SHELF} shop="rare" />
         </Win>
       )}
       {show('bp') && (
@@ -556,7 +562,7 @@ const USED: Record<string, string> = {
   chest: 'Opens the moment it is bought.',
   theme: 'Changes the scene on Today.',
   treasure: 'Sold to the Collector in the Shop.',
-  fossil: `Brought back to life at the Lab in the Shop, for ${REVIVE_COST} coins.`,
+  fossil: 'Put it in the Nursery on Today: the steps you walk bring it back to life.',
   evo: 'Used on a Pokemon in My Pokemon, from its page: one stage, if the type fits.',
   vitamin: 'Given to a Pokemon from its page (or here, to your partner): for good.',
   battle: 'Used on Today, under Battle prep: it counts for the whole day.',
@@ -692,9 +698,9 @@ export function Bag({ game }: { game: Game }) {
     [<Coin size={30} />, 'Coins', game.wallet.coins, game.wallet.coinsToday],
     [<Gem size={30} />, 'Gems', game.wallet.gems, game.wallet.gemsToday],
     // every mark you hold stays in the Bag, shelved or not: only the shop is out of sight (version 18)
-    ...MARK_TAGS.map((t) => [<MarkIcon tag={t} size={30} />, `${MARKS[t].name} · spent in ${DOMAIN_SHOPS[t].name}${isShelved(game, t) ? ' (shelved)' : ''}`, game.wallet.marks[t], game.wallet.marksToday[t]] as [ReactNode, string, number, number]),
+    ...(game.v22 ? [] : MARK_TAGS).map((t) => [<MarkIcon tag={t} size={30} />, `${MARKS[t].name} · spent in ${DOMAIN_SHOPS[t].name}${isShelved(game, t) ? ' (shelved)' : ''}`, game.wallet.marks[t], game.wallet.marksToday[t]] as [ReactNode, string, number, number]),
     // Battle Points are money too: the Frontier pays them, the BP Exchange takes them. Held ones show even if the league is not open yet.
-    ...(game.v13 || game.wallet.bp > 0 ? [[<BpIcon size={30} />, 'Battle Points · spent at the BP Exchange', game.wallet.bp, game.wallet.bpToday] as [ReactNode, string, number, number]] : []),
+    ...(!game.v22 && (game.v13 || game.wallet.bp > 0) ? [[<BpIcon size={30} />, 'Battle Points · spent at the BP Exchange', game.wallet.bp, game.wallet.bpToday] as [ReactNode, string, number, number]] : []),
   ]
   return (
     <Win title="Bag" tone="purple" aside={balls || berries ? <>{balls > 0 && `${balls} ${balls === 1 ? 'ball' : 'balls'}`}{balls > 0 && berries > 0 && ' · '}{berries > 0 && `${berries} ${berries === 1 ? 'berry' : 'berries'}`}</> : game.keyStone ? <><ItemIcon id="key-stone" size={24} /> Key Stone</> : undefined}>
@@ -956,7 +962,7 @@ export function TeamTab({ game, under, choices }: { game: Game; under: ReactNode
       <div className="pview" key={view}>
         {view === 'team' && (
           <>
-            <TeamScreen game={game} onInfo={setPage} under={under} between={<><Deck game={game} />{game.v13 && <BondPerks game={game} />}</>} />
+            <TeamScreen game={game} onInfo={setPage} under={under} between={<>{!game.v22 && <Deck game={game} />}{game.v13 && <BondPerks game={game} />}</>} />
             {!game.v14 && bench.length > 0 && (
               <Win title="Fully trained, off the party" tone="dark" aside={String(bench.length)}>
                 <BallBox mons={bench} onOpen={setPage} empty="" />
@@ -978,6 +984,8 @@ export function TeamTab({ game, under, choices }: { game: Game; under: ReactNode
  * Pokemon is either fighting in the party (leaders and the boss) or helping you catch (the desk). Nobody is sold.
  */
 function ProfessorLab({ game, onOpen }: { game: Game; onOpen: (uid: string) => void }) {
+  // version 22: no desk with seats: everyone outside the party researches
+  if (game.v22) return <LabV22 game={game} onOpen={onOpen} />
   return <ResearchTab game={game} onOpen={onOpen} studyValue={studyValue} />
 }
 

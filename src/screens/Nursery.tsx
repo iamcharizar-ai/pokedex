@@ -7,7 +7,7 @@
 import { type CSSProperties } from 'react'
 import { Win } from '../App.tsx'
 import { Gem, ItemIcon } from '../Item.tsx'
-import { EGG_IDS, EGG_KINDS, MARKS, itemName } from '../../core/economy.ts'
+import { EGG_KINDS, MARKS, NURSERY_IDS, EGG_IDS, FOSSILS, FOSSIL_STEPS, itemName } from '../../core/economy.ts'
 import type { Game } from '../../core/fold.ts'
 import { STEPS_GOAL, V19_START } from '../../core/rules.ts'
 import { addDays } from '../../core/facts.ts'
@@ -17,6 +17,7 @@ import { useItem } from '../lib/store.ts'
 
 /** What an egg of this kind hatches, in a few words. */
 export const hatchesInto = (kind: string): string => {
+  if (FOSSILS[kind]) return `${itemName(FOSSILS[kind].species)}, brought back to life`
   const k = EGG_KINDS[kind]
   if (!k) return 'a rare Pokemon'
   if (k.work) return `an uncommon Pokemon of ${MARKS[k.work].name.toLowerCase()} work (a rare one in three or four)`
@@ -36,9 +37,16 @@ function TrailLine({ game }: { game: Game }) {
 }
 
 export function Nursery({ game, onShop }: { game: Game; onShop: () => void }) {
-  const egg = game.egg
+  return <>
+    <NurseryPlace game={game} onShop={onShop} egg={game.egg} />
+    {game.egg2 && <NurseryPlace game={game} onShop={onShop} egg={game.egg2} />}
+  </>
+}
+
+/** One place in the Nursery: what is warming in it, or what could go in (version 22: fossils too, and a second place once bought). */
+function NurseryPlace({ game, onShop, egg }: { game: Game; onShop: () => void; egg: Game['egg'] }) {
   if (!egg) {
-    const waiting = EGG_IDS.filter((id) => (game.inv[id] ?? 0) > 0)
+    const waiting = (game.v22 ? NURSERY_IDS : EGG_IDS).filter((id) => (game.inv[id] ?? 0) > 0)
     if (waiting.length > 1) {
       return (
         <Win title="Nursery" tone="green" aside={`${waiting.length} kinds waiting`}>
@@ -49,7 +57,7 @@ export function Nursery({ game, onShop }: { game: Game; onShop: () => void }) {
               <small>One egg is warmed at a time. Its steps count from tomorrow, and the others wait in your Bag.</small>
               <span className="nest-chips">
                 {waiting.map((id) => (
-                  <button key={id} type="button" className="pill-btn" onClick={() => { useItem(id, '', 'warm'); play('tap') }} title={`${itemName(id)}: ${EGG_KINDS[id].steps.toLocaleString()} steps, hatches ${hatchesInto(id)}`}>
+                  <button key={id} type="button" className="pill-btn" onClick={() => { useItem(id, '', 'warm'); play('tap') }} title={`${itemName(id)}: ${(FOSSILS[id] ? FOSSIL_STEPS : EGG_KINDS[id].steps).toLocaleString()} steps, hatches ${hatchesInto(id)}`}>
                     <ItemIcon id={id} size={24} />{itemName(id)}{(game.inv[id] ?? 0) > 1 ? ` ×${game.inv[id]}` : ''}
                   </button>
                 ))}
@@ -75,7 +83,7 @@ export function Nursery({ game, onShop }: { game: Game; onShop: () => void }) {
       </Win>
     )
   }
-  const kind = EGG_KINDS[egg.kind]
+  const kind = FOSSILS[egg.kind] ? { name: itemName(egg.kind) } : EGG_KINDS[egg.kind]
   const left = Math.max(0, egg.need - egg.have)
   const warm = egg.need > 0 ? egg.have / egg.need : 0
   // your pace: the band's average day lately, every step of it, and when that brings the egg out

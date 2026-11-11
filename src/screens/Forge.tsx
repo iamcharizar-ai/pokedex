@@ -12,8 +12,8 @@
 // they go back to the ring.
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useHold } from './overlay.ts'
-import { COMET_SHARD, FEATS, FORGE_COST, GEAR_ITEMS, SHARDS, forgeFair, forgeShard, itemName } from '../../core/economy.ts'
-import { KIT_SHARD_EVERY } from '../../core/rules.ts'
+import { COMET_SHARD, FEATS, FORGE_COINS, FORGE_COST, GEAR_ITEMS, SHARDS, forgeFair, forgeShard, itemName } from '../../core/economy.ts'
+import { HEART_CAP, KIT_SHARD_EVERY } from '../../core/rules.ts'
 import { Meter } from '../Meter.tsx'
 import { nameOf, spritePath, type Game, type Mon } from '../../core/fold.ts'
 import { SPECIES } from '../../core/species.ts'
@@ -76,7 +76,9 @@ export function Forge({ game }: { game: Game }) {
   // version 13: any three shards of three different colours forge a stone, and the X or Y is chosen below
   const fair = game.v13
   const shardOf = (s: Slot): string | null => (fair ? (forgeFair(game.inv) ? 'any' : null) : forgeShard(s.count, s.index, s.m.nature?.up, game.inv))
-  const state = (s: Slot): State => (s.m.megas?.includes(s.mega) ? 'done' : !game.keyStone ? 'locked' : shardOf(s) ? 'ready' : 'waiting')
+  // version 22 (6.2): a fully trained Best Friend (150 hearts), and the Forge's fee in coins, on top of three shards
+  const v22Ok = (s: Slot): boolean => !game.v22 || (Boolean(s.m.graduated) && (s.m.together ?? 0) + (s.m.fed ?? 0) >= HEART_CAP && game.wallet.coins >= FORGE_COINS)
+  const state = (s: Slot): State => (s.m.megas?.includes(s.mega) ? 'done' : !game.keyStone ? 'locked' : !v22Ok(s) ? 'waiting' : shardOf(s) ? 'ready' : 'waiting')
   const order: Record<State, number> = { ready: 0, waiting: 1, locked: 2, done: 3 }
   const sorted = [...slots].sort((a, b) => order[state(a)] - order[state(b)])
   const keyOf = (s: Slot) => `${s.m.uid}:${s.mega}`
@@ -181,6 +183,7 @@ export function Forge({ game }: { game: Game }) {
     : !sel ? (later ? `None of yours has a Mega form yet. ${nameOf(later.m.form)} will, once it evolves into ${nameOf(later.into)}.` : 'None of your Pokemon has a Mega form yet. Catch or raise one that does and it appears here.')
       : lit ? 'The stone wakes...'
       : st === 'done' ? `Forged: ${megaStoneName(sel.mega)}. ${nameOf(sel.m.form)} keeps it for good.`
+        : game.v22 && !v22Ok(sel) ? `A Mega Stone needs a fully trained Best Friend (${HEART_CAP} hearts), three shards of three colours and ${FORGE_COINS.toLocaleString('en-IN')} coins.`
         : st === 'ready' ? (placed.length === 0 ? (fair ? 'Tap three shards of three different colours into the stone.' : `Tap three ${itemName(shard!)}s into the stone.`) : `${FORGE_COST - placed.length} more.`)
           : fair ? `${shortName(sel.mega)}: ${toward.length} of ${FORGE_COST} sockets filled by what you hold. ${FORGE_COST - toward.length} more ${FORGE_COST - toward.length === 1 ? 'shard' : 'shards'} of a colour you don't have, or a Comet.` : `${shortName(sel.mega)} needs ${wantText(sel)}, or three Comet Shards.`
 

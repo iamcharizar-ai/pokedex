@@ -81,8 +81,38 @@ function PerksV21({ game }: { game: Game }) {
   )
 }
 
+/** Version 22 (8): a Trainer level every 100 hearts across everything you own, with no last one, and three perks on the way. */
+const PERKS22: { name: string; icon: string; at: number; text: string }[] = [
+  { name: 'Pickup', icon: 'itemfinder', at: 10, text: 'On a day with a pillar your partner may find something: coins, a berry, a ball, a Rare Candy, a stone or a fossil.' },
+  { name: 'Endure', icon: 'guard-spec', at: 100, text: 'One empty day in seven costs nothing.' },
+  { name: 'Close bond', icon: 'soothe-bell', at: 300, text: '+10% XP every day.' },
+]
+function PerksV22({ game }: { game: Game }) {
+  const t = game.trainer
+  const bestFriends = [game.partner, ...game.queue, ...game.graduates].filter((m) => heartsOf(m) >= HEART_CAP).length
+  const into = t.hearts - t.level * 100
+  return (
+    <section className="perks" aria-label="Trainer">
+      <span className="k-label">Trainer level {t.level} · {t.hearts} ♥ across all your Pokemon</span>
+      <Meter kind="gold" value={into} max={100} name={`Hearts to Trainer level ${t.level + 1}`} label={`${into} / 100 ♥ to level ${t.level + 1}`} size="lg" />
+      <p className="muted">Every level adds 2% to your party's power for good, and pays a choice of two. There is no last level. {bestFriends > 0 ? `${bestFriends} Best Friend${bestFriends === 1 ? '' : 's'} so far.` : 'A Pokemon at 150 hearts is a Best Friend: it can hold a Mega Stone.'}</p>
+      <ol className="perk-track">
+        {PERKS22.map((p) => (
+          <li key={p.name}>
+            <button type="button" className={`perk-node ${t.hearts >= p.at ? 'on' : ''}`} title={p.text} aria-label={`${p.name}, at ${p.at} hearts${t.hearts >= p.at ? ', earned' : ''}: ${p.text}`}>
+              <span className="perk-ico"><ItemIcon id={p.icon} size={24} /></span>
+              <small>{t.hearts >= p.at ? '✓' : `${p.at}♥`}</small>
+            </button>
+          </li>
+        ))}
+      </ol>
+    </section>
+  )
+}
+
 /** The partner's hearts as five steps, each unlocking something. */
 export function BondPerks({ game }: { game: Game }) {
+  if (game.v22) return <PerksV22 game={game} />
   if (game.tier.v21) return <PerksV21 game={game} />
   return <BondPerksOld game={game} />
 }

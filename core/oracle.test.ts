@@ -15,7 +15,7 @@ const run = (name: string) => {
   const facts = buildFacts(ingest(f.events, f.config, f.today))
   // the engine's version 22 fields are the only difference: they are new, and empty before V22_START
   const live = JSON.parse(JSON.stringify(foldGame(facts)))
-  delete live.v22; delete live.tracks; delete live.tier.pillars
+  delete live.v22; delete live.tracks; delete live.tier.pillars; delete live.lab; delete live.egg2; delete live.partyPower
   return { facts, live: JSON.stringify(live), old: JSON.stringify(foldLegacy(facts)) }
 }
 
