@@ -12,3 +12,6 @@ tests/diff/
 
 
 bridge/last-run.log
+
+# TypeScript incremental-build cache, rewritten by every `tsc -b`
+*.tsbuildinfo
