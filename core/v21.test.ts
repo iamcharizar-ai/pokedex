@@ -25,6 +25,9 @@ const day = (i: number, did: { code?: boolean; gym?: boolean; arbor?: boolean },
 const fold = (f: DayFacts[]) => foldGame(f, { instant: true })
 const all = { code: true, gym: true, arbor: true }
 
+import { setV22Start } from './rules.ts'
+setV22Start('2099-01-01') // this file tests the rules before version 22: keep them in force on every date (the oracle, core/oracle.test.ts, ties version 22 to them)
+
 test('the tier counts effortful pillars; Sleep never does; a Max day is all of them and three-quarters of the chores', () => {
   const t = (did: Parameters<typeof day>[1], chores = 8) => fold([day(0, did, 85, chores)]).tier
   assert.equal(t({}).tier, 0)

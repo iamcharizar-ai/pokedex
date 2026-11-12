@@ -36,6 +36,9 @@ function onTheDay(i: number) {
   return { kept, moved, desk: before.research.desk.length }
 }
 
+import { setV22Start } from './rules.ts'
+setV22Start('2099-01-01') // this file tests the rules before version 22: keep them in force on every date (the oracle, core/oracle.test.ts, ties version 22 to them)
+
 test('V20 starts on the day it ships', () => {
   assert.equal(V20_START, '2026-11-05')
 })

@@ -25,6 +25,9 @@ const fold = (f: DayFacts[]) => foldGame(f, { instant: true })
 const all = { code: true, gym: true, arbor: true }
 const buyCandy = { what: 'buy', item: 'rare-candy', to: 'rare', uid: '' }
 
+import { setV22Start } from './rules.ts'
+setV22Start('2099-01-01') // this file tests the rules before version 22: keep them in force on every date (the oracle, core/oracle.test.ts, ties version 22 to them)
+
 test('momentum is the seven days again: a good night and one pillar is a day that counts, a good night alone is not, and six of seven is the top', () => {
   const counts = (i: number) => day(i, { code: true }, 85, 4) // one effortful pillar and a night of 85
   const night = (i: number) => day(i, {}, 85, 4) // a night of 85 and nothing else

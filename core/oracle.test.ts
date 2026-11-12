@@ -20,10 +20,14 @@ const run = (name: string) => {
 }
 
 test('with version 22 off, the engine folds every fixture exactly as the frozen legacy rules do', () => {
-  for (const name of FIXTURES) {
-    const { live, old } = run(name)
-    assert.ok(live === old, `${name}: the live engine differs from legacy/fold.ts`)
-  }
+  const was = V22_START
+  try {
+    setV22Start('2099-01-01')
+    for (const name of FIXTURES) {
+      const { live, old } = run(name)
+      assert.ok(live === old, `${name}: the live engine differs from legacy/fold.ts`)
+    }
+  } finally { setV22Start(was) }
 })
 
 test('a version 22 start after the last day changes nothing either', () => {

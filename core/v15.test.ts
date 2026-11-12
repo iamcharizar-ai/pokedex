@@ -15,6 +15,9 @@ const days = (from: string, n: number, withWork: boolean): DayFacts[] =>
   Array.from({ length: n }, (_, i) => ({ day: addDays(from, i), habits: withWork ? [sleep(), work()] : [sleep()] }))
 const fold = (f: DayFacts[]) => foldGame(f, { instant: true })
 
+import { setV22Start } from './rules.ts'
+setV22Start('2099-01-01') // this file tests the rules before version 22: keep them in force on every date (the oracle, core/oracle.test.ts, ties version 22 to them)
+
 test('from version 15 a night of Sleep alone makes no day with a pillar; with another pillar it counts as before', () => {
   const alone = fold(days(V15_START, 3, false))
   assert.ok(alone.days.every((d) => d.pillars === 0), 'Sleep alone: no pillar')

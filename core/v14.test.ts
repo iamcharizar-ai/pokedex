@@ -22,6 +22,9 @@ const use = (facts: DayFacts[], i: number, ...uses: { what: string; item?: strin
 type Mon = ReturnType<typeof foldGame>['queue'][number]
 const hearts = (m: Mon) => (m.together ?? 0) + (m.fed ?? 0)
 
+import { setV22Start } from './rules.ts'
+setV22Start('2099-01-01') // this file tests the rules before version 22: keep them in force on every date (the oracle, core/oracle.test.ts, ties version 22 to them)
+
 test('a berry can be fed to any Pokemon you own, not only the partner', () => {
   const days = run(4)
   const before = fold(days)

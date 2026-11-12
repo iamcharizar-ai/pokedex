@@ -39,6 +39,9 @@ const use = (facts: DayFacts[], i: number, ...uses: { what: string; item?: strin
 type G = ReturnType<typeof foldGame>
 const kinds = (g: G, k: string) => g.moments.filter((m) => m.kind === k)
 
+import { setV22Start } from './rules.ts'
+setV22Start('2099-01-01') // this file tests the rules before version 22: keep them in force on every date (the oracle, core/oracle.test.ts, ties version 22 to them)
+
 test('leaders get tougher the further you go, and a Rematch rank adds more', () => {
   assert.equal(leaderHp(0, 'gym', 0), LEADER_HP)
   assert.equal(leaderHp(0, 'champion', 0), 3200)

@@ -28,6 +28,9 @@ const input = (habits: HabitLite[], today: string, c: BossCard | null = card(WEE
 })
 const kinds = (f: ReturnType<typeof buildFacts>, day: string): string[] | undefined => f.find((x) => x.day === day)?.boss?.card.tasks.map((t) => t.kind)
 
+import { setV22Start } from './rules.ts'
+setV22Start('2099-01-01') // this file tests the rules before version 22: keep them in force on every date (the oracle, core/oracle.test.ts, ties version 22 to them)
+
 test('V18 starts on a Monday, so a boss week never begins before it', () => {
   assert.equal(new Date(V18_START + 'T12:00:00').getDay(), 1)
 })

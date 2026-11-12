@@ -65,6 +65,9 @@ function night(n: number, score: number, o: Parameters<typeof day>[1] = {}): Day
 const around = (before: number, plan: Parameters<typeof dayOn>[1][]): DayFacts[] => plan.map((o, i) => dayOn(addDays(STAKES_FROM, i - before), o))
 
 // ── version 8: the day, the wild Pokemon, showing up ────────────────────────
+import { setV22Start } from './rules.ts'
+setV22Start('2099-01-01') // this file tests the rules before version 22: keep them in force on every date (the oracle, core/oracle.test.ts, ties version 22 to them)
+
 test('a pillar outweighs the whole routine', () => {
   const g = fold([day(0, { code: 1 })])
   assert.equal(g.today.xp, 100)

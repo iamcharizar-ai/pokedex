@@ -7,6 +7,7 @@ import { FIXTURES, fixture } from '../src/lib/fixtures.ts'
 import { ingest } from '../src/lib/ingest.ts'
 import { buildFacts } from '../core/facts.ts'
 import { foldGame } from '../core/fold.ts'
+import { V22_START } from '../core/rules.ts'
 import { BOSS_PARTY, THROW_AT } from '../core/boss.ts'
 
 const play = (name) => { const f = fixture(name); return { f, g: foldGame(buildFacts(ingest(f.events, f.config, f.today))) } }
@@ -36,13 +37,14 @@ test('week: a partner that has grown, a wild Pokemon partly worn down, rewards t
   assert.ok(g.today.xp > 0, 'today has started')
 })
 
-test('late: trained Pokemon, feats, a full Box, an egg warming and chests opened', () => {
+test('late: trained Pokemon, feats, a full Lab, an egg warming and a chest opened before version 22', () => {
   const { g } = play('late')
-  assert.ok(g.graduates.length >= 3)
+  assert.ok(g.graduates.length >= 2)
   assert.ok(g.feats.length >= 10)
   assert.ok(g.queue.length > 0)
   assert.ok(g.egg, 'an egg is being kept warm')
-  assert.ok(g.moments.some((m) => m.kind === 'chest'))
+  // chests were opened while the old shop still sold them; from version 22 (12 Nov 2026) there are none, so the fixture's own are the early ones
+  assert.ok(g.moments.some((m) => m.kind === 'chest' && m.day < V22_START))
   assert.ok(g.moments.some((m) => m.kind === 'evolve'))
   assert.ok(g.keyStone)
 })

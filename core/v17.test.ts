@@ -8,6 +8,9 @@ import { V17_START } from './rules.ts'
 
 const list = (day: string, at: string, ids: string[]) => ({ type: 'day_list', day, at, payload: { habits: JSON.stringify(ids.map((id) => ({ id, tier: 'standard', tag: 'routine' }))) } })
 
+import { setV22Start } from './rules.ts'
+setV22Start('2099-01-01') // this file tests the rules before version 22: keep them in force on every date (the oracle, core/oracle.test.ts, ties version 22 to them)
+
 test('from version 17 the latest list written for a day stands, so a habit taken off is off the day', () => {
   const lists = listsOf([list(V17_START, '1', ['a', 'b', 'c']), list(V17_START, '2', ['a', 'c'])])
   assert.deepEqual(lists[V17_START].map((h) => h.id), ['a', 'c'])

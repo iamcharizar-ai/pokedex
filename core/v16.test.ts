@@ -28,6 +28,9 @@ const hearts = (m: { together?: number; fed?: number }) => (m.together ?? 0) + (
 const withUses = (facts: DayFacts[], i: number, ...uses: { what: string; item?: string; uid?: string; to?: string }[]) =>
   facts.map((f, k) => (k === i ? { ...f, uses: [...(f.uses ?? []), ...uses.map((u) => ({ day: f.day, item: u.item ?? '', uid: u.uid ?? '', what: u.what, ...(u.to ? { to: u.to } : {}) }))] } : f))
 
+import { setV22Start } from './rules.ts'
+setV22Start('2099-01-01') // this file tests the rules before version 22: keep them in force on every date (the oracle, core/oracle.test.ts, ties version 22 to them)
+
 test('the trainer bond is every heart across every Pokemon owned, and its level reads TRAINER_LEVELS', () => {
   const g = fold(run(V16_START, 30))
   const sum = [g.partner, ...g.queue, ...g.graduates].reduce((n, m) => n + hearts(m), 0)

@@ -30,6 +30,9 @@ const game = (from: number, readings: (number | undefined)[], at: number, ...use
 }
 const rareEgg: Use = { what: 'buy', item: 'rare-egg', to: 'rare' }
 
+import { setV22Start } from './rules.ts'
+setV22Start('2099-01-01') // this file tests the rules before version 22: keep them in force on every date (the oracle, core/oracle.test.ts, ties version 22 to them)
+
 test('V19 starts on the day it was written, and every egg has a kind with a size', () => {
   assert.equal(V19_START, '2026-11-04')
   assert.deepEqual(EGG_IDS, ['rare-egg', 'trail-egg', ...['code', 'fitness', 'guitar', 'arbor', 'sleep'].map((t) => `egg-${t}`)])
