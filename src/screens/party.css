@@ -104,5 +104,6 @@ button.bagtile:focus-visible > img:first-child { outline: 3px solid #fff; outlin
 .feed2 h2 { margin: 0; font-size: var(--t-display); }
 .feed2-say { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 13.5px; color: var(--text-2); }
 .feed2-say img { flex: none; image-rendering: pixelated; }
+.feed2-syn { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .feed2-say b { font-family: var(--k-face); font-weight: 400; color: var(--k-gold-hi); }
 .feed2 .mon-grid { padding-top: 14px; }

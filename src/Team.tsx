@@ -7,7 +7,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperti
 import { nameOf, type Game, type Mon } from '../core/fold.ts'
 import { BERRY_DOMAIN_MULT, signatureOf } from '../core/bond.ts'
 import { berryGain, likesBerry } from '../core/v22.ts'
-import { BERRY_HEARTS, itemName } from '../core/economy.ts'
+import { BERRY_HEARTS, ITEMS, itemName } from '../core/economy.ts'
 import { HEART_CAP, HEART_LEVELS, MAX_LEVEL, bondLevel, levelOf, xpForLevel } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
 import { Win } from './App.tsx'
@@ -219,7 +219,7 @@ export function FeedBlock({ game, m }: { game: Game; m: Mon }) {
       {treats.length > 1 && (
         <div className="mp-berries" role="radiogroup" aria-label="Which berry">
           {treats.map((b) => (
-            <button key={b} type="button" role="radio" aria-checked={b === berry} title={`${itemName(b)}: +${BERRY_HEARTS[b]} hearts`} onClick={() => { setChosen(b); play('tap') }}>
+            <button key={b} type="button" role="radio" aria-checked={b === berry} title={game.v22 ? ITEMS[b]?.text : `${itemName(b)}: +${BERRY_HEARTS[b]} hearts`} onClick={() => { setChosen(b); play('tap') }}>
               <ItemIcon id={b} size={24} /><i>{game.inv[b]}</i>
             </button>
           ))}

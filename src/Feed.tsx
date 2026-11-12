@@ -13,7 +13,9 @@ import { MonCard } from './MonCard.tsx'
 import { monCardOf } from './Team.tsx'
 import { useLook } from './lib/cardkit.tsx'
 import { nameOf, type Game, type Mon } from '../core/fold.ts'
-import { BERRY_HEARTS, itemName } from '../core/economy.ts'
+import { BERRY_HEARTS, FRIEND_BERRY, ITEMS, itemName } from '../core/economy.ts'
+import { BERRY_PLAIN } from '../core/rules.ts'
+import { TYPE_DOMAIN } from '../core/types.ts'
 import { BERRY_DOMAIN_MULT, signatureOf } from '../core/bond.ts'
 import { berryGain, likesBerry } from '../core/v22.ts'
 import { HEART_CAP } from '../core/rules.ts'
@@ -22,7 +24,10 @@ import { Sheet } from './screens/Sheet.tsx'
 import { play } from './lib/sfx.ts'
 import { useItem } from './lib/store.ts'
 
-export const heartsOf = (m: Mon): number => (m.together ?? 0) + (m.fed ?? 0)
+/** The types whose first type makes this berry their favourite (version 22). */
+const likedTypes = (berry: string): string[] => Object.keys(TYPE_DOMAIN).filter((t) => TYPE_DOMAIN[t] === FRIEND_BERRY[berry])
+
+export const heartsOf =(m: Mon): number => (m.together ?? 0) + (m.fed ?? 0)
 
 /** Everything in the bag that can be fed, the most hearts first. */
 export const treatsIn = (game: Game): string[] =>
@@ -50,14 +55,17 @@ export function FeedSheet({ game, only, onClose }: { game: Game; only?: string; 
         {treats.length > 1 && (
           <div className="feed-pick" role="radiogroup" aria-label="Which berry">
             {treats.map((b) => (
-              <button key={b} type="button" role="radio" aria-checked={b === berry} className={`feed-berry ${b === berry ? 'on' : ''}`} onClick={() => { setPick(b); play('tap') }} title={`${itemName(b)}: +${BERRY_HEARTS[b]} hearts`}>
-                <ItemIcon id={b} size={24} /><i>{game.inv[b]}</i><small>+{BERRY_HEARTS[b]}</small>
+              <button key={b} type="button" role="radio" aria-checked={b === berry} className={`feed-berry ${b === berry ? 'on' : ''}`} onClick={() => { setPick(b); play('tap') }} title={game.v22 ? ITEMS[b]?.text : `${itemName(b)}: +${BERRY_HEARTS[b]} hearts`}>
+                <ItemIcon id={b} size={24} /><i>{game.inv[b]}</i><small>{game.v22 && FRIEND_BERRY[b] ? `+${BERRY_PLAIN}` : `+${BERRY_HEARTS[b]}`}</small>
               </button>
             ))}
           </div>
         )}
         {berry
-          ? <p className="feed2-say"><ItemIcon id={berry} size={24} /><span>Tap a card to give it one. {game.v16 && <><b>×{BERRY_DOMAIN_MULT} today</b> on a card: its kind of work was done.</>}</span></p>
+          ? <p className="feed2-say"><ItemIcon id={berry} size={24} />
+              {game.v22 && FRIEND_BERRY[berry]
+                ? <span className="feed2-syn" aria-label={`Likes: ${likedTypes(berry).join(', ')}`}>{likedTypes(berry).map((t) => <span key={t} className="chip type"><img src={`/sprites/types/${t}.png`} alt="" width={14} height={14} onError={(e) => { e.currentTarget.style.display = 'none' }} />{t}</span>)}</span>
+                : <span>Tap a card to give it one. {game.v16 && <><b>×{BERRY_DOMAIN_MULT} today</b> on a card: its kind of work was done.</>}</span>}</p>
           : <p className="muted">Nothing to feed. Berries are at the Mart and the Garden; Pickup finds them too.</p>}
         <div className="mon-grid" role="list" aria-label="Who to feed">
           {sorted.map((m) => {
@@ -65,7 +73,7 @@ export function FeedSheet({ game, only, onClose }: { game: Game; only?: string; 
             const mon = { ...card, ghost: full ? 0 : gain, canFeed: card.need !== null && heartsOf(m) + gain >= card.need }
             return (
               <div key={m.uid} role="listitem">
-                <MonCard mon={mon} look={look} box={boxOf(m.form)} role={m.uid === game.partner.uid ? 'partner' : 'party'} ribbon={m.uid === game.partner.uid ? 'Partner' : twice(m) ? `×${BERRY_DOMAIN_MULT} today` : undefined}
+                <MonCard mon={mon} look={look} box={boxOf(m.form)} role={m.uid === game.partner.uid ? 'partner' : 'party'} ribbon={m.uid === game.partner.uid ? 'Partner' : twice(m) ? (game.v22 ? `Likes it · ${signatureOf(m.form).type}` : `×${BERRY_DOMAIN_MULT} today`) : undefined}
                   dimmed={full || !berry} disabled={full || !berry} onClick={() => feed(m)}
                   aria-label={full ? `${nameOf(m.form)}: every bond level reached` : `Feed ${nameOf(m.form)} one ${berry ? itemName(berry) : 'berry'}: plus ${gain} hearts, ${heartsOf(m)} now`} />
               </div>
