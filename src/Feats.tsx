@@ -1,6 +1,6 @@
 // Feats: what the work has proved, and what each proof paid. Runs first (they
 // can end, but nothing they paid ever does), then the ones closest to done.
-import { FEATS, ITEMS, itemName, type Feat } from '../core/economy.ts'
+import { FEATS_LIVE, ITEMS, featReward, itemName, type Feat } from '../core/economy.ts'
 import type { Game } from '../core/fold.ts'
 import { featShown } from './lib/shelved.ts'
 import { Win, plural } from './App.tsx'
@@ -12,12 +12,13 @@ import { fmtDay } from './lib/art.ts'
 const GROUP: Record<Feat['group'], string> = { run: 'Runs', total: 'For life', perfect: 'Perfect days', collect: 'Collection', raise: 'Raising', league: 'Leagues' }
 const ORDER: Feat['group'][] = ['run', 'total', 'perfect', 'collect', 'raise', 'league']
 
-function Reward({ f }: { f: Feat }) {
-  const items = Object.entries(f.reward.items ?? {})
+function Reward({ f, day }: { f: Feat; day: string }) {
+  const reward = featReward(f, day)
+  const items = Object.entries(reward.items ?? {})
   return (
     <span className="freward">
-      {f.reward.gems ? <span className="fr"><Gem size={18} />{f.reward.gems}</span> : null}
-      {f.reward.coins ? <span className="fr"><ItemIcon id="coin" size={24} />{f.reward.coins}</span> : null}
+      {reward.gems ? <span className="fr"><Gem size={18} />{reward.gems}</span> : null}
+      {reward.coins ? <span className="fr"><ItemIcon id="coin" size={24} />{reward.coins}</span> : null}
       {items.map(([id, n]) => <span key={id} className={`fr ${ITEMS[id]?.kind === 'unique' || ITEMS[id]?.kind === 'key' ? 'big' : ''}`} title={itemName(id)}><ItemIcon id={id} size={24} />{n > 1 ? `×${n}` : ''}</span>)}
     </span>
   )
@@ -30,7 +31,7 @@ function FeatRow({ f, game }: { f: Feat; game: Game }) {
     <li className={`feat ${got ? 'done' : ''}`}>
       <div className="fname"><b>{f.name}</b><small>{f.text}</small></div>
       {got ? <span className="fwhen">{fmtDay(got.day)}</span> : <Meter value={have} max={f.n} size="lg" name={f.name} label={`${have} / ${f.n}`} />}
-      <Reward f={f} />
+      <Reward f={f} day={game.today.day} />
     </li>
   )
 }
@@ -38,7 +39,8 @@ function FeatRow({ f, game }: { f: Feat; game: Game }) {
 export function FeatsWin({ game }: { game: Game }) {
   const earned = new Set(game.feats.map((f) => f.id))
   // version 18: a feat about a kind of work with no habit on the Life OS list is hidden until it has one again (one already earned stays)
-  const shown = FEATS.filter((f) => featShown(game, f))
+  // version 22: the feats are milestones (no runs but the week that pays the Key Stone): the Frontier is the one streak system
+  const shown = FEATS_LIVE(game.today.day).filter((f) => featShown(game, f))
   const ratio = (f: Feat) => Math.min(1, (game.counters[f.key] ?? 0) / f.n)
   const next = shown.filter((f) => !earned.has(f.id)).sort((a, b) => ratio(b) - ratio(a)).slice(0, 2)
   return (
@@ -68,6 +70,7 @@ export function FeatsWin({ game }: { game: Game }) {
           <summary><b>All feats</b><Meter value={earned.size} max={shown.length} kind="gold" size="sm" name="All feats" /><span>{earned.size} / {shown.length}</span></summary>
           {ORDER.map((g) => {
             const list = shown.filter((f) => f.group === g)
+            if (list.length === 0) return null
             const n = list.filter((f) => earned.has(f.id)).length
             return (
               <details key={g} className="featgroup fold-row">

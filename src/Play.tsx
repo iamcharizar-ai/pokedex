@@ -163,7 +163,7 @@ export function Quests({ game }: { game: Game }) {
   const t = game.today
   const done = game.quests.weekly.filter((q) => q.done).length
   return (
-    <Win title="Pay and quests" tone="green" aside={t.pay > 0 ? <><Coin size={20} /> +{t.pay} today</> : `${done} / ${game.quests.weekly.length} this week`}>
+    <Win title={game.v22 ? 'Pay' : 'Pay and quests'} tone="green" aside={t.pay > 0 ? <><Coin size={20} /> +{t.pay} today</> : game.v22 ? '' : `${done} / ${game.quests.weekly.length} this week`}>
       <div className="questcols">
         <div>
           <span className="k-label">{game.tier.v21 ? "Today's pay: by the pillars done" : "Today's pay: the share of your habits ticked"}</span>
@@ -175,7 +175,7 @@ export function Quests({ game }: { game: Game }) {
           </div>
           <Meter value={t.done} max={Math.max(1, t.total)} size="lg" name="Habits ticked today" label={`${t.done} / ${t.total} habits ticked`} />
         </div>
-        <div><span className="k-label">This week</span><ul className="quests">{game.quests.weekly.map((q) => <QuestRow key={q.id} q={q} />)}</ul></div>
+        {!game.v22 && <div><span className="k-label">This week</span><ul className="quests">{game.quests.weekly.map((q) => <QuestRow key={q.id} q={q} />)}</ul></div>}
       </div>
     </Win>
   )

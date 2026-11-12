@@ -7,7 +7,8 @@
 import { useState, type ReactNode } from 'react'
 import { PERKS_V21, hasPerkV21, type PerkV21, STAR_ENDURE_MIN, STAR_EVERY, STAR_FOCUS, STAR_FRIENDS, STAR_MAX, STAR_PICKUP, STAR_SHARE, TRAINER_LEVELS, rankName } from '../core/bond.ts'
 import { canCandy, isShelved, nameOf, type Game, type Mon } from '../core/fold.ts'
-import { BOOST, DIRE_HIT, EVO_ITEMS, FOSSILS, ITEMS, LEGEND_KEYS, LEGEND_KEY_BP, COLLECTOR_MULT, REVIVE_COST, TREASURE, collectorWants, treasurePrice, VITAMINS, VITAMIN_MAX, VITAMIN_STEP, itemName, type MarkTag } from '../core/economy.ts'
+import { LEAGUES } from '../core/gyms.ts'
+import { LEGEND_DEEDS, BOOST, DIRE_HIT, EVO_ITEMS, FOSSILS, ITEMS, LEGEND_KEYS, LEGEND_KEY_BP, COLLECTOR_MULT, REVIVE_COST, TREASURE, collectorWants, treasurePrice, VITAMINS, VITAMIN_MAX, VITAMIN_STEP, itemName, type MarkTag } from '../core/economy.ts'
 import { FACILITIES, type Facility } from '../core/frontier.ts'
 import { BOUNTY, DAY_HIT_MULT, HEART_CAP, TEAM_SIZE, BOND_PERKS, CRIT_BASE, DYNAMAX, ENDURE_DAYS, FRIENDS_XP, GIGANTAMAX, HEART_LEVELS, PICKUP_BASE, PICKUP_STEP, SHARE_XP, V13_START, bondLevel, hasPerk, levelOf, type BondPerk } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
@@ -221,7 +222,7 @@ export function BattlePrep({ game }: { game: Game }) {
 
 // ── the Battle Frontier ─────────────────────────────────────────────────────
 /** What a win is, and how many days off a run survives, in one line. */
-const winLine = (f: Facility): string => `${f.what[0].toUpperCase()}${f.what.slice(1)}${f.gap > 1 ? ` · ${f.gap - 1} rest ${f.gap === 2 ? 'day' : 'days'} ok` : ''}`
+const winLine = (f: Facility, v22 = false): string => `${(v22 && f.id === 'pyramid' ? 'a Max day (every pillar, three-quarters of the chores)' : f.what)[0].toUpperCase()}${(v22 && f.id === 'pyramid' ? 'a Max day (every pillar, three-quarters of the chores)' : f.what).slice(1)}${f.gap > 1 ? ` · ${f.gap - 1} rest ${f.gap === 2 ? 'day' : 'days'} ok` : ''}`
 function FacilityCard({ f, game }: { f: Facility; game: Game }) {
   const r = game.frontier.find((x) => x.id === f.id)!
   const reach = f.gap === 0 ? r.wins : r.cur
@@ -231,7 +232,7 @@ function FacilityCard({ f, game }: { f: Facility; game: Game }) {
       <span className="facility-ico"><ItemIcon id={f.icon} size={48} /></span>
       <div className="facility-txt">
         <b>{f.name}</b>
-        <small>{winLine(f)}</small>
+        <small>{winLine(f, game.v22)}</small>
         <Meter value={Math.min(reach, target)} max={target} kind={r.silver ? 'gold' : 'xp'} size="lg" name={`${f.name}: toward ${r.silver ? 'Gold' : 'Silver'}`} label={`${reach} / ${target} for ${r.silver ? 'Gold' : 'Silver'} · best ${r.best}`} />
       </div>
       <span className="symbols" aria-label={`${r.silver ? 'Silver won' : 'Silver not yet'}, Gold not yet`}>
@@ -248,7 +249,7 @@ export function FrontierWin({ game }: { game: Game }) {
   // version 18: a facility for a kind of work with no habit on the Life OS list waits out of sight until it has one again
   const going = FACILITIES.filter((f) => !won(f) && !isShelved(game, f.win)), done = FACILITIES.filter(won)
   return (
-    <Win title="Battle Frontier" tone="purple" aside={<><BpIcon size={22} /> {game.wallet.bp.toLocaleString('en-IN')} BP · {symbols} / 14 Symbols</>}>
+    <Win title="Battle Frontier" tone="purple" aside={game.v22 ? `${symbols} / 14 Symbols` : <><BpIcon size={22} /> {game.wallet.bp.toLocaleString('en-IN')} BP · {symbols} / 14 Symbols</>}>
       {!game.v13 ? <p className="muted">{opens}</p> : (
         <>
           {going.length > 0 && <div className="facilities">{going.map((f) => <FacilityCard key={f.id} f={f} game={game} />)}</div>}
@@ -273,14 +274,21 @@ export function LegendWin({ game }: { game: Game }) {
   const [all, setAll] = useState(false)
   const [open, setOpen] = useState<string | null>(null)
   const boxes = useBoxes()
-  const keys = Object.entries(LEGEND_KEYS)
+  // version 22 (10.3): every legend is one deed (a Gold Symbol, or a Champion); a key with no deed is not listed unless you hold it
+  const keys = Object.entries(LEGEND_KEYS).filter(([id]) => !game.v22 || id in LEGEND_DEEDS || (game.inv[id] ?? 0) > 0)
   const caught = (form: string) => Boolean(game.dex[form]?.own)
   const held = keys.filter(([id]) => (game.inv[id] ?? 0) > 0)
   const legends = keys.flatMap(([, k]) => k.forms)
   const have = legends.filter(caught).length
   const shown = all ? keys : [...held, ...keys.filter(([id]) => !(game.inv[id] ?? 0)).slice(0, Math.max(0, 6 - held.length))]
-  const where = (id: string) => (KEY_FROM[id] ? `Gold Symbol at the ${KEY_FROM[id].name}` : `BP Exchange, ${LEGEND_KEY_BP} BP`)
-  const met = (id: string) => (KEY_FROM[id] ? Boolean(game.frontier.find((x) => x.id === KEY_FROM[id].id)?.gold) : game.wallet.bp >= LEGEND_KEY_BP)
+  const champ = (id: string) => (game.v22 ? LEGEND_DEEDS[id] : undefined)
+  const where = (id: string) => (KEY_FROM[id] ? `Gold Symbol at the ${KEY_FROM[id].name}` : champ(id)?.kind === 'champion' ? (({ league, lap }) => `Beat the ${LEAGUES[league].name} Champion${lap > 0 ? ` at Rematch rank ★${lap + 1}` : ''}`)(champ(id) as { league: number; lap: number }) : game.v22 ? 'No deed yet' : `BP Exchange, ${LEGEND_KEY_BP} BP`)
+  const met = (id: string) => {
+    if (KEY_FROM[id]) return Boolean(game.frontier.find((x) => x.id === KEY_FROM[id].id)?.gold)
+    const d = champ(id)
+    if (d?.kind === 'champion') return game.league.lap > d.lap || (game.league.lap === d.lap && game.league.index > d.league)
+    return !game.v22 && game.wallet.bp >= LEGEND_KEY_BP
+  }
   const sel = shown.find(([id]) => id === open)
   return (
     <Win title="Legend quests" tone="gold" aside={`${have} / ${legends.length} legends`}>
@@ -300,7 +308,7 @@ export function LegendWin({ game }: { game: Game }) {
                     art={<CropSprite src={still(form)} box={boxes?.[form]} />}
                     corners={{
                       tl: <span className={`legend-key ${n ? 'lit' : ''}`}><ItemIcon id={id} size={16} /></span>,
-                      tr: <span className={`legend-req ${met(id) ? 'lit' : ''}`}>{KEY_FROM[id] ? <ItemIcon id={KEY_FROM[id].icon} size={16} /> : <BpIcon size={16} />}</span>,
+                      tr: <span className={`legend-req ${met(id) ? 'lit' : ''}`}>{KEY_FROM[id] ? <ItemIcon id={KEY_FROM[id].icon} size={16} /> : game.v22 ? <ItemIcon id="star-piece" size={16} /> : <BpIcon size={16} />}</span>,
                       trTitle: where(id),
                       ...(k.forms.length > 1 ? { top: <span className="legend-more">+{k.forms.length - 1}</span> } : {}),
                     }}

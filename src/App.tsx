@@ -14,6 +14,7 @@ import { SPECIES } from '../core/species.ts'
 import { Ball, BallItem, KeyStone } from './Ball.tsx'
 import { ObjCard } from './ObjCard.tsx'
 import { FeatsWin } from './Feats.tsx'
+import { RulesV22Body } from './screens/RulesV22.tsx'
 import { SleepWin } from './Sleep.tsx'
 import type { SleepNight } from '../core/events.ts'
 import { ItemIcon } from './Item.tsx'
@@ -864,7 +865,7 @@ export function Road({ game }: { game: Game }) {
   const all = lineup(l)
   const at = done ? all.length : league.slot
   // the Rematch rule waits in the tip of the league's heading (phase 8)
-  const rematch = !game.v13 ? '' : league.lap > 0 ? `Rematch rank ★${league.lap + 1}: every leader has ${Math.round(60 * league.lap)}% more HP, wins pay Battle Points, and each Champion a Legend key.` : 'After Paldea\'s Champion, every league comes back at Rematch rank ★2, then ★3: the road never ends.'
+  const rematch = !game.v13 ? '' : league.lap > 0 ? `Rematch rank ★${league.lap + 1}: every leader has ${Math.round(60 * league.lap)}% more HP, wins pay ${game.v22 ? 'gems' : 'Battle Points'}, and each Champion a Legend key.` : 'After Paldea\'s Champion, every league comes back at Rematch rank ★2, then ★3: the road never ends.'
   return (
     <Win title={`${league.lap > 0 ? `★${league.lap + 1} ` : ''}${l.name} league`} tone="gold" aside={<span title={rematch || undefined}>{done ? 'All beaten' : league.lap > 0 ? `Rematch rank ★${league.lap + 1}` : `${Math.min(at, l.gyms.length)} / ${l.gyms.length} badges`}{rematch && <span className="sr-only">. {rematch}</span>}</span>}>
       <div className="road-win">
@@ -946,7 +947,7 @@ function TrainerTab({ game }: { game: Game }) {
       <div className="pview two" key={view}>
         {view === 'roads' && (
           <>
-            <div className="pcol"><Road game={game} /><SeasonRoad game={game} /></div>
+            <div className="pcol"><Road game={game} />{!game.v22 && <SeasonRoad game={game} />}</div>
             <div className="pcol"><FrontierWin game={game} /></div>
           </>
         )}
@@ -982,7 +983,7 @@ function TrainerTab({ game }: { game: Game }) {
   )
 }
 
-function Rule({ title, tone, pic, children }: { title: string; tone: string; pic: ReactNode; children: ReactNode }) {
+export function Rule({ title, tone, pic, children }: { title: string; tone: string; pic: ReactNode; children: ReactNode }) {
   return (
     <div className="rule" data-tone={tone}>
       <div className="rule-pic">{pic}</div>
@@ -992,14 +993,14 @@ function Rule({ title, tone, pic, children }: { title: string; tone: string; pic
   )
 }
 const Arrow = () => <span className="rule-arrow" aria-hidden>▸</span>
-function RulesTab({ onTour }: { onTour: () => void }) {
+function RulesTab({ onTour, game }: { onTour: () => void; game: Game }) {
   const boxes = useBoxes()
   const [sound, setSound] = useState(soundOn())
   return (
     <section className="k-panel">
       <div className="k-panel-b">
         <h2 className="k-type" style={{ fontSize: 26, marginBottom: 12 }}>How it works</h2>
-        <div className="rules">
+        {game.v22 ? <RulesV22Body /> : <div className="rules">
           <Rule title="Do the day" tone="gold" pic={<>{([[TIER_XP.pillar, 'code'], [TIER_XP.core, 'fitness'], [TIER_XP.standard, 'routine']] as const).map(([xp, tag], i) => <span key={tag} className="rule-ring" style={{ ['--c' as string]: `var(--tag-${tag})`, ['--s' as string]: `${40 - i * 6}px` } as CSSProperties}>{xp}</span>)}</>}>
             Every habit is XP for your partner. Pillars are {TIER_XP.pillar}; chores are small.
           </Rule>
@@ -1129,11 +1130,11 @@ function RulesTab({ onTour }: { onTour: () => void }) {
           <Rule title="A day's list" tone="red" pic={<><span className="rule-dot" /><span className="rule-dot" /><span className="rule-dot" style={{ opacity: 0.3 }} /></>}>
             The game reads the list Life OS shows, at once: a habit you take off is off today. A kind of work with no habit left on it (say you shelve Guitar) is shelved here too: its shop, unfinished feats, Frontier facility and boss task are hidden, and come back, with everything you kept, when the habit does.
           </Rule>
-        </div>
+        </div>}
         <div className="kit-row" style={{ marginTop: 14 }}>
           <button type="button" className="pill-btn" onClick={onTour}>Show the tour</button>
           <button type="button" className={`k-btn ${sound ? 'ok' : ''}`} aria-pressed={sound} onClick={() => { setSoundOn(!sound); setSound(!sound); if (!sound) play('buy') }}>Sound and buzz: {sound ? 'on' : 'off'}</button>
-          <span className="muted">Rules version 11. The game began {fmtDay(GAME_START)}.</span>
+          <span className="muted">Rules version {game.v22 ? 22 : 11}. The game began {fmtDay(GAME_START)}.</span>
         </div>
       </div>
     </section>
@@ -1162,18 +1163,19 @@ function TopBar({ game, today, status, loading, onHelp }: { game: Game; today: s
   const seen = Object.keys(game.dex).filter((id) => !SPECIES[id]?.f).length
   const v5 = !loading
   const nx = game.season.next
-  const into = clamp01(game.season.into / game.season.need)
+  // version 22: no season ladder; the ring is the partner's way to its next level
+  const into = clamp01(game.v22 ? game.into / game.need : game.season.into / game.season.need)
   const prize = nx.coins ? `${nx.coins} coins` : nx.gems ? `${nx.gems} gems` : nx.item ? itemName(nx.item) : 'a prize'
   const R = 27, C = 2 * Math.PI * R
   return (
     <header className="topbar tb">
-      <span className="tb-ring" title={`Season step ${game.season.step}: ${game.season.into.toLocaleString('en-IN')} of ${game.season.need.toLocaleString('en-IN')} XP of the month's work, then ${prize}`} role="img" aria-label={`Season step ${game.season.step}, ${Math.round(into * 100)} percent to the next, which pays ${prize}`}>
+      <span className="tb-ring" title={game.v22 ? `Level ${game.level}: ${Math.round(game.into).toLocaleString('en-IN')} of ${game.need.toLocaleString('en-IN')} XP to the next` : `Season step ${game.season.step}: ${game.season.into.toLocaleString('en-IN')} of ${game.season.need.toLocaleString('en-IN')} XP of the month's work, then ${prize}`} role="img" aria-label={`Season step ${game.season.step}, ${Math.round(into * 100)} percent to the next, which pays ${prize}`}>
         <svg viewBox="0 0 64 64" aria-hidden>
           <circle cx="32" cy="32" r={R} className="track" />
           <circle cx="32" cy="32" r={R} className="fill" strokeDasharray={`${C * into} ${C}`} transform="rotate(-90 32 32)" />
         </svg>
-        {v5 ? (nx.coins ? <Coin size={30} /> : nx.gems ? <Gem size={30} /> : nx.item ? <ItemIcon id={nx.item} size={24} /> : <Ball ball="poke" size={32} />) : <Ball ball="poke" size={32} />}
-        {v5 && <b className="tb-lv">Step {game.season.step}</b>}
+        {v5 ? (game.v22 ? <Ball ball="poke" size={32} /> : nx.coins ? <Coin size={30} /> : nx.gems ? <Gem size={30} /> : nx.item ? <ItemIcon id={nx.item} size={24} /> : <Ball ball="poke" size={32} />) : <Ball ball="poke" size={32} />}
+        {v5 && <b className="tb-lv">{game.v22 ? `Lv ${game.level}` : `Step ${game.season.step}`}</b>}
       </span>
       <div className="tb-main">
         <div className="tb-row">
@@ -1331,7 +1333,7 @@ export default function App() {
         <div className="recap helpwin" role="dialog" aria-modal="true" aria-label="How it works" onClick={() => setHelp(false)}>
           <div className="helpbody" onClick={(e) => e.stopPropagation()}>
             <KClose onClick={() => setHelp(false)} />
-            <RulesTab onTour={() => { setHelp(false); setTourOpen(true) }} />
+            <RulesTab game={game} onTour={() => { setHelp(false); setTourOpen(true) }} />
           </div>
         </div>
       )}
