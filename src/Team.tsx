@@ -235,7 +235,7 @@ export function FeedBlock({ game, m }: { game: Game; m: Mon }) {
         onPointerCancel={stop}
         onClick={(e) => { if (e.detail === 0) feed() }}
       >
-        {full ? 'Nothing left to feed' : berry ? <>Feed <span className="cost"><ItemIcon id={berry} size={16} />×1</span> +{gain} ♥{twice ? ` (×${BERRY_DOMAIN_MULT} today)` : ''}</> : 'No berries'}
+        {full ? 'Nothing left to feed' : berry ? <>Feed <span className="cost"><ItemIcon id={berry} size={16} />×1</span> +{gain} ♥{twice ? (game.v22 ? <img src={`/sprites/types/${sig.type}.png`} alt={`Likes it: ${sig.type}`} title={sig.type} width={20} height={20} style={{ marginLeft: 8, verticalAlign: 'middle' }} /> : ` (×${BERRY_DOMAIN_MULT} today)`) : ''}</> : 'No berries'}
       </button>
       {!berry && !full && <small className="muted">Berries are at the Mart and the Garden; Pickup finds them too. They are in the Items tab.</small>}
       {berry && !full && <small className="muted">Hold the button to keep feeding. {game.inv[berry] ?? 0} left.</small>}
