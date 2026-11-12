@@ -107,7 +107,7 @@ export function CollectButton({ game, today }: { game: Game; today: string }) {
                 {sum.items > 0 && <span><ItemIcon id="seal-bag" size={24} />{sum.items}</span>}
               </p>
             )}
-            {held.length === 0 && <p className="muted">Nothing is waiting. Pay, quests, season steps, feats and boss prizes arrive here.</p>}
+            {held.length === 0 && <p className="muted">Nothing is waiting. The day's pay, track prizes, Lab gifts, feats and boss prizes arrive here.</p>}
             <div className="collect-list">
               {held.filter((h) => h.choice).map((h) => (
                 <div key={h.key} className="claim-choice">

@@ -418,7 +418,9 @@ Every 5 levels of the partner: a choice of two from coins, gems, three Great Bal
 
 ### 10.6 Collect
 
-Keep it only for rewards that carry a **choice** (a track's prize, a level milestone, who is next). Everything else is paid at once and told as news. Today 66 of 75 collects changed nothing.
+~~Keep it only for rewards that carry a choice; everything else paid at once and told as news.~~ **Reversed on 12 Nov 2026, the day v22 went live, at the owner's word:** every reward waits in Collect until it is tapped, so there is always something to collect and nothing is found already sitting in the Bag (the Sleep track's egg and the Lab's coins had skipped Collect). Unclaimed, a reward pays itself after `CLAIM_AUTO` (3) days, a choice pays its first side. The change is in `hold()` in `core/fold.ts` (v22 days no longer credit at once); the legacy engine is untouched.
+
+Texts that must stay true with it: a "track is full" note names its track (Sleep has an egg only, no choice; the Gym track is seven routines of the split, prize a Red Shard or a Gym egg), and a Lab rank says its gift waits in Collect, not that wild Pokemon come weaker (nothing takes HP off in v22).
 
 ---
 

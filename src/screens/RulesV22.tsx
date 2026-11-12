@@ -81,7 +81,7 @@ export function RulesV22Body() {
         Feats are milestones: a first, a hundred, a year of something. A week running of any kind of work earns the Key Stone. They pay gems and the odd keepsake.
       </Rule>
       <Rule title="Collect" tone="gold" pic={<><Coin size={24} /><Gem size={24} /></>}>
-        Rewards are paid the moment they are earned. Only a choice waits in Collect: a track's prize, a level milestone, a Trainer level, a berry from the Lab. Unchosen, the first one pays itself after three days.
+        Every reward waits in Collect until you tap it: the day's pay, a track's prize, a Lab gift, a boss prize, a level milestone, a Trainer level. A choice is yours to make; left alone, each pays itself (a choice pays its first side) after three days, so nothing is lost.
       </Rule>
       <Rule title="An empty day costs" tone="red" pic={<span className="rule-chip">0</span>}>
         A day with nothing ticked is settled two days later, so a late tick still saves it. The leader wins back {SLIP.leader} HP, the wild Pokemon {SLIP_WILD_TICKS}, and a tenth of the XP into your partner's level fades. Nothing finished is ever taken back. Endure forgives one such day a week.

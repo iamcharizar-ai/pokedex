@@ -85,6 +85,18 @@ test('tracks: seven days of a pillar fill its track, and its prize is a choice o
   assert.equal(g.wallet.marks.code, 0)
 })
 
+test('a track with only an egg (Sleep) waits in Collect too, named for its own track, and is not already in the Bag', () => {
+  const days = Array.from({ length: TRACK_LEN }, (_, i) => day(i, { code: true, sleep: true }))
+  const g = foldGame(days)
+  const egg = g.held.find((h) => h.key === 'track:sleep:1')
+  assert.ok(egg && !egg.choice, 'the Sleep egg waits in Collect')
+  assert.deepEqual(egg!.items, [['egg-sleep', 1]])
+  assert.equal(g.inv['egg-sleep'] ?? 0, 0, 'not already in the Bag')
+  assert.equal(g.tracks.sleep.ready, true)
+  assert.ok(g.moments.some((m) => m.kind === 'track' && m.tag === 'sleep'))
+  assert.equal(g.tracks.fitness.pips, 0, 'no Gym pip was earned, so nothing is told about the Gym')
+})
+
 test('the Gym track is the seven routines of the split: a routine done twice adds one pip', () => {
   const split = ['d1-chest-delts', 'd2-lats-biceps', 'd3-legs', 'd4-delts-triceps', 'd5-back-biceps', 'd6-chest-flys', 'd7-arms-delts']
   const g = foldGame([day(0, { gym: true }, 4, [], [split[0]]), day(1, { gym: true }, 4, [], [split[0]]), day(2, { gym: true }, 4, [], [split[1]])])

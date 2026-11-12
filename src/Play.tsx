@@ -391,7 +391,7 @@ function PillarCounter({ game, tag }: { game: Game; tag: MarkTag }) {
       </span>
       <span className="pcount-txt">
         <b>{itemName(tile.iconId)}</b>
-        <Meter kind="gold" value={Math.min(have, need)} max={need} name={game.v22 ? `${TAG_NAME[tag]} track toward ${itemName(tile.iconId)}` : `${MARKS[tag].name} toward ${itemName(tile.iconId)}`} label={game.v22 ? (tile.ready ? 'Full: choose its prize in Collect' : `${have} / ${need}`) : tile.ready ? `Ready · ${have} held` : `${have} / ${need}`} />
+        <Meter kind="gold" value={Math.min(have, need)} max={need} name={game.v22 ? `${TAG_NAME[tag]} track toward ${itemName(tile.iconId)}` : `${MARKS[tag].name} toward ${itemName(tile.iconId)}`} label={game.v22 ? (tile.ready ? (tag === 'sleep' ? 'Full: its egg waits in Collect' : 'Full: choose its prize in Collect') : `${have} / ${need}`) : tile.ready ? `Ready · ${have} held` : `${have} / ${need}`} />
         {tile.bountyActive && <small className="pcount-bounty">✦ Bounty: {TAG_NAME[tag].toLowerCase()} today pays ×{tile.bounty}</small>}
       </span>
       {shard && !game.v22 && (

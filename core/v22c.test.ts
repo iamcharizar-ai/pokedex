@@ -5,7 +5,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { addDays, type DayFacts, type HabitFact } from './facts.ts'
 import { foldGame } from './fold.ts'
-import { V21_FIX, setV22Start } from './rules.ts'
+import { CLAIM_AUTO, V21_FIX, setV22Start } from './rules.ts'
 import { FEATS, FEATS_LIVE, LEGEND_DEEDS, LEGEND_KEYS, REMATCH_KEYS, championKey, featReward } from './economy.ts'
 import { FACILITIES, SILVER_GEMS } from './frontier.ts'
 import { LEAGUES } from './gyms.ts'
@@ -34,14 +34,22 @@ test('feats are milestones: the runs go, the week that pays the Key Stone stays,
   const g = foldGame(run(9))
   assert.ok(g.feats.some((f) => f.id === 'work7'), 'a week running: the Key Stone')
   assert.ok(!g.feats.some((f) => f.id.startsWith('run7-') || f.id === 'work14'), 'no run feats')
-  assert.equal(g.inv['key-stone'], 1)
+  assert.ok(g.held.some((h) => h.key === 'feat:work7'), 'the Key Stone waits in Collect')
+  assert.equal(foldGame(run(9), { instant: true }).inv['key-stone'], 1, 'and is in the Bag once collected')
 })
 
-test('rewards are paid at once; only a choice waits in Collect; no weekly quests, no season ladder', () => {
-  const g = foldGame(run(12))
-  assert.ok(g.wallet.coins >= 200, 'the day paid its coins at once')
-  assert.ok(g.held.every((h) => h.choice), `held: ${g.held.map((h) => h.key).join(', ')}`)
+test('every reward waits in Collect until it is tapped (12 Nov 2026: the owner reversed "paid at once"); no weekly quests, no season ladder', () => {
+  const g = foldGame(run(2))
+  const pay = g.held.find((h) => h.key === `pay:${START}`)
+  assert.ok(pay && !pay.choice && pay.coins > 0, 'the day\'s pay waits in Collect, plain')
+  assert.equal(g.wallet.coins, foldGame(run(2), { instant: true }).wallet.coins - g.held.reduce((n, h) => n + h.coins, 0), 'what waits is not in the wallet yet')
   assert.ok(!g.moments.some((m) => m.kind === 'quest' || m.kind === 'season'))
+  // a claim pays it
+  const claimed = foldGame(run(2).map((f, i) => (i === 1 ? { ...f, uses: [{ day: f.day, item: '', uid: '', what: 'claim', to: pay.key }] } : f)))
+  assert.ok(!claimed.held.some((h) => h.key === pay.key))
+  assert.equal(claimed.wallet.coins, g.wallet.coins + pay.coins)
+  // left alone it pays itself after CLAIM_AUTO days, so nothing is lost
+  assert.ok(!foldGame(run(1 + CLAIM_AUTO)).held.some((h) => h.key === pay.key))
 })
 
 test('the Battle Frontier is the one streak system: the Pyramid counts Max days, and a Symbol pays gems, never Battle Points', () => {

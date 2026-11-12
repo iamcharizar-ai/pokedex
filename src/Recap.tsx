@@ -23,6 +23,8 @@ import { SPECIES } from '../core/species.ts'
 import { typeColor } from './screens/types.ts'
 import { aBall, badgeArt, badgeName, fmtDay, leagueName, still } from './lib/art.ts'
 
+/** Which track a "track is full" note is about: it must say, since the Gym, Sleep and the rest each fill their own. */
+const TRACK_LABEL: Record<Extract<Moment, { kind: 'track' }>['tag'], string> = { code: 'Code', fitness: 'Gym', guitar: 'Guitar', arbor: 'Arbor', sleep: 'Sleep' }
 const SEEN_KEY = 'pokedex.seen.v1'
 /** How far back a moment can still be news. Older than this it is history, in the Adventure log. */
 const NEWS_DAYS = 30
@@ -89,7 +91,16 @@ function tell(m: Moment, game: Game): Told {
     }
     case 'form': return { title: m.what === 'mega' ? 'Mega form' : 'Gigantamax', line: `${nameOf(m.form)} is registered in the Pokedex.`, art: 'mon', form: m.form }
     case 'mega': return { title: 'Mega Stone forged', line: `${nameOf(m.form)} is registered to this Pokemon and never runs out.`, art: 'mon', form: m.form }
-    case 'track': return { title: 'A track is full', line: `Seven pips: its shard or its egg is waiting in Collect. You choose.`, art: 'item', item: m.tag === 'sleep' ? 'egg-sleep' : `egg-${m.tag}` }
+    case 'track': {
+      const name = TRACK_LABEL[m.tag]
+      return {
+        title: `${name} track is full`,
+        line: m.tag === 'sleep' ? 'Seven good nights: a Sleep Egg is waiting in Collect.'
+          : m.tag === 'fitness' ? 'Seven routines of your split: a Red Shard or a Gym Egg is waiting in Collect. You choose.'
+          : `Seven ${name} days: its shard or its egg is waiting in Collect. You choose.`,
+        art: 'item', item: m.tag === 'sleep' ? 'egg-sleep' : `egg-${m.tag}`,
+      }
+    }
     case 'kit': return m.shard
       ? { title: 'Training kit complete', line: 'A full set of Strong gear became a Red Shard, and paid gems and Iron.', art: 'item', item: 'red-shard' }
       : { title: 'Training kit complete', line: 'A full set of Strong gear paid gems and Iron. Every third set is a Red Shard too.', art: 'item', item: 'iron' }
@@ -116,7 +127,7 @@ function tell(m: Moment, game: Game): Told {
     case 'summon': return { title: 'A legend stirs', line: `The ${itemName(m.key)} called ${nameOf(m.form)}. It comes as the next wild Pokemon.`, art: 'item', item: m.key }
     case 'itemevo': return { title: 'Evolved', line: `The ${itemName(m.item)} evolved ${nameOf(m.from)} into ${nameOf(m.form)}.`, art: 'evolve', form: m.form, from: m.from }
     case 'lap': return { title: `Rematch rank ★${m.lap + 1}`, line: 'Every league is beaten. They are all back, stronger, and every Champion now hands over a Legend key.', art: 'none' }
-    case 'research': return { title: `Research rank ${m.rank}`, line: `The Professor learnt more from the Pokemon on his desk: every wild Pokemon now comes ${Math.round(game.research.cut * 100)}% weaker, and his gift waits in Collect.`, art: 'item', item: 'journal' }
+    case 'research': return { title: `Research rank ${m.rank}`, line: game.v22 ? `The Professor learnt more from the Pokemon in the Lab: his gift is waiting in Collect.` : `The Professor learnt more from the Pokemon on his desk: every wild Pokemon now comes ${Math.round(game.research.cut * 100)}% weaker, and his gift waits in Collect.`, art: 'item', item: 'journal' }
     case 'master': return { title: 'Level 100', line: `${nameOf(m.form)} has nothing left to learn as your partner. It stays strong for the party or the Professor's desk.`, art: 'mon', form: m.form }
     default: return { title: '', line: '', art: 'none' }
   }

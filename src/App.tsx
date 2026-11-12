@@ -837,7 +837,7 @@ function line(m: Moment): string {
     case 'slip': return `An empty day (${fmtDay(m.empty)}): ${[m.leader ? `the leader won back ${m.leader} HP` : '', m.wild ? `the wild Pokemon ${m.wild} HP` : '', m.xp ? `${m.xp} XP faded` : ''].filter(Boolean).join(', ')}`
     case 'chest': return `Chest ${m.n}: ${m.coins ? `${m.coins} coins` : `${itemName(m.item)}${m.count > 1 ? ` ×${m.count}` : ''}`}`
     case 'gear': return v22On(m.day) ? `${itemName(m.item)}: a new routine of Strong's split, one pip on the Gym track` : `${itemName(m.item)} dropped by a Strong workout`
-    case 'track': return `${TAG_NAME[m.tag]} track ${m.n} full: its shard or its egg is waiting in Collect`
+    case 'track': return `${TAG_NAME[m.tag]} track ${m.n} full: ${m.tag === 'sleep' ? 'its egg is' : 'its shard or its egg is'} waiting in Collect`
     case 'kit': return m.shard ? `A full set of gear (set ${m.n}) became a Red Shard` : `A full set of gear (set ${m.n}) paid gems and Iron`
     case 'pickup': return `${nameOf(m.form)} found ${aOrAn(itemName(m.item))} on the day's walk`
     case 'forage': return `Forage: ${aOrAn(itemName(m.item))} found on the Arbor morning`
@@ -851,7 +851,7 @@ function line(m: Moment): string {
     case 'fossil': return `The Lab brought the ${itemName(m.item)} back: ${nameOf(m.form)}`
     case 'itemevo': return `${nameOf(m.from)} evolved into ${nameOf(m.form)} (${itemName(m.item)})`
     case 'lap': return `Every league beaten: the Rematch begins at rank ★${m.lap + 1}`
-    case 'research': return `The Professor's research reached rank ${m.rank}: wild Pokemon come weaker, and he sent a gift`
+    case 'research': return v22On(m.day) ? `The Professor's research reached rank ${m.rank}: his gift is waiting in Collect` : `The Professor's research reached rank ${m.rank}: wild Pokemon come weaker, and he sent a gift`
     case 'master': return `${nameOf(m.form)} reached level 100 and stepped aside for the next partner`
     case 'feat': return `Feat: ${m.name}${[m.gems ? `+${m.gems} gems` : '', m.coins ? `+${m.coins} coins` : '', ...m.items.map(itemName)].filter(Boolean).map((x, i) => (i ? x : ` (${x}`)).join(', ')}${m.gems || m.coins || m.items.length ? ')' : ''}`
   }
