@@ -6,8 +6,11 @@ kept working: do not redesign it, retune it or rework its rules in passing. This
 ## What was done as groundwork (13 Nov 2026)
 
 - The Forge has a **tab of its own** in Party: **Team, Lab, Items, Forge** (`src/Play.tsx`, `TeamTab`). It used to sit under the Bag
-  inside Items. Items is now the Bag, incense and the pending choices.
-- Nothing about how the Forge works or looks changed. `src/screens/Forge.tsx` and `src/screens/forge.css` are as they were.
+  inside Items. Items is now the Bag and incense. The **Choices** window (which form shows, which branch) moved from Items to the Forge tab, under the altar.
+- The Forge also shows **where the Key Stone comes from** (`KeyStoneSource` in `Forge.tsx`: the "A week running" feat and its progress), beside the
+  existing "where the next shards come from" list.
+- Otherwise nothing about how the Forge works or looks changed. `src/screens/Forge.tsx` and `src/screens/forge.css` are as they were.
+- The shard list (`NextShards`) still talks about Strong's old "every third full set" Red Shard; version 22 replaced that with the Gym track. Part of the overhaul.
 - `tools/stylediff.mjs` has a `Party:Forge` state so the tab can be captured.
 
 ## How the Forge works today (so the overhaul starts from facts)

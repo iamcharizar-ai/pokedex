@@ -252,6 +252,7 @@ export function Forge({ game }: { game: Game }) {
           </div>
         )}
         {st !== 'ready' && st !== 'done' && <NextShards game={game} />}
+        <KeyStoneSource game={game} />
         {fair && sorted.some((s) => s.count > 1) && <p className="forge-where">A Pokemon with two Megas: the X or Y is yours to choose above.</p>}
       </div>
 
@@ -266,6 +267,30 @@ export function Forge({ game }: { game: Game }) {
         </div>
       )}
     </Win>
+  )
+}
+
+/**
+ * Where the Key Stone comes from, as NextShards says for shards. There is only one: a feat (a week running of any kind of work).
+ * Before it is yours, how far that feat is; earned but not collected, where it waits; held, a line that says so.
+ */
+function KeyStoneSource({ game }: { game: Game }) {
+  const f = FEATS.find((x) => (x.reward.items ?? {})['key-stone'])
+  if (!f) return null
+  const earned = game.feats.some((x) => x.id === f.id)
+  const have = Math.min(f.n, game.counters[f.key] ?? 0)
+  return (
+    <div className="nextshards">
+      <span className="k-label">{game.keyStone ? 'The Key Stone' : 'Where the Key Stone comes from'}</span>
+      <div className="nextshard">
+        <ItemIcon id="key-stone" size={24} />
+        <span>
+          <b>{f.name}</b>
+          <small>{game.keyStone ? 'The Key Stone is yours, and there is only one.' : earned ? 'Earned: the Key Stone is waiting in Collect.' : `${f.text}. It pays the Key Stone, once.`}</small>
+          {!game.keyStone && !earned && <Meter value={have} max={f.n} size="lg" name={f.name} label={`${have} / ${f.n}`} />}
+        </span>
+      </div>
+    </div>
   )
 }
 

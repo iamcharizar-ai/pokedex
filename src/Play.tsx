@@ -947,7 +947,7 @@ function BallBox({ mons, onOpen, note, actions, empty }: { mons: Mon[]; onOpen: 
 type PartyView = 'team' | 'lab' | 'items' | 'forge'
 
 /**
- * Party: four screens: the team (and the partner), the lab (or the box), items (the Bag, incense and choices) and the Forge.
+ * Party: four screens: the team (and the partner), the lab (or the box), items (the Bag and incense) and the Forge (with the Choices: which form shows, which branch).
  * The Forge has a tab of its own since 13 Nov 2026, as groundwork only: a FULL OVERHAUL OF THE FORGE IS PLANNED, to be done later
  * (by Opus). See FORGE-OVERHAUL.md before changing how it works or looks.
  */
@@ -992,8 +992,8 @@ export function TeamTab({ game, under, choices }: { game: Game; under: ReactNode
           </>
         )}
         {view === 'lab' && (game.v14 ? <ProfessorLab game={game} onOpen={setPage} /> : <MyPokemon game={game} onOpen={setPage} />)}
-        {view === 'items' && <><Bag game={game} news={news} /><IncenseWin game={game} />{choices}</>}
-        {view === 'forge' && <Forge game={game} />}
+        {view === 'items' && <><Bag game={game} news={news} /><IncenseWin game={game} /></>}
+        {view === 'forge' && <><Forge game={game} />{choices}</>}
       </div>
       {shown && <MonPage m={shown} game={game} onClose={() => setPage(null)} />}
     </div>
