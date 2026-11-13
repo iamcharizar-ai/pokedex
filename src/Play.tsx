@@ -18,6 +18,7 @@ import { Sheet } from './screens/Sheet.tsx'
 import { MiniScene } from './screens/Stage.tsx'
 import { typeColor } from './screens/types.ts'
 import { tabTodo } from './screens/Today.tsx'
+import { useItemNews, type ItemNews } from './lib/newitems.ts'
 import { Deck, SigLine } from './Bond.tsx'
 import { ResearchTab } from './Research.tsx'
 import { Coin, EggIcon, Gem, ItemIcon, MarkIcon } from './Item.tsx'
@@ -587,7 +588,17 @@ const GROUPS: [string, (id: string) => boolean][] = [
 /** A count as a slot shows it: 1.2k, 16k. */
 const short = (n: number): string => (n < 1000 ? String(n) : n < 10000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k` : `${Math.floor(n / 1000)}k`)
 
-export function Bag({ game }: { game: Game }) {
+/** What the Bag holds, thing by thing (badges too), for what is new in it. A thing on the partner counts: taking it off is not finding it. */
+export function bagCounts(game: Game): Record<string, number> {
+  const out: Record<string, number> = {}
+  for (const id of Object.keys(game.inv)) if ((game.inv[id] ?? 0) > 0 && ITEMS[id]) out[id] = game.inv[id]
+  const h = game.partner.held
+  if (h && ITEMS[h]) out[h] = (out[h] ?? 0) + 1
+  LEAGUES.forEach((l, li) => l.gyms.forEach((_, gi) => { if (badgeWon(game.league, li, gi)) out[`badge:${li}:${gi}`] = 1 }))
+  return out
+}
+
+export function Bag({ game, news }: { game: Game; news: ItemNews }) {
   const [open, setOpen] = useState<string | null>(null)
   const [tab, setTab] = useState('Everything')
   const [feedCard, setFeedCard] = useState<string | null>(null)
@@ -661,7 +672,7 @@ export function Bag({ game }: { game: Game }) {
   useFlip(held, glide)
   const press = (id: string) => (e: ReactPointerEvent<HTMLElement>) => startPress({ x: e.clientX, y: e.clientY, id: e.pointerId, type: e.pointerType, button: e.button }, id, e.currentTarget, hooks)
   const tap = (id: string, i: number) => {
-    if (!arrange) { setOpen(id); play('tap'); return }
+    if (!arrange) { news.see(id); setOpen(id); play('tap'); return }
     if (carry === null) { setCarry(id); play('click'); return }
     if (carry === id) { setCarry(null); return }
     if (dropOn(carry, i)) setCarry(null)
@@ -673,15 +684,17 @@ export function Bag({ game }: { game: Game }) {
       const [li, gi] = id.split(':').slice(1).map(Number)
       const l = LEAGUES[li], t = l.gyms[gi]
       return (
-        <Slot key={id} className={`medal ${cls}`} data-place={i} data-flip={id} onPointerDown={press(id)} onClick={() => tap(id, i)} aria-label={`${badgeName(t)}, ${l.name}. Open`}
+        <Slot key={id} className={`medal ${cls} ${news.isNew(id) ? 'fresh' : ''}`} data-place={i} data-flip={id} onPointerDown={press(id)} onClick={() => tap(id, i)} aria-label={`${badgeName(t)}, ${l.name}${news.isNew(id) ? ', new' : ''}. Open`}
           icon={<GymBadge art={badgeArt(li, gi)} on n={gi + 1} size={32} title="" />} tip={{ title: badgeName(t), note: <>{l.name} · won from {t.name}</> }} />
       )
     }
     const on = game.partner.held === id || equipped.includes(id) || game.theme === id
     const n = have(id)
+    // the gold dot: more of it than was last looked at; opening it is looking (lib/newitems.ts)
+    const fresh = news.isNew(id)
     return (
-      <Slot key={id} className={cls} on={on} data-place={i} data-flip={id} onPointerDown={press(id)} onClick={() => tap(id, i)} aria-label={`${itemName(id)}, ${n || 'held'}${on ? ', in use' : ''}. Open`}
-        icon={<ItemIcon id={id} size={32} />} n={n > 1 ? short(n) : null} tip={{ title: itemName(id), note: <>{on ? (game.theme === id ? 'In use' : 'Equipped') : `×${n}`} · {ITEMS[id].text}</> }} />
+      <Slot key={id} className={`${cls} ${fresh ? 'fresh' : ''}`} on={on} data-place={i} data-flip={id} onPointerDown={press(id)} onClick={() => tap(id, i)} aria-label={`${itemName(id)}, ${n || 'held'}${on ? ', in use' : ''}${fresh ? ', new' : ''}. Open`}
+        icon={<ItemIcon id={id} size={32} />} n={n > 1 ? short(n) : null} tip={{ title: itemName(id), note: <>{fresh ? 'New · ' : ''}{on ? (game.theme === id ? 'In use' : 'Equipped') : `×${n}`} · {ITEMS[id].text}</> }} />
     )
   }
   useEffect(() => {
@@ -708,7 +721,7 @@ export function Bag({ game }: { game: Game }) {
         {(owned.length > 0 || badges > 0) && (
           <div className="inv-tabs" role="tablist" aria-label="Bag pockets" data-noswipe>
             {tabs.map(([name, ids]) => (
-              <button key={name} type="button" role="tab" aria-selected={at[0] === name} className={`inv-tab ${at[0] === name ? 'on' : ''}`} onClick={() => { setTab(name); play('click') }} title={`${name} · ${ids.length}`}>
+              <button key={name} type="button" role="tab" aria-selected={at[0] === name} className={`inv-tab ${at[0] === name ? 'on' : ''} ${ids.some(news.isNew) ? 'fresh' : ''}`} onClick={() => { setTab(name); play('click') }} title={`${name} · ${ids.length}${ids.some(news.isNew) ? ' · something new' : ''}`}>
                 {name === 'Badges' ? <ItemIcon id="town-map" size={26} /> : <ItemIcon id={name === 'Everything' ? 'seal-bag' : ids[0]} size={26} />}
               </button>
             ))}
@@ -943,7 +956,10 @@ export function TeamTab({ game, under, choices }: { game: Game; under: ReactNode
   const cap = TEAM_SIZE
   const bench = game.graduates.filter((m) => !inTeam.has(m.uid))
   const items = Object.keys(game.inv).filter((id) => (game.inv[id] ?? 0) > 0 && ITEMS[id]).length
-  const todo = tabTodo(game).team
+  // the gold dot on Items: something arrived in the Bag since it was last looked at (the Forge shows what can evolve, so the dot is not for that)
+  const counts = bagCounts(game)
+  const news = useItemNews(counts, game.days.length > 0)
+  const todo = news.ids.length ? `${news.ids.length} new ${news.ids.length === 1 ? 'thing' : 'things'} in the Bag` : null
   const menu: [PartyView, string, string, ReactNode][] = [
     ['team', 'Team', 'poke-ball', `${1 + game.team.length}/${cap + 1}`],
     ['lab', game.v14 ? 'Lab' : 'Box', game.v14 ? 'journal' : 'poke-ball', game.v14 ? `R${game.research.rank}` : game.queue.length || null],
@@ -971,7 +987,7 @@ export function TeamTab({ game, under, choices }: { game: Game; under: ReactNode
           </>
         )}
         {view === 'lab' && (game.v14 ? <ProfessorLab game={game} onOpen={setPage} /> : <MyPokemon game={game} onOpen={setPage} />)}
-        {view === 'items' && <><Bag game={game} /><Forge game={game} /><IncenseWin game={game} />{choices}</>}
+        {view === 'items' && <><Bag game={game} news={news} /><Forge game={game} /><IncenseWin game={game} />{choices}</>}
       </div>
       {shown && <MonPage m={shown} game={game} onClose={() => setPage(null)} />}
     </div>

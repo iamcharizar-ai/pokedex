@@ -74,6 +74,9 @@
 .inv-slot > img, .inv-slot > .swatch { width: 78%; height: auto; image-rendering: pixelated; }
 .inv-slot:hover:not(.blank), .inv-slot:focus-visible { background: var(--slot-hover); outline: none; }
 .inv-slot.on { background: var(--slot-on); }
+/* new: the same gold dot as the Items tab's, on each thing that arrived since the Bag was last opened and on the pocket that holds it; opening the thing clears it */
+.inv-slot.fresh::after, .inv-tab.fresh::after { content: ''; position: absolute; top: 3px; right: 3px; z-index: 2; width: 10px; height: 10px; border-radius: 50%; background: var(--k-gold); box-shadow: 0 0 0 2px var(--surface-2, #1b2448), 0 0 10px var(--gold-glow); pointer-events: none; }
+.inv-tab.fresh { position: relative; }
 .inv-n { position: absolute; right: 2px; bottom: 0; font: 600 13px/1 'Pixelify Sans', var(--k-face); color: #fff; text-shadow: 2px 2px 0 #3f3f3f; pointer-events: none; }
 .inv-on { position: absolute; left: 3px; top: 2px; font: 600 10px/1 'Pixelify Sans', var(--k-face); font-style: normal; color: #ffe066; text-shadow: 1px 1px 0 #3f3f3f; }
 /* the tooltip: dark, with a purple edge, over the slot */
