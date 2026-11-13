@@ -69,7 +69,7 @@ export function RulesV22Body() {
         Of the last seven days, {steps} that counted make your XP bigger. A day counts with two pillars, a good night being one of them but never the only one. It slides back a day at a time and never resets. Two days with no pillar and your partner dozes off.
       </Rule>
       <Rule title="The weekly boss" tone="purple" pic={icons('master-ball')}>
-        Every Monday a boss comes with a card of tasks sized to your last three weeks: the pillars you do, a task for any you have been skipping, good nights and steady days. The card is its HP. Beat it and it joins you.
+        Every Monday a boss comes with a card of tasks sized to your last three weeks: the pillars you do, a task for any you have been skipping, good nights and steady days. The card is its HP. Beat it and it joins you as itself, at level 1: a beaten Gengar is a Gengar, not a Gastly. It never evolves; it is fully trained at level {graduateAt(3)}, and then it can forge its Mega like any other.
       </Rule>
       <Rule title="The Battle Frontier" tone="purple" pic={icons('rainbow-pass', 'relic-statue')}>
         Seven facilities, each a run of one kind of day, and the only streaks in the game: the Tower for days that count, one for each pillar, the Pyramid for Max days. A Silver Symbol and a Gold Symbol pay gems, and a Gold Symbol a Legend key.

@@ -2,9 +2,12 @@
 //   node --test core/v22.test.ts
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { addDays, type DayFacts, type HabitFact, type ItemUse } from './facts.ts'
+import { addDays, mondayOf, type DayFacts, type HabitFact, type ItemUse } from './facts.ts'
 import { foldGame } from './fold.ts'
-import { BERRY_FAVOURITE, BERRY_PLAIN, PILLAR_HIT, TRACK_LEN, WILD_TICKS, V21_FIX, setV22Start } from './rules.ts'
+import type { BossCard } from './boss.ts'
+import { SPECIES } from './species.ts'
+import { BERRY_FAVOURITE, BERRY_PLAIN, PILLAR_HIT, TRACK_LEN, WILD_TICKS, V21_FIX, evolveAt, graduateAt, levelOf, setV22Start } from './rules.ts'
+const rec = (id: string) => SPECIES[id]
 import { partyPower, pillarsOf, shareOf, tierHit, tierOf } from './v22.ts'
 
 const START = V21_FIX
@@ -83,6 +86,35 @@ test('tracks: seven days of a pillar fill its track, and its prize is a choice o
   assert.ok(g.moments.some((m) => m.kind === 'track' && m.tag === 'code'))
   // marks are not earned any more
   assert.equal(g.wallet.marks.code, 0)
+})
+
+test('a choice tapped the day its reward is earned pays the side that was tapped, not always the first (13 Nov 2026: a Qualot Berry was chosen and a Hondew paid)', () => {
+  const claim = (side: '0' | '1'): Omit<ItemUse, 'day'>[] => [{ what: 'claim', item: side, uid: '', to: 'track:code:1' }]
+  const fill = (side: '0' | '1') => foldGame(Array.from({ length: TRACK_LEN }, (_, i) => day(i, { code: true }, 4, i === TRACK_LEN - 1 ? claim(side) : [])))
+  const shard = fill('0'), egg = fill('1')
+  assert.equal(shard.inv['blue-shard'], 1, 'the first side: the shard')
+  assert.ok(!egg.inv['blue-shard'], 'the second side must not pay the shard')
+  assert.ok(egg.inv['egg-code'] === 1 || egg.egg?.kind === 'egg-code', 'the second side: the egg')
+  assert.ok(!shard.held.some((h) => h.key === 'track:code:1') && !egg.held.some((h) => h.key === 'track:code:1'), 'nothing is left waiting once chosen')
+})
+
+test('a beaten boss joins as the form it was fought as, at level 1 (13 Nov 2026: Gengar, not Gastly); it never evolves and is fully trained where its line is', () => {
+  const card = (species: string, form: string, mega = false): BossCard => ({ week: mondayOf(START), rev: 3, species, form, rarity: 'R', mega, level: 20, tasks: [{ kind: 'code', template: 'days', target: 1, share: 1, text: 'Code on 1 day' }] })
+  const beat = (c: BossCard) => foldGame([{ ...day(0, { code: true }), boss: { card: c, p: [1] } }], { instant: true })
+  const g = beat(card('gastly', 'gengar'))
+  const mon = g.queue.find((m) => m.base === 'gastly')
+  assert.ok(mon, 'it joins the Box')
+  assert.equal(mon!.form, 'gengar')
+  assert.deepEqual(mon!.path, ['gengar'])
+  assert.equal(mon!.xp, 0, 'level 1')
+  assert.equal(levelOf(mon!.xp), 1)
+  assert.equal(evolveAt(rec(mon!.base).x ?? 1, rec(mon!.form).s), null, 'a Gengar has nothing to evolve into at 16 or 36')
+  assert.equal(graduateAt(rec(mon!.base).x ?? 1), graduateAt(3), 'fully trained at the line\'s level, so its Mega comes when a normal Gengar\'s does')
+  assert.ok(rec(mon!.form).m?.includes('gengar-mega'), 'and it has a Mega to forge')
+  assert.ok(g.moments.some((m) => m.kind === 'boss' && m.what === 'catch' && m.form === 'gengar' && m.uid === mon!.uid))
+  // a Mega boss (a legendary) joins as the form it is a Mega of, never as the Mega
+  const mew = beat(card('mewtwo', 'mewtwo-megax', true)).queue.find((m) => m.base === 'mewtwo')
+  assert.equal(mew?.form, 'mewtwo')
 })
 
 test('a track with only an egg (Sleep) waits in Collect too, named for its own track, and is not already in the Bag', () => {

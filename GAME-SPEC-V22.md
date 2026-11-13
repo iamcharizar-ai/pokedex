@@ -124,7 +124,7 @@ The owner's rule: catching is the simple one. No multipliers, no powers, nothing
 
 ### 3.5 The boss (unchanged, with one swap)
 
-The card, its targets, its payouts and "a beaten boss joins you" stay exactly as version 21 has them. Two changes only:
+The card, its targets and its payouts stay exactly as version 21 has them. **"A beaten boss joins you" changed on 13 Nov 2026, at the owner's word:** it joins as the form it was fought as, at level 1 (a beaten Gengar is a Gengar, not the Gastly version 21 gave). Its line is still its base (rarity, stage count, the "second of a line you own" rule), so it never evolves, is fully trained at the line's level (50), and forges its Mega like any Gengar. A Mega boss (a legendary) joins as the form it is a Mega of. The change is in the boss-kill branch of `core/fold.ts`, behind `v22`. Two other changes:
 
 - Its power bonus becomes the same **party power** number as the leader's (5.3), in place of the Mega-by-bond, type-edge and Rocky Helmet terms. One number to learn.
 - It no longer pays a shard (4.1: shards have one source). It pays gems and the Pokemon.
