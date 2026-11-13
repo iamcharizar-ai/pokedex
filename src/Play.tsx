@@ -552,7 +552,7 @@ const USED: Record<string, string> = {
   berry: 'Fed to any of your Pokemon for hearts.',
   held: 'Held by your partner, one at a time: it adds to its kind of work.',
   tm: 'Carried by your partner: each counts as one of its types against a leader.',
-  shard: 'Three shards of three different colours forge a Mega Stone, in the Forge on this tab.',
+  shard: 'Three shards of three different colours forge a Mega Stone, in the Forge, a tab of Party.',
   key: 'Needed before the Forge can make a Mega Stone.',
   unique: 'Kept for good: no shop sells it.',
   gear: "A piece of Strong's training kit: a full set of seven pays gems and Iron.",
@@ -944,9 +944,13 @@ function BallBox({ mons, onOpen, note, actions, empty }: { mons: Mon[]; onOpen: 
   )
 }
 
-type PartyView = 'team' | 'lab' | 'items'
+type PartyView = 'team' | 'lab' | 'items' | 'forge'
 
-/** Party: three screens: the team (and the partner), the lab (or the box), and items (the Bag, the Forge, incense and choices). */
+/**
+ * Party: four screens: the team (and the partner), the lab (or the box), items (the Bag, incense and choices) and the Forge.
+ * The Forge has a tab of its own since 13 Nov 2026, as groundwork only: a FULL OVERHAUL OF THE FORGE IS PLANNED, to be done later
+ * (by Opus). See FORGE-OVERHAUL.md before changing how it works or looks.
+ */
 /** `under`: what stands under the six places (App's PartyNotes: the Feed button and the partner's state). */
 export function TeamTab({ game, under, choices }: { game: Game; under: ReactNode; choices: ReactNode }) {
   const [page, setPage] = useState<string | null>(null)
@@ -964,6 +968,7 @@ export function TeamTab({ game, under, choices }: { game: Game; under: ReactNode
     ['team', 'Team', 'poke-ball', `${1 + game.team.length}/${cap + 1}`],
     ['lab', game.v14 ? 'Lab' : 'Box', game.v14 ? 'journal' : 'poke-ball', game.v14 ? `R${game.research.rank}` : game.queue.length || null],
     ['items', 'Items', 'seal-bag', items || null],
+    ['forge', 'Forge', 'key-stone', null],
   ]
   return (
     <div className="partypage">
@@ -987,7 +992,8 @@ export function TeamTab({ game, under, choices }: { game: Game; under: ReactNode
           </>
         )}
         {view === 'lab' && (game.v14 ? <ProfessorLab game={game} onOpen={setPage} /> : <MyPokemon game={game} onOpen={setPage} />)}
-        {view === 'items' && <><Bag game={game} news={news} /><Forge game={game} /><IncenseWin game={game} />{choices}</>}
+        {view === 'items' && <><Bag game={game} news={news} /><IncenseWin game={game} />{choices}</>}
+        {view === 'forge' && <Forge game={game} />}
       </div>
       {shown && <MonPage m={shown} game={game} onClose={() => setPage(null)} />}
     </div>

@@ -1,5 +1,8 @@
 // The Forge (Party tab): where Mega Stones are made, as a small ritual.
 //
+// A FULL OVERHAUL OF THE FORGE IS PLANNED, to be done later (by Opus): see FORGE-OVERHAUL.md before changing how it
+// works or looks. Until then this file is only kept working; it has its own tab in Party (13 Nov 2026) as groundwork.
+//
 // An altar: the stone in the middle, three empty sockets round it, and every
 // shard you hold floating on the outer ring. Below it, each Pokemon that has a
 // Mega form. Pick one that is ready and the shards that fit it light up; tap

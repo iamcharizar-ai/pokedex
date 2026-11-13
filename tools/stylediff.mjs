@@ -27,6 +27,7 @@ for (const fx of ['empty', 'week', 'late', 'boss']) {
   STATES.push([`${fx}/Party:Box`, `fixture=${fx}&tour=0`, ['nav:Party', 'pm:Box']])
   STATES.push([`${fx}/Party:Lab`, `fixture=${fx}&tour=0`, ['nav:Party', 'pm:Lab']])
   STATES.push([`${fx}/Party:Items`, `fixture=${fx}&tour=0`, ['nav:Party', 'pm:Items']])
+  STATES.push([`${fx}/Party:Forge`, `fixture=${fx}&tour=0`, ['nav:Party', 'pm:Forge']])
   STATES.push([`${fx}/Shop:Gems`, `fixture=${fx}&tour=0`, ['nav:Shop', 'pm:Gems']])
   STATES.push([`${fx}/Shop:Marks`, `fixture=${fx}&tour=0`, ['nav:Shop', 'pm:Marks']])
   STATES.push([`${fx}/Journey:Goals`, `fixture=${fx}&tour=0`, ['nav:Journey', 'pm:Goals']])
