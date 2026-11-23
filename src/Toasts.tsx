@@ -9,6 +9,8 @@ import { play } from './lib/sfx.ts'
 import { ItemIcon } from './Item.tsx'
 import { useBusy } from './screens/overlay.ts'
 import { onNote } from './lib/toast.ts'
+import { newsKey } from '../core/events.ts'
+import { markTold } from './lib/store.ts'
 import { nameOf, type Game, type Moment } from '../core/fold.ts'
 
 const KEY = 'pokedex.toasted.v1'
@@ -42,7 +44,7 @@ function load(): Set<string> | null {
 type Item = { key: string; title: string; line: string; big?: boolean; bad?: boolean; urgent?: boolean }
 
 /** Without a game (the ?kit page) it shows notes only. */
-export function Toasts({ game, today = '' }: { game?: Game; today?: string }) {
+export function Toasts({ game, today = '', toldKeys = new Set<string>() }: { game?: Game; today?: string; toldKeys?: Set<string> }) {
   const [rail, setRail] = useState<Item[]>([])
   // news that arrives while a window is open waits for it to close, then plays: never on top of it
   const [held, setHeld] = useState<Item[]>([])
@@ -53,11 +55,13 @@ export function Toasts({ game, today = '' }: { game?: Game; today?: string }) {
     if (seen.current === undefined) seen.current = load()
     const mine = game.moments.filter((m) => m.day === today && textOf(m))
     const known = seen.current
-    const fresh = known ? mine.filter((m) => !known.has(keyOf(m))) : []
+    // one Life OS has already told is not told again here, and what is told here is recorded for it (core/events.ts)
+    const fresh = known ? mine.filter((m) => !known.has(keyOf(m)) && !toldKeys.has(newsKey(m))) : []
     const all = new Set([...(known ?? []), ...mine.map(keyOf)])
     seen.current = all
     try { localStorage.setItem(KEY, JSON.stringify([...all].filter((k) => k.startsWith(today)))) } catch { /* the worst case is a repeated toast */ }
     if (!fresh.length) return
+    markTold(fresh.map(newsKey))
     setHeld((h) => [...h, ...fresh.map((m) => ({ key: keyOf(m), ...textOf(m)! }))])
   }, [game?.moments.length, today])
   useEffect(() => {

@@ -117,6 +117,12 @@ test('a beaten boss joins as the form it was fought as, at level 1 (13 Nov 2026:
   assert.equal(mew?.form, 'mewtwo')
 })
 
+test('a row that records news as told changes nothing in the game (core/events.ts: told once across both apps)', () => {
+  const plain = [day(0, { code: true }), day(1, { code: true, sleep: true })]
+  const withTold = [day(0, { code: true }), day(1, { code: true, sleep: true }, 4, [{ what: 'told', uid: '', item: '', to: '2026-11-12|hatch|x,2026-11-12|boss|y' }])]
+  assert.deepEqual(JSON.parse(JSON.stringify(foldGame(withTold))), JSON.parse(JSON.stringify(foldGame(plain))))
+})
+
 test('a track with only an egg (Sleep) waits in Collect too, named for its own track, and is not already in the Bag', () => {
   const days = Array.from({ length: TRACK_LEN }, (_, i) => day(i, { code: true, sleep: true }))
   const g = foldGame(days)

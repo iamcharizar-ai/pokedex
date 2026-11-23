@@ -4,7 +4,7 @@
 import { useSyncExternalStore } from 'react'
 import { BOSS_CARD_REV, BOSS_CARD_REV_V21, BOSS_DAY_EVENT, CARD_EVENT, bossDayChanged } from '../../core/boss.ts'
 import { addDays, buildFacts, mondayOf, type DayFacts, type FactsInput } from '../../core/facts.ts'
-import { USE_EVENT, sleepOf, type SleepNight } from '../../core/events.ts'
+import { USE_EVENT, sleepOf, toldOf, toldPayload, type SleepNight } from '../../core/events.ts'
 import { settled } from '../../core/order.ts'
 import { foldGame, type Game } from '../../core/fold.ts'
 import { V18_START, V21_START, setV22Start } from '../../core/rules.ts'
@@ -41,6 +41,8 @@ export interface View {
   facts: DayFacts[]
   status: LedgerStatus
   today: string
+  /** the news already told, in this app or in Life OS (core/events.ts): what neither should tell again */
+  told: Set<string>
 }
 
 const events: LedgerEvent[] = FIXTURE ? [...FIXTURE.events] : []
@@ -85,7 +87,7 @@ function compute(): View {
     for (const e of vit) if (e.day === last) for (const k of ['sleepMin', 'steps', 'weightKg'] as const) if (typeof e.payload[k] === 'number') body[k] = e.payload[k] as number
   }
   // until the habit library has been asked for, the game is still loading: nothing is drawn, told or auto-filled from a game without it
-  return { nights: sleepOf(settled(events)), body, game: foldGame(facts), facts, status: status === 'live' && !configAsked ? 'connecting' : status, today }
+  return { nights: sleepOf(settled(events)), body, game: foldGame(facts), facts, status: status === 'live' && !configAsked ? 'connecting' : status, today, told: toldOf(input.uses ?? []) }
 }
 function refresh(): void {
   view = compute()
@@ -239,6 +241,18 @@ export function useItem(item: string, uid: string, what: string, to?: string): b
   events.push(ev)
   refresh()
   return true
+}
+/**
+ * Record news as told, so Life OS does not tell it again (and this app does not tell what Life OS told). One row for the lot; what is already
+ * told is left out, and nothing is written when nothing is left. It changes nothing in the game, so it skips the trial fold useItem makes.
+ */
+export function markTold(keys: string[]): void {
+  const payload = toldPayload(keys, view.told)
+  if (!payload) return
+  const ev = ledger.emit(USE_EVENT, payload, view.today)
+  seen.add(keyOf(ev))
+  events.push(ev)
+  refresh()
 }
 /** What an action can change, as one string: every day but the last is history, which no action today rewrites. */
 const digest = (g: Game): string => JSON.stringify({ ...g, days: g.days.length })

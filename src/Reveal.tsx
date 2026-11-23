@@ -16,6 +16,8 @@ import { flyReward } from './lib/fly.ts'
 import { K, motion, motionConfig, run } from './lib/fx.ts'
 import { capsuleBurst, capsulePopup, confetti, evoUnlocked, type RarityName } from './lib/motion.js'
 import { play } from './lib/sfx.ts'
+import { newsKey } from '../core/events.ts'
+import { markTold } from './lib/store.ts'
 import { RANK, useOverlay } from './screens/overlay.ts'
 
 // ── an evolution ────────────────────────────────────────────────────────────
@@ -128,7 +130,7 @@ const load = (): Set<number> | null => {
 }
 
 /** A chest bought in the shop opens on the spot in the game; this is the moment of opening it. */
-export function ChestOpener({ game }: { game: Game }) {
+export function ChestOpener({ game, toldKeys }: { game: Game; toldKeys: Set<string> }) {
   const [queue, setQueue] = useState<Chest[]>([])
   const seen = useRef<Set<number> | null | undefined>(undefined)
   const count = game.moments.length
@@ -137,10 +139,11 @@ export function ChestOpener({ game }: { game: Game }) {
     const chests = game.moments.filter((m): m is Chest => m.kind === 'chest')
     const known = seen.current
     // the first run on a device opens nothing: history is not news
-    const fresh = known ? chests.filter((c) => !known.has(c.n)) : []
+    // one Life OS has already told is not opened again here, and one opened here is recorded for it (core/events.ts)
+    const fresh = known ? chests.filter((c) => !known.has(c.n) && !toldKeys.has(newsKey(c))) : []
     seen.current = new Set(chests.map((c) => c.n))
     try { localStorage.setItem(KEY, JSON.stringify([...seen.current])) } catch { /* it would only open twice */ }
-    if (fresh.length) setQueue((q) => [...q, ...fresh])
+    if (fresh.length) { markTold(fresh.map(newsKey)); setQueue((q) => [...q, ...fresh]) }
   }, [count])
   const c = queue[0]
   const turn = useOverlay(Boolean(c), RANK.chest)
@@ -165,7 +168,7 @@ const loadHatched = (): Set<string> | null => {
 }
 
 /** The egg on screen, tapped open: what hatched comes out of it. The first run on a device hatches nothing. */
-export function HatchOpener({ game }: { game: Game }) {
+export function HatchOpener({ game, toldKeys }: { game: Game; toldKeys: Set<string> }) {
   const [queue, setQueue] = useState<Hatch[]>([])
   const seen = useRef<Set<string> | null | undefined>(undefined)
   const count = game.moments.length
@@ -173,10 +176,11 @@ export function HatchOpener({ game }: { game: Game }) {
     if (seen.current === undefined) seen.current = loadHatched()
     const all = game.moments.filter((m): m is Hatch => m.kind === 'hatch')
     const known = seen.current
-    const fresh = known ? all.filter((h) => !known.has(h.uid)) : []
+    // one Life OS has already told is not hatched again here, and one hatched here is recorded for it (core/events.ts)
+    const fresh = known ? all.filter((h) => !known.has(h.uid) && !toldKeys.has(newsKey(h))) : []
     seen.current = new Set(all.map((h) => h.uid))
     try { localStorage.setItem(HATCH_KEY, JSON.stringify([...seen.current])) } catch { /* it would only hatch twice */ }
-    if (fresh.length) setQueue((q) => [...q, ...fresh])
+    if (fresh.length) { markTold(fresh.map(newsKey)); setQueue((q) => [...q, ...fresh]) }
   }, [count])
   const h = queue[0]
   const turn = useOverlay(Boolean(h), RANK.hatch)

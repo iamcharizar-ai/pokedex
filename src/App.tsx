@@ -1305,10 +1305,10 @@ export default function App() {
     <div className="shell">
       {FIXTURE && <a className="fixturetag" href={location.pathname} title={`${FIXTURE.note} Nothing here is your game, and nothing is saved. Tap to leave.`}>Fixture: {FIXTURE.name} · {fmtDay(FIXTURE.today)} · not your game ✕</a>}
       <TopBar game={game} today={view.today} status={status} loading={loading} onHelp={() => setHelp(true)} />
-      {!loading && <Toasts game={game} today={view.today} />}
+      {!loading && <Toasts game={game} today={view.today} toldKeys={view.told} />}
       {!loading && <PartyAutoFill game={game} />}
-      {!loading && <ChestOpener game={game} />}
-      {!loading && <HatchOpener game={game} />}
+      {!loading && <ChestOpener game={game} toldKeys={view.told} />}
+      {!loading && <HatchOpener game={game} toldKeys={view.told} />}
       {!loading && tour && <Tour onClose={closeTour} />}
       <main className="pager" onPointerDown={dragStart} onPointerMove={dragMove} onPointerUp={dragEnd} onPointerCancel={dragEnd}>
         {loading && (
@@ -1344,7 +1344,7 @@ export default function App() {
           return <button key={id} role="tab" aria-selected={tab === id} aria-label={text} aria-description={why ?? undefined} title={why ?? undefined} data-reward-target={id === 'team' ? 'bag' : undefined} className={`${tab === id ? 'on' : ''} ${why ? 'todo' : ''}`} onClick={(e) => { tapPop(e.currentTarget.querySelector('.tabicon')); slideTo(id) }}>{ICON[id]}{text}</button>
         })}
       </nav>
-      {!loading && <Recap game={game} today={view.today} />}
+      {!loading && <Recap game={game} today={view.today} toldKeys={view.told} />}
     </div>
   )
 }

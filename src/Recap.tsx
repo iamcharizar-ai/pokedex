@@ -15,6 +15,8 @@ import { KReveal, type Tier } from './Kit.tsx'
 import { EvoReveal } from './Reveal.tsx'
 import { party } from './lib/fx.ts'
 import { told } from './lib/told.ts'
+import { newsKey } from '../core/events.ts'
+import { markTold } from './lib/store.ts'
 import { RANK, useOverlay } from './screens/overlay.ts'
 import { FACILITIES } from '../core/frontier.ts'
 import { CropSprite } from './lib/pixel.tsx'
@@ -48,7 +50,7 @@ function loadSeen(): Set<string> | null {
 }
 
 /** The moments this device has not told yet, biggest first, and marks them told. The first run on a device tells nothing: history is not news. */
-export function freshMoments(game: Game, today: string): Moment[] {
+export function freshMoments(game: Game, today: string, toldKeys: Set<string> = new Set()): Moment[] {
   const from = new Date(today + 'T12:00:00')
   from.setDate(from.getDate() - NEWS_DAYS)
   const floor = from.toISOString().slice(0, 10)
@@ -56,7 +58,8 @@ export function freshMoments(game: Game, today: string): Moment[] {
   const seen = loadSeen()
   // one the screen that did it has already played (a forged Mega) is marked told below but not shown again
   const unseen = seen ? recent.filter((m) => !seen.has(keyOf(m))) : []
-  const fresh = unseen.filter((m) => !(m.kind === 'mega' && told.has(`mega:${m.form}`)))
+  // and one already told, here or in Life OS (core/events.ts), is marked told below but not shown again
+  const fresh = unseen.filter((m) => !(m.kind === 'mega' && told.has(`mega:${m.form}`)) && !toldKeys.has(newsKey(m)))
   if (!seen || unseen.length) {
     try {
       // added to, never replaced: a game read before all of its data has landed can lack (or date differently) a badge already told,
@@ -173,13 +176,15 @@ function NewsArt({ t, boxes }: { t: Told; boxes: Record<string, [number, number,
 }
 
 /** One window for everything new: the biggest thing drawn large, the rest as a list. One tap, anywhere, closes it. */
-export function Recap({ game, today }: { game: Game; today: string }) {
+export function Recap({ game, today, toldKeys }: { game: Game; today: string; toldKeys: Set<string> }) {
   // read once per day: marking them told is part of reading them
   const [fresh, setFresh] = useState<Moment[]>([])
   const count = game.moments.length
   useEffect(() => {
-    const news = freshMoments(game, today)
+    const news = freshMoments(game, today, toldKeys)
     if (news.length) setFresh((cur) => [...cur, ...news])
+    // what this window will say is told: Life OS will not say it again
+    markTold(news.filter((m) => tell(m, game).title).map(newsKey))
     // `game` is read as it stands when the count of moments changes
   }, [count, today])
   const told = useMemo(() => fresh.map((m) => ({ m, t: tell(m, game) })).filter((x) => x.t.title), [fresh, game])
