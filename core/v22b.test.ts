@@ -146,6 +146,24 @@ test('the Nursery: a fossil is revived by walking like an egg, and an egg of a t
   assert.equal(g.egg2, null)
 })
 
+test('an egg asked for on the day the Nursery hatches goes in the place the hatch frees, not nowhere (23 Nov 2026)', () => {
+  // seven days of Code and a good night: the Code track's egg (choice 1) and the Sleep track's egg both wait in Collect; Code's goes in, 25,000 steps a day
+  const week = Array.from({ length: 7 }, (_, i) => day(i, { code: true, sleep: true }))
+  const claims: Omit<ItemUse, 'day'>[] = [{ what: 'claim', item: '1', uid: '', to: 'track:code:1' }, { what: 'claim', item: '', uid: '', to: 'track:sleep:1' }, { what: 'warm', item: 'egg-code', uid: '' }]
+  const upto = (extra: DayFacts[]) => foldGame([...week, day(7, {}, 4, claims, 25000), day(8, {}, 4, [], 25000), ...extra])
+  assert.equal(upto([]).egg?.kind, 'egg-code', 'the one chosen is warming')
+  assert.equal(upto([]).inv['egg-sleep'], 1, 'the other waits in the Bag')
+  // the day it hatches (50,000 of 40,000 steps) the other is asked for: the action is read before the hatch, so it must be kept until the place is free
+  const hatchDay = day(9, {}, 4, [{ what: 'warm', item: 'egg-sleep', uid: '' }], 25000)
+  const g = upto([hatchDay])
+  assert.ok(g.moments.some((m) => m.kind === 'hatch' && m.egg === 'egg-code'), 'the Code egg hatched')
+  assert.equal(g.egg?.kind, 'egg-sleep', 'the Sleep egg went into the freed place')
+  assert.equal(g.egg?.since, addDays(START, 9))
+  assert.ok(!g.inv['egg-sleep'], 'and left the Bag')
+  // without the request nothing goes in until tomorrow (a lone kind waiting)
+  assert.equal(upto([day(9, {}, 4, [], 25000)]).egg, null)
+})
+
 test('Pickup finds only what is used as it is: coins, a berry, a ball, a Rare Candy, a stone or a fossil', () => {
   const ids = new Set(PICKUP_V22.map(([id]) => id))
   const g = foldGame(run(60, { code: true, gym: true }, 4))

@@ -7,7 +7,7 @@
 import { type CSSProperties } from 'react'
 import { Win } from '../App.tsx'
 import { Gem, ItemIcon } from '../Item.tsx'
-import { EGG_KINDS, MARKS, NURSERY_IDS, EGG_IDS, FOSSILS, FOSSIL_STEPS, itemName } from '../../core/economy.ts'
+import { EGG_KINDS, MARKS, NURSERY_IDS, NURSERY_PLACE, EGG_IDS, FOSSILS, FOSSIL_STEPS, itemName } from '../../core/economy.ts'
 import type { Game } from '../../core/fold.ts'
 import { STEPS_GOAL, V19_START } from '../../core/rules.ts'
 import { addDays } from '../../core/facts.ts'
@@ -40,6 +40,8 @@ export function Nursery({ game, onShop }: { game: Game; onShop: () => void }) {
   return <>
     <NurseryPlace game={game} onShop={onShop} egg={game.egg} />
     {game.egg2 && <NurseryPlace game={game} onShop={onShop} egg={game.egg2} />}
+    {/* version 22: a second place that was bought and is empty, while something waits in the Bag, can be filled from here too */}
+    {game.v22 && game.egg && !game.egg2 && (game.inv[NURSERY_PLACE] ?? 0) > 0 && NURSERY_IDS.some((id) => (game.inv[id] ?? 0) > 0) && <NurseryPlace game={game} onShop={onShop} egg={null} />}
   </>
 }
 
@@ -74,9 +76,14 @@ function NurseryPlace({ game, onShop, egg }: { game: Game; onShop: () => void; e
         <div className="nursery empty">
           <span className="nest empty"><span className="nursery-egg dim"><ItemIcon id={waiting[0] ?? 'rare-egg'} size={48} /></span></span>
           <span className="nursery-txt">
-            <b>{held > 0 ? 'An egg is in your Bag' : 'No egg is warming'}</b>
-            <small>{held > 0 ? 'It is set to incubate: warming begins tomorrow, and its steps count from the next day.' : game.today.day >= V19_START ? 'Walking finds Trail Eggs. A boss, a research rank or the Rare shop gives a Mystery Egg, and each kind of work\'s shop sells its own for marks.' : 'A boss you beat can drop one, or it is 150 gems in the Rare shop. Walking hatches it, into a rare Pokemon.'}</small>
+            <b>{held > 0 ? `${itemName(waiting[0])} is in your Bag` : 'No egg is warming'}</b>
+            <small>{held > 0 ? 'Put it in now and its steps count from tomorrow. Left alone, it goes in by itself tomorrow, and counts from the day after.' : game.today.day >= V19_START ? 'Walking finds Trail Eggs. A boss, a research rank or the Rare shop gives a Mystery Egg, and each kind of work\'s shop sells its own for marks.' : 'A boss you beat can drop one, or it is 150 gems in the Rare shop. Walking hatches it, into a rare Pokemon.'}</small>
             <TrailLine game={game} />
+            {held > 0 && (
+              <button type="button" className="pill-btn" onClick={() => { useItem(waiting[0], '', 'warm'); play('tap') }} title={`${itemName(waiting[0])}: ${(FOSSILS[waiting[0]] ? FOSSIL_STEPS : EGG_KINDS[waiting[0]].steps).toLocaleString()} steps, ${hatchesInto(waiting[0])}`}>
+                <ItemIcon id={waiting[0]} size={24} />Put it in now
+              </button>
+            )}
             {held === 0 && <button type="button" className="pill-btn" onClick={onShop}><Gem size={20} />Shop</button>}
           </span>
         </div>
