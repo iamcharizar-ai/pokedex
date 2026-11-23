@@ -13,6 +13,7 @@ import { DESK_BONUS, DAILY_PAY, DAY_COINS, MAX_LEVEL, REPEL_DAYS, RESEARCH_SLOTS
 import { SPECIES } from '../core/species.ts'
 import { GymBadge, TAG_NAME, Win, badgesWon, plural } from './App.tsx'
 import { Ball, BallItem, MegaStone, megaStoneName } from './Ball.tsx'
+import { MEGASTONE_ART } from './lib/megastone-art.ts'
 import { Forge } from './screens/Forge.tsx'
 import { Sheet } from './screens/Sheet.tsx'
 import { MiniScene } from './screens/Stage.tsx'
@@ -588,13 +589,36 @@ const GROUPS: [string, (id: string) => boolean][] = [
 /** A count as a slot shows it: 1.2k, 16k. */
 const short = (n: number): string => (n < 1000 ? String(n) : n < 10000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k` : `${Math.floor(n / 1000)}k`)
 
-/** What the Bag holds, thing by thing (badges too), for what is new in it. A thing on the partner counts: taking it off is not finding it. */
+/** A forged Mega Stone lies in the Bag as a thing of its own: `megastone:<Mega form>`, like a badge (it is not in `game.inv`). */
+const STONE = 'megastone:'
+/**
+ * Every Mega Stone forged so far, by Mega form, with the Pokemon each is registered to. A stone is kept for good: it is read from the
+ * Pokemon that hold it (the ledger's forge events), so it is in the Bag from the moment it is forged and cannot be spent or lost.
+ * Two Pokemon of one species that each forged the same stone give two of it.
+ */
+export function forgedStones(game: Game): Record<string, Mon[]> {
+  const seen = new Set<string>()
+  const out: Record<string, Mon[]> = {}
+  for (const m of [game.partner, ...game.queue, ...game.graduates]) {
+    if (seen.has(m.uid)) continue
+    seen.add(m.uid)
+    for (const f of m.megas ?? []) (out[f] ??= []).push(m)
+  }
+  return out
+}
+/** The stones in the order the Pokedex numbers them (X before Y). */
+const stoneOrder = (stones: Record<string, Mon[]>): string[] =>
+  Object.keys(stones).sort((a, b) => (SPECIES[a.replace(/-mega[xy]?$/, '')]?.d ?? 9999) - (SPECIES[b.replace(/-mega[xy]?$/, '')]?.d ?? 9999) || a.localeCompare(b))
+
+/** What the Bag holds, thing by thing (badges and Mega Stones too), for what is new in it. A thing on the partner counts: taking it off is not finding it. */
 export function bagCounts(game: Game): Record<string, number> {
   const out: Record<string, number> = {}
   for (const id of Object.keys(game.inv)) if ((game.inv[id] ?? 0) > 0 && ITEMS[id]) out[id] = game.inv[id]
   const h = game.partner.held
   if (h && ITEMS[h]) out[h] = (out[h] ?? 0) + 1
   LEAGUES.forEach((l, li) => l.gyms.forEach((_, gi) => { if (badgeWon(game.league, li, gi)) out[`badge:${li}:${gi}`] = 1 }))
+  const stones = forgedStones(game)
+  for (const f of Object.keys(stones)) out[STONE + f] = stones[f].length
   return out
 }
 
@@ -625,7 +649,10 @@ export function Bag({ game, news }: { game: Game; news: ItemNews }) {
   const badges = badgesWon(game)
   // each badge won lies in the Bag as a thing of its own: in the Badges pocket and among everything
   const badgeIds = LEAGUES.flatMap((l, index) => l.gyms.flatMap((_, i) => (badgeWon(game.league, index, i) ? [`badge:${index}:${i}`] : [])))
-  const ordered = [...groups.flatMap(([, ids]) => ids), ...rest, ...badgeIds]
+  // each Mega Stone forged lies in the Bag too, in a pocket of its own
+  const stones = forgedStones(game)
+  const stoneIds = stoneOrder(stones).map((f) => STONE + f)
+  const ordered = [...groups.flatMap(([, ids]) => ids), ...rest, ...stoneIds, ...badgeIds]
   // where each thing lies (kept on this device): what was left, made to fit what is owned now
   const [saved, setSaved] = useState<Layout>(loadLayout)
   const orderKey = ordered.join('|')
@@ -633,7 +660,7 @@ export function Bag({ game, news }: { game: Game; news: ItemNews }) {
   const layout = useMemo(() => reconcile(saved, ordered), [saved, orderKey])
   const saveNow = (l: Layout) => { setSaved(l); storeLayout(l) }
   useEffect(() => { if (JSON.stringify(layout) !== JSON.stringify(saved)) saveNow(layout) }, [layout, saved])
-  const tabs: [string, string[]][] = [['Everything', ordered], ...groups.map(([n, ids]) => [n, ids] as [string, string[]]), ...(rest.length ? [['Everything else', rest] as [string, string[]]] : []), ...(badgeIds.length ? [['Badges', badgeIds] as [string, string[]]] : [])]
+  const tabs: [string, string[]][] = [['Everything', ordered], ...groups.map(([n, ids]) => [n, ids] as [string, string[]]), ...(rest.length ? [['Everything else', rest] as [string, string[]]] : []), ...(stoneIds.length ? [['Mega Stones', stoneIds] as [string, string[]]] : []), ...(badgeIds.length ? [['Badges', badgeIds] as [string, string[]]] : [])]
   const at = tabs.find(([n]) => n === tab) ?? tabs[0]
   const all = at[0] === 'Everything'
   // what a pocket draws: every slot of the layout (Everything), or its things in the order they lie, then empty slots
@@ -641,6 +668,7 @@ export function Bag({ game, news }: { game: Game; news: ItemNews }) {
     ? Array.from({ length: slotCount(layout) }, (_, i) => layout[i] ?? null)
     : (() => { const c: (string | null)[] = [...at[1]].sort((x, y) => layout.indexOf(x) - layout.indexOf(y)); while (c.length < Math.max(18, Math.ceil(c.length / 9) * 9)) c.push(null); return c })()
   const nameOfThing = (id: string): string => {
+    if (id.startsWith(STONE)) return megaStoneName(id.slice(STONE.length))
     if (!id.startsWith('badge:')) return itemName(id)
     const [li, gi] = id.split(':').slice(1).map(Number)
     return badgeName(LEAGUES[li].gyms[gi])
@@ -688,6 +716,13 @@ export function Bag({ game, news }: { game: Game; news: ItemNews }) {
           icon={<GymBadge art={badgeArt(li, gi)} on n={gi + 1} size={32} title="" />} tip={{ title: badgeName(t), note: <>{l.name} · won from {t.name}</> }} />
       )
     }
+    if (id.startsWith(STONE)) {
+      const form = id.slice(STONE.length), holders = stones[form] ?? [], fresh = news.isNew(id)
+      return (
+        <Slot key={id} className={`${cls} ${fresh ? 'fresh' : ''}`} data-place={i} data-flip={id} onPointerDown={press(id)} onClick={() => tap(id, i)} aria-label={`${megaStoneName(form)}${holders.length > 1 ? `, ${holders.length}` : ''}${fresh ? ', new' : ''}. Open`}
+          icon={<MegaStone mega={form} size={MEGASTONE_ART.has(form) ? 32 : 22} title="" />} n={holders.length > 1 ? short(holders.length) : null} tip={{ title: megaStoneName(form), note: <>{fresh ? 'New · ' : ''}Forged for {holders.map((m) => nameOf(m.form)).join(', ')}</> }} />
+      )
+    }
     const on = game.partner.held === id || equipped.includes(id) || game.theme === id
     const n = have(id)
     // the gold dot: more of it than was last looked at; opening it is looking (lib/newitems.ts)
@@ -718,24 +753,24 @@ export function Bag({ game, news }: { game: Game; news: ItemNews }) {
   return (
     <Win title="Bag" tone="purple" aside={balls || berries ? <>{balls > 0 && `${balls} ${balls === 1 ? 'ball' : 'balls'}`}{balls > 0 && berries > 0 && ' · '}{berries > 0 && `${berries} ${berries === 1 ? 'berry' : 'berries'}`}</> : game.keyStone ? <><ItemIcon id="key-stone" size={24} /> Key Stone</> : undefined}>
       <div className="inv">
-        {(owned.length > 0 || badges > 0) && (
+        {(owned.length > 0 || badges > 0 || stoneIds.length > 0) && (
           <div className="inv-tabs" role="tablist" aria-label="Bag pockets" data-noswipe>
             {tabs.map(([name, ids]) => (
               <button key={name} type="button" role="tab" aria-selected={at[0] === name} className={`inv-tab ${at[0] === name ? 'on' : ''} ${ids.some(news.isNew) ? 'fresh' : ''}`} onClick={() => { setTab(name); play('click') }} title={`${name} · ${ids.length}${ids.some(news.isNew) ? ' · something new' : ''}`}>
-                {name === 'Badges' ? <ItemIcon id="town-map" size={26} /> : <ItemIcon id={name === 'Everything' ? 'seal-bag' : ids[0]} size={26} />}
+                {name === 'Badges' ? <ItemIcon id="town-map" size={26} /> : name === 'Mega Stones' ? <MegaStone mega={ids[0].slice(STONE.length)} size={24} title="" /> : <ItemIcon id={name === 'Everything' ? 'seal-bag' : ids[0]} size={26} />}
               </button>
             ))}
           </div>
         )}
         <div className="inv-panel">
           <div className="inv-bar">
-            <span className="inv-title">{carry ? `Carrying ${nameOfThing(carry)}: tap a slot` : at[0] === 'Badges' ? `Badges · ${badges}` : owned.length ? (at[0] === 'TMs' ? `TMs · ${equipped.length} of ${TM_SLOTS} on ${nameOf(game.partner.form)}` : at[0] === 'Held items' ? `Held items · ${nameOf(game.partner.form)} holds one` : at[0]) : 'Inventory'}</span>
+            <span className="inv-title">{carry ? `Carrying ${nameOfThing(carry)}: tap a slot` : at[0] === 'Badges' ? `Badges · ${badges}` : owned.length ? (at[0] === 'TMs' ? `TMs · ${equipped.length} of ${TM_SLOTS} on ${nameOf(game.partner.form)}` : at[0] === 'Held items' ? `Held items · ${nameOf(game.partner.form)} holds one` : at[0]) : stoneIds.length ? at[0] : 'Inventory'}</span>
             <span className="inv-btns">
               <button type="button" className={`inv-btn ${arrange ? 'on' : ''}`} aria-pressed={arrange} onClick={() => { setArrange(!arrange); setCarry(null); play('click') }} title="Tap a thing to pick it up, tap a slot to put it down. You can also drag a thing (hold it on a touch screen).">Arrange</button>
               <button type="button" className="inv-btn" onClick={() => { glide.current = true; saveNow(tidy(ordered)); setCarry(null); play('click') }} title="Lay everything down again in order, with no gaps">Tidy</button>
             </span>
           </div>
-          {owned.length === 0 && badges === 0 && <p className="inv-empty">No items yet. The Mart opens each morning, and feats hand out the rest.</p>}
+          {owned.length === 0 && badges === 0 && stoneIds.length === 0 && <p className="inv-empty">No items yet. The Mart opens each morning, and feats hand out the rest.</p>}
           <div className={`inv-grid ${arrange ? 'arranging' : ''}`}>{cells.map(cell)}</div>
           <span className="inv-title">Money and marks</span>
           <div className="inv-grid inv-hotbar">
@@ -757,6 +792,19 @@ export function Bag({ game, news }: { game: Game; news: ItemNews }) {
               <h2 className="k-type">{badgeName(t)}</h2>
               <p>Won from {t.name}, {l.name}.</p>
               <p className="muted">Badges lie in the Bag with everything else. Drag one, or use Arrange, to put it where you like.</p>
+            </div>
+          </Sheet>
+        )
+      })()}
+      {open?.startsWith(STONE) && stones[open.slice(STONE.length)] && (() => {
+        const form = open.slice(STONE.length), holders = stones[form]
+        return (
+          <Sheet title={megaStoneName(form)} onClose={() => setOpen(null)}>
+            <div className="ware-sheet">
+              <span className="ware-sheet-art"><MegaStone mega={form} size={96} title={megaStoneName(form)} /></span>
+              <h2 className="k-type">{megaStoneName(form)}</h2>
+              <p>Forged for {holders.map((m) => nameOf(m.form)).join(' and ')}, which {holders.length > 1 ? 'each keep' : 'keeps'} it for good: it never runs out and cannot be spent.</p>
+              <p className="muted">A Mega Stone doubles its Pokemon's share of the party's power. Mega Stones lie in the Bag with everything else. Drag one, or use Arrange, to put it where you like.</p>
             </div>
           </Sheet>
         )
@@ -858,9 +906,9 @@ export function MonPage({ m, game, onClose }: { m: Mon; game: Game; onClose: () 
           <div className="mp-line">
             {m.path.map((f, i) => <span key={f} className="path-step">{i > 0 && <span className="arrow">▸</span>}<img src={still(f, m.shiny)} alt={nameOf(f)} title={nameOf(f)} width={48} height={48} className="sprite" /></span>)}
             {(rec.e ?? []).length > 0 && <span className="path-step"><span className="arrow">▸</span>{rec.e!.slice(0, 3).map((f) => <img key={f} src={still(f)} alt="" width={48} height={48} className={`sprite ${game.dex[f] ? '' : 'unseen'}`} />)}</span>}
-            {(m.megas ?? []).map((f) => <span key={f} className="path-step"><span className="arrow">★</span><img src={still(f, m.shiny)} alt={nameOf(f)} title={`${nameOf(f)}, for good`} width={48} height={48} className="sprite" /><MegaStone mega={f} size={22} /></span>)}
+            {(m.megas ?? []).map((f) => <span key={f} className="path-step"><span className="arrow">★</span><img src={still(f, m.shiny)} alt={nameOf(f)} title={`${nameOf(f)}, for good`} width={48} height={48} className="sprite" /><MegaStone mega={f} size={24} /></span>)}
           </div>
-          {megas.length > 0 && <p className="muted megaline">{(m.megas ?? []).length ? <>It holds {(m.megas ?? []).map((f) => <span key={f} className="megachip"><MegaStone mega={f} size={18} />{megaStoneName(f)}</span>)}, forged and kept for good.</> : <>It can hold {megas.map((f) => <span key={f} className="megachip"><MegaStone mega={f} size={18} />{megaStoneName(f)}</span>)}. Mega Stones are forged in the Forge on the Party tab, once the Key Stone is yours.</>}</p>}
+          {megas.length > 0 && <p className="muted megaline">{(m.megas ?? []).length ? <>It holds {(m.megas ?? []).map((f) => <span key={f} className="megachip"><MegaStone mega={f} size={24} />{megaStoneName(f)}</span>)}, forged and kept for good.</> : <>It can hold {megas.map((f) => <span key={f} className="megachip"><MegaStone mega={f} size={24} />{megaStoneName(f)}</span>)}. Mega Stones are forged in the Forge on the Party tab, once the Key Stone is yours.</>}</p>}
           <MonExtras game={game} m={m} onDone={onClose} />
           {game.v14 && trained && !isPartner && <p className="muted">{levelOf(m.xp) >= MAX_LEVEL ? 'Level 100: it has nothing left to learn as a partner.' : `Fully trained. It can lead again to go on to level ${MAX_LEVEL}${game.tier.v21 ? ', and takes a Rare Candy' : ", or grow with the party's Exp. Share"}.`}</p>}
           <div className="kit-row">

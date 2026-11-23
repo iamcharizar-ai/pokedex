@@ -243,7 +243,7 @@ export function Forge({ game }: { game: Game }) {
               const k = keyOf(s), on = sel && keyOf(sel) === k, ss = state(s)
               return (
                 <button key={k} type="button" role="radio" aria-checked={Boolean(on)} className={`fp ${ss} ${on ? 'on' : ''}`} onClick={() => { setPick(k); play('tap') }} title={`${nameOf(s.mega)}: ${ss === 'done' ? 'forged' : ss === 'ready' ? 'ready to forge' : ss === 'locked' ? 'needs the Key Stone' : `needs ${fair ? 'three shards of different colours' : wantText(s)}`}`}>
-                  <span className="fp-face"><img src={still(s.m.form, s.m.shiny)} alt="" width={52} height={52} className="sprite" />{ss === 'done' && <i className="fp-star" aria-hidden>★</i>}<span className="fp-stone"><MegaStone mega={s.mega} size={20} /></span></span>
+                  <span className="fp-face"><img src={still(s.m.form, s.m.shiny)} alt="" width={52} height={52} className="sprite" />{ss === 'done' && <i className="fp-star" aria-hidden>★</i>}<span className="fp-stone"><MegaStone mega={s.mega} size={24} /></span></span>
                   <b>{shortName(s.mega)}</b>
                   <small>{ss === 'done' ? 'Forged' : ss === 'ready' ? 'Ready' : ss === 'locked' ? 'Locked' : 'Needs shards'}</small>
                 </button>
@@ -262,7 +262,8 @@ export function Forge({ game }: { game: Game }) {
           <div className="capsule-stage" style={{ width: 'min(360px, 92vw)', height: 'auto' }}>
             <EvoReveal from={still(reveal.from)} to={spritePath(reveal.to)} title={`${nameOf(reveal.to)}!`} />
           </div>
-          <p className="capsule-line">A Mega Stone is forged. {nameOf(reveal.from)} keeps it for good.</p>
+          <MegaStone mega={reveal.to} size={72} />
+          <p className="capsule-line">{megaStoneName(reveal.to)} is forged, and lies in your Bag. {nameOf(reveal.from)} keeps it for good.</p>
           <button type="button" className="k-btn main capsule-go" autoFocus>Nice</button>
         </div>
       )}
