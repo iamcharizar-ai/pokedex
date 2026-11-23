@@ -35,7 +35,7 @@ for (const fx of ['empty', 'week', 'late', 'boss']) {
   STATES.push([`${fx}/Party card sheet`, `fixture=${fx}&tour=0`, ['nav:Party', 'click:.pl .mc']])
   STATES.push([`${fx}/Bag item sheet`, `fixture=${fx}&tour=0`, ['nav:Party', 'pm:Items', 'click:.inv-slot:not(.blank)']])
   STATES.push([`${fx}/Shop ware sheet`, `fixture=${fx}&tour=0`, ['nav:Shop', 'click:.wcard']])
-  STATES.push([`${fx}/Dex entry`, `fixture=${fx}&tour=0`, ['nav:Pokedex', 'click:.dexcard']])
+  STATES.push([`${fx}/Dex entry`, `fixture=${fx}&tour=0`, ['nav:Pokedex', 'click:.dx']])
   STATES.push([`${fx}/Help`, `fixture=${fx}&tour=0`, ['click:.topbar button[aria-label*="elp"], .topbar .k-help, button[aria-label="How it works"]']])
   STATES.push([`${fx}/Collect`, `fixture=${fx}&tour=0`, ['click:.tb-collect']])
 }

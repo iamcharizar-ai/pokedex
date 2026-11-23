@@ -2,7 +2,7 @@
 //   node --test tools/stage.test.mjs
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { BUILT, biomeOf, layoutFor, lightAt, litFilter, paintBack, paintFront, rng } from '../src/screens/stage.ts'
+import { BUILT, THEME_PLACE, biomeOf, layoutFor, lightAt, litFilter, paintBack, paintFront, rng } from '../src/screens/stage.ts'
 
 /** A canvas stand-in that keeps every rectangle drawn. */
 function recorder() {
@@ -90,4 +90,13 @@ test('each place looks like itself: two places never draw the same picture', () 
   const seen = new Map()
   // the cave is a scene you buy (its look comes with the theme), not a type's place
   for (const b of BUILT.filter((b) => b !== 'cave')) { const p = pic(b); assert.ok(!seen.has(p), `${b} draws the same as ${seen.get(p)}`); seen.set(p, b) }
+})
+
+test('the Beach scene is the shore whoever the wild Pokemon is; the other scenes keep the foe\'s place', () => {
+  const pics = (o) => { const g = recorder(); paintBack(g, state(o)); const b = JSON.stringify(g.rects); const f = recorder(); paintFront(f, state(o)); return b + JSON.stringify(f.rects) }
+  const shore = pics({ biome: 'shore', theme: '' , minutes: 720 })
+  for (const biome of ['meadow', 'volcano', 'snow', 'steel', 'ruins']) assert.equal(pics({ biome, theme: 'theme-beach', minutes: 720 }), shore, `a Beach over a ${biome} is still the shore`)
+  assert.equal(THEME_PLACE['theme-beach'], 'shore')
+  // the starry night keeps the place and only pins the hour
+  assert.notEqual(pics({ biome: 'volcano', theme: 'theme-night' }), pics({ biome: 'meadow', theme: 'theme-night' }))
 })

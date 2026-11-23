@@ -34,30 +34,27 @@
 .seg2 button { min-height: 44px; min-width: 44px; padding: 0 var(--s-3); font-family: var(--k-face); font-size: 14px; color: var(--text-2); background: none; border: 0; border-radius: 99px; cursor: pointer; transition: background var(--t-fade) linear, color var(--t-fade) linear; }
 .seg2 button.on { color: var(--k-edge); background: linear-gradient(#ffe27a, var(--tone-gold)); }
 
-/* ── the grid (UI-AUDIT-2026-11-04 phase 7): each entry a mini object card. Caught: the type's colour as the field.
-   Seen only: the same field, faded. Not seen: the grey frame and a silhouette. The ball sits in the corner, the
-   number is the banner, and the sprite is drawn at 1x (only its drawn part), so nobody is shrunk. ── */
+/* ── the grid: a tile for each entry. Caught: a gold tile, the ball in its corner and a star once fully trained. Seen: a lighter
+   tile. Not seen: the silhouette. The number sits at the bottom in the app's own face (this is the look from before phase 7). ── */
 .dex2 { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px; }
+.dx { position: relative; display: grid; justify-items: center; align-content: end; height: 90px; padding: 0 0 5px; background: rgba(255, 255, 255, 0.04); border: 2px solid var(--hair); border-radius: 12px; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.18); cursor: pointer; transition: background var(--t-fade) linear, border-color var(--t-fade) linear, transform var(--t-fade) var(--ease-out); }
+.dx:hover { background: var(--surface-2); border-color: var(--hair-hi); transform: translateY(-2px); }
 /* a region is up to 240 cells: only the ones near the screen are drawn */
-.dexcard { content-visibility: auto; contain-intrinsic-size: auto 76px auto 104px; }
-.dexcard .mc-f { gap: 2px; padding: 2px; border-radius: 10px; }
-.dexcard .mc-art { height: 72px; border-radius: 7px 7px 3px 3px; }
-.dexcard .mc-art::after { bottom: 8px; height: 7px; }
-.dexcard .mc-lv { height: 18px; }
-.dexcard .mc-lv b { font-size: 11.5px; -webkit-text-stroke: 2.5px var(--k-edge); }
-.dexcard .mc-sig { right: 2px; top: 2px; width: 20px; height: 20px; border-width: 1.5px; }
-.dexcard .mc-sig img { width: 16px; height: 16px; }
-.dexcard .crop { z-index: 1; flex: none; }
-/* seen, not caught: the field without its colour */
-.dexcard.dc-seen .mc-art { background: radial-gradient(circle at 50% 44%, color-mix(in srgb, var(--tc) 22%, #5a6180) 0 18%, color-mix(in srgb, var(--tc) 18%, #1a2040) 80%); }
-.dexcard.dc-seen .mc-lv b { color: var(--text-2); }
-/* not seen: the silhouette (the grey metal blacks the sprite) and a dim number */
-.dexcard.dc-none .mc-lv b { color: var(--text-3); }
-.dexcard.dc-none .mc-art::after { display: none; }
-.dexcard .mc-shiny { color: #7fe3ff; font-size: 12px; }
-.dexcard .dc-ball { display: block; width: 10px; height: 10px; border-radius: 50%; background: linear-gradient(#ff5a64 0 45%, #1a1a2e 45% 55%, #fff 55%); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5); }
-.dexcard.m-gold .mc-f { box-shadow: 0 4px 0 var(--k-edge); }
-.dex2.locked .dexcard { opacity: 0.45; }
+.dx { content-visibility: auto; contain-intrinsic-size: auto 76px auto 90px; }
+.dx:focus-visible { outline: 3px solid #fff; outline-offset: -2px; }
+.dx img.sprite { width: 56px; height: 56px; image-rendering: pixelated; transition: transform var(--t-fade) linear; }
+.dx img.unseen { filter: brightness(0) opacity(0.22); }
+.dx-no { font-family: var(--k-face); font-size: 12px; color: var(--text-3); }
+.dx.seen { background: linear-gradient(160deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03)); }
+.dx.seen .dx-no { color: var(--text-2); }
+.dx.own { background: linear-gradient(160deg, rgba(255, 200, 40, 0.22), rgba(255, 200, 40, 0.04)); border-color: rgba(255, 200, 40, 0.5); }
+.dx.own .dx-no { color: var(--text); }
+.dx img.dx-ball { position: absolute; right: 4px; top: 4px; width: 16px; height: 16px; image-rendering: pixelated; }
+.dx i.dx-ball.plain { position: absolute; display: block; box-sizing: border-box; padding: 0; min-width: 0; min-height: 0; width: 10px; height: 10px; border-radius: 50%; background: linear-gradient(#ff5a64 0 45%, #1a1a2e 45% 55%, #fff 55%); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5); right: 6px; top: 6px; }
+.dx-star { position: absolute; left: 5px; top: 3px; font-style: normal; font-size: 12px; color: var(--tone-gold); }
+.dx-shine { position: absolute; left: 5px; top: 19px; font-style: normal; font-size: 12px; color: #7fe3ff; }
+.dx.mg img.sprite { filter: drop-shadow(0 0 5px rgba(169, 139, 255, 0.9)); }
+.dex2.locked .dx { opacity: 0.45; }
 .dex-none { grid-column: 1 / -1; }
 
 /* ── the header's ring in parts: caught, seen only, and the track for not seen ── */
@@ -84,6 +81,5 @@
 .entry-forms span { display: grid; justify-items: center; }
 .entry-forms small { font-family: var(--k-face); font-size: 12px; color: var(--text-2); }
 @media (max-width: 560px) {
-  .dex2 { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); }
   .dexhead-txt h2 { font-size: 28px; }
 }

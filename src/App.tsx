@@ -12,7 +12,6 @@ import { MARKS, EGG_KINDS, RARE_EGG_GEMS, BOND_STEP, MASTERY_MAX, MASTERY_STEP, 
 import { MILESTONE_EVERY, CRIT_MULT, DYNAMAX, LEVEL_POWER, MAX_LEVEL, MEGA_BONUS, MEGA_BOND, RESEARCH_SLOTS, RESEARCH_WILD, RESEARCH_WILD_MAX, TEAM_BONUS, TEAM_LEVEL, TEAM_NATURE, type Tag as TagKind } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
 import { Ball, BallItem, KeyStone } from './Ball.tsx'
-import { ObjCard } from './ObjCard.tsx'
 import { FeatsWin } from './Feats.tsx'
 import { RulesV22Body } from './screens/RulesV22.tsx'
 import { SleepWin } from './Sleep.tsx'
@@ -22,7 +21,7 @@ import { KClose, KPill } from './Kit.tsx'
 import { Actions, Coin, Count, Gem, Pop, Quests, ShopTab, TeamTab } from './Play.tsx'
 import { Recap } from './Recap.tsx'
 import { BossLog, BossTile } from './Boss.tsx'
-import { useBoxes } from './Fit.tsx'
+import { fitOf, useBoxes } from './Fit.tsx'
 import { Calendar } from './screens/Calendar.tsx'
 import { SIG_CAP, TRAINER_LEVELS } from '../core/bond.ts'
 import { reachNote, tabTodo } from './screens/Today.tsx'
@@ -738,6 +737,7 @@ function DexTab({ game }: { game: Game }) {
   const here = perRegion[region - 1]
   // each sprite is sized by what is drawn in it, so a small Pokemon and a large one look alike in the grid
   const boxes = useBoxes()
+  const fit = (id: string): CSSProperties | undefined => { const t = boxes ? fitOf(boxes[id], 56, 42) : undefined; return t ? { transform: t } : undefined }
   return (
     <div className="dexpage">
       <div className="regions2" role="tablist" aria-label="Region" data-noswipe>
@@ -783,16 +783,14 @@ function DexTab({ game }: { game: Game }) {
         {shown.map(([id, r]) => {
           const e = game.dex[id]
           const mon = owned.get(id)
-          const mg = (r.m ?? []).some((f) => game.dex[f]?.own)
-          // a mini card: the type's field once caught, a faded one when only seen, a silhouette when not; the ball in the corner
           return (
-            <ObjCard key={id} className={`dexcard ${e ? (e.own ? 'dc-own' : 'dc-seen') : 'dc-none'}`} metal={!e ? 'locked' : mg ? 'mega' : mon?.graduated ? 'gold' : 'silver'}
-              tc={e ? typeColor(r.t) : undefined}
-              art={<CropSprite src={still(id, e?.shiny)} box={boxes?.[id]} lazy className="dx-sprite" />}
-              corners={{ ...(e?.own ? { tr: mon?.ball ? <Ball ball={mon.ball} size={16} /> : <i className="dc-ball" />, trTitle: 'Caught' } : {}), ...(e?.shiny ? { top: '✦' } : {}) }}
-              banner={dexNo(r.d)}
-              onClick={() => setOpen(id)} title={e ? r.n : `#${r.d}`}
-              aria-label={e ? `${r.n}, number ${r.d}${e.own ? ', caught' : ', seen'}${mon?.graduated ? ', fully trained' : ''}` : `Not seen, number ${r.d}`} />
+            <button key={id} type="button" className={`dx ${e ? 'seen' : ''} ${e?.own ? 'own' : ''} ${(r.m ?? []).some((f) => game.dex[f]?.own) ? 'mg' : ''}`} onClick={() => setOpen(id)} title={e ? r.n : `#${r.d}`} aria-label={e ? `${r.n}, number ${r.d}${e.own ? ', caught' : ', seen'}${mon?.graduated ? ', fully trained' : ''}` : `Not seen, number ${r.d}`}>
+              <img src={still(id, e?.shiny)} alt="" loading="lazy" decoding="async" width={56} height={56} className={`sprite ${e ? '' : 'unseen'}`} style={fit(id)} />
+              <span className="dx-no">{dexNo(r.d)}</span>
+              {e?.own && (mon?.ball ? <Ball ball={mon.ball} size={16} className="dx-ball" /> : <i className="dx-ball plain" aria-hidden />)}
+              {mon?.graduated && <i className="dx-star" title="Fully trained" aria-hidden>★</i>}
+              {e?.shiny && <i className="dx-shine" title="Shiny" aria-hidden>✦</i>}
+            </button>
           )
         })}
         {shown.length === 0 && <p className="muted dex-none">Nothing here with this filter.</p>}

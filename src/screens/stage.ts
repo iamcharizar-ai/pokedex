@@ -161,6 +161,13 @@ const PLACES: Record<Exclude<Biome, 'cave'>, Place> = {
   ruins: { colours: { far: '#5e5a78', ground: '#918da4', ground2: '#7c7894', pad: '#aaa6bc', pad2: '#6e6a86' }, haze: ['#7a6aaa', 0.18], ridge: 'hills', line: 'columns', frame: 'pillar', floor: 'tiles', dots: ['#7f9a6a', '#a7b48a'], dotRate: 0.35, pad: 'stone', fore: 'rocks', life: 'wisps' },
   steel: { colours: { far: '#5d6678', ground: '#8c95a5', ground2: '#7a8393', pad: '#a6afbe', pad2: '#6b7484' }, haze: ['#9aa0ac', 0.22], ridge: 'skyline', line: 'girders', frame: 'tank', floor: 'plates', dots: ['#c8ced8', '#5a6272'], dotRate: 0.2, pad: 'metal', fore: 'pipe', life: 'steam' },
 }
+/**
+ * A bought scene that is a place of its own. The Beach is the shore (sea, sand, a palm, gulls) whoever the wild Pokemon is; the other
+ * scenes only pin the light (sky.ts THEME_CLOCK), and the Cave is drawn by its own branch.
+ */
+export const THEME_PLACE: Record<string, Biome> = { 'theme-beach': 'shore' }
+/** The place a state is drawn in: the bought scene's own, else the wild Pokemon's. */
+const biomeFor = (s: Pick<StageState, 'theme' | 'biome'>): Biome => THEME_PLACE[s.theme] ?? s.biome
 /** The place a state is drawn as: its own if built, the meadow if not. */
 const placeOf = (b: Biome): Place => PLACES[(b === 'cave' || !BUILT.includes(b) ? 'meadow' : b) as Exclude<Biome, 'cave'>]
 
@@ -170,7 +177,7 @@ export function paintBack(g: Ctx, s: StageState) {
   const { w, h, horizon: hy } = lay
   const look = lookOf(s)
   const { dark, wx, minutes, cave } = look
-  const place = placeOf(s.biome)
+  const place = placeOf(biomeFor(s))
   // the place's colours at this hour (the meadow's are the palette as it is)
   const tod = (c: string) => mix(mix(c, look.p.sky2, 0.1), '#121a3d', dark * 0.6)
   const p: Palette = cave || !place.colours ? look.p : { sky1: look.p.sky1, sky2: look.p.sky2, far: tod(place.colours.far), ground: tod(place.colours.ground), ground2: tod(place.colours.ground2), pad: tod(place.colours.pad), pad2: tod(place.colours.pad2) }
@@ -614,7 +621,7 @@ export function paintFront(g: Ctx, s: StageState) {
   const { w, h, horizon: hy } = lay
   const look = lookOf(s)
   const { dark, wx, cave } = look
-  const place = placeOf(s.biome)
+  const place = placeOf(biomeFor(s))
   const tod = (c: string) => mix(mix(c, look.p.sky2, 0.1), '#121a3d', dark * 0.6)
   const p: Palette = cave || !place.colours ? look.p : { ...look.p, far: tod(place.colours.far), ground: tod(place.colours.ground), ground2: tod(place.colours.ground2), pad: tod(place.colours.pad), pad2: tod(place.colours.pad2) }
   g.globalAlpha = 1

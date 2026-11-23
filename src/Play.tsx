@@ -591,6 +591,11 @@ const short = (n: number): string => (n < 1000 ? String(n) : n < 10000 ? `${(n /
 
 /** A forged Mega Stone lies in the Bag as a thing of its own: `megastone:<Mega form>`, like a badge (it is not in `game.inv`). */
 const STONE = 'megastone:'
+/** The ordinary scene (no bought theme) lies in the Bag too, as the first of the Scenes: it is what "Take it off" goes back to. */
+const SCENE_DEFAULT = 'scene:default'
+/** Its picture: the sky split between day and night over the meadow, because it follows the clock. */
+const DEFAULT_SCENE_ART = 'linear-gradient(#5aa84a 0 0) bottom / 100% 40% no-repeat, linear-gradient(115deg, #7fcdf0 0 50%, #1b2650 50%)'
+const DefaultSceneIcon = ({ size = 32 }: { size?: number }) => <span className="swatch" aria-hidden style={{ width: size, height: size, background: DEFAULT_SCENE_ART }} />
 /**
  * Every Mega Stone forged so far, by Mega form, with the Pokemon each is registered to. A stone is kept for good: it is read from the
  * Pokemon that hold it (the ledger's forge events), so it is in the Bag from the moment it is forged and cannot be spent or lost.
@@ -638,7 +643,10 @@ export function Bag({ game, news }: { game: Game; news: ItemNews }) {
     return [name, ids] as const
   }).filter(([, ids]) => ids.length > 0)
   // everything that is not one of the groups above: gear, guards, incense, an egg, a chest, a scene
-  const rest = owned.filter((id) => !used.has(id))
+  // the bought scenes are a pocket of their own, with the ordinary scene first
+  const themeIds = owned.filter((id) => ITEMS[id].kind === 'theme')
+  const sceneIds = [SCENE_DEFAULT, ...themeIds]
+  const rest = owned.filter((id) => !used.has(id) && ITEMS[id].kind !== 'theme')
   const balls = owned.filter((id) => ITEMS[id].kind === 'ball').reduce((n, id) => n + have(id), 0)
   const berries = owned.filter((id) => ITEMS[id].kind === 'berry').reduce((n, id) => n + have(id), 0)
   const toggleTm = (id: string) => {
@@ -652,7 +660,7 @@ export function Bag({ game, news }: { game: Game; news: ItemNews }) {
   // each Mega Stone forged lies in the Bag too, in a pocket of its own
   const stones = forgedStones(game)
   const stoneIds = stoneOrder(stones).map((f) => STONE + f)
-  const ordered = [...groups.flatMap(([, ids]) => ids), ...rest, ...stoneIds, ...badgeIds]
+  const ordered = [...groups.flatMap(([, ids]) => ids), ...rest, ...sceneIds, ...stoneIds, ...badgeIds]
   // where each thing lies (kept on this device): what was left, made to fit what is owned now
   const [saved, setSaved] = useState<Layout>(loadLayout)
   const orderKey = ordered.join('|')
@@ -660,7 +668,7 @@ export function Bag({ game, news }: { game: Game; news: ItemNews }) {
   const layout = useMemo(() => reconcile(saved, ordered), [saved, orderKey])
   const saveNow = (l: Layout) => { setSaved(l); storeLayout(l) }
   useEffect(() => { if (JSON.stringify(layout) !== JSON.stringify(saved)) saveNow(layout) }, [layout, saved])
-  const tabs: [string, string[]][] = [['Everything', ordered], ...groups.map(([n, ids]) => [n, ids] as [string, string[]]), ...(rest.length ? [['Everything else', rest] as [string, string[]]] : []), ...(stoneIds.length ? [['Mega Stones', stoneIds] as [string, string[]]] : []), ...(badgeIds.length ? [['Badges', badgeIds] as [string, string[]]] : [])]
+  const tabs: [string, string[]][] = [['Everything', ordered], ...groups.map(([n, ids]) => [n, ids] as [string, string[]]), ...(rest.length ? [['Everything else', rest] as [string, string[]]] : []), ['Scenes', sceneIds] as [string, string[]], ...(stoneIds.length ? [['Mega Stones', stoneIds] as [string, string[]]] : []), ...(badgeIds.length ? [['Badges', badgeIds] as [string, string[]]] : [])]
   const at = tabs.find(([n]) => n === tab) ?? tabs[0]
   const all = at[0] === 'Everything'
   // what a pocket draws: every slot of the layout (Everything), or its things in the order they lie, then empty slots
@@ -668,6 +676,7 @@ export function Bag({ game, news }: { game: Game; news: ItemNews }) {
     ? Array.from({ length: slotCount(layout) }, (_, i) => layout[i] ?? null)
     : (() => { const c: (string | null)[] = [...at[1]].sort((x, y) => layout.indexOf(x) - layout.indexOf(y)); while (c.length < Math.max(18, Math.ceil(c.length / 9) * 9)) c.push(null); return c })()
   const nameOfThing = (id: string): string => {
+    if (id === SCENE_DEFAULT) return 'Default scene'
     if (id.startsWith(STONE)) return megaStoneName(id.slice(STONE.length))
     if (!id.startsWith('badge:')) return itemName(id)
     const [li, gi] = id.split(':').slice(1).map(Number)
@@ -716,6 +725,13 @@ export function Bag({ game, news }: { game: Game; news: ItemNews }) {
           icon={<GymBadge art={badgeArt(li, gi)} on n={gi + 1} size={32} title="" />} tip={{ title: badgeName(t), note: <>{l.name} · won from {t.name}</> }} />
       )
     }
+    if (id === SCENE_DEFAULT) {
+      const worn = game.theme === ''
+      return (
+        <Slot key={id} className={cls} on={worn} data-place={i} data-flip={id} onPointerDown={press(id)} onClick={() => tap(id, i)} aria-label={`Default scene${worn ? ', in use' : ''}. Open`}
+          icon={<DefaultSceneIcon />} tip={{ title: 'Default scene', note: <>{worn ? 'In use' : 'Not in use'} · follows the clock and your sleep</> }} />
+      )
+    }
     if (id.startsWith(STONE)) {
       const form = id.slice(STONE.length), holders = stones[form] ?? [], fresh = news.isNew(id)
       return (
@@ -757,14 +773,14 @@ export function Bag({ game, news }: { game: Game; news: ItemNews }) {
           <div className="inv-tabs" role="tablist" aria-label="Bag pockets" data-noswipe>
             {tabs.map(([name, ids]) => (
               <button key={name} type="button" role="tab" aria-selected={at[0] === name} className={`inv-tab ${at[0] === name ? 'on' : ''} ${ids.some(news.isNew) ? 'fresh' : ''}`} onClick={() => { setTab(name); play('click') }} title={`${name} · ${ids.length}${ids.some(news.isNew) ? ' · something new' : ''}`}>
-                {name === 'Badges' ? <ItemIcon id="town-map" size={26} /> : name === 'Mega Stones' ? <MegaStone mega={ids[0].slice(STONE.length)} size={24} title="" /> : <ItemIcon id={name === 'Everything' ? 'seal-bag' : ids[0]} size={26} />}
+                {name === 'Badges' ? <ItemIcon id="town-map" size={26} /> : name === 'Scenes' ? <DefaultSceneIcon size={24} /> : name === 'Mega Stones' ? <MegaStone mega={ids[0].slice(STONE.length)} size={24} title="" /> : <ItemIcon id={name === 'Everything' ? 'seal-bag' : ids[0]} size={26} />}
               </button>
             ))}
           </div>
         )}
         <div className="inv-panel">
           <div className="inv-bar">
-            <span className="inv-title">{carry ? `Carrying ${nameOfThing(carry)}: tap a slot` : at[0] === 'Badges' ? `Badges · ${badges}` : owned.length ? (at[0] === 'TMs' ? `TMs · ${equipped.length} of ${TM_SLOTS} on ${nameOf(game.partner.form)}` : at[0] === 'Held items' ? `Held items · ${nameOf(game.partner.form)} holds one` : at[0]) : stoneIds.length ? at[0] : 'Inventory'}</span>
+            <span className="inv-title">{carry ? `Carrying ${nameOfThing(carry)}: tap a slot` : at[0] === 'Badges' ? `Badges · ${badges}` : owned.length ? (at[0] === 'TMs' ? `TMs · ${equipped.length} of ${TM_SLOTS} on ${nameOf(game.partner.form)}` : at[0] === 'Held items' ? `Held items · ${nameOf(game.partner.form)} holds one` : at[0]) : at[0] !== 'Everything' ? at[0] : 'Inventory'}</span>
             <span className="inv-btns">
               <button type="button" className={`inv-btn ${arrange ? 'on' : ''}`} aria-pressed={arrange} onClick={() => { setArrange(!arrange); setCarry(null); play('click') }} title="Tap a thing to pick it up, tap a slot to put it down. You can also drag a thing (hold it on a touch screen).">Arrange</button>
               <button type="button" className="inv-btn" onClick={() => { glide.current = true; saveNow(tidy(ordered)); setCarry(null); play('click') }} title="Lay everything down again in order, with no gaps">Tidy</button>
@@ -796,6 +812,17 @@ export function Bag({ game, news }: { game: Game; news: ItemNews }) {
           </Sheet>
         )
       })()}
+      {open === SCENE_DEFAULT && (
+        <Sheet title="Default scene" onClose={() => setOpen(null)}>
+          <div className="ware-sheet">
+            <span className="ware-sheet-art"><MiniScene theme="" w={58} h={70} /></span>
+            <h2 className="k-type">Default scene</h2>
+            <p>The ordinary scene on Today. It follows the time of day, from dawn to a starry night, and last night's sleep: a clear sky after a good night, rain after a bad one. Its place is the wild Pokemon's own.</p>
+            <p className="muted">It is always yours: no scene you buy takes it away. {game.theme === '' ? 'It is in use now.' : 'Put it back whenever you like.'}</p>
+            {game.theme !== '' && <KButton tone="main" big onClick={() => { useItem('', '', 'theme', undefined); setOpen(null) }}>Use the default scene</KButton>}
+          </div>
+        </Sheet>
+      )}
       {open?.startsWith(STONE) && stones[open.slice(STONE.length)] && (() => {
         const form = open.slice(STONE.length), holders = stones[form]
         return (
