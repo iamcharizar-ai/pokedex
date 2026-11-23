@@ -7,6 +7,7 @@ import path from 'node:path'
 import { PNG } from 'pngjs'
 import { SPECIES } from '../core/species.ts'
 import { MEGASTONE_ART } from '../src/lib/megastone-art.ts'
+import { megaStoneName } from '../src/lib/stone-names.ts'
 
 const ROOT = path.resolve(import.meta.dirname, '..')
 const OUT = path.join(ROOT, 'sprites/megastones')
@@ -47,4 +48,14 @@ test('the sources are clean pixel art: each pixel fully opaque or fully clear', 
     const p = PNG.sync.read(fs.readFileSync(path.join(SRC, f)))
     for (let i = 3; i < p.data.length; i += 4) assert.ok(p.data[i] === 0 || p.data[i] === 255, `${f} has a half-clear pixel`)
   }
+})
+
+test('every stone is named as the games name it, and that name is its picture file', () => {
+  for (const f of everyMega) {
+    const file = `Mega_Stone_${megaStoneName(f).replace(/ /g, '_')}.png`
+    assert.ok(fs.existsSync(path.join(SRC, file)) || NO_PICTURE.includes(f), `${f}: ${megaStoneName(f)} has no source ${file}`)
+  }
+  // the ones the plain "species + ite" rule used to get wrong, and the ones it got right
+  const want = { 'alakazam-mega': 'Alakazite', 'blastoise-mega': 'Blastoisinite', 'lopunny-mega': 'Lopunnite', 'manectric-mega': 'Manectite', 'glalie-mega': 'Glalitite', 'excadrill-mega': 'Excadrite', 'feraligatr-mega': 'Feraligite', 'mewtwo-megax': 'Mewtwonite X', 'mewtwo-megay': 'Mewtwonite Y', 'charizard-megax': 'Charizardite X', 'kangaskhan-mega': 'Kangaskhanite', 'venusaur-mega': 'Venusaurite', 'crabominable-mega': 'Crabominite', 'glimmora-mega': 'Glimmoranite', 'rayquaza-mega': 'Rayquazite' }
+  for (const [f, name] of Object.entries(want)) assert.equal(megaStoneName(f), name)
 })

@@ -4,6 +4,7 @@ import { useState, type CSSProperties } from 'react'
 import { BALL_NAME, type Ball as BallId } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
 import { MEGASTONE_ART } from './lib/megastone-art.ts'
+import { megaStoneName } from './lib/stone-names.ts'
 import { typeColor } from './screens/types.ts'
 
 /**
@@ -23,21 +24,7 @@ export function KeyStone({ size = 24, held = true }: { size?: number; held?: boo
   return <img className={`keystone pix ${held ? '' : 'unheld'}`} src="/sprites/items/key-stone.png" width={size} height={size} alt={held ? 'Key Stone' : 'Key Stone, not held yet'} draggable={false} />
 }
 
-/** The stones whose name is not the species with "ite" on the end (the games' own spelling). */
-const STONE_NAME: Record<string, string> = { 'crabominable-mega': 'Crabominite', 'glimmora-mega': 'Glimmoranite' }
-
-/**
- * A Mega Stone's name, the way the games make it: the species with "ite" on the end, and X or Y when there are two
- * ("charizard-megax" is Charizardite X, "kangaskhan-mega" Kangaskhanite).
- */
-export function megaStoneName(mega: string): string {
-  if (STONE_NAME[mega]) return STONE_NAME[mega]
-  const base = mega.replace(/-mega[xy]?$/, '')
-  const name = (SPECIES[base]?.n ?? base).replace(/\s+/g, '')
-  const stem = /[aeiou]$/i.test(name) ? name.slice(0, -1) : name
-  const side = mega.endsWith('megax') ? ' X' : mega.endsWith('megay') ? ' Y' : ''
-  return `${stem}ite${side}`
-}
+export { megaStoneName }
 
 /**
  * A Mega Stone: its own pixel picture (sprites/megastones/<form>.png, the wiki's 24px art blown up 8 times with nothing smoothed:

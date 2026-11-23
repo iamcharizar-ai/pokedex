@@ -9,30 +9,15 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { PNG } from 'pngjs'
 import { SPECIES } from '../core/species.ts'
+import { megaStoneName } from '../src/lib/stone-names.ts'
 
 const ROOT = path.resolve(import.meta.dirname, '..')
 const SRC = path.join(ROOT, 'tools/megastones-src')
 const OUT = path.join(ROOT, 'sprites/megastones')
 const SCALE = 8
 
-/** The wiki's file for a Mega form (Mega_Stone_<name>.png) where it is not just the species + "ite" (the games' own spellings). */
-const WIKI = {
-  'alakazam-mega': 'Alakazite', 'slowbro-mega': 'Slowbronite', 'starmie-mega': 'Starminite', 'dragonite-mega': 'Dragoninite',
-  'mewtwo-megax': 'Mewtwonite_X', 'mewtwo-megay': 'Mewtwonite_Y', 'heracross-mega': 'Heracronite', 'skarmory-mega': 'Skarmorite',
-  'sableye-mega': 'Sablenite', 'sharpedo-mega': 'Sharpedonite', 'altaria-mega': 'Altarianite', 'lucario-mega': 'Lucarionite',
-  'abomasnow-mega': 'Abomasite', 'hawlucha-mega': 'Hawluchanite', 'diancie-mega': 'Diancite', 'drampa-mega': 'Drampanite',
-  'feraligatr-mega': 'Feraligite', 'manectric-mega': 'Manectite', 'glalie-mega': 'Glalitite', 'gyarados-mega': 'Gyaradosite',
-  'blastoise-mega': 'Blastoisinite', 'mawile-mega': 'Mawilite', 'medicham-mega': 'Medichamite', 'gallade-mega': 'Galladite',
-  'lopunny-mega': 'Lopunnite', 'houndoom-mega': 'Houndoominite', 'kangaskhan-mega': 'Kangaskhanite', 'victreebel-mega': 'Victreebelite',
-  'excadrill-mega': 'Excadrite', 'crabominable-mega': 'Crabominite', 'glimmora-mega': 'Glimmoranite',
-}
-const wikiName = (form) => {
-  if (WIKI[form]) return WIKI[form]
-  const base = form.replace(/-mega[xy]?$/, '')
-  const side = form.endsWith('megax') ? '_X' : form.endsWith('megay') ? '_Y' : ''
-  const name = SPECIES[base].n.replace(/[\s.'’]/g, '')
-  return (/[aeiou]$/i.test(name) ? name.slice(0, -1) : name) + 'ite' + side
-}
+/** The wiki's file for a Mega form is Mega_Stone_<its stone's name, with _ for spaces>.png. */
+const wikiName = (form) => megaStoneName(form).replace(/ /g, '_')
 
 fs.rmSync(OUT, { recursive: true, force: true })
 fs.mkdirSync(OUT, { recursive: true })
