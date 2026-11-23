@@ -2,7 +2,7 @@
 //   node --test tools/sky.test.mjs
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { THEME_CLOCK, bodyAt, darkAt, paletteAt, weatherOf } from '../src/screens/sky.ts'
+import { THEME_CLOCK, THEME_PREVIEW, bodyAt, darkAt, paletteAt, weatherOf } from '../src/screens/sky.ts'
 
 const m = (h, min = 0) => h * 60 + min
 
@@ -56,8 +56,10 @@ test('last night sets the weather, and a missing night is never a bad one', () =
   for (const s of [95, 85, 70, 50, 20]) { const g = weatherOf(s).gloom; assert.ok(g >= last); last = g }
 })
 
-test('a bought scene pins the sky', () => {
-  assert.equal(THEME_CLOCK['theme-beach'], 720)
+test('the bought scenes follow the clock; only the cave has no sky, and a miniature shows a scene at its best hour', () => {
   assert.equal(THEME_CLOCK['theme-cave'], null)
-  assert.equal(bodyAt(THEME_CLOCK['theme-night']).kind, 'moon')
+  assert.equal(THEME_CLOCK['theme-beach'], undefined)
+  assert.equal(THEME_CLOCK['theme-night'], undefined)
+  assert.equal(THEME_PREVIEW['theme-beach'], 720)
+  assert.equal(bodyAt(THEME_PREVIEW['theme-night']).kind, 'moon')
 })

@@ -78,5 +78,10 @@ export function weatherOf(score: number | null): Sky {
   return { weather: 'rain', clouds: 5, gloom: 1, rain: true, label: `Rain: slept ${score}` }
 }
 
-/** The scene's own scenes (bought with gems) pin the sky: a beach is always noon, a starry night always night, and a cave has no sky at all. */
-export const THEME_CLOCK: Record<string, number | null> = { 'theme-beach': 720, 'theme-night': 1380, 'theme-cave': null }
+/**
+ * The scenes bought with gems follow the clock like the ordinary one (dawn, noon, dusk, night, and last night's sleep as weather).
+ * Only the cave has no sky at all, so there is no hour to follow.
+ */
+export const THEME_CLOCK: Record<string, number | null> = { 'theme-cave': null }
+/** The hour a still picture of a scene shows (the shop's and the Bag's miniature): the scene itself follows the clock, a picture cannot. */
+export const THEME_PREVIEW: Record<string, number> = { 'theme-beach': 720, 'theme-night': 1380 }

@@ -117,7 +117,7 @@ export interface StageState {
   t: number
 }
 
-/** The palette and weather a state is drawn with: a bought scene pins the clock (sky.ts), a cave has its own. */
+/** The palette and weather a state is drawn with: the sky follows the clock in every scene but the cave, which has its own. */
 export function lookOf(s: StageState): { p: Palette; dark: number; wx: Sky; minutes: number; cave: boolean } {
   const cave = s.theme in THEME_CLOCK && THEME_CLOCK[s.theme] === null
   const minutes = s.theme in THEME_CLOCK && !cave ? (THEME_CLOCK[s.theme] as number) : s.minutes
@@ -162,10 +162,11 @@ const PLACES: Record<Exclude<Biome, 'cave'>, Place> = {
   steel: { colours: { far: '#5d6678', ground: '#8c95a5', ground2: '#7a8393', pad: '#a6afbe', pad2: '#6b7484' }, haze: ['#9aa0ac', 0.22], ridge: 'skyline', line: 'girders', frame: 'tank', floor: 'plates', dots: ['#c8ced8', '#5a6272'], dotRate: 0.2, pad: 'metal', fore: 'pipe', life: 'steam' },
 }
 /**
- * A bought scene that is a place of its own. The Beach is the shore (sea, sand, a palm, gulls) whoever the wild Pokemon is; the other
- * scenes only pin the light (sky.ts THEME_CLOCK), and the Cave is drawn by its own branch.
+ * A bought scene is a place of its own, whoever the wild Pokemon is: the Beach is the shore (sea, sand, a palm, gulls) and the Starry
+ * night a meadow under the sky. Each follows the clock like the ordinary scene (the ordinary one takes the foe's place instead); the
+ * Cave is drawn by its own branch (sky.ts THEME_CLOCK).
  */
-export const THEME_PLACE: Record<string, Biome> = { 'theme-beach': 'shore' }
+export const THEME_PLACE: Record<string, Biome> = { 'theme-beach': 'shore', 'theme-night': 'meadow' }
 /** The place a state is drawn in: the bought scene's own, else the wild Pokemon's. */
 const biomeFor = (s: Pick<StageState, 'theme' | 'biome'>): Biome => THEME_PLACE[s.theme] ?? s.biome
 /** The place a state is drawn as: its own if built, the meadow if not. */
