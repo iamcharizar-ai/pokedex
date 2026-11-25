@@ -209,10 +209,9 @@ export function Stage(props: StageProps) {
   const keyPx = 16 * Math.max(1, Math.floor((2 * meta.centre.r * px * 0.85) / 16))
   const megaPx = 24 * Math.max(2, Math.floor((px * 0.3) / 24))
   const sprPx = Math.round(px * 0.2)
-  // the floating shards are drawn at 1x or 2x the art, whole numbers, by how many there are (counted from what is held, so it does not change as they are placed)
-  const total = SHELF.reduce((n, k) => n + (held[k] ?? 0), 0)
-  const orbPx = total <= 14 ? 48 : 24
-  const keyOrbPx = orbPx === 48 ? 48 : 32
+  // a shard is drawn at one size, whole times the art, floating or in its socket; the Key Stone floats at the size it has in the centre
+  const orbPx = shardPx
+  const keyOrbPx = keyPx
   orbSize.current = orbPx + 8
   const firstOfKind = new Map<string, string>()
   for (const o of orbs) if (!firstOfKind.has(o.kind)) firstOfKind.set(o.kind, o.key)
@@ -425,7 +424,7 @@ export function Stage(props: StageProps) {
       {shown && (gate || !keyStone) && <p className="forge-gate">{gate ?? 'The altar needs the Key Stone before it will forge.'}</p>}
 
       <div className="stage" ref={arenaRef} role="group" aria-label="The altar: three sockets round a centre, and your shards floating round it">
-        <div className="altar-box" ref={stageRef}>
+        <div className="altar-box" ref={stageRef} style={{ width: `${ALTAR * 100}%` }}>
           <img className="altar-img" src="/sprites/forge/altar.png" alt="" draggable={false} />
           {[0, 1, 2, 3].map((i) => {
             const w = i < 3 ? meta.wells[i] : meta.centre

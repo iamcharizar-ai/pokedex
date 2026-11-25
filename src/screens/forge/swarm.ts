@@ -5,7 +5,7 @@
 export interface Orb { key: string; kind: string; x: number; y: number; vx: number; vy: number; /** floating (not in a socket) */ on: boolean; /** held by the pointer: it goes where the pointer goes, and still pushes the others away */ held?: boolean; phase: number }
 
 /** The altar's picture is this share of the arena's width (CSS: .altar-box), and the altar itself fills its picture. */
-export const ALTAR = 0.8
+export const ALTAR = 0.72
 
 export class Swarm {
   orbs: Orb[] = []
@@ -74,9 +74,9 @@ export class Swarm {
   step(dt: number, W: number, d: number, t: number): void {
     dt = Math.min(dt, 0.033)
     const live = this.orbs.filter((o) => o.on)
-    const edge = (ALTAR / 2) * W + 4                  // a shard's middle stays outside the altar's rim (it may overlap the rim a little: there is little room round it)
-    const home = edge + 8                             // the ring they settle toward when there is room
     const lim = d * 0.5 + 2
+    const edge = (ALTAR / 2) * W + d * 0.5 + 8        // a shard keeps clear of the altar's rim, with a little room to spare
+    const home = Math.min(edge + 10, W / 2 - lim - 2) // the ring they settle toward when there is room
     const K = 90 * d * d                              // how hard like poles push (inverse square)
     const reach = d * 12
     const ax = new Float64Array(live.length), ay = new Float64Array(live.length)

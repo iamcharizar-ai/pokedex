@@ -14,15 +14,14 @@
 .tray-text { margin: 0; max-width: 40ch; text-align: center; font-size: 13px; color: var(--text-2); }
 
 /* ── the altar ── */
-.forge3 .stage { position: relative; width: min(460px, 100%); aspect-ratio: 1; border-radius: 28px; user-select: none; -webkit-user-select: none;
-  background: radial-gradient(circle at 50% 47%, #1d2338 0, #10142a 55%, #0a0d1c 100%); box-shadow: inset 0 0 0 1px var(--hair-hi), 0 8px 24px rgba(0, 0, 0, 0.35); }
-.forge3 .altar-box { position: absolute; left: 50%; top: 50%; width: 80%; aspect-ratio: 1; translate: -50% -50%; }
+.forge3 .stage { position: relative; width: min(460px, 100%); aspect-ratio: 1; user-select: none; -webkit-user-select: none; }
+.forge3 .altar-box { position: absolute; left: 50%; top: 50%; aspect-ratio: 1; translate: -50% -50%; }
 .forge3 .altar-img, .forge3 .glow, .forge3 .fxc { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .forge3 .altar-img { object-fit: contain; }
 .forge3 .well-fb { position: absolute; translate: -50% -50%; border-radius: 50%; opacity: 0; display: none; pointer-events: none; }
 .forge3.noglow .well-fb { display: block; }
-.forge3 .dark { position: absolute; inset: 0; border-radius: 28px; background: radial-gradient(circle at 50% 47%, transparent 30%, rgba(0, 0, 0, 0.9) 100%); opacity: 0; pointer-events: none; }
-.forge3 .wash { position: absolute; inset: 0; border-radius: 28px; background: radial-gradient(circle at 50% 47%, #fff 0, color-mix(in srgb, var(--mc, #fff) 45%, #fff) 28%, transparent 66%); opacity: 0; pointer-events: none; mix-blend-mode: screen; }
+.forge3 .dark { position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle at 50% 47%, transparent 30%, rgba(0, 0, 0, 0.9) 100%); opacity: 0; pointer-events: none; }
+.forge3 .wash { position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle at 50% 47%, #fff 0, color-mix(in srgb, var(--mc, #fff) 45%, #fff) 28%, transparent 66%); opacity: 0; pointer-events: none; mix-blend-mode: screen; }
 
 /* the middle: the Pokemon's silhouette while a Mega is chosen, the Key Stone and the gathering ball while it forges, the Mega Stone after */
 .forge3 .core { position: absolute; width: 0; height: 0; pointer-events: none; }

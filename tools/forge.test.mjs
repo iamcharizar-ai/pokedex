@@ -355,3 +355,23 @@ test('a shard held by the pointer goes where the pointer goes, and the others ge
   run(sw, 56, 2)
   assert.ok(minGap(sw) > 40, 'let go, it floats on and nobody is on top of anybody')
 })
+
+import { Director } from '../src/screens/forge/director.ts'
+test('a shard lifted back out leaves no light behind: the last frame of the fade is drawn', () => {
+  globalThis.document = { hidden: false }
+  globalThis.requestAnimationFrame = () => 1
+  const sets = []
+  const glow = { set: (s) => sets.push(JSON.parse(JSON.stringify(s))) }
+  const fx = { alive: false, draw() {}, spark() {}, ring() {}, clear() {} }
+  const d = new Director({ glow, fx, fxCanvas: { width: 100 }, geom: () => ({ S: 300, wells: [{ x: 1, y: 1 }, { x: 2, y: 2 }, { x: 3, y: 3 }], centre: { x: 0, y: 0 }, fs: 1 }), els: () => ({ shards: [], key: null, ball: null, mega: null, flash: null, wash: null, dark: null, shake: null }), reduced: () => false, onDone() {} })
+  const frame = (t) => d.frame(t)
+  d.snap(0, 'red-shard', 0)
+  for (let t = 0; t <= 2000; t += 16) frame(t)
+  assert.ok(sets[sets.length - 1].fill[0] > 0.99, 'the crevices are full')
+  d.lift(0, 3000)
+  for (let t = 3000; t <= 3700; t += 16) frame(t)
+  const last = sets[sets.length - 1]
+  assert.equal(last.fill[0], 0, 'the water has drained all the way')
+  assert.equal(last.wells[0], 0, 'and the socket is dark')
+  delete globalThis.document; delete globalThis.requestAnimationFrame
+})

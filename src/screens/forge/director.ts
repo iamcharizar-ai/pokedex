@@ -64,6 +64,8 @@ export class Director {
   private at = [0, 0, 0]
   private lit = [0, 0, 0]
   private colour: (string | null)[] = [null, null, null]
+  /** something changed since the glow was last drawn (the last frame of a tween must be drawn, or the light stays where it stopped) */
+  private dirty = false
 
   constructor(deps: Deps) { this.d = deps }
 
@@ -75,14 +77,14 @@ export class Director {
   snap(i: number, kind: string, now = performance.now()): void {
     const { geom, fx, reduced } = this.d
     this.colour[i] = kind
-    this.from[i] = this.fill[i]; this.to[i] = 1; this.at[i] = now
+    this.from[i] = this.fill[i]; this.to[i] = 1; this.at[i] = now; this.dirty = true
     const g = geom(), w = g.wells[i], hex = shardHex(kind)
     if (!reduced()) { fx.spark(w.x, w.y, 16, hex, g.S * 0.28, 0.55); fx.ring(w.x, w.y, g.S * 0.03, g.S * 0.1, hex, 0.45, 3) }
     this.kick()
   }
   /** A shard lifted back out: the crevices drain back to dark. */
   lift(i: number, now = performance.now()): void {
-    this.from[i] = this.fill[i]; this.to[i] = 0; this.at[i] = now
+    this.from[i] = this.fill[i]; this.to[i] = 0; this.at[i] = now; this.dirty = true
     this.kick()
   }
   /** Back to a dark, resting altar. */
@@ -136,8 +138,9 @@ export class Director {
       this.lit[i] = this.to[i] > 0 ? RESTING * clamp((now - this.at[i]) / 250) : RESTING * (1 - clamp((now - this.at[i]) / 300))
     }
     const any = this.fill.some((f) => f > 0.001)
-    if (tweening || (any && now - this.lastGlow > 50)) {
+    if (tweening || this.dirty || (any && now - this.lastGlow > 50)) {
       this.lastGlow = now
+      this.dirty = tweening
       const colours = this.colour
       const s: GlowState = {
         ...CALM,
