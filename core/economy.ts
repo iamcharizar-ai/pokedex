@@ -5,7 +5,9 @@ export * from './legacy/economy.ts'
 // ══ version 22 (GAME-SPEC-V22.md) ══════════════════════════════════════════════
 import { BALLS, WAIT_CAP, dayGap, FRIEND_BERRY, MARKS, workEgg, rng, throwHp as throwHpLegacy, type MarkTag, type Option } from './legacy/economy.ts'
 import { TYPE_DOMAIN } from './types.ts'
-import { BERRY_FAVOURITE, BERRY_PLAIN, TICKS_PER_HP, v22On, v23On, type Tag } from './rules.ts'
+import { BERRY_FAVOURITE, BERRY_PLAIN, TICKS_PER_HP, scenesOn, v22On, v23On, type Tag } from './rules.ts'
+import { BUYABLE_PLACES, FREE_PLACE, PLACE_INFO, placeFolk, sceneItem, type Biome } from './places.ts'
+import { SPECIES } from './species.ts'
 
 /** What a thrown ball takes off the wild Pokemon. From V22_START the wild Pokemon's HP is counted in ticks, so a ball's HP is too (TICKS_PER_HP); a Master Ball still catches anything. */
 export function throwHp(ball: string, wild: { types: (string | undefined)[]; from: string; owned: boolean }, day: string): number {
@@ -82,17 +84,36 @@ export const RARE_V22: Offer[] = [
   { item: 'theme-beach', gems: 60 }, { item: 'theme-cave', gems: 60 }, { item: 'theme-night', gems: 60 },
   ...Object.entries(HELD_V22).map(([item, gems]) => ({ item, gems })),
 ]
+/**
+ * The scenes (core/places.ts), each a place of the Today scene and an item in the Bag. Buying one lets its Pokemon turn up as the wild Pokemon; it never
+ * decides the look by itself (the Bag's rotating scene follows the wild Pokemon; a scene you lock is only a look). The Meadow's is free and always yours.
+ */
+const names = (b: Biome): string => {
+  const folk = placeFolk(b).filter((id) => (SPECIES[id].g ?? 9) === 1).slice(0, 3).map((id) => SPECIES[id].n)
+  return folk.length ? `${folk.join(', ')} and more` : 'new ones'
+}
+for (const b of [FREE_PLACE, ...BUYABLE_PLACES]) {
+  const info = PLACE_INFO[b]
+  LEGACY_ITEMS[sceneItem(b)] = {
+    name: info.name, kind: 'theme',
+    text: b === FREE_PLACE
+      ? `The place you start in: ${info.kin} Pokemon are met here. It is always yours. Lock it to keep Today looking like this.`
+      : `A place for Today where ${info.kin} Pokemon are met: ${names(b)} can now turn up as the wild Pokemon. Bought once; it joins your scenes in the Bag.`,
+  }
+}
+/** The Rare shop from SCENES_START: the same, with the old three scenes replaced by one for every place. */
+export const RARE_V24: Offer[] = [...RARE_V22.filter((o) => !o.item.startsWith('theme-')), ...BUYABLE_PLACES.map((b) => ({ item: sceneItem(b), gems: PLACE_INFO[b].gems }))]
 /** The Forge's fee for a Mega Stone, on top of three shards of three colours. */
 export const FORGE_COINS = 1500
 /** A fossil is revived by walking, in the Nursery like an egg. */
 export const FOSSIL_STEPS = 20000
 /** Everything bought once: the old list, and the keepsakes that are held items now. */
-export const ONCE: Set<string> = new Set([...ONCE_LEGACY, 'amulet-coin', 'old-charm', NURSERY_PLACE])
+export const ONCE: Set<string> = new Set([...ONCE_LEGACY, 'amulet-coin', 'old-charm', NURSERY_PLACE, ...BUYABLE_PLACES.map(sceneItem)])
 
 export function offerFor(shop: ShopId | undefined, item: string, day: string, deals: number): { shop: ShopId; offer: Offer } | null {
   if (!v22On(day)) return offerForLegacy(shop, item, day, deals)
   for (const s of (shop ? [shop] : ['mart', 'rare']) as ShopId[]) {
-    const offer = (s === 'mart' ? MART_V22 : s === 'rare' ? RARE_V22 : []).find((o) => o.item === item)
+    const offer = (s === 'mart' ? MART_V22 : s === 'rare' ? (scenesOn(day) ? RARE_V24 : RARE_V22) : []).find((o) => o.item === item)
     if (offer) return { shop: s, offer }
   }
   return null
@@ -106,7 +127,7 @@ export const itemName = (id: string): string => (id === 'coin' ? 'Coins' : id ==
 /** Does this item stay in the game from version 22? (Everything else is paid back: convertV22.) */
 export function keptV22(id: string): boolean {
   return BALLS_V22.includes(id) || id in FRIEND_BERRY || id in HELD_V22 || (SHARDS as readonly string[]).includes(id) || id === COMET_SHARD || id === 'key-stone' || isEgg(id) || id in FOSSILS
-    || STONES_V22.includes(id) || id === 'rare-candy' || id === 'full-incense' || id in LEGEND_KEYS || id.startsWith('theme-') || id === NURSERY_PLACE
+    || STONES_V22.includes(id) || id === 'rare-candy' || id === 'full-incense' || id in LEGEND_KEYS || id.startsWith('theme-') || id.startsWith('scene-') || id === NURSERY_PLACE
 }
 const SHELF_PRICES: Offer[] = [...MART_POOL, ...STANDING, ...BATTLE_SHELF, ...RARE_SHELF, ...RARE_SHELF_V13]
 /** What a cut item is worth to give back, one of it: its shelf price (marks at 15 coins, Battle Points at 4), the Collector's price for a treasure, else 100 coins. */

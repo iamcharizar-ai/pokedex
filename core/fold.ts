@@ -23,7 +23,8 @@ import {
   type Ball, type NatureStat, type Rarity, type Tag,
 } from './rules.ts'
 import { berryGain, labWorth, leaderHit, partyPower, pillarsOf, tierOf, type Fighter } from './v22.ts'
-import { LAB_MEGA_X, MOMENTUM_LADDER, STONE_STREAK, momentumLadder, v23On } from './rules.ts'
+import { LAB_MEGA_X, MOMENTUM_LADDER, STONE_STREAK, momentumLadder, scenesOn, v23On } from './rules.ts'
+import { FREE_PLACE, biomeOfForm, placeOfScene, sceneItem } from './places.ts'
 import { fillOwed as fillOwedStones, forgeRecipe, goodRun, nextStone, recipeOf, type RowStone } from './v23.ts'
 export type { RowStone } from './v23.ts'
 import { featLive, featReward, championKey, BERRY_OF, trackPrize, milestoneOptionsV22, labReward, labCost, trainerOptions, convertV22, keptV22, pickupFindV22, PICKUP_COINS, FORGE_COINS, NURSERY_PLACE, NURSERY_IDS, inNursery, HELD_V22, MART_V22, GEAR_FOR, COUNTER_V21, EGG_WAIT_MAX, researchRewardV21, ribbonOptions, workEgg, BOOST, COMET_SHARD, DIRE_HIT, EVO_ITEMS, FOSSILS, LEGEND_KEYS, PICKUP_TIERS, PLATES, PLATE_BONUS, REMATCH_KEYS, plateFor, REVIVE_COST, TREASURE, VITAMINS, VITAMIN_MAX, VITAMIN_STEP, forgeFair, legendFor, milestoneOptions, pickupFind, researchReward, type Option } from './economy.ts'
@@ -435,6 +436,8 @@ export interface Game {
   tier: { v21: boolean; tier: number; effort: number; /** version 22: pillars done, a good night counted beside an effort pillar */ pillars: number; first: boolean; sleepBonus: boolean; bounty: Partial<Record<Tag, number>> }
   /** version 22 is in force on the last day */
   v22: boolean
+  /** scenes (core/places.ts) are in force on the last day: only the places you own let their Pokemon turn up, and the Meadow is free */
+  scenes: boolean
   /** version 23 (MEGA-OVERHAUL-PLAN.md) is in force on the last day: Momentum is a ladder and the streak puts Mega Stones on its days */
   v23: boolean
   /** version 23: the seven days before today as the Momentum row draws them (oldest first), each with the Mega Stone its good day carries, if any */
@@ -834,7 +837,10 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
     const have = owned()
     // nothing new of that rarity in the open regions: try the neighbouring ones before repeating
     const chain: Record<string, string[]> = { C: ['C', 'U', 'R'], U: ['U', 'C', 'R'], R: ['R', 'U', 'C'], L: ['L', 'R', 'U', 'C'] }
-    const pools = chain[rarity].map((x) => FIRST_STAGES.filter(([, s]) => (s.g ?? 9) <= open && s.r === x))
+    // scenes: from SCENES_START only a place you own lets its Pokemon turn up (the Meadow always; a Legendary is met wherever it comes)
+    const gated = scenesOn(teamDay)
+    const placeOpen = (id: string, x: string) => !gated || x === 'L' || biomeOfForm(id) === FREE_PLACE || (inv[sceneItem(biomeOfForm(id))] ?? 0) > 0
+    const pools = chain[rarity].map((x) => FIRST_STAGES.filter(([id, s]) => (s.g ?? 9) <= open && s.r === x && placeOpen(id, x)))
     // a lure: its domain's types first, new species before repeats
     const ts = lure ? lureTypes(lure) : []
     const lured = lure ? pools.map((p) => p.filter(([, s]) => ts.includes(s.t) || (s.t2 !== undefined && ts.includes(s.t2)))) : []
@@ -1225,7 +1231,8 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
         return
       }
       case 'theme': {
-        if (!u.to || inv[u.to]) theme = u.to ?? ''
+        // a scene is locked by choosing it: one you own, or the Meadow (always yours). Choosing nothing lets Today follow the wild Pokemon again.
+        if (!u.to || inv[u.to] || (scenesOn(day) && placeOfScene(u.to) === FREE_PLACE)) theme = u.to ?? ''
         return
       }
       case 'next': {
@@ -2321,6 +2328,7 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
     tier: dayTier,
     v22: Boolean(last && v22On(last.day)),
     v23: Boolean(last && v23On(last.day)),
+    scenes: Boolean(last && scenesOn(last.day)),
     row,
     ring,
     megas: megasToday,

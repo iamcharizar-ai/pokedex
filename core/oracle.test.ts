@@ -8,7 +8,7 @@ import { ingest } from '../src/lib/ingest.ts'
 import { buildFacts } from './facts.ts'
 import { foldGame } from './fold.ts'
 import { foldGame as foldLegacy } from './legacy/fold.ts'
-import { V22_START, setV22Start } from './rules.ts'
+import { V22_START, V23_START, setV22Start, setV23Start } from './rules.ts'
 
 const run = (name: string) => {
   const f = fixture(name)!
@@ -18,27 +18,31 @@ const run = (name: string) => {
   delete live.v22; delete live.tracks; delete live.tier.pillars; delete live.lab; delete live.egg2; delete live.partyPower
   // version 23 adds the Momentum row, today's ring, who is a Mega today, and the flag (the ladder is only present once v23 is on)
   delete live.v23; delete live.row; delete live.ring; delete live.megas
+  // scenes (core/places.ts) add only the flag; the wild Pokemon are gated by it from SCENES_START, which needs version 22 on
+  delete live.scenes
   return { facts, live: JSON.stringify(live), old: JSON.stringify(foldLegacy(facts)) }
 }
 
 test('with version 22 off, the engine folds every fixture exactly as the frozen legacy rules do', () => {
-  const was = V22_START
+  const was = V22_START, was23 = V23_START
   try {
     setV22Start('2099-01-01')
+    setV23Start('2099-01-01') // version 23 began 25 Nov 2026; the frozen rules know nothing of it
     for (const name of FIXTURES) {
       const { live, old } = run(name)
       assert.ok(live === old, `${name}: the live engine differs from legacy/fold.ts`)
     }
-  } finally { setV22Start(was) }
+  } finally { setV22Start(was); setV23Start(was23) }
 })
 
 test('a version 22 start after the last day changes nothing either', () => {
-  const was = V22_START
+  const was = V22_START, was23 = V23_START
   try {
+    setV23Start('2099-01-01')
     for (const name of FIXTURES) {
       setV22Start('2098-01-01')
       const { live, old } = run(name)
       assert.ok(live === old, `${name}: a future V22_START changed the game`)
     }
-  } finally { setV22Start(was) }
+  } finally { setV22Start(was); setV23Start(was23) }
 })

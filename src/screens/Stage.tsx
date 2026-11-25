@@ -10,16 +10,18 @@ const FRAME_MS = 125
 
 /** A bought scene as a still miniature (a theme ware in the Shop): the same painter at its own small size, drawn
  *  once and enlarged by a whole number, at the hour that shows the scene best (the scene itself follows the clock). */
-export function MiniScene({ theme, w = 50, h = 52, k = 2 }: { theme: string; w?: number; h?: number; k?: number }) {
+export function MiniScene({ theme, w = 50, h = 52, k = 2, live }: { theme: string; w?: number; h?: number; k?: number; live?: Pick<StageState, 'biome' | 'minutes' | 'score' | 'seed'> }) {
   const back = useRef<HTMLCanvasElement>(null)
   const front = useRef<HTMLCanvasElement>(null)
+  // the ordinary scene has no place of its own: `live` is the place, hour and sleep Today is showing right now
+  const liveKey = JSON.stringify(live ?? null)
   useEffect(() => {
     const b = back.current?.getContext('2d'), f = front.current?.getContext('2d')
     if (!b || !f) return
-    const s = { lay: layoutFor(w, h), minutes: THEME_PREVIEW[theme] ?? 720, score: null, theme, biome: 'meadow' as const, seed: 'pikachu', t: 0 }
+    const s = { lay: layoutFor(w, h), minutes: THEME_PREVIEW[theme] ?? 720, score: null, theme, biome: 'meadow' as const, seed: 'pikachu', t: 0, ...live }
     paintBack(b, s)
     paintFront(f, s)
-  }, [theme, w, h])
+  }, [theme, w, h, liveKey])
   const size = { width: w * k, height: h * k }
   return (
     <span className="mini-scene" aria-hidden style={size}>

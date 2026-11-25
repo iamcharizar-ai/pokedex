@@ -17,7 +17,9 @@ It also answers the open questions in `FORGE-OVERHAUL.md`. Numbers marked * are 
 - 14 new tests (`core/v23.test.ts`), including one that feeds a Charizard to 150 hearts, forges it and follows it through the row, the Lab and the fade; the oracle and the Life OS copy are updated (`npm run core` ran; Life OS type-checks with it).
   With version 23 off, every fixture and the saved real ledger fold exactly as before (checked by fingerprint).
 
-**Not built yet:** setting `V23_START`; the phase 0 look test; the forge (the next focus); the altar art; the Life OS partner strip drawing the row and the ladder; sound; the spec file (`GAME-SPEC-V23.md`); screenshot baselines.
+**Update 25 Nov 2026:** `V23_START` is set to 2026-11-25, the day it deployed (the owner asked for it); the days before replay unchanged on the real ledger.
+
+**Not built yet:** the phase 0 look test; the forge (the next focus); the altar art; the Life OS partner strip drawing the row and the ladder; sound; the spec file (`GAME-SPEC-V23.md`); screenshot baselines.
 
 ## Forge phase: the owner's requirements (25 Nov 2026)
 

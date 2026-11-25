@@ -16,16 +16,9 @@ import { THEME_CLOCK, bodyAt, darkAt, paletteAt, weatherOf, type Palette, type S
 export interface Ctx { fillStyle: unknown; globalAlpha: number; fillRect(x: number, y: number, w: number, h: number): void; clearRect(x: number, y: number, w: number, h: number): void }
 
 // ── the places ─────────────────────────────────────────────────────────────
-export type Biome = 'meadow' | 'shore' | 'marsh' | 'canyon' | 'volcano' | 'snow' | 'cliff' | 'pass' | 'plain' | 'ruins' | 'flowers' | 'steel' | 'cave'
-const TYPE_BIOME: Record<string, Biome> = {
-  Normal: 'meadow', Grass: 'meadow', Bug: 'meadow', Water: 'shore', Poison: 'marsh', Rock: 'canyon', Ground: 'canyon', Fighting: 'canyon',
-  Fire: 'volcano', Ice: 'snow', Flying: 'cliff', Dragon: 'pass', Electric: 'plain', Ghost: 'ruins', Dark: 'ruins', Psychic: 'ruins', Fairy: 'flowers', Steel: 'steel',
-}
-/** Where a wild Pokemon is met: its first type's place, unless that type is Normal and it has a second (a Pidgey is met on a cliff). */
-export function biomeOf(t: string, t2?: string | null): Biome {
-  const a = TYPE_BIOME[t] ?? 'meadow'
-  return a === 'meadow' && t === 'Normal' && t2 && TYPE_BIOME[t2] ? TYPE_BIOME[t2] : a
-}
+// Which Pokemon is met where (and what each place costs) is a rule, so it lives in core/places.ts; this file draws the places.
+export { biomeOf, biomeOfForm, type Biome } from '../../core/places.ts'
+import { PLACE_INFO, sceneItem, type Biome } from '../../core/places.ts'
 /** The places drawn so far. Any other is drawn as the meadow until it is built. */
 export const BUILT: readonly Biome[] = ['meadow', 'flowers', 'shore', 'marsh', 'canyon', 'volcano', 'snow', 'cliff', 'pass', 'plain', 'ruins', 'steel', 'cave']
 
@@ -105,7 +98,7 @@ export interface StageState {
   minutes: number
   /** last night's sleep score, or null (a fair sky that says nothing) */
   score: number | null
-  /** the scene the player bought ('theme-beach', 'theme-cave', 'theme-night'), or '' */
+  /** the scene locked on Today ('scene-<place>', or an older 'theme-…'), or '' while the scene rotates with the wild Pokemon */
   theme: string
   biome: Biome
   /** the wild Pokemon's form: the place's flowers and stars are seeded by it */
@@ -119,7 +112,8 @@ export interface StageState {
 
 /** The palette and weather a state is drawn with: the sky follows the clock in every scene but the cave, which has its own. */
 export function lookOf(s: StageState): { p: Palette; dark: number; wx: Sky; minutes: number; cave: boolean } {
-  const cave = s.theme in THEME_CLOCK && THEME_CLOCK[s.theme] === null
+  // the Cave is drawn by its own branch: the older Cave scene, the new one, and a cave-dweller met while the scene rotates
+  const cave = (s.theme in THEME_CLOCK && THEME_CLOCK[s.theme] === null) || biomeFor(s) === 'cave'
   const minutes = s.theme in THEME_CLOCK && !cave ? (THEME_CLOCK[s.theme] as number) : s.minutes
   if (cave) return { p: CAVE, dark: 0.55, wx: { weather: 'fair', clouds: 0, gloom: 0, rain: false, label: 'A cave' }, minutes, cave }
   return { p: paletteAt(minutes), dark: darkAt(minutes), wx: weatherOf(s.score), minutes, cave }
@@ -166,7 +160,11 @@ const PLACES: Record<Exclude<Biome, 'cave'>, Place> = {
  * night a meadow under the sky. Each follows the clock like the ordinary scene (the ordinary one takes the foe's place instead); the
  * Cave is drawn by its own branch (sky.ts THEME_CLOCK).
  */
-export const THEME_PLACE: Record<string, Biome> = { 'theme-beach': 'shore', 'theme-night': 'meadow' }
+export const THEME_PLACE: Record<string, Biome> = {
+  'theme-beach': 'shore', 'theme-night': 'meadow',
+  // the scenes of core/places.ts: a scene locked on Today is its place, whoever the wild Pokemon is
+  ...Object.fromEntries((Object.keys(PLACE_INFO) as Biome[]).map((b) => [sceneItem(b), b])),
+}
 /** The place a state is drawn in: the bought scene's own, else the wild Pokemon's. */
 const biomeFor = (s: Pick<StageState, 'theme' | 'biome'>): Biome => THEME_PLACE[s.theme] ?? s.biome
 /** The place a state is drawn as: its own if built, the meadow if not. */

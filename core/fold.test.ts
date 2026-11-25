@@ -12,8 +12,7 @@ import { beats, weakDomains } from './types.ts'
 import {
   BALL_MULT, CLAIM_AUTO, DAILY_PAY, PAY_STREAK, REVIEW_GEMS, EGG_STEPS, STEPS_GOAL, GAME_START, GEMS, KIT_IRON, LEADER_HP, MEGA_BONUS, REPEL_DAYS, SEASON_STEP, SLEEP_DEEP, SLIP, STAKES_FROM, TEAM_BONUS, TEAM_NATURE, TEAM_OPEN_FROM, TEAM_LEVEL, TEAM_HOLE, TEAM_SIZE, WEAK_MULT, WILD_HP, WILD_STAY,
   V13_START, ballFor, bondLevel, evolveAt, graduateAt, levelOf, momentumMult, regionsOpen, wildHit, xpForLevel,
-  DEEP_SLEEP_FROM, DEEP_SLEEP_MIN,
-} from './rules.ts'
+  DEEP_SLEEP_FROM, DEEP_SLEEP_MIN, setV23Start } from './rules.ts'
 import { PLATES, plateFor, forgeFair, BALLS, BOND_PARTY, CHEST, rng, DOMAIN_SHOPS, FEATS, FORGE_COST, GEAR, GEAR_ITEMS, LURES, MART_POOL, SELL, STANDING, forgeShard, lureTypes, martDeals, throwHp } from './economy.ts'
 import { SPECIES } from './species.ts'
 import { setV21Start } from './rules.ts'
@@ -66,6 +65,7 @@ const around = (before: number, plan: Parameters<typeof dayOn>[1][]): DayFacts[]
 
 // ── version 8: the day, the wild Pokemon, showing up ────────────────────────
 import { setV22Start } from './rules.ts'
+setV23Start('2099-01-01') // and before version 23 (which began 25 Nov 2026: the longer runs here cross it)
 setV22Start('2099-01-01') // this file tests the rules before version 22: keep them in force on every date (the oracle, core/oracle.test.ts, ties version 22 to them)
 
 test('a pillar outweighs the whole routine', () => {
@@ -416,7 +416,7 @@ test('every entry in the species table can be reached', async () => {
 
 test('Life OS runs the same core', { skip: !fs.existsSync(new URL('../../lifeos/src/game-core', import.meta.url)) }, () => {
   const read = (u: URL) => fs.readFileSync(u, 'utf8').replace(/\r\n/g, '\n')
-  for (const f of ['rules.ts', 'facts.ts', 'fold.ts', 'order.ts', 'species.ts', 'gyms.ts', 'events.ts', 'types.ts', 'economy.ts', 'boss.ts', 'v22.ts', 'v23.ts'])
+  for (const f of ['rules.ts', 'facts.ts', 'fold.ts', 'order.ts', 'species.ts', 'gyms.ts', 'events.ts', 'types.ts', 'economy.ts', 'boss.ts', 'v22.ts', 'v23.ts', 'places.ts'])
     assert.ok(read(new URL(`../../lifeos/src/game-core/${f}`, import.meta.url)) === read(new URL(`./${f}`, import.meta.url)), `${f} differs: run npm run core`)
   // the frozen rules too: Life OS folds with them
   for (const f of fs.readdirSync(new URL('./legacy/', import.meta.url)).filter((x) => x.endsWith('.ts')))

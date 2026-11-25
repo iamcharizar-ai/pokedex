@@ -48,7 +48,7 @@ import { FIXTURE } from './lib/fixture-boot.ts'
 import { dropIn, floatNote, hit, lunge, party, react, ring, stamp, tapPop } from './lib/fx.ts'
 import { auraFor, sleepFor, useClock } from './screens/Sky.tsx'
 import { Stage } from './screens/Stage.tsx'
-import { biomeOf, layoutFor, lightAt, litFilter, lookOf } from './screens/stage.ts'
+import { biomeOfForm, layoutFor, lightAt, litFilter, lookOf } from './screens/stage.ts'
 import { Meter } from './Meter.tsx'
 import { useAim } from './lib/aim.ts'
 import { IcStar } from './lib/icons.tsx'
@@ -178,7 +178,7 @@ function Scene({ game }: { game: Game }) {
   const meRec = SPECIES[game.display] ?? SPECIES[partner.form]
   const stageState = {
     lay, minutes, score, theme: game.theme, aura: aura,
-    biome: wildRec ? biomeOf(wildRec.t, wildRec.t2) : 'meadow' as const,
+    biome: wild ? biomeOfForm(wild.form) : 'meadow' as const,
     seed: wild?.form ?? partner.form, partnerTc: typeColor(meRec?.t),
   }
   const look = lookOf({ ...stageState, t: 0 })

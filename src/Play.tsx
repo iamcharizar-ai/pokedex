@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerE
 import { LabV22 } from './screens/LabV22.tsx'
 import { canCandy, isShelved, nameOf, type Game, type Mon, type Quest } from '../core/fold.ts'
 import {
-  COUNTER_V21, DOMAIN_V21, workEgg, RARE_V22, NURSERY_PLACE, BALLS, battleShelf, BERRY_HEARTS, treasurePrice, BOOST, BP_SHELF, DOMAIN_SHOPS, DOMAIN_V13, EVO_ITEMS, FOSSILS, GEAR_FOR, GEAR_ITEMS, HELD, ITEMS, LEGEND_KEYS, LURES, MARKS, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, masteryCost, RARE_SHELF, RARE_SHELF_V13, REVIVE_COST, SELL, TM_SLOTS, TREASURE, itemName, throwHp, tmType,
+  COUNTER_V21, DOMAIN_V21, workEgg, RARE_V22, RARE_V24, NURSERY_PLACE, BALLS, battleShelf, BERRY_HEARTS, treasurePrice, BOOST, BP_SHELF, DOMAIN_SHOPS, DOMAIN_V13, EVO_ITEMS, FOSSILS, GEAR_FOR, GEAR_ITEMS, HELD, ITEMS, LEGEND_KEYS, LURES, MARKS, MARK_TAGS, MASTERY_MAX, MASTERY_STEP, ONCE, masteryCost, RARE_SHELF, RARE_SHELF_V13, REVIVE_COST, SELL, TM_SLOTS, TREASURE, itemName, throwHp, tmType,
   type MarkTag, type Offer, type ShopId,
 } from '../core/economy.ts'
 import { DESK_BONUS, DAILY_PAY, DAY_COINS, MAX_LEVEL, REPEL_DAYS, RESEARCH_SLOTS, TEAM_BONUS, TEAM_NATURE, TEAM_SIZE, levelOf, studyPoints, type Rarity } from '../core/rules.ts'
@@ -17,6 +17,9 @@ import { MEGASTONE_ART } from './lib/megastone-art.ts'
 import { Forge } from './screens/Forge.tsx'
 import { Sheet } from './screens/Sheet.tsx'
 import { MiniScene } from './screens/Stage.tsx'
+import { sleepFor, useClock } from './screens/Sky.tsx'
+import { biomeOfForm } from './screens/stage.ts'
+import { FREE_PLACE, sceneItem } from '../core/places.ts'
 import { typeColor } from './screens/types.ts'
 import { tabTodo } from './screens/Today.tsx'
 import { useItemNews, type ItemNews } from './lib/newitems.ts'
@@ -306,7 +309,7 @@ function Shelf({ game, offers: all, shop, fold, what = 'items' }: { game: Game; 
               </>}
               corners={work ? { tr: <MarkIcon tag={work} size={16} />, trTitle: `For ${TAG_NAME[work].toLowerCase()}` } : undefined}
               name={itemName(o.item)}
-              banner={owned ? (def?.kind === 'theme' ? (worn ? 'Worn' : 'Owned') : 'Owned') : sold ? 'Sold' : <Tag o={o} shop={shop} />}
+              banner={owned ? (def?.kind === 'theme' ? (worn ? 'Locked' : 'Owned') : 'Owned') : sold ? 'Sold' : <Tag o={o} shop={shop} />}
               gold={!done && afford} fill={done ? 0 : 1} vars={{ '--held': String(done ? 0 : heldOf(game, o, shop)) }}
               onClick={() => { setOpen(o.item); play('tap') }}
               aria-label={`${itemName(o.item)}: ${sold ? 'sold today' : owned ? 'owned' : afford ? 'you can buy it' : 'not enough yet'}`} />
@@ -332,7 +335,7 @@ function Shelf({ game, offers: all, shop, fold, what = 'items' }: { game: Game; 
                 </div>
               </div>
               {def?.kind === 'theme' && owned
-                ? <KButton tone={game.theme === o.item ? 'neutral' : 'main'} big onClick={() => useItem('', '', 'theme', game.theme === o.item ? undefined : o.item)}>{game.theme === o.item ? 'Take it off' : 'Use this scene'}</KButton>
+                ? <KButton tone={game.theme === o.item ? 'neutral' : 'main'} big onClick={() => useItem('', '', 'theme', game.theme === o.item ? undefined : o.item)}>{game.theme === o.item ? 'Let it rotate' : 'Lock this look'}</KButton>
                 : (
                   <>
                     <button type="button" className="k-btn ok big" disabled={!canBuy(game, o, shop)} onClick={() => buy(o.item)}>Buy <Price coins={o.coins} gems={o.gems} marks={o.marks} tag={MARK_TAGS.includes(shop as MarkTag) ? (shop as MarkTag) : undefined} bp={shop === 'bp'} /></button>
@@ -530,7 +533,7 @@ export function ShopTab({ game }: { game: Game }) {
       )}
       {show('rare') && (
         <Win title="Rare things" tone="blue" aside={<><Gem size={22} /> <Count value={game.wallet.gems} /></>}>
-          <Shelf game={game} offers={game.v22 ? RARE_V22 : game.v13 ? [...RARE_SHELF, ...RARE_SHELF_V13] : RARE_SHELF} shop="rare" />
+          <Shelf game={game} offers={game.scenes ? RARE_V24 : game.v22 ? RARE_V22 : game.v13 ? [...RARE_SHELF, ...RARE_SHELF_V13] : RARE_SHELF} shop="rare" />
         </Win>
       )}
       {show('bp') && (
@@ -568,7 +571,7 @@ const USED: Record<string, string> = {
   incense: 'Shows three Pokemon of any type: the one you tap is the next wild Pokemon.',
   egg: 'Warmed by the steps your band counts, in the Nursery on Today. With two kinds waiting, you choose which goes in.',
   chest: 'Opens the moment it is bought.',
-  theme: 'Changes the scene on Today.',
+  theme: 'Lock it to keep Today looking like this. With none locked, Today shows the place of the wild Pokemon in front of you.',
   treasure: 'Sold to the Collector in the Shop.',
   fossil: 'Put it in the Nursery on Today: the steps you walk bring it back to life.',
   evo: 'Used on a Pokemon in My Pokemon, from its page: one stage, if the type fits.',
@@ -597,8 +600,10 @@ const short = (n: number): string => (n < 1000 ? String(n) : n < 10000 ? `${(n /
 
 /** A forged Mega Stone lies in the Bag as a thing of its own: `megastone:<Mega form>`, like a badge (it is not in `game.inv`). */
 const STONE = 'megastone:'
-/** The ordinary scene (no bought theme) lies in the Bag too, as the first of the Scenes: it is what "Take it off" goes back to. */
+/** The rotating scene (no scene locked) lies in the Bag too, as the first of the Scenes: it is what "Let it rotate" goes back to. */
 const SCENE_DEFAULT = 'scene:default'
+/** The Meadow's scene is always yours: it is not in `inv`, but it lies in the Scenes (once scenes are on) and can be locked like any other. */
+const SCENE_MEADOW = sceneItem(FREE_PLACE)
 /** Its picture: the sky split between day and night over the meadow, because it follows the clock. */
 const DEFAULT_SCENE_ART = 'linear-gradient(#5aa84a 0 0) bottom / 100% 40% no-repeat, linear-gradient(115deg, #7fcdf0 0 50%, #1b2650 50%)'
 const DefaultSceneIcon = ({ size = 32 }: { size?: number }) => <span className="swatch" aria-hidden style={{ width: size, height: size, background: DEFAULT_SCENE_ART }} />
@@ -637,7 +642,8 @@ export function Bag({ game, news }: { game: Game; news: ItemNews }) {
   const [open, setOpen] = useState<string | null>(null)
   const [tab, setTab] = useState('Everything')
   const [feedCard, setFeedCard] = useState<string | null>(null)
-  const have = (id: string) => game.inv[id] ?? 0
+  const minutes = useClock()
+  const have = (id: string) => (id === SCENE_MEADOW && game.scenes ? 1 : game.inv[id] ?? 0)
   const equipped = game.partner.moves ?? []
   const owned = Object.keys(game.inv).filter((id) => have(id) > 0 && ITEMS[id])
   // an item held by the partner is not in the count of what is loose, but it is still in the bag
@@ -651,7 +657,7 @@ export function Bag({ game, news }: { game: Game; news: ItemNews }) {
   // everything that is not one of the groups above: gear, guards, incense, an egg, a chest, a scene
   // the bought scenes are a pocket of their own, with the ordinary scene first
   const themeIds = owned.filter((id) => ITEMS[id].kind === 'theme')
-  const sceneIds = [SCENE_DEFAULT, ...themeIds]
+  const sceneIds = [SCENE_DEFAULT, ...(game.scenes ? [SCENE_MEADOW] : []), ...themeIds]
   const rest = owned.filter((id) => !used.has(id) && ITEMS[id].kind !== 'theme')
   const balls = owned.filter((id) => ITEMS[id].kind === 'ball').reduce((n, id) => n + have(id), 0)
   const berries = owned.filter((id) => ITEMS[id].kind === 'berry').reduce((n, id) => n + have(id), 0)
@@ -682,7 +688,7 @@ export function Bag({ game, news }: { game: Game; news: ItemNews }) {
     ? Array.from({ length: slotCount(layout) }, (_, i) => layout[i] ?? null)
     : (() => { const c: (string | null)[] = [...at[1]].sort((x, y) => layout.indexOf(x) - layout.indexOf(y)); while (c.length < Math.max(18, Math.ceil(c.length / 9) * 9)) c.push(null); return c })()
   const nameOfThing = (id: string): string => {
-    if (id === SCENE_DEFAULT) return 'Default scene'
+    if (id === SCENE_DEFAULT) return 'Rotating scene'
     if (id.startsWith(STONE)) return megaStoneName(id.slice(STONE.length))
     if (!id.startsWith('badge:')) return itemName(id)
     const [li, gi] = id.split(':').slice(1).map(Number)
@@ -734,8 +740,8 @@ export function Bag({ game, news }: { game: Game; news: ItemNews }) {
     if (id === SCENE_DEFAULT) {
       const worn = game.theme === ''
       return (
-        <Slot key={id} className={cls} on={worn} data-place={i} data-flip={id} onPointerDown={press(id)} onClick={() => tap(id, i)} aria-label={`Default scene${worn ? ', in use' : ''}. Open`}
-          icon={<DefaultSceneIcon />} tip={{ title: 'Default scene', note: <>{worn ? 'In use' : 'Not in use'} · follows the clock and your sleep</> }} />
+        <Slot key={id} className={cls} on={worn} data-place={i} data-flip={id} onPointerDown={press(id)} onClick={() => tap(id, i)} aria-label={`Rotating scene${worn ? ', in use' : ''}. Open`}
+          icon={<DefaultSceneIcon />} tip={{ title: 'Rotating scene', note: <>{worn ? 'In use' : 'Not in use'} · follows the wild Pokemon, the clock and your sleep</> }} />
       )
     }
     if (id.startsWith(STONE)) {
@@ -819,13 +825,15 @@ export function Bag({ game, news }: { game: Game; news: ItemNews }) {
         )
       })()}
       {open === SCENE_DEFAULT && (
-        <Sheet title="Default scene" onClose={() => setOpen(null)}>
+        <Sheet title="Rotating scene" onClose={() => setOpen(null)}>
           <div className="ware-sheet">
-            <span className="ware-sheet-art"><MiniScene theme="" w={58} h={70} /></span>
-            <h2 className="k-type">Default scene</h2>
-            <p>The ordinary scene on Today. It follows the time of day, from dawn to a starry night, and last night's sleep: a clear sky after a good night, rain after a bad one. Its place is the wild Pokemon's own.</p>
-            <p className="muted">It is always yours: no scene you buy takes it away. {game.theme === '' ? 'It is in use now.' : 'Put it back whenever you like.'}</p>
-            {game.theme !== '' && <KButton tone="main" big onClick={() => { useItem('', '', 'theme', undefined); setOpen(null) }}>Use the default scene</KButton>}
+            <span className="ware-sheet-art"><MiniScene theme="" w={58} h={70} live={{ biome: game.wild ? biomeOfForm(game.wild.form) : 'meadow', minutes, score: sleepFor(game.sleep.state === 'measured' ? game.sleep.score : null), seed: game.wild?.form ?? game.partner.form }} /></span>
+            <h2 className="k-type">Rotating scene</h2>
+            <p>{game.scenes
+              ? "Today shows the place of the wild Pokemon in front of you, so it changes as the next one comes: every scene you own takes its turn. It follows the time of day, from dawn to a starry night, and last night's sleep: a clear sky after a good night, rain after a bad one."
+              : "The ordinary scene on Today. It follows the time of day, from dawn to a starry night, and last night's sleep: a clear sky after a good night, rain after a bad one. Its place is the wild Pokemon's own."}</p>
+            <p className="muted">{game.scenes ? 'This is the look right now. Lock any scene you own to keep its look: it never changes who turns up, only the scenes you own do that. ' : 'It is always yours: no scene you buy takes it away. '}{game.theme === '' ? 'It is in use now.' : 'Put it back whenever you like.'}</p>
+            {game.theme !== '' && <KButton tone="main" big onClick={() => { useItem('', '', 'theme', undefined); setOpen(null) }}>Let it rotate</KButton>}
           </div>
         </Sheet>
       )}
@@ -848,7 +856,7 @@ export function Bag({ game, news }: { game: Game; news: ItemNews }) {
             {/* the thing itself as a card: its kind is the field's colour, how many you hold the banner, in use the gold frame */}
             <div className="item-hero">
               <ObjCard className={`item-card ${kind === 'theme' ? 'wcard theme' : ''}`} look="full" tc={catColor(kind)} metal={game.partner.held === card || equipped.includes(card) || game.theme === card ? 'gold' : 'silver'}
-                art={kind === 'theme' ? <MiniScene theme={card} w={58} h={70} /> : <ItemIcon id={card} size={72} className="mc-item" />} banner={kind === 'theme' ? (game.theme === card ? 'In use' : 'Owned') : have(card) > 0 ? `×${have(card)}` : 'Held'} disabled tabIndex={-1} aria-hidden />
+                art={kind === 'theme' ? <MiniScene theme={card} w={58} h={70} /> : <ItemIcon id={card} size={72} className="mc-item" />} banner={kind === 'theme' ? (game.theme === card ? 'Locked' : 'Owned') : have(card) > 0 ? `×${have(card)}` : 'Held'} disabled tabIndex={-1} aria-hidden />
               <div className="item-hero-txt">
                 <h2 className="k-type">{itemName(card)}</h2>
                 <p>{ITEMS[card].text}</p>
@@ -864,7 +872,7 @@ export function Bag({ game, news }: { game: Game; news: ItemNews }) {
               return <KButton tone={on ? 'neutral' : 'main'} big onClick={() => { useItem(on ? '' : card, '', 'hold', on ? '' : card); play('tap'); setOpen(null) }}>{on ? 'Take it off' : `Give it to ${nameOf(game.partner.form)}`}</KButton>
             })()}
             {kind === 'tm' && <KButton tone={equipped.includes(card) ? 'neutral' : 'main'} big onClick={() => { toggleTm(card); setOpen(null) }}>{equipped.includes(card) ? 'Take it off' : `Equip on ${nameOf(game.partner.form)}`}</KButton>}
-            {kind === 'theme' && <KButton tone={game.theme === card ? 'neutral' : 'main'} big onClick={() => { useItem('', '', 'theme', game.theme === card ? undefined : card); setOpen(null) }}>{game.theme === card ? 'Take it off' : 'Use this scene'}</KButton>}
+            {kind === 'theme' && <KButton tone={game.theme === card ? 'neutral' : 'main'} big onClick={() => { useItem('', '', 'theme', game.theme === card ? undefined : card); setOpen(null) }}>{game.theme === card ? 'Let it rotate' : 'Lock this look'}</KButton>}
             {card === 'max-repel' && <button type="button" className="k-btn main big" disabled={!(game.wild && !game.wild.caught && !game.wild.repel)} onClick={() => { useItem('max-repel', '', 'repel'); play('tap'); setOpen(null) }}>Use on the wild Pokemon</button>}
             {kind === 'treasure' && <button type="button" className="k-btn ok big" onClick={() => { useItem(card, '', 'sell', String(have(card))); play('buy'); setOpen(null) }}>Sell {have(card) > 1 ? `all ${have(card)} ` : ''}for <Coin size={18} />{(treasurePrice(card, game.today.day) * have(card)).toLocaleString('en-IN')}{treasurePrice(card, game.today.day) > TREASURE[card][1] ? ' (wanted today: ×2)' : ''}</button>}
             {kind === 'fossil' && <button type="button" className="k-btn main big" disabled={game.wallet.coins < REVIVE_COST} onClick={() => { useItem(card, '', 'fossil'); play('catch'); setOpen(null) }}>Revive it: {nameOf(FOSSILS[card].species)} (<Coin size={16} />{REVIVE_COST})</button>}

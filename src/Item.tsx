@@ -5,7 +5,13 @@ import { BallItem } from './Ball.tsx'
 const BIG_BALLS = /^(poke|great|ultra|master|premier|safari)-ball$/
 /** Items whose file is not named for them. */
 const FILE: Record<string, string> = { chest: 'loot-sack', 'rare-egg': 'mystery-egg', 'trail-egg': 'mystery-egg', coin: 'nugget', gem: 'psychic-gem', berry: 'oran-berry', incense: 'full-incense' }
-const THEME_SWATCH: Record<string, [string, string]> = { 'theme-beach': ['#58c8e8', '#f1dc9a'], 'theme-cave': ['#4a4466', '#8a7a6a'], 'theme-night': ['#121a3d', '#3d7a5c'] }
+const THEME_SWATCH: Record<string, [string, string]> = {
+  'theme-beach': ['#58c8e8', '#f1dc9a'], 'theme-cave': ['#4a4466', '#8a7a6a'], 'theme-night': ['#121a3d', '#3d7a5c'],
+  // the scenes (core/places.ts): the sky over the ground of each place
+  'scene-meadow': ['#7fcdf0', '#5aa84a'], 'scene-shore': ['#58c8e8', '#ecdaa6'], 'scene-marsh': ['#a7b89a', '#6f8350'], 'scene-canyon': ['#f0b080', '#d6a068'],
+  'scene-volcano': ['#c4663f', '#544849'], 'scene-snow': ['#dfe8ff', '#eef3fb'], 'scene-cliff': ['#9fb6d8', '#e8eef8'], 'scene-pass': ['#6f7ea2', '#8e937c'],
+  'scene-plain': ['#fff0b0', '#d4c46c'], 'scene-ruins': ['#7a6aaa', '#918da4'], 'scene-flowers': ['#ffc8de', '#a6d884'], 'scene-steel': ['#9aa0ac', '#8c95a5'], 'scene-cave': ['#4a4466', '#8a7a6a'],
+}
 
 export function ItemIcon({ id, size = 44, className = '' }: { id: string; size?: number; className?: string }) {
   if (BIG_BALLS.test(id)) return <BallItem id={id} size={size} className={className} />
