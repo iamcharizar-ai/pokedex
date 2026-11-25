@@ -65,6 +65,8 @@
 .pcount.is-ready .pcount-fill { animation: pcount-glow 1.6s ease-in-out infinite; }
 .pcount-badge { position: absolute; top: -4px; right: -4px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; font-style: normal; font-size: 13px; color: var(--tone-gold); background: var(--surface-1); box-shadow: 0 0 0 2px var(--tone-gold); visibility: hidden; }
 .pcount-badge.on { visibility: visible; }
+.pcount-pair { display: flex; gap: 6px; }
+.pcount-ghost.sm { width: 62px; height: 62px; border-radius: 14px; }
 .pcount-txt { display: grid; gap: 6px; min-width: 0; }
 .pcount-txt b { font-family: var(--k-face); font-weight: 400; font-size: 17px; }
 .pcount-bounty { color: var(--tone-gold); font-size: 13px; }

@@ -35,6 +35,7 @@
 @import '../screens/party.css' layer(screens);
 @import '../screens/moncard.css' layer(screens);
 @import '../screens/forge.css' layer(screens);
+@import '../screens/forge3.css' layer(screens);
 @import '../screens/shop.css' layer(screens);
 @import '../screens/dex.css' layer(screens);
 @import '../screens/journey.css' layer(screens);

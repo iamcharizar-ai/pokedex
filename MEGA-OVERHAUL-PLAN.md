@@ -21,6 +21,8 @@ It also answers the open questions in `FORGE-OVERHAUL.md`. Numbers marked * are 
 
 ## Forge phase: the owner's requirements (25 Nov 2026)
 
+The full design of the forge (the experience beat by beat, how each effect is built, the assets and the image prompts) is in **`FORGE-EXPERIENCE.md`**.
+
 These are for the next piece of work and are not built:
 - **The player places every shard by hand.** Nothing is placed for them (no "Place them all", no auto-fill).
 - **Each crevice lights in the colour of the shard placed in its socket.**

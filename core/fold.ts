@@ -24,7 +24,7 @@ import {
 } from './rules.ts'
 import { berryGain, labWorth, leaderHit, partyPower, pillarsOf, tierOf, type Fighter } from './v22.ts'
 import { LAB_MEGA_X, MOMENTUM_LADDER, STONE_STREAK, momentumLadder, v23On } from './rules.ts'
-import { fillOwed as fillOwedStones, goodRun, nextStone, type RowStone } from './v23.ts'
+import { fillOwed as fillOwedStones, forgeRecipe, goodRun, nextStone, recipeOf, type RowStone } from './v23.ts'
 export type { RowStone } from './v23.ts'
 import { featLive, featReward, championKey, BERRY_OF, trackPrize, milestoneOptionsV22, labReward, labCost, trainerOptions, convertV22, keptV22, pickupFindV22, PICKUP_COINS, FORGE_COINS, NURSERY_PLACE, NURSERY_IDS, inNursery, HELD_V22, MART_V22, GEAR_FOR, COUNTER_V21, EGG_WAIT_MAX, researchRewardV21, ribbonOptions, workEgg, BOOST, COMET_SHARD, DIRE_HIT, EVO_ITEMS, FOSSILS, LEGEND_KEYS, PICKUP_TIERS, PLATES, PLATE_BONUS, REMATCH_KEYS, plateFor, REVIVE_COST, TREASURE, VITAMINS, VITAMIN_MAX, VITAMIN_STEP, forgeFair, legendFor, milestoneOptions, pickupFind, researchReward, type Option } from './economy.ts'
 import { FACILITIES, GOLD_BP, GOLD_GEMS, REMATCH_BP, SILVER_BP, SILVER_GEMS, bpFor } from './frontier.ts'
@@ -1153,7 +1153,8 @@ export function foldGame(facts: DayFacts[], opts: { instant?: boolean } = {}): G
         if (!megas.includes(u.to) || m.megas?.includes(u.to)) return
         if (v13On(day)) {
           // version 13: three shards of three different colours, and the X or Y is yours
-          const use = forgeFair(inv, u.item || undefined)
+          // version 23: the stone's own recipe (core/v23.ts), a Comet fitting any place; before it, three shards of three different colours
+          const use = v23On(day) ? forgeRecipe(inv, u.item, recipeOf(u.to)) : forgeFair(inv, u.item || undefined)
           if (!use) return
           for (const id of use) inv[id]--
           if (v22On(day)) wallet.coins -= FORGE_COINS

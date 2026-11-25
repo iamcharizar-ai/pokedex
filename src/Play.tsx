@@ -347,7 +347,7 @@ function Shelf({ game, offers: all, shop, fold, what = 'items' }: { game: Game; 
   )
 }
 
-/** Strong's seven pieces of gear, and how close the next full set (and the next Red Shard) is. */
+/** Strong's seven routines (before version 22, seven pieces of gear), and how close the track (and its prize) is. */
 function TrainingKit({ game }: { game: Game }) {
   // version 22: a routine of the split is a pip on the Gym track, not a piece in the bag
   const kit = game.v22 ? new Set(game.tracks.fitness.kit) : null
@@ -360,7 +360,7 @@ function TrainingKit({ game }: { game: Game }) {
         {GEAR_ITEMS.map((g) => {
           const n = held(g)
           return (
-            <span key={g} className={`gear ${n > 0 ? 'on' : ''}`} title={`${itemName(g)}: ${ITEMS[g].text}`}>
+            <span key={g} className={`gear ${n > 0 ? 'on' : ''}`} title={`${itemName(g)}: ${kit ? `a routine of Strong's split. Each one you do is a pip on the Gym track; all seven fill it, and a Red Shard or a Gym Egg is yours to choose in Collect.` : ITEMS[g].text}`}>
               <ItemIcon id={g} size={24} />{n > 1 && <i>×{n}</i>}<small>{itemName(g)}</small>
             </span>
           )
@@ -383,17 +383,23 @@ function PillarCounter({ game, tag }: { game: Game; tag: MarkTag }) {
   const have = game.v22 ? track.pips : game.wallet.marks[tag], need = game.v22 ? track.of : COUNTER_V21
   const egg = workEgg(tag), shard = MARKS[tag].shard
   const aimed = tile.iconId === egg ? 'egg' : 'shard'
+  // version 22: a full track pays its shard or its egg, and you choose in Collect, so both are shown (Sleep has only its egg)
+  const both = game.v22 && Boolean(shard)
+  const ghost = (id: string, size: number, small: boolean, badge: boolean) => (
+    <span className={`pcount-ghost ${small ? 'sm' : ''}`} aria-hidden>
+      <span className="pcount-dark"><ItemIcon id={id} size={size} /></span>
+      <span className="pcount-fill" style={{ clipPath: `inset(${((1 - tile.fill) * 100).toFixed(1)}% 0 0 0)` }}><ItemIcon id={id} size={size} /></span>
+      {badge && <i className={`pcount-badge ${tile.bountyActive ? 'on' : ''}`}>✦</i>}
+    </span>
+  )
+  const prize = both ? `${itemName(shard!)} or ${itemName(egg)}` : itemName(tile.iconId)
   const choose = (to: 'egg' | 'shard') => { if (to !== aimed) { useItem(tag, '', 'aim', to); play('tap') } }
   return (
     <div className={`pcount ${tile.ready ? 'is-ready' : ''}`}>
-      <span className="pcount-ghost" aria-hidden>
-        <span className="pcount-dark"><ItemIcon id={tile.iconId} size={64} /></span>
-        <span className="pcount-fill" style={{ clipPath: `inset(${((1 - tile.fill) * 100).toFixed(1)}% 0 0 0)` }}><ItemIcon id={tile.iconId} size={64} /></span>
-        <i className={`pcount-badge ${tile.bountyActive ? 'on' : ''}`}>✦</i>
-      </span>
+      {both ? <span className="pcount-pair">{ghost(shard!, 44, true, true)}{ghost(egg, 44, true, false)}</span> : ghost(tile.iconId, 64, false, true)}
       <span className="pcount-txt">
-        <b>{itemName(tile.iconId)}</b>
-        <Meter kind="gold" value={Math.min(have, need)} max={need} name={game.v22 ? `${TAG_NAME[tag]} track toward ${itemName(tile.iconId)}` : `${MARKS[tag].name} toward ${itemName(tile.iconId)}`} label={game.v22 ? (tile.ready ? (tag === 'sleep' ? 'Full: its egg waits in Collect' : 'Full: choose its prize in Collect') : `${have} / ${need}`) : tile.ready ? `Ready · ${have} held` : `${have} / ${need}`} />
+        <b>{prize}</b>
+        <Meter kind="gold" value={Math.min(have, need)} max={need} name={game.v22 ? `${TAG_NAME[tag]} track toward ${prize}` : `${MARKS[tag].name} toward ${itemName(tile.iconId)}`} label={game.v22 ? (tile.ready ? (tag === 'sleep' ? 'Full: its egg waits in Collect' : 'Full: choose its prize in Collect') : `${have} / ${need}`) : tile.ready ? `Ready · ${have} held` : `${have} / ${need}`} />
         {tile.bountyActive && <small className="pcount-bounty">✦ Bounty: {TAG_NAME[tag].toLowerCase()} today pays ×{tile.bounty}</small>}
       </span>
       {shard && !game.v22 && (

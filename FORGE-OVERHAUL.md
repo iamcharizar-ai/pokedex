@@ -1,7 +1,7 @@
 # The Forge: a full overhaul is planned (to be done later, by Opus)
 
 **Status (25 Nov 2026): planned, a plan is written, nothing is built.** The overhaul is now a bigger one (Megas that are temporary and shown on the Momentum day row, and a dynamic
-forge-only altar): see **`MEGA-OVERHAUL-PLAN.md`**, which answers the open questions below and lists the decisions the owner still has to make. Until it is
+forge-only altar): see **`MEGA-OVERHAUL-PLAN.md`** (and **`FORGE-EXPERIENCE.md`** for the forge itself: the experience, its effects, its assets and the prompts), which answers the open questions below and lists the decisions the owner still has to make. Until it is
 approved and built the Forge is only kept working: do not redesign it, retune it or rework its rules in passing. The rest of this file is how the Forge works today.
 
 ## What was done as groundwork (13 Nov 2026)
@@ -11,7 +11,7 @@ approved and built the Forge is only kept working: do not redesign it, retune it
 - The Forge also shows **where the Key Stone comes from** (`KeyStoneSource` in `Forge.tsx`: the "A week running" feat and its progress), beside the
   existing "where the next shards come from" list.
 - Otherwise nothing about how the Forge works or looks changed. `src/screens/Forge.tsx` and `src/screens/forge.css` are as they were.
-- The shard list (`NextShards`) still talks about Strong's old "every third full set" Red Shard; version 22 replaced that with the Gym track. Part of the overhaul.
+- The shard list (`NextShards`) used to talk about Strong's old "every third full set" Red Shard; from version 22 it lists each live pillar's track (a full track pays its shard or its egg, chosen in Collect) and the Comet from a month's review. Fixed 25 Nov 2026.
 - `tools/stylediff.mjs` has a `Party:Forge` state so the tab can be captured.
 
 ## How the Forge works today (so the overhaul starts from facts)

@@ -1,0 +1,90 @@
+/* THE FORGE, rebuilt (screens/forge/Stage.tsx): the painted altar with the light drawn over it, the recipe tray above, and the shards and the Key Stone floating round it.
+   Positions inside the altar are percentages of its picture; sizes that touch pixel art are set in code to whole multiples of the art. */
+
+.forge3 { width: 100%; display: grid; justify-items: center; gap: var(--s-3); }
+
+/* ── the recipe tray ── */
+.tray { display: grid; justify-items: center; gap: 6px; }
+.tray-gems { display: flex; gap: 14px; }
+.gem { position: relative; width: 48px; height: 48px; display: grid; place-items: center; border-radius: 50%; border: 2px dashed color-mix(in srgb, var(--gc) 55%, transparent); background: rgba(0, 0, 0, 0.35); transition: box-shadow var(--t-pop) linear, border-color var(--t-pop) linear; }
+.gem img { image-rendering: pixelated; opacity: 0.32; filter: grayscale(0.5); transition: opacity var(--t-pop) linear; }
+.gem.in { border-style: solid; border-color: var(--gc); box-shadow: 0 0 14px var(--gc), inset 0 0 8px color-mix(in srgb, var(--gc) 50%, transparent); }
+.gem.in img { opacity: 1; filter: none; }
+.gem-comet { position: absolute; right: -2px; top: -6px; font-style: normal; font-size: 16px; color: #f3e4ff; text-shadow: 0 0 6px #c890ff, 0 1px 0 rgba(0, 0, 0, 0.6); }
+.tray-text { margin: 0; max-width: 40ch; text-align: center; font-size: 13px; color: var(--text-2); }
+
+/* ── the altar ── */
+.forge3 .stage { position: relative; width: min(460px, 100%); aspect-ratio: 1; border-radius: 28px; user-select: none; -webkit-user-select: none;
+  background: radial-gradient(circle at 50% 47%, #1d2338 0, #10142a 55%, #0a0d1c 100%); box-shadow: inset 0 0 0 1px var(--hair-hi), 0 8px 24px rgba(0, 0, 0, 0.35); }
+.forge3 .altar-box { position: absolute; left: 50%; top: 50%; width: 80%; aspect-ratio: 1; translate: -50% -50%; }
+.forge3 .altar-img, .forge3 .glow, .forge3 .fxc { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.forge3 .altar-img { object-fit: contain; }
+.forge3 .well-fb { position: absolute; translate: -50% -50%; border-radius: 50%; opacity: 0; display: none; pointer-events: none; }
+.forge3.noglow .well-fb { display: block; }
+.forge3 .dark { position: absolute; inset: 0; border-radius: 28px; background: radial-gradient(circle at 50% 47%, transparent 30%, rgba(0, 0, 0, 0.9) 100%); opacity: 0; pointer-events: none; }
+.forge3 .wash { position: absolute; inset: 0; border-radius: 28px; background: radial-gradient(circle at 50% 47%, #fff 0, color-mix(in srgb, var(--mc, #fff) 45%, #fff) 28%, transparent 66%); opacity: 0; pointer-events: none; mix-blend-mode: screen; }
+
+/* the middle: the Pokemon's silhouette while a Mega is chosen, the Key Stone and the gathering ball while it forges, the Mega Stone after */
+.forge3 .core { position: absolute; width: 0; height: 0; pointer-events: none; }
+.forge3 .core > * { position: absolute; left: 0; top: 0; transform: translate(-50%, -50%); }
+.forge3 .sil { image-rendering: pixelated; opacity: 0.8; filter: brightness(0) drop-shadow(0 0 5px rgba(210, 180, 255, 0.9)); transition: opacity 0.3s linear; }
+.forge3 .ball { width: calc(var(--mp) * 1.5); aspect-ratio: 1; border-radius: 50%; opacity: 0; background: radial-gradient(circle, #fff 0, rgba(255, 255, 255, 0.92) 24%, rgba(255, 244, 214, 0.5) 48%, transparent 70%); }
+.forge3 .keyst { display: grid; place-items: center; }
+.forge3 .keyst img { image-rendering: pixelated; }
+.forge3 .mega { isolation: isolate; opacity: 0; display: grid; place-items: center; }
+.forge3 .mega img { image-rendering: pixelated; filter: drop-shadow(0 0 10px var(--mc, #fff)); }
+.forge3 .mega::before { content: ''; position: absolute; inset: -65%; z-index: -1; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--mc, #fff) 60%, transparent) 0, color-mix(in srgb, var(--mc2, var(--mc, #fff)) 28%, transparent) 42%, transparent 70%); }
+.forge3.reveal .mega { opacity: 1; animation: mega-hover 2.6s ease-in-out infinite; }
+.forge3 .mega-take { position: absolute; translate: -50% -50%; padding: 0; border: 0; border-radius: 50%; background: none; cursor: pointer; }
+.forge3 .mega-take:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+
+/* where the Key Stone goes, while it is the next thing to do */
+.forge3 .core-ring { position: absolute; translate: -50% -50%; border-radius: 50%; border: 2px dashed rgba(255, 255, 255, 0.4); pointer-events: none; }
+.forge3 .core-ring.on { border-color: #fff; box-shadow: 0 0 14px rgba(255, 255, 255, 0.7); animation: ring-pulse 1.4s ease-in-out infinite; }
+
+/* the three sockets (a button each, over the painted well) and the shards in them */
+.forge3 .sock { position: absolute; translate: -50% -50%; padding: 0; border: 0; border-radius: 50%; background: none; display: grid; place-items: center; cursor: pointer; }
+.forge3 .sock:disabled { cursor: default; }
+.forge3 .sock.hot { animation: sock-hot 1s ease-in-out infinite; }
+.forge3 .sock.near { box-shadow: 0 0 0 3px #fff, 0 0 18px #fff; }
+.forge3 .sock:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+.forge3 .shard { display: block; translate: 0 0; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.45)); transition: translate 0.35s var(--ease-out), scale 0.35s var(--ease-out), filter 0.35s linear; animation: shard-snap 0.34s cubic-bezier(0.55, 0, 0.8, 0.3) backwards; }
+.forge3 .shard img { image-rendering: pixelated; display: block; }
+.forge3.armed .shard, .forge3.committed .shard { translate: 0 calc(var(--lift) * -1); scale: var(--fs, 2); filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.75)); animation: shard-snap 0.34s cubic-bezier(0.55, 0, 0.8, 0.3) backwards, shard-bob 2.2s ease-in-out infinite; }
+.forge3.reveal .shard { display: none; }
+
+
+.forge3 .forge-say { margin: 0; max-width: 36ch; min-height: 2.5em; text-align: center; font-family: var(--k-face); font-size: 18px; line-height: 1.25; color: var(--text); }
+.forge3.armed.can .forge-say { color: #f3e4ff; }
+
+/* ── the shards you hold, floating round the altar ── */
+.forge3 .orb { position: absolute; left: 0; top: 0; padding: 0; display: grid; place-items: center; border: 0; border-radius: 50%; background: none; cursor: grab; touch-action: none; }
+.forge3 .orb-in { display: block; animation: orb-float 3.2s ease-in-out infinite; animation-delay: calc(var(--i) * -0.7s); filter: drop-shadow(0 0 8px var(--oc)) drop-shadow(0 3px 0 rgba(0, 0, 0, 0.4)); transition: opacity var(--t-pop) linear; }
+.forge3 .orb-in img { image-rendering: pixelated; display: block; }
+.forge3 .orb.need .orb-in { filter: drop-shadow(0 0 14px var(--oc)) drop-shadow(0 0 4px #fff) drop-shadow(0 3px 0 rgba(0, 0, 0, 0.4)); }
+.forge3 .orb.idle .orb-in { opacity: 0.45; }
+.forge3 .orb.dragging { z-index: 5; cursor: grabbing; }
+.forge3 .orb.dragging .orb-in { animation: none; }
+.forge3 .orb.key .orb-in { filter: drop-shadow(0 0 10px #fff) drop-shadow(0 3px 0 rgba(0, 0, 0, 0.4)); }
+.forge3 .orb.key.need .orb-in { filter: drop-shadow(0 0 18px #fff) drop-shadow(0 0 6px #fff) drop-shadow(0 3px 0 rgba(0, 0, 0, 0.4)); animation-duration: 1.6s; }
+.forge3 .orb.idle { cursor: default; }
+.forge3 .orb.bad { animation: sh-bad 0.4s linear; }
+.forge3 .orb:focus-visible, .forge3 .key-take:focus-visible { outline: 3px solid #fff; outline-offset: 3px; border-radius: 50%; }
+.forge3 .forge-all { min-height: 44px; }
+.forge3 .key-take { position: absolute; translate: -50% -50%; padding: 0; border: 0; border-radius: 50%; background: none; cursor: pointer; }
+.forge3.rest .keyst img { filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.8)); }
+.forge-flash { position: fixed; inset: 0; z-index: 9999; background: #fff; opacity: 0; pointer-events: none; }
+
+@keyframes orb-float { 50% { translate: 0 -6px; } }
+@keyframes shard-snap { from { translate: var(--dx) var(--dy); scale: 1.5; opacity: 0.85; } }
+@keyframes shard-bob { 50% { transform: translateY(-2px); } }
+@keyframes mega-hover { 50% { translate: 0 -3px; } }
+@keyframes ring-pulse { 50% { scale: 1.12; opacity: 0.6; } }
+@keyframes sock-hot { 50% { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.6); } }
+@keyframes sh-bad { 20%, 60% { translate: -4px 0; } 40%, 80% { translate: 4px 0; } }
+
+/* reduced motion: nothing loops, nothing flies; the light still changes, softly (the stage reads the same setting for its own effects) */
+@media (prefers-reduced-motion: reduce) {
+  .forge3 * { animation: none !important; transition: none !important; }
+}
+.forge3 .forge-gate { margin: 0; max-width: 40ch; text-align: center; font-size: 13px; color: var(--tone-gold); }

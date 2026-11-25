@@ -5,8 +5,9 @@ import assert from 'node:assert/strict'
 import { addDays, type DayFacts, type HabitFact } from './facts.ts'
 import { foldGame } from './fold.ts'
 import { MOMENTUM_LADDER, MOMENTUM_WINDOW_STEPS, STONE_STREAK, V21_FIX, momentumLadder, setV22Start, setV23Start, v23On } from './rules.ts'
-import { BERRY_HEARTS, FEATS, FEATS_LIVE, STREAK_FEATS, featReward } from './economy.ts'
-import { fillOwed, goodRun, nextStone, type RowStone } from './v23.ts'
+import { BERRY_HEARTS, FEATS, FEATS_LIVE, FORGE_COINS, SHARDS, STREAK_FEATS, featReward } from './economy.ts'
+import { SPECIES } from './species.ts'
+import { fillOwed, fitsRecipe, forgeRecipe, goodRun, nextStone, recipeMet, recipeOf, type RowStone } from './v23.ts'
 
 const START = V21_FIX
 setV22Start(START)
@@ -221,7 +222,8 @@ test('a forged Mega is a Mega only while its stone is on the row: the row shows 
   let need = 150 - ((ch.together ?? 0) + (ch.fed ?? 0))
   for (const [item, n] of Object.entries(g0.inv)) if (item in BERRY_HEARTS) for (let k = 0; k < n && need > 0; k++) { feeds.push({ item, uid: ch.uid, what: 'feed' }); need -= 2 }
   const play = (uses: typeof feeds, more: number, tail: (i: number) => DayFacts = great) => foldGame([...base.slice(0, N - 1), { ...base[N - 1], uses }, ...Array.from({ length: more }, (_, i) => tail(N + i))], { instant: true })
-  const forge = { item: '', uid: ch.uid, what: 'forge', to: 'charizard-megax' }
+  // version 23 forges from the stone's recipe, so the shards are named (three Comets fit any recipe)
+  const forge = { item: 'comet-shard,comet-shard,comet-shard', uid: ch.uid, what: 'forge', to: 'charizard-megax' }
   const fed = play(feeds, 3)
   const made = play([...feeds, forge], 3)
   assert.deepEqual(made.graduates.find((m) => m.uid === ch.uid)!.megas, ['charizard-megax'], 'forged')
@@ -240,5 +242,79 @@ test('a forged Mega is a Mega only while its stone is on the row: the row shows 
   assert.deepEqual(quiet.megas, [], 'back to normal once the stone\'s day has left the row')
   assert.deepEqual(quiet.graduates.find((m) => m.uid === ch.uid)!.megas, ['charizard-megax'], 'the stone is kept')
   assert.equal(quiet.lab.strength, fed.lab.strength, 'and the Lab is back to its ordinary strength')
+  setV23Start('2099-01-01')
+})
+
+// ── the recipes ─────────────────────────────────────────────────────────────
+test('every Mega has one recipe of three shards, fixed for good: the same every time, and all three kinds of recipe occur', () => {
+  const forms = Object.values(SPECIES).flatMap((s) => s.m ?? [])
+  const shape = (r: string[]): 'triple' | 'double' | 'trio' => (new Set(r).size === 1 ? 'triple' : new Set(r).size === 2 ? 'double' : 'trio')
+  const count = { triple: 0, double: 0, trio: 0 }
+  for (const f of forms) {
+    const r = recipeOf(f)
+    assert.equal(r.length, 3, f)
+    assert.ok(r.every((k) => (SHARDS as readonly string[]).includes(k)), `${f}: colours only, never a Comet`)
+    assert.deepEqual(recipeOf(f), r, `${f} is not the same twice`)
+    count[shape(r)]++
+  }
+  assert.equal(forms.length, 70)
+  assert.ok(count.triple >= 4 && count.double >= 20 && count.trio >= 10, JSON.stringify(count))
+  assert.equal(recipeOf('charizard-megax').join(), recipeOf('charizard-megax').join())
+  assert.ok(new Set(forms.map((f) => recipeOf(f).join())).size > 8, 'the recipes differ from stone to stone')
+})
+
+test('what fits a recipe: a Comet fits any place, a colour only as often as the recipe has it, never more than three', () => {
+  const rb = ['red-shard', 'red-shard', 'blue-shard']
+  assert.ok(fitsRecipe([], rb))
+  assert.ok(fitsRecipe(['red-shard'], rb) && fitsRecipe(['red-shard', 'red-shard'], rb) && fitsRecipe(['blue-shard', 'red-shard'], rb))
+  assert.ok(!fitsRecipe(['blue-shard', 'blue-shard'], rb), 'only one blue')
+  assert.ok(!fitsRecipe(['red-shard', 'red-shard', 'red-shard'], rb), 'only two red')
+  assert.ok(!fitsRecipe(['green-shard'], rb), 'green is not in it')
+  assert.ok(fitsRecipe(['comet-shard', 'comet-shard', 'comet-shard'], rb), 'three Comets are fine')
+  assert.ok(fitsRecipe(['comet-shard', 'blue-shard', 'red-shard'], rb) && recipeMet(['comet-shard', 'blue-shard', 'red-shard'], rb))
+  assert.ok(!fitsRecipe(['comet-shard', 'blue-shard', 'red-shard', 'red-shard'], rb), 'not four')
+  assert.ok(!recipeMet(['red-shard', 'red-shard'], rb), 'two of three is not met')
+  assert.ok(recipeMet(['red-shard', 'comet-shard', 'red-shard'], rb))
+  const inv = { 'red-shard': 2, 'blue-shard': 1, 'comet-shard': 1 }
+  assert.deepEqual(forgeRecipe(inv, 'red-shard,red-shard,blue-shard', rb), ['red-shard', 'red-shard', 'blue-shard'])
+  assert.equal(forgeRecipe(inv, 'red-shard,red-shard,red-shard', rb), null, 'not the recipe')
+  assert.equal(forgeRecipe({ 'red-shard': 1, 'blue-shard': 1 }, 'red-shard,red-shard,blue-shard', rb), null, 'a shard that is not held')
+  assert.equal(forgeRecipe(inv, undefined, rb), null, 'it must say which shards')
+  assert.deepEqual(forgeRecipe(inv, 'comet-shard,red-shard,blue-shard', rb), ['comet-shard', 'red-shard', 'blue-shard'])
+})
+
+test('forging under the recipe rule: only the stone\'s own shards are accepted, exactly those are spent (a Comet standing in for any), and the coins go', () => {
+  setV23Start(START)
+  const N = 320
+  const base = Array.from({ length: N }, (_, i) => great(i))
+  const g0 = foldGame(base, { instant: true })
+  const ch = g0.graduates.find((m) => m.form === 'charizard')!
+  const feeds: { item: string; uid: string; what: string; to?: string }[] = []
+  let need = 150 - ((ch.together ?? 0) + (ch.fed ?? 0))
+  for (const [item, n] of Object.entries(g0.inv)) if (item in BERRY_HEARTS) for (let k = 0; k < n && need > 0; k++) { feeds.push({ item, uid: ch.uid, what: 'feed' }); need -= 2 }
+  const at = (uses: typeof feeds) => foldGame([...base.slice(0, N - 1), { ...base[N - 1], uses }, great(N)], { instant: true })
+  const before = at(feeds)
+  const recipe = recipeOf('charizard-megax')
+  // the recipe as a player with these shards would place it: a colour they hold, otherwise a Comet
+  const left: Record<string, number> = { ...before.inv }
+  const kinds = recipe.map((c) => { if ((left[c] ?? 0) > 0) { left[c]--; return c } left['comet-shard']--; return 'comet-shard' })
+  const forge = (item: string) => ({ item, uid: ch.uid, what: 'forge', to: 'charizard-megax' })
+  const made = at([...feeds, forge(kinds.join(','))])
+  assert.deepEqual(made.graduates.find((m) => m.uid === ch.uid)!.megas, ['charizard-megax'], 'forged')
+  for (const k of new Set(kinds)) assert.equal((before.inv[k] ?? 0) - (made.inv[k] ?? 0), kinds.filter((x) => x === k).length, `${k} spent`)
+  assert.equal(before.wallet.coins - made.wallet.coins, FORGE_COINS, 'and the fee')
+  // a Comet in every place is also a recipe
+  const three = at([...feeds, forge('comet-shard,comet-shard,comet-shard')])
+  assert.deepEqual(three.graduates.find((m) => m.uid === ch.uid)!.megas, ['charizard-megax'], 'three Comets')
+  assert.equal((before.inv['comet-shard'] ?? 0) - (three.inv['comet-shard'] ?? 0), 3)
+  // shards that are not the recipe are refused, and nothing is spent
+  const other = (SHARDS as readonly string[]).find((c) => !recipe.includes(c))
+  if (other) {
+    const wrong = at([...feeds, forge(`${other},${other},${other}`)])
+    assert.equal(wrong.graduates.find((m) => m.uid === ch.uid)!.megas, undefined, 'refused')
+    assert.equal(wrong.wallet.coins, before.wallet.coins, 'no coins taken')
+  }
+  const noKinds = at([...feeds, forge('')])
+  assert.equal(noKinds.graduates.find((m) => m.uid === ch.uid)!.megas, undefined, 'it must say which shards')
   setV23Start('2099-01-01')
 })
