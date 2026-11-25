@@ -1,7 +1,8 @@
 # The Forge: a full overhaul is planned (to be done later, by Opus)
 
-**Status (13 Nov 2026): planned, not started.** The owner wants the Forge redesigned in full, later, by Opus. Until then the Forge is only
-kept working: do not redesign it, retune it or rework its rules in passing. This file is the place to start from when the overhaul begins.
+**Status (25 Nov 2026): planned, a plan is written, nothing is built.** The overhaul is now a bigger one (Megas that are temporary and shown on the Momentum day row, and a dynamic
+forge-only altar): see **`MEGA-OVERHAUL-PLAN.md`**, which answers the open questions below and lists the decisions the owner still has to make. Until it is
+approved and built the Forge is only kept working: do not redesign it, retune it or rework its rules in passing. The rest of this file is how the Forge works today.
 
 ## What was done as groundwork (13 Nov 2026)
 

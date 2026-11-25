@@ -164,6 +164,22 @@
 .mo-pip b { position: absolute; top: 15px; font: 400 11px/1 var(--k-face); color: var(--text-3); white-space: nowrap; }
 .mo-pip b.got { color: var(--k-gold-hi); }
 .mo-pip b.next { color: var(--text); }
+/* Momentum as one dot for each of the last seven days (the look from before 4 Nov 2026), today's ring at the end; from version 23 a good day that carries a Mega Stone shows the stone */
+.pace-days { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'l b' 'w w'; align-items: center; row-gap: 8px; }
+.pace-days .k-label { grid-area: l; }
+.pace-days .pace-big { grid-area: b; }
+.pace-big { font: 400 26px/1 var(--k-face); color: var(--tone-gold); white-space: nowrap; }
+.pace-week { grid-area: w; display: flex; align-items: center; gap: 8px; min-height: 28px; }
+.pace-week i { flex: none; width: 12px; height: 12px; border-radius: 50%; background: var(--well); box-shadow: inset 0 0 0 1px var(--hair-hi); }
+.pace-week i.on { background: var(--tone-gold); box-shadow: 0 0 8px var(--gold-glow); }
+.pace-week i.off { background: rgba(255, 90, 100, 0.35); box-shadow: none; }
+.pace-week i.none { opacity: 0.3; }
+.pace-week i.now { width: 16px; height: 16px; margin-left: 3px; box-shadow: inset 0 0 0 2px #fff; }
+.pace-week i.now.on { box-shadow: 0 0 0 2px #fff, 0 0 10px var(--gold-glow); }
+.pace-stone { flex: none; display: grid; place-items: center; width: 24px; height: 24px; filter: drop-shadow(0 0 6px var(--gold-glow)); }
+.pace-now { flex: none; display: grid; place-items: center; width: 28px; height: 28px; margin-left: 3px; border-radius: 50%; box-shadow: inset 0 0 0 2px #fff; }
+.pace-now.on { box-shadow: 0 0 0 2px #fff, 0 0 10px var(--gold-glow); }
+.pace-now .ghost { display: grid; opacity: 0.38; }
 .evo-way { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: end; gap: 8px; }
 .evo-way .meter { align-self: center; }
 .evo-way .crop { filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.35)); }

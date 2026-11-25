@@ -16,6 +16,8 @@ const run = (name: string) => {
   // the engine's version 22 fields are the only difference: they are new, and empty before V22_START
   const live = JSON.parse(JSON.stringify(foldGame(facts)))
   delete live.v22; delete live.tracks; delete live.tier.pillars; delete live.lab; delete live.egg2; delete live.partyPower
+  // version 23 adds the Momentum row, today's ring, who is a Mega today, and the flag (the ladder is only present once v23 is on)
+  delete live.v23; delete live.row; delete live.ring; delete live.megas
   return { facts, live: JSON.stringify(live), old: JSON.stringify(foldLegacy(facts)) }
 }
 

@@ -43,7 +43,8 @@ export function monCardOf(m: Mon, game: Game): MonCardData {
     sig: game.v16 ? { icon: s.icon, name: s.name } : undefined,
     // the green arrow: one berry you hold finishes its next bond level (not "there are berries somewhere")
     canFeed: need !== null && bestBerry(game, m) >= need - hearts,
-    mega: Boolean(m.megas?.length), trained: Boolean(m.graduated),
+    // version 23: a Mega only while its stone's day is on the Momentum row
+    mega: game.v23 ? game.megas.some((x) => x.uid === m.uid) : Boolean(m.megas?.length), trained: Boolean(m.graduated),
   }
 }
 

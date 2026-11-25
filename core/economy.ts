@@ -5,7 +5,7 @@ export * from './legacy/economy.ts'
 // ══ version 22 (GAME-SPEC-V22.md) ══════════════════════════════════════════════
 import { BALLS, WAIT_CAP, dayGap, FRIEND_BERRY, MARKS, workEgg, rng, throwHp as throwHpLegacy, type MarkTag, type Option } from './legacy/economy.ts'
 import { TYPE_DOMAIN } from './types.ts'
-import { BERRY_FAVOURITE, BERRY_PLAIN, TICKS_PER_HP, v22On, type Tag } from './rules.ts'
+import { BERRY_FAVOURITE, BERRY_PLAIN, TICKS_PER_HP, v22On, v23On, type Tag } from './rules.ts'
 
 /** What a thrown ball takes off the wild Pokemon. From V22_START the wild Pokemon's HP is counted in ticks, so a ball's HP is too (TICKS_PER_HP); a Master Ball still catches anything. */
 export function throwHp(ball: string, wild: { types: (string | undefined)[]; from: string; owned: boolean }, day: string): number {
@@ -181,15 +181,28 @@ import { FACILITIES } from './frontier.ts'
 import { LEAGUES } from './gyms.ts'
 import { FEATS as LEGACY_FEATS, REMATCH_KEYS, type Feat, type Reward } from './legacy/economy.ts'
 
-/** From version 22 the feats are milestones: every run (7, 30, 100 in a row) goes, because the Battle Frontier is the one streak system. The week running that pays the Key Stone stays. */
-export const featLive = (f: Feat, day: string): boolean => !v22On(day) || f.group !== 'run' || f.id === 'work7'
+/**
+ * Version 23: the road past the Battle Tower. The Tower (a Frontier facility) already pays a Silver Symbol at 14 good days running and a Gold Symbol at 35,
+ * one rest day forgiven. These three go on from there, on the same count (`run:work`, the days with two pillars), so the top of a streak always has something to reach.
+ * They pay coins (the Forge's fee is 1,500), gems and a keepsake, and never a shard (shards come from tracks, 4.1).
+ */
+export const STREAK_FEATS: Feat[] = [
+  { id: 'streak60', name: 'Two months of good days', text: 'Two pillars a day for sixty days running (one rest day is forgiven)', group: 'run', key: 'run:work', n: 60, reward: { coins: 2000, gems: 60, items: { 'rare-candy': 2 } } },
+  { id: 'streak100', name: 'A hundred good days', text: 'Two pillars a day for a hundred days running (one rest day is forgiven)', group: 'run', key: 'run:work', n: 100, reward: { coins: 4000, gems: 120, items: { 'master-ball': 1 } } },
+  { id: 'streak200', name: 'Unstoppable', text: 'Two pillars a day for two hundred days running (one rest day is forgiven)', group: 'run', key: 'run:work', n: 200, reward: { coins: 8000, gems: 250, items: { 'rare-candy': 5 } } },
+]
+const STREAK_IDS = new Set(STREAK_FEATS.map((f) => f.id))
+/** Every feat there is: the old ones, then the streak road. Whether one is live is `featLive`. */
+export const FEATS: Feat[] = [...LEGACY_FEATS, ...STREAK_FEATS]
+/** From version 22 the feats are milestones: every run (7, 30, 100 in a row) goes, because the Battle Frontier is the one streak system. The week running that pays the Key Stone stays. From version 23 the streak road beyond the Tower is back. */
+export const featLive = (f: Feat, day: string): boolean => (STREAK_IDS.has(f.id) ? v23On(day) : !v22On(day) || f.group !== 'run' || f.id === 'work7')
 /** What a feat pays from version 22: shards come from tracks and nowhere else, so a feat pays gems and its other things. */
 export function featReward(f: Feat, day: string): Reward {
   if (!v22On(day) || !f.reward.items) return f.reward
   const items = Object.fromEntries(Object.entries(f.reward.items).filter(([id]) => !(SHARDS as readonly string[]).includes(id)))
   return { ...f.reward, items }
 }
-export const FEATS_LIVE = (day: string): Feat[] => LEGACY_FEATS.filter((f) => featLive(f, day))
+export const FEATS_LIVE = (day: string): Feat[] => FEATS.filter((f) => featLive(f, day))
 
 /**
  * Where each Legend key comes from (10.3): a Gold Symbol at a Frontier facility (seven keys), or the Champion of a league (ten on the first lap, then

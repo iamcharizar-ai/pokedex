@@ -185,7 +185,7 @@ export function Forge({ game }: { game: Game }) {
   const say = !game.keyStone ? 'The altar is cold until the Key Stone is yours: any one kind of work, seven days running.'
     : !sel ? (later ? `None of yours has a Mega form yet. ${nameOf(later.m.form)} will, once it evolves into ${nameOf(later.into)}.` : 'None of your Pokemon has a Mega form yet. Catch or raise one that does and it appears here.')
       : lit ? 'The stone wakes...'
-      : st === 'done' ? `Forged: ${megaStoneName(sel.mega)}. ${nameOf(sel.m.form)} keeps it for good.`
+      : st === 'done' ? `Forged: ${megaStoneName(sel.mega)}. ${nameOf(sel.m.form)} keeps it for good${game.v23 ? ', and is a Mega on the days your streak puts it on the Momentum row' : ''}.`
         : game.v22 && !v22Ok(sel) ? `A Mega Stone needs a fully trained Best Friend (${HEART_CAP} hearts), three shards of three colours and ${FORGE_COINS.toLocaleString('en-IN')} coins.`
         : st === 'ready' ? (placed.length === 0 ? (fair ? 'Tap three shards of three different colours into the stone.' : `Tap three ${itemName(shard!)}s into the stone.`) : `${FORGE_COST - placed.length} more.`)
           : fair ? `${shortName(sel.mega)}: ${toward.length} of ${FORGE_COST} sockets filled by what you hold. ${FORGE_COST - toward.length} more ${FORGE_COST - toward.length === 1 ? 'shard' : 'shards'} of a colour you don't have, or a Comet.` : `${shortName(sel.mega)} needs ${wantText(sel)}, or three Comet Shards.`
@@ -263,7 +263,7 @@ export function Forge({ game }: { game: Game }) {
             <EvoReveal from={still(reveal.from)} to={spritePath(reveal.to)} title={`${nameOf(reveal.to)}!`} />
           </div>
           <MegaStone mega={reveal.to} size={72} />
-          <p className="capsule-line">{megaStoneName(reveal.to)} is forged, and lies in your Bag. {nameOf(reveal.from)} keeps it for good.</p>
+          <p className="capsule-line">{megaStoneName(reveal.to)} is forged, and lies in your Bag. {nameOf(reveal.from)} keeps it for good{game.v23 ? ', and is a Mega on the days your streak puts it on the Momentum row' : ''}.</p>
           <button type="button" className="k-btn main capsule-go" autoFocus>Nice</button>
         </div>
       )}

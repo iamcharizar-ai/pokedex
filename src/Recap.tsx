@@ -93,7 +93,7 @@ function tell(m: Moment, game: Game): Told {
       return { title: m.how === 'perfect' ? 'Perfect day: caught!' : 'Gotcha!', line: `${m.shiny ? 'A shiny ' : ''}${nameOf(m.form)} was caught in ${thrown ? `a ${itemName(thrown)}` : aBall(ball)} and is in My Pokemon.`, art: 'catch', form: m.form, shiny: m.shiny, ball, thrown }
     }
     case 'form': return { title: m.what === 'mega' ? 'Mega form' : 'Gigantamax', line: `${nameOf(m.form)} is registered in the Pokedex.`, art: 'mon', form: m.form }
-    case 'mega': return { title: 'Mega Stone forged', line: `${nameOf(m.form)} is registered to this Pokemon and never runs out.`, art: 'mon', form: m.form }
+    case 'mega': return { title: 'Mega Stone forged', line: `${nameOf(m.form)} is kept for good and never runs out.`, art: 'mon', form: m.form }
     case 'track': {
       const name = TRACK_LABEL[m.tag]
       return {

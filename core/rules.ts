@@ -11,6 +11,22 @@ export let V22_START = '2026-11-12'
 export const setV22Start = (day: string): void => { V22_START = day }
 export const v22On = (day: string): boolean => day >= V22_START
 
+/**
+ * Version 23 (MEGA-OVERHAUL-PLAN.md): Momentum is a ladder, one small step for each good day of the last seven, and the streak puts Mega Stones on its days.
+ * A placeholder far in the future until the owner sets it on the day it deploys (the way V22_START was); until then every day folds exactly as before.
+ * A `let` only so a test can set it.
+ */
+export let V23_START = '2099-01-01'
+export const setV23Start = (day: string): void => { V23_START = day }
+export const v23On = (day: string): boolean => day >= V23_START
+/** The XP multiplier by the number of good days (two pillars) among the seven before today: every good day adds a little, the seventh is the leap. Tuned on the owner's real days: their pace averages x1.107, as today's steps do (x1.104). */
+export const MOMENTUM_LADDER = [1, 1.02, 1.05, 1.12, 1.21, 1.33, 1.5, 2] as const
+export const momentumLadder = (days: number): number => MOMENTUM_LADDER[Math.max(0, Math.min(MOMENTUM_LADDER.length - 1, Math.floor(days)))]
+/** A good day carries a Mega Stone once the seven-day count, with it, has reached this: the streak is on. */
+export const STONE_STREAK = 4
+/** A Lab Pokemon in Mega form is worth this many times as much to the Lab that day (the party's own x2 is POWER_MEGA_X). */
+export const LAB_MEGA_X = 2
+
 // ── the day (spec sections 2 and 3) ──
 /**
  * The wild Pokemon: every habit ticked takes one HP off, nothing multiplies it (3.3). Its HP is a fixed number of ticks by rarity, set from the owner's

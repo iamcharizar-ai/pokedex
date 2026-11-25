@@ -6,12 +6,12 @@ import type { DayFacts, HabitFact } from '../core/facts.ts'
 import { LEAGUES, lineup } from '../core/gyms.ts'
 import {
   ADVANTAGE_MULT, GEMS, SEASON_STEP, BALL_MULT, BALL_NAME, GAME_START, GRADUATES_PER_REGION, LEADER_HP, MOMENTUM_WINDOW,
-  CLAIM_AUTO, SLEEP_HABIT, HEART_LEVELS, MOMENTUM_OLD_STEPS, MOMENTUM_WINDOW_STEPS, MOMENTUM_PILLARS, MOMENTUM_STEPS, DAY_COINS, DAY_HEARTS, DAY_HIT_MULT, FIRST_PILLAR, levelOf, LEGENDARY_EVERY_WILD, REGIONS, REPEL_DAYS, SHINY_ODDS, SHINY_ODDS_WORN, SLEEP_AFTER, SLIP, STAKES_FROM, STEPS_GOAL, TEAM_SIZE, TRAIL_EGG_STEPS, WILD_STAY, TIER_XP, WEAK_MULT, evolveAt, graduateAt, xpForLevel,
+  CLAIM_AUTO, SLEEP_HABIT, HEART_LEVELS, MOMENTUM_LADDER, MOMENTUM_OLD_STEPS, MOMENTUM_WINDOW_STEPS, MOMENTUM_PILLARS, MOMENTUM_STEPS, DAY_COINS, DAY_HEARTS, DAY_HIT_MULT, FIRST_PILLAR, levelOf, LEGENDARY_EVERY_WILD, REGIONS, REPEL_DAYS, SHINY_ODDS, SHINY_ODDS_WORN, SLEEP_AFTER, SLIP, STAKES_FROM, STEPS_GOAL, TEAM_SIZE, TRAIL_EGG_STEPS, WILD_STAY, TIER_XP, WEAK_MULT, evolveAt, graduateAt, xpForLevel,
 } from '../core/rules.ts'
 import { MARKS, EGG_KINDS, RARE_EGG_GEMS, BOND_STEP, MASTERY_MAX, MASTERY_STEP, SELL, itemName as econName, masteryCost } from '../core/economy.ts'
 import { MILESTONE_EVERY, CRIT_MULT, DYNAMAX, LEVEL_POWER, MAX_LEVEL, MEGA_BONUS, MEGA_BOND, RESEARCH_SLOTS, RESEARCH_WILD, RESEARCH_WILD_MAX, TEAM_BONUS, TEAM_LEVEL, TEAM_NATURE, type Tag as TagKind } from '../core/rules.ts'
 import { SPECIES } from '../core/species.ts'
-import { Ball, BallItem, KeyStone } from './Ball.tsx'
+import { Ball, BallItem, KeyStone, MegaStone, megaStoneName } from './Ball.tsx'
 import { FeatsWin } from './Feats.tsx'
 import { RulesV22Body } from './screens/RulesV22.tsx'
 import { SleepWin } from './Sleep.tsx'
@@ -341,18 +341,26 @@ function Pace({ game }: { game: Game }) {
           </span>
         </div>
       ) : (
-      <div className="pace-cell pace-mo" title={`Days that counted in the last seven: ${steps.map(([d, m]) => `${d} make XP ×${m}`).join(', ')}. A day counts with two pillars; a good night can be one of them, never the only one. It slides back a day at a time, never resets.`}>
+      <div className="pace-cell pace-mo pace-days" title={momentum.ladder
+        ? `Days that counted in the last seven: each adds a little to XP (×1 for none, ×1.5 for six, ×${MOMENTUM_LADDER[MOMENTUM_LADDER.length - 1]} for all seven). A day counts with two pillars; a good night can be one of them, never the only one. Once four have counted, each good day carries a Mega Stone and its Pokemon is a Mega while the day is on the row. It slides back a day at a time, never resets.`
+        : `Days that counted in the last seven: ${steps.map(([d, m]) => `${d} make XP ×${m}`).join(', ')}. A day counts with two pillars; a good night can be one of them, never the only one. It slides back a day at a time, never resets.`}>
         <span className="k-label">Momentum</span>
-        <span className="mo-pips" role="meter" aria-valuemin={0} aria-valuemax={MOMENTUM_WINDOW} aria-valuenow={momentum.days} aria-label={`${momentum.days} of the last ${MOMENTUM_WINDOW} days counted: XP ×${momentum.mult}${next ? `; ${next[0] - momentum.days} more for ×${next[1]}` : ''}`}>
-          {Array.from({ length: MOMENTUM_WINDOW }, (_, i) => {
-            const step = steps.find(([d]) => d === i + 1)
-            return (
-              <span key={i} className={`mo-pip ${i < momentum.days ? 'on' : ''} ${next && i + 1 === next[0] ? 'next' : ''}`}>
-                <i />
-                {step && <b className={momentum.days >= step[0] ? 'got' : next?.[0] === step[0] ? 'next' : ''}>×{step[1]}</b>}
+        <b className="pace-big">×{momentum.mult}</b>
+        <span className="pace-week" role="group" aria-label={`${momentum.days} of the last ${MOMENTUM_WINDOW} days counted: XP ×${momentum.mult}${next && !momentum.ladder ? `; ${next[0] - momentum.days} more for ×${next[1]}` : ''}${game.megas.length && game.v23 ? `. Mega today: ${game.megas.map((m) => megaStoneName(m.form)).join(', ')}` : ''}`}>
+          {game.row.map((d, i) => {
+            const day = game.days[game.days.length - 1 - (game.row.length - i)]
+            const title = d.day ? `${fmtDay(d.day)}: ${day?.pillars ?? 0} of ${day?.pillarTotal ?? 0} pillars${d.stone ? `, carries ${megaStoneName(d.stone.form)}` : ''}` : 'before the game began'
+            return d.stone
+              ? <span key={i} className="pace-stone" title={title}><MegaStone mega={d.stone.form} size={24} title="" /></span>
+              : <i key={i} className={d.day === '' ? 'none' : d.counts ? 'on' : 'off'} title={title} />
+          })}
+          {game.ring.stone || game.ring.next
+            ? (
+              <span className={`pace-now ${game.ring.stone ? 'on' : ''}`} title={game.ring.stone ? `Today carries ${megaStoneName(game.ring.stone.form)}` : `Today: ${megaStoneName(game.ring.next!.form)} joins if today counts`}>
+                <span className={game.ring.stone ? '' : 'ghost'}><MegaStone mega={(game.ring.stone ?? game.ring.next)!.form} size={24} title="" /></span>
               </span>
             )
-          })}
+            : <i className={`now ${game.ring.counts ? 'on' : ''}`} title={game.ring.counts ? 'Today counts' : 'Today'} />}
         </span>
       </div>
       )}
@@ -383,7 +391,7 @@ function PartyNotes({ game }: { game: Game }) {
         <ItemIcon id={treats[0] ?? 'oran-berry'} size={24} />Feed{berries > 0 && <i>{berries}</i>}
       </button>
       {game.asleep && <p className="notice warn">Dozing after two days without a pillar. Finish one pillar to wake it. Nothing finished is lost{game.today.day >= STAKES_FROM ? '; a day with nothing ticked also costs what is still in progress (see How it works)' : `. From ${fmtDay(STAKES_FROM)} a day with nothing ticked also costs what is still in progress`}.</p>}
-      {game.aura === 'mega' && <p className="notice good">{partner.megas?.length ? 'Mega form: registered for good. Choose which form shows in Choices.' : 'Mega form: full momentum and every pillar done today.'}</p>}
+      {game.aura === 'mega' && <p className="notice good">{game.v23 ? `Mega form: ${megaStoneName(game.megas.find((x) => x.uid === partner.uid)?.form ?? '')} is on the Momentum row, so ${nameOf(partner.form)} is a Mega today. Choose which form shows in Choices.` : partner.megas?.length ? 'Mega form: registered for good. Choose which form shows in Choices.' : 'Mega form: full momentum and every pillar done today.'}</p>}
       {game.aura === 'gmax' && <p className="notice gmax">{game.display === partner.form ? 'Perfect day: Dynamaxed for today, every strike ×2.' : 'Perfect day: Gigantamax for today, every strike ×2.5.'}</p>}
       {feeding && <FeedSheet game={game} onClose={() => setFeeding(false)} />}
     </div>
@@ -564,7 +572,7 @@ function Choices({ game }: { game: Game }) {
   const kept = game.partner.megas ?? []
   const branching = [game.partner, ...game.queue].filter((m) => (SPECIES[m.form].e?.length ?? 0) > 1)
   const uses: [Choice, string, string][] = [
-    ['show', 'Which form shows', 'Your partner has a Mega form registered for good. Choose whether it is drawn as that or as its ordinary self.'],
+    ['show', 'Which form shows', game.v23 ? 'Your partner is a Mega on the days its stone is on the Momentum row. Choose whether it is drawn as that or as its ordinary self.' : 'Your partner has a Mega form registered for good. Choose whether it is drawn as that or as its ordinary self.'],
     ['branch', 'Choose a branch', 'Decide which way a branching Pokemon evolves. It still evolves on its own, at its level.'],
   ]
   // who each one can be used on right now
@@ -821,7 +829,7 @@ function line(m: Moment): string {
     case 'league': return `The ${leagueName(m.league)} league is yours: entered in the Hall of Fame`
     case 'use': return m.what === 'branch' ? `Chose ${nameOf(m.to ?? '')} as the branch` : `${nameOf(m.form)} came forward as the partner`
     case 'key': return 'The Key Stone is yours: shards can now forge Mega Stones'
-    case 'mega': return `${nameOf(m.form)} registered for good`
+    case 'mega': return `${nameOf(m.form)}: its Mega Stone is forged`
     case 'transfer': return `${nameOf(m.form)} went to the Professor (+${m.coins} coins)`
     case 'quest': return `${m.name}: ${m.coins ? `+${m.coins} coins` : `+${m.gems} gems`}`
     case 'season': return `Season step ${m.step}: ${m.coins ? `+${m.coins} coins` : m.gems ? `+${m.gems} gems` : itemName(m.item)}`
@@ -998,7 +1006,7 @@ function RulesTab({ onTour, game }: { onTour: () => void; game: Game }) {
     <section className="k-panel">
       <div className="k-panel-b">
         <h2 className="k-type" style={{ fontSize: 26, marginBottom: 12 }}>How it works</h2>
-        {game.v22 ? <RulesV22Body /> : <div className="rules">
+        {game.v22 ? <RulesV22Body v23={game.v23} /> : <div className="rules">
           <Rule title="Do the day" tone="gold" pic={<>{([[TIER_XP.pillar, 'code'], [TIER_XP.core, 'fitness'], [TIER_XP.standard, 'routine']] as const).map(([xp, tag], i) => <span key={tag} className="rule-ring" style={{ ['--c' as string]: `var(--tag-${tag})`, ['--s' as string]: `${40 - i * 6}px` } as CSSProperties}>{xp}</span>)}</>}>
             Every habit is XP for your partner. Pillars are {TIER_XP.pillar}; chores are small.
           </Rule>

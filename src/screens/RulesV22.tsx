@@ -1,13 +1,13 @@
 // How it works, as version 22 plays it (GAME-SPEC-V22.md). Every number is read from the rules, never typed here, so this page cannot drift from the game.
 import { BALL_TICKS, FORGE_COINS, FOSSIL_STEPS, HELD_V22, NURSERY_PLACE_COINS, STONE_COINS, STONES_V22, labCost } from '../../core/economy.ts'
-import { DAY_COINS, DAY_HIT_MULT, HEART_CAP, LAB_BASE, MOMENTUM_WINDOW_STEPS, PILLAR_HIT, SLIP, SLIP_WILD_TICKS, TRACK_LEN, TRAINER_HEARTS, WEAK_HIT, WILD_STAY, WILD_TICKS, BERRY_FAVOURITE, BERRY_PLAIN, POWER_TRAINER, evolveAt, graduateAt, TIER_XP } from '../../core/rules.ts'
+import { DAY_COINS, DAY_HIT_MULT, HEART_CAP, LAB_BASE, MOMENTUM_LADDER, MOMENTUM_WINDOW_STEPS, PILLAR_HIT, SLIP, SLIP_WILD_TICKS, TRACK_LEN, TRAINER_HEARTS, WEAK_HIT, WILD_STAY, WILD_TICKS, BERRY_FAVOURITE, BERRY_PLAIN, POWER_TRAINER, evolveAt, graduateAt, TIER_XP } from '../../core/rules.ts'
 import { Rule } from '../App.tsx'
 import { Coin, Gem, ItemIcon } from '../Item.tsx'
 
 const chip = (t: string, sm = true) => <span className={`rule-chip ${sm ? 'sm' : ''}`}>{t}</span>
 const icons = (...ids: string[]) => <>{ids.map((id) => <ItemIcon key={id} id={id} size={24} />)}</>
 
-export function RulesV22Body() {
+export function RulesV22Body({ v23 = false }: { v23?: boolean }) {
   const steps = MOMENTUM_WINDOW_STEPS.map(([d, m]) => `${d} days ×${m}`).join(', ')
   return (
     <div className="rules">
@@ -30,7 +30,7 @@ export function RulesV22Body() {
         Each pillar you do hits the leader for {PILLAR_HIT}, or {WEAK_HIT} if they are weak to it, times your party's power, times the day's tier (two ×{DAY_HIT_MULT[2]}, three ×{DAY_HIT_MULT[3]}, a Max day ×{DAY_HIT_MULT[4]}). Chores do not hit. Beat all of a league and the next opens; beat every league and they all come back stronger, for ever.
       </Rule>
       <Rule title="Party power" tone="blue" pic={icons('exp-share')}>
-        Your partner and up to five more fight together. Each adds its level and its bond, doubled when its type beats the leader's, doubled again with a Mega Stone, and your partner counts twice. Every Trainer level adds {Math.round(POWER_TRAINER * 100)}% on top. It is the one number behind every strike and the boss.
+        Your partner and up to five more fight together. Each adds its level and its bond, doubled when its type beats the leader's, doubled again {v23 ? 'while its Mega Stone is on the Momentum row' : 'with a Mega Stone'}, and your partner counts twice. Every Trainer level adds {Math.round(POWER_TRAINER * 100)}% on top. It is the one number behind every strike and the boss.
       </Rule>
       <Rule title="Tracks" tone="gold" pic={<>{chip(`${TRACK_LEN}`)}{icons('red-shard', 'rare-egg')}</>}>
         Each pillar has a track of {TRACK_LEN} pips: a day of Code, Arbor or Guitar, a good night beside a pillar, or a routine of your Strong split you have not done on this track yet. A full track is a prize to choose in Collect: that pillar's shard, or its egg. Shards come from nowhere else.
@@ -51,7 +51,7 @@ export function RulesV22Body() {
         Every {TRAINER_HEARTS} hearts across all your Pokemon is a Trainer level, with no last one: a choice of two gifts and a little more party power for good. On the way: Pickup at 10 hearts, Endure (one empty day a week costs nothing) at {TRAINER_HEARTS}, and +10% XP at {3 * TRAINER_HEARTS}.
       </Rule>
       <Rule title="Mega" tone="purple" pic={icons('red-shard', 'blue-shard', 'green-shard', 'key-stone')}>
-        With the Key Stone, a fully trained Best Friend can hold a Mega Stone: three shards of three different colours and {FORGE_COINS.toLocaleString('en-IN')} coins. It doubles that Pokemon's share of the party's power.
+        With the Key Stone, a fully trained Best Friend can hold a Mega Stone: three shards of three different colours and {FORGE_COINS.toLocaleString('en-IN')} coins. {v23 ? 'The stone is kept for good. Its Pokemon is a Mega on the days the stone is on your Momentum row (a good day carries one once four of the last seven have counted), and then it fights, or researches in the Lab, twice as well.' : "It doubles that Pokemon's share of the party's power."}
       </Rule>
       <Rule title="Eggs and fossils" tone="blue" pic={icons('rare-egg', 'trail-egg', 'helix-fossil')}>
         The Nursery warms what you put in it with the steps your band counts: a track's egg 40,000, a Trail Egg 30,000 (one for every 100,000 steps walked), a Mystery Egg 60,000, a fossil {FOSSIL_STEPS.toLocaleString('en-IN')} to bring it back. A second place costs {NURSERY_PLACE_COINS.toLocaleString('en-IN')} coins.
@@ -66,7 +66,7 @@ export function RulesV22Body() {
         From 10 hearts, on a day with a pillar your partner may find something on the walk: coins, a berry, a ball, a Rare Candy, an evolution stone or a fossil. The further you are in the leagues, the better the finds.
       </Rule>
       <Rule title="Momentum" tone="blue" pic={<>{MOMENTUM_WINDOW_STEPS.map(([, m]) => chip(`×${m}`))}</>}>
-        Of the last seven days, {steps} that counted make your XP bigger. A day counts with two pillars, a good night being one of them but never the only one. It slides back a day at a time and never resets. Two days with no pillar and your partner dozes off.
+        {v23 ? `Of the last seven days, each that counted adds to your XP: ×${MOMENTUM_LADDER[1]} for one, ×${MOMENTUM_LADDER[3]} for three, ×${MOMENTUM_LADDER[6]} for six and ×${MOMENTUM_LADDER[7]} for all seven.` : `Of the last seven days, ${steps} that counted make your XP bigger.`} A day counts with two pillars, a good night being one of them but never the only one. It slides back a day at a time and never resets. Two days with no pillar and your partner dozes off.
       </Rule>
       <Rule title="The weekly boss" tone="purple" pic={icons('master-ball')}>
         Every Monday a boss comes with a card of tasks sized to your last three weeks: the pillars you do, a task for any you have been skipping, good nights and steady days. The card is its HP. Beat it and it joins you as itself, at level 1: a beaten Gengar is a Gengar, not a Gastly. It never evolves; it is fully trained at level {graduateAt(3)}, and then it can forge its Mega like any other.

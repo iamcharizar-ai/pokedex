@@ -831,7 +831,7 @@ export function Bag({ game, news }: { game: Game; news: ItemNews }) {
               <span className="ware-sheet-art"><MegaStone mega={form} size={96} title={megaStoneName(form)} /></span>
               <h2 className="k-type">{megaStoneName(form)}</h2>
               <p>Forged for {holders.map((m) => nameOf(m.form)).join(' and ')}, which {holders.length > 1 ? 'each keep' : 'keeps'} it for good: it never runs out and cannot be spent.</p>
-              <p className="muted">A Mega Stone doubles its Pokemon's share of the party's power. Mega Stones lie in the Bag with everything else. Drag one, or use Arrange, to put it where you like.</p>
+              <p className="muted">{game.v23 ? `Its Pokemon is a Mega on the days this stone is on your Momentum row, which a good day carries once four of the last seven have counted. Then it fights, or researches in the Lab, twice as well.` : "A Mega Stone doubles its Pokemon's share of the party's power."} Mega Stones lie in the Bag with everything else. Drag one, or use Arrange, to put it where you like.</p>
             </div>
           </Sheet>
         )
@@ -933,9 +933,9 @@ export function MonPage({ m, game, onClose }: { m: Mon; game: Game; onClose: () 
           <div className="mp-line">
             {m.path.map((f, i) => <span key={f} className="path-step">{i > 0 && <span className="arrow">▸</span>}<img src={still(f, m.shiny)} alt={nameOf(f)} title={nameOf(f)} width={48} height={48} className="sprite" /></span>)}
             {(rec.e ?? []).length > 0 && <span className="path-step"><span className="arrow">▸</span>{rec.e!.slice(0, 3).map((f) => <img key={f} src={still(f)} alt="" width={48} height={48} className={`sprite ${game.dex[f] ? '' : 'unseen'}`} />)}</span>}
-            {(m.megas ?? []).map((f) => <span key={f} className="path-step"><span className="arrow">★</span><img src={still(f, m.shiny)} alt={nameOf(f)} title={`${nameOf(f)}, for good`} width={48} height={48} className="sprite" /><MegaStone mega={f} size={24} /></span>)}
+            {(m.megas ?? []).map((f) => <span key={f} className="path-step"><span className="arrow">★</span><img src={still(f, m.shiny)} alt={nameOf(f)} title={game.v23 ? nameOf(f) : `${nameOf(f)}, for good`} width={48} height={48} className="sprite" /><MegaStone mega={f} size={24} /></span>)}
           </div>
-          {megas.length > 0 && <p className="muted megaline">{(m.megas ?? []).length ? <>It holds {(m.megas ?? []).map((f) => <span key={f} className="megachip"><MegaStone mega={f} size={24} />{megaStoneName(f)}</span>)}, forged and kept for good.</> : <>It can hold {megas.map((f) => <span key={f} className="megachip"><MegaStone mega={f} size={24} />{megaStoneName(f)}</span>)}. Mega Stones are forged in the Forge on the Party tab, once the Key Stone is yours.</>}</p>}
+          {megas.length > 0 && <p className="muted megaline">{(m.megas ?? []).length ? <>It holds {(m.megas ?? []).map((f) => <span key={f} className="megachip"><MegaStone mega={f} size={24} />{megaStoneName(f)}</span>)}, forged and kept for good{game.v23 ? ': it is a Mega on the days the stone is on the Momentum row' : ''}.</> : <>It can hold {megas.map((f) => <span key={f} className="megachip"><MegaStone mega={f} size={24} />{megaStoneName(f)}</span>)}. Mega Stones are forged in the Forge on the Party tab, once the Key Stone is yours.</>}</p>}
           <MonExtras game={game} m={m} onDone={onClose} />
           {game.v14 && trained && !isPartner && <p className="muted">{levelOf(m.xp) >= MAX_LEVEL ? 'Level 100: it has nothing left to learn as a partner.' : `Fully trained. It can lead again to go on to level ${MAX_LEVEL}${game.tier.v21 ? ', and takes a Rare Candy' : ", or grow with the party's Exp. Share"}.`}</p>}
           <div className="kit-row">
