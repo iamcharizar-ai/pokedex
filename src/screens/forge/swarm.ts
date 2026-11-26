@@ -6,9 +6,14 @@ export interface Orb { key: string; kind: string; x: number; y: number; vx: numb
 
 /** The altar's picture is this share of the arena's width (CSS: .altar-box), and the altar itself fills its picture. */
 export const ALTAR = 0.72
+/** The altar's share for an arena `W` pixels wide: on a phone the arena is small, so the altar takes more of it and the shards float in a thinner ring;
+    on a wide screen the shards are drawn bigger and still have room at a larger share than the default. */
+export const altarShare = (W: number): number => (W < 520 ? 0.8 : 0.76)
 
 export class Swarm {
   orbs: Orb[] = []
+  /** The altar's share of the arena's width (see `altarShare`). */
+  altar = ALTAR
   private n = 0
   private seed: number
   constructor(seed = 1) { this.seed = seed }
@@ -18,7 +23,7 @@ export class Swarm {
   private spawn(): { x: number; y: number } {
     for (;;) {
       const x = 0.06 + this.rnd() * 0.88, y = 0.06 + this.rnd() * 0.88
-      if (Math.hypot(x - 0.5, y - 0.5) > ALTAR / 2 + 0.03) return { x, y }
+      if (Math.hypot(x - 0.5, y - 0.5) > this.altar / 2 + 0.03) return { x, y }
     }
   }
 
@@ -75,7 +80,7 @@ export class Swarm {
     dt = Math.min(dt, 0.033)
     const live = this.orbs.filter((o) => o.on)
     const lim = d * 0.5 + 2
-    const edge = (ALTAR / 2) * W + d * 0.5 + 8        // a shard keeps clear of the altar's rim, with a little room to spare
+    const edge = (this.altar / 2) * W + d * 0.5 + 8        // a shard keeps clear of the altar's rim, with a little room to spare
     const home = Math.min(edge + 10, W / 2 - lim - 2) // the ring they settle toward when there is room
     const K = 90 * d * d                              // how hard like poles push (inverse square)
     const reach = d * 12

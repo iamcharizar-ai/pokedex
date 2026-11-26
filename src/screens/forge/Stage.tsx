@@ -16,7 +16,7 @@ import { Particles } from './fx.ts'
 import { Director, type Els, type Geom } from './director.ts'
 import { SOCKETS, firstEmpty, freeOf, guidance, idle, placed, recipeText, reduce, trayView, whyNotPlace, type Action, type Forge, type ForgeState, type Refusal, type Result } from './machine.ts'
 import { shardHex } from './look.ts'
-import { ALTAR, Swarm } from './swarm.ts'
+import { ALTAR, Swarm, altarShare } from './swarm.ts'
 import { forgeSound } from './sound.ts'
 
 export interface Chosen { uid: string; form: string; mega: string; shiny: boolean }
@@ -65,6 +65,9 @@ export function Stage(props: StageProps) {
   const SRef = useRef(S)
   const [meta, setMeta] = useState<Pick<AltarMeta, 'wells' | 'centre'>>(DEFAULT_META)
   const metaRef = useRef(meta)
+  /** the altar's share of the arena's width: bigger on a phone (swarm.ts altarShare) */
+  const [share, setShare] = useState(ALTAR)
+  const shareRef = useRef(share)
   const [flies, setFlies] = useState([{ dx: 0, dy: 0, n: 0 }, { dx: 0, dy: 0, n: 0 }, { dx: 0, dy: 0, n: 0 }])
   const [note, setNote] = useState('')
   /** a refusal, said on the visible line for a few seconds */
@@ -117,10 +120,20 @@ export function Stage(props: StageProps) {
       if (fx) { const px = Math.max(64, Math.min(1024, Math.round(w * Math.min(window.devicePixelRatio || 1, 2)))); if (fx.width !== px) { fx.width = px; fx.height = px } }
       glowRef.current?.resize()
     }
-    size()
+    // the arena's width decides the altar's share of it; the altar box then resizes, and that is measured above
+    const fit = (): void => {
+      const W = arenaRef.current?.clientWidth ?? 0
+      if (W <= 0) return
+      const s = altarShare(W)
+      sw.current!.altar = s
+      if (s !== shareRef.current) { shareRef.current = s; setShare(s) }
+    }
+    fit(); size()
     const ro = new ResizeObserver(size)
     ro.observe(el)
-    return () => ro.disconnect()
+    const ra = new ResizeObserver(fit)
+    if (arenaRef.current) ra.observe(arenaRef.current)
+    return () => { ro.disconnect(); ra.disconnect() }
   }, [])
 
   useEffect(() => {
@@ -172,8 +185,8 @@ export function Stage(props: StageProps) {
   useEffect(() => {
     if (sw.current!.sync({ ...held, [KEY]: keyStone ? 1 : 0 }, [...SHELF, KEY])) setOrbs(sw.current!.orbs.map((o) => ({ key: o.key, kind: o.kind })))
   }, [held, keyStone])
-  const wellFrac = (i: number): { x: number; y: number } => ({ x: (1 - ALTAR) / 2 + ALTAR * metaRef.current.wells[i].x, y: (1 - ALTAR) / 2 + ALTAR * metaRef.current.wells[i].y })
-  const centreFrac = (): { x: number; y: number } => ({ x: (1 - ALTAR) / 2 + ALTAR * metaRef.current.centre.x, y: (1 - ALTAR) / 2 + ALTAR * metaRef.current.centre.y })
+  const wellFrac = (i: number): { x: number; y: number } => { const a = shareRef.current; return { x: (1 - a) / 2 + a * metaRef.current.wells[i].x, y: (1 - a) / 2 + a * metaRef.current.wells[i].y } }
+  const centreFrac = (): { x: number; y: number } => { const a = shareRef.current; return { x: (1 - a) / 2 + a * metaRef.current.centre.x, y: (1 - a) / 2 + a * metaRef.current.centre.y } }
 
   // ── a new choice starts the ritual again: whatever was placed goes back (nothing was spent) ──
   const pickKey = pick ? `${pick.uid}:${pick.mega}` : ''
@@ -411,9 +424,9 @@ export function Stage(props: StageProps) {
         <div className="tray" role="group" aria-label={`Recipe: ${recipeText(recipe)}`}>
           <div className="tray-gems">
             {tray.map((p, i) => (
-              <span key={i} className={`gem ${p.by ? 'in' : ''}`} style={{ ['--gc' as string]: shardHex(p.by ?? p.kind) } as CSSProperties}>
+              <span key={i} className={`tray-gem ${p.by ? 'in' : ''}`} style={{ ['--gc' as string]: shardHex(p.by ?? p.kind) } as CSSProperties}>
                 <ItemIcon id={p.by ?? p.kind} size={24} />
-                {p.by === COMET_SHARD && <i className="gem-comet" aria-hidden>*</i>}
+                {p.by === COMET_SHARD && <i className="tray-gem-comet" aria-hidden>*</i>}
               </span>
             ))}
           </div>
@@ -424,7 +437,7 @@ export function Stage(props: StageProps) {
       {shown && (gate || !keyStone) && <p className="forge-gate">{gate ?? 'The altar needs the Key Stone before it will forge.'}</p>}
 
       <div className="stage" ref={arenaRef} role="group" aria-label="The altar: three sockets round a centre, and your shards floating round it">
-        <div className="altar-box" ref={stageRef} style={{ width: `${ALTAR * 100}%` }}>
+        <div className="altar-box" ref={stageRef} style={{ width: `${share * 100}%` }}>
           <img className="altar-img" src="/sprites/forge/altar.png" alt="" draggable={false} />
           {[0, 1, 2, 3].map((i) => {
             const w = i < 3 ? meta.wells[i] : meta.centre

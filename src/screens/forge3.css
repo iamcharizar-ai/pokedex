@@ -6,15 +6,16 @@
 /* ── the recipe tray ── */
 .tray { display: grid; justify-items: center; gap: 6px; }
 .tray-gems { display: flex; gap: 14px; }
-.gem { position: relative; width: 48px; height: 48px; display: grid; place-items: center; border-radius: 50%; border: 2px dashed color-mix(in srgb, var(--gc) 55%, transparent); background: rgba(0, 0, 0, 0.35); transition: box-shadow var(--t-pop) linear, border-color var(--t-pop) linear; }
-.gem img { image-rendering: pixelated; opacity: 0.32; filter: grayscale(0.5); transition: opacity var(--t-pop) linear; }
-.gem.in { border-style: solid; border-color: var(--gc); box-shadow: 0 0 14px var(--gc), inset 0 0 8px color-mix(in srgb, var(--gc) 50%, transparent); }
-.gem.in img { opacity: 1; filter: none; }
-.gem-comet { position: absolute; right: -2px; top: -6px; font-style: normal; font-size: 16px; color: #f3e4ff; text-shadow: 0 0 6px #c890ff, 0 1px 0 rgba(0, 0, 0, 0.6); }
+.tray-gem { position: relative; width: 48px; height: 48px; display: grid; place-items: center; border-radius: 50%; border: 2px dashed color-mix(in srgb, var(--gc) 55%, transparent); background: rgba(0, 0, 0, 0.35); transition: box-shadow var(--t-pop) linear, border-color var(--t-pop) linear; }
+.tray-gem img { image-rendering: pixelated; opacity: 0.32; filter: grayscale(0.5); transition: opacity var(--t-pop) linear; }
+.tray-gem.in { border-style: solid; border-color: var(--gc); box-shadow: 0 0 14px var(--gc), inset 0 0 8px color-mix(in srgb, var(--gc) 50%, transparent); }
+.tray-gem.in img { opacity: 1; filter: none; }
+.tray-gem-comet { position: absolute; right: -2px; top: -6px; font-style: normal; font-size: 16px; color: #f3e4ff; text-shadow: 0 0 6px #c890ff, 0 1px 0 rgba(0, 0, 0, 0.6); }
 .tray-text { margin: 0; max-width: 40ch; text-align: center; font-size: 13px; color: var(--text-2); }
 
 /* ── the altar ── */
-.forge3 .stage { position: relative; width: min(460px, 100%); aspect-ratio: 1; user-select: none; -webkit-user-select: none; }
+/* the arena: as wide as the screen allows (a phone's full width, past the window's padding; on a desktop up to 760px, but never taller than the window) */
+.forge3 .stage { --aw: min(100vw - 16px, 760px, max(460px, 100svh - 140px)); position: relative; width: var(--aw); margin-inline: calc((100% - var(--aw)) / 2); aspect-ratio: 1; user-select: none; -webkit-user-select: none; }
 .forge3 .altar-box { position: absolute; left: 50%; top: 50%; aspect-ratio: 1; translate: -50% -50%; }
 .forge3 .altar-img, .forge3 .glow, .forge3 .fxc { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .forge3 .altar-img { object-fit: contain; }
