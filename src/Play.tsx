@@ -720,6 +720,19 @@ export function Bag({ game, news }: { game: Game; news: ItemNews }) {
   const glide = useRef(false)
   useFlip(held, glide)
   const press = (id: string) => (e: ReactPointerEvent<HTMLElement>) => startPress({ x: e.clientX, y: e.clientY, id: e.pointerId, type: e.pointerType, button: e.button }, id, e.currentTarget, hooks)
+  // with a mouse, resting on a new thing for a moment is looking at it too (the gold dot goes); a quick sweep across the bag is not
+  const dwell = useRef<number | undefined>(undefined)
+  const newsNow = useRef(news)
+  newsNow.current = news
+  useEffect(() => () => window.clearTimeout(dwell.current), [])
+  const look = (id: string) => ({
+    onPointerEnter: (e: ReactPointerEvent<HTMLElement>) => {
+      if (e.pointerType !== 'mouse' || !news.isNew(id)) return
+      window.clearTimeout(dwell.current)
+      dwell.current = window.setTimeout(() => newsNow.current.see(id), 300)
+    },
+    onPointerLeave: () => window.clearTimeout(dwell.current),
+  })
   const tap = (id: string, i: number) => {
     if (!arrange) { news.see(id); setOpen(id); play('tap'); return }
     if (carry === null) { setCarry(id); play('click'); return }
@@ -733,7 +746,7 @@ export function Bag({ game, news }: { game: Game; news: ItemNews }) {
       const [li, gi] = id.split(':').slice(1).map(Number)
       const l = LEAGUES[li], t = l.gyms[gi]
       return (
-        <Slot key={id} className={`medal ${cls} ${news.isNew(id) ? 'fresh' : ''}`} data-place={i} data-flip={id} onPointerDown={press(id)} onClick={() => tap(id, i)} aria-label={`${badgeName(t)}, ${l.name}${news.isNew(id) ? ', new' : ''}. Open`}
+        <Slot key={id} className={`medal ${cls} ${news.isNew(id) ? 'fresh' : ''}`} data-place={i} data-flip={id} onPointerDown={press(id)} {...look(id)} onClick={() => tap(id, i)} aria-label={`${badgeName(t)}, ${l.name}${news.isNew(id) ? ', new' : ''}. Open`}
           icon={<GymBadge art={badgeArt(li, gi)} on n={gi + 1} size={32} title="" />} tip={{ title: badgeName(t), note: <>{l.name} · won from {t.name}</> }} />
       )
     }
@@ -747,7 +760,7 @@ export function Bag({ game, news }: { game: Game; news: ItemNews }) {
     if (id.startsWith(STONE)) {
       const form = id.slice(STONE.length), holders = stones[form] ?? [], fresh = news.isNew(id)
       return (
-        <Slot key={id} className={`${cls} ${fresh ? 'fresh' : ''}`} data-place={i} data-flip={id} onPointerDown={press(id)} onClick={() => tap(id, i)} aria-label={`${megaStoneName(form)}${holders.length > 1 ? `, ${holders.length}` : ''}${fresh ? ', new' : ''}. Open`}
+        <Slot key={id} className={`${cls} ${fresh ? 'fresh' : ''}`} data-place={i} data-flip={id} onPointerDown={press(id)} {...look(id)} onClick={() => tap(id, i)} aria-label={`${megaStoneName(form)}${holders.length > 1 ? `, ${holders.length}` : ''}${fresh ? ', new' : ''}. Open`}
           icon={<MegaStone mega={form} size={MEGASTONE_ART.has(form) ? 32 : 22} title="" />} n={holders.length > 1 ? short(holders.length) : null} tip={{ title: megaStoneName(form), note: <>{fresh ? 'New · ' : ''}Forged for {holders.map((m) => nameOf(m.form)).join(', ')}</> }} />
       )
     }
@@ -756,7 +769,7 @@ export function Bag({ game, news }: { game: Game; news: ItemNews }) {
     // the gold dot: more of it than was last looked at; opening it is looking (lib/newitems.ts)
     const fresh = news.isNew(id)
     return (
-      <Slot key={id} className={`${cls} ${fresh ? 'fresh' : ''}`} on={on} data-place={i} data-flip={id} onPointerDown={press(id)} onClick={() => tap(id, i)} aria-label={`${itemName(id)}, ${n || 'held'}${on ? ', in use' : ''}${fresh ? ', new' : ''}. Open`}
+      <Slot key={id} className={`${cls} ${fresh ? 'fresh' : ''}`} on={on} data-place={i} data-flip={id} onPointerDown={press(id)} {...look(id)} onClick={() => tap(id, i)} aria-label={`${itemName(id)}, ${n || 'held'}${on ? ', in use' : ''}${fresh ? ', new' : ''}. Open`}
         icon={<ItemIcon id={id} size={32} />} n={n > 1 ? short(n) : null} tip={{ title: itemName(id), note: <>{fresh ? 'New · ' : ''}{on ? (game.theme === id ? 'In use' : 'Equipped') : `×${n}`} · {ITEMS[id].text}</> }} />
     )
   }
